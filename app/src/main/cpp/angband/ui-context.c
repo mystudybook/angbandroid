@@ -37,6 +37,8 @@
 #include "store.h"
 #include "target.h"
 #include "ui-context.h"
+#include "droid.h"
+#include "zh-tw-ui.h"
 #include "ui-game.h"
 #include "ui-input.h"
 #include "ui-keymap.h"
@@ -98,25 +100,25 @@ static int context_menu_player_2(int mx, int my)
 	labels = string_make(lower_case);
 	m->selections = labels;
 
-	menu_dynamic_add_label(m, "Knowledge", '~', MENU_VALUE_KNOWLEDGE, labels);
-	menu_dynamic_add_label(m, "Show Map", 'M', MENU_VALUE_MAP, labels);
-	menu_dynamic_add_label(m, "^Show Messages", 'P', MENU_VALUE_MESSAGES,
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Knowledge", angdroid_zh_tw_enabled()), '~', MENU_VALUE_KNOWLEDGE, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Show Map", angdroid_zh_tw_enabled()), 'M', MENU_VALUE_MAP, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("^Show Messages", angdroid_zh_tw_enabled()), 'P', MENU_VALUE_MESSAGES,
 						   labels);
-	menu_dynamic_add_label(m, "Show Monster List", '[', MENU_VALUE_MONSTERS,
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Show Monster List", angdroid_zh_tw_enabled()), '[', MENU_VALUE_MONSTERS,
 						   labels);
-	menu_dynamic_add_label(m, "Show Object List", ']', MENU_VALUE_OBJECTS,
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Show Object List", angdroid_zh_tw_enabled()), ']', MENU_VALUE_OBJECTS,
 						   labels);
 
 	/* Ignore toggle has different keys, but we don't have a way to look them
 	 * up (see ui-game.c). */
 	cmdkey = (mode == KEYMAP_MODE_ORIG) ? 'K' : 'O';
-	menu_dynamic_add_label(m, "Toggle Ignored", cmdkey,
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Toggle Ignored", angdroid_zh_tw_enabled()), cmdkey,
 						   MENU_VALUE_TOGGLE_IGNORED, labels);
 
 	ADD_LABEL("Ignore an item", CMD_IGNORE, MN_ROW_VALID);
 
-	menu_dynamic_add_label(m, "Options", '=', MENU_VALUE_OPTIONS, labels);
-	menu_dynamic_add_label(m, "Commands", '?', MENU_VALUE_HELP, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Options", angdroid_zh_tw_enabled()), '=', MENU_VALUE_OPTIONS, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Commands", angdroid_zh_tw_enabled()), '?', MENU_VALUE_HELP, labels);
 
 	/* Hack -- no flush needed */
 	msg_flag = false;
@@ -281,13 +283,13 @@ int context_menu_player(int mx, int my)
 	/* Looking has different keys, but we don't have a way to look them up
 	 * (see ui-game.c). */
 	cmdkey = (mode == KEYMAP_MODE_ORIG) ? 'l' : 'x';
-	menu_dynamic_add_label(m, "Look", cmdkey, MENU_VALUE_LOOK, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Look", angdroid_zh_tw_enabled()), cmdkey, MENU_VALUE_LOOK, labels);
 
 	/* 'R' is used for resting in both keymaps. */
-	menu_dynamic_add_label(m, "Rest", 'R', MENU_VALUE_REST, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Rest", angdroid_zh_tw_enabled()), 'R', MENU_VALUE_REST, labels);
 
 	/* 'i' is used for inventory in both keymaps. */
-	menu_dynamic_add_label(m, "Inventory", 'i', MENU_VALUE_INVENTORY, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Inventory", angdroid_zh_tw_enabled()), 'i', MENU_VALUE_INVENTORY, labels);
 
 	/* if object under player add pickup option */
 	obj = square_object(cave, player->grid);
@@ -295,20 +297,20 @@ int context_menu_player(int mx, int my)
 			menu_row_validity_t valid;
 
 			/* 'f' isn't in rogue keymap, so we can use it here. */
-  			menu_dynamic_add_label(m, "Floor", 'f', MENU_VALUE_FLOOR, labels);
+  			menu_dynamic_add_label(m, angdroid_game_ui_text("Floor", angdroid_zh_tw_enabled()), 'f', MENU_VALUE_FLOOR, labels);
 			valid = (inven_carry_okay(obj)) ? MN_ROW_VALID : MN_ROW_INVALID;
 			ADD_LABEL("Pick up", CMD_PICKUP, valid);
 	}
 
 	/* 'C' is used for the character sheet in both keymaps. */
-	menu_dynamic_add_label(m, "Character", 'C', MENU_VALUE_CHARACTER, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Character", angdroid_zh_tw_enabled()), 'C', MENU_VALUE_CHARACTER, labels);
 
 	if (!OPT(player, center_player)) {
-		menu_dynamic_add_label(m, "^Center Map", 'L', MENU_VALUE_CENTER_MAP,
+		menu_dynamic_add_label(m, angdroid_game_ui_text("^Center Map", angdroid_zh_tw_enabled()), 'L', MENU_VALUE_CENTER_MAP,
 							   labels);
 	}
 
-	menu_dynamic_add_label(m, "Other", ' ', MENU_VALUE_OTHER, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Other", angdroid_zh_tw_enabled()), ' ', MENU_VALUE_OTHER, labels);
 
 	/* Hack -- no flush needed */
 	msg_flag = false;
@@ -438,11 +440,11 @@ int context_menu_cave(struct chunk *c, int y, int x, int adjacent, int mx,
 	/* Looking has different keys, but we don't have a way to look them up
 	 * (see ui-game.c). */
 	cmdkey = (mode == KEYMAP_MODE_ORIG) ? 'l' : 'x';
-	menu_dynamic_add_label(m, "Look At", cmdkey, MENU_VALUE_LOOK, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Look At", angdroid_zh_tw_enabled()), cmdkey, MENU_VALUE_LOOK, labels);
 
 	if (square(c, grid)->mon)
 		/* '/' is used for recall in both keymaps. */
-		menu_dynamic_add_label(m, "Recall Info", '/', MENU_VALUE_RECALL,
+		menu_dynamic_add_label(m, angdroid_game_ui_text("Recall Info", angdroid_zh_tw_enabled()), '/', MENU_VALUE_RECALL,
 							   labels);
 
 	ADD_LABEL("Use Item On", CMD_USE, MN_ROW_VALID);
@@ -492,7 +494,7 @@ int context_menu_cave(struct chunk *c, int y, int x, int adjacent, int mx,
 	} else {
 		/* ',' is used for ignore in rogue keymap, so we'll just swap letters */
 		cmdkey = (mode == KEYMAP_MODE_ORIG) ? ',' : '.';
-		menu_dynamic_add_label(m, "Pathfind To", cmdkey, CMD_PATHFIND, labels);
+		menu_dynamic_add_label(m, angdroid_game_ui_text("Pathfind To", angdroid_zh_tw_enabled()), cmdkey, CMD_PATHFIND, labels);
 
 		ADD_LABEL("Walk Towards", CMD_WALK, MN_ROW_VALID);
 		ADD_LABEL("Run Towards", CMD_RUN, MN_ROW_VALID);
@@ -670,7 +672,7 @@ int context_menu_object(struct object *obj)
 	m->selections = labels;
 
 	/* 'I' is used for inspect in both keymaps. */
-	menu_dynamic_add_label(m, "Inspect", 'I', MENU_VALUE_INSPECT, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Inspect", angdroid_zh_tw_enabled()), 'I', MENU_VALUE_INSPECT, labels);
 
 	if (obj_can_browse(obj)) {
 		if (obj_can_cast_from(obj) && player_can_cast(player, false))
@@ -730,7 +732,7 @@ int context_menu_object(struct object *obj)
 			if (obj->number > 1) {
 				/* 'D' is used for ignore in rogue keymap, so swap letters. */
 				cmdkey = (mode == KEYMAP_MODE_ORIG) ? 'D' : 'A';
-				menu_dynamic_add_label(m, "Drop All", cmdkey,
+				menu_dynamic_add_label(m, angdroid_game_ui_text("Drop All", angdroid_zh_tw_enabled()), cmdkey,
 									   MENU_VALUE_DROP_ALL, labels);
 			}
 		} else if (square(cave, player->grid)->feat == FEAT_HOME) {
@@ -739,7 +741,7 @@ int context_menu_object(struct object *obj)
 			if (obj->number > 1) {
 				/* 'D' is used for ignore in rogue keymap, so swap letters. */
 				cmdkey = (mode == KEYMAP_MODE_ORIG) ? 'D' : 'A';
-				menu_dynamic_add_label(m, "Drop All", cmdkey,
+				menu_dynamic_add_label(m, angdroid_game_ui_text("Drop All", angdroid_zh_tw_enabled()), cmdkey,
 									   MENU_VALUE_DROP_ALL, labels);
 			}
 		} else if (store_will_buy_tester(obj)) {
@@ -920,7 +922,7 @@ static int show_command_list(struct cmd_info cmd_list[], int size, int mx,
 			key[0] = cmd_list[i].key[mode];
 			key[1] = '\0';
 		}
-		strnfmt(cmd_name, 80, "%s (%s)",  cmd_list[i].desc, key);
+		strnfmt(cmd_name, 80, "%s (%s)",  angdroid_game_ui_text(cmd_list[i].desc, angdroid_zh_tw_enabled()), key);
 		menu_dynamic_add(m, cmd_name, i+1);
 	}
 
@@ -954,12 +956,12 @@ int context_menu_command(int mx, int my)
 	}
 
 	m->selections = lower_case;
-	menu_dynamic_add(m, "Item", 1);
-	menu_dynamic_add(m, "Action", 2);
-	menu_dynamic_add(m, "Item Management", 3);
-	menu_dynamic_add(m, "Info", 4);
-	menu_dynamic_add(m, "Util", 5);
-	menu_dynamic_add(m, "Misc", 6);
+	menu_dynamic_add(m, angdroid_game_ui_text("Item", angdroid_zh_tw_enabled()), 1);
+	menu_dynamic_add(m, angdroid_game_ui_text("Action", angdroid_zh_tw_enabled()), 2);
+	menu_dynamic_add(m, angdroid_game_ui_text("Item Management", angdroid_zh_tw_enabled()), 3);
+	menu_dynamic_add(m, angdroid_game_ui_text("Info", angdroid_zh_tw_enabled()), 4);
+	menu_dynamic_add(m, angdroid_game_ui_text("Util", angdroid_zh_tw_enabled()), 5);
+	menu_dynamic_add(m, angdroid_game_ui_text("Misc", angdroid_zh_tw_enabled()), 6);
 
 	menu_dynamic_calc_location(m, mx, my);
 
@@ -1128,7 +1130,7 @@ static void cmd_sub_entry(struct menu *menu, int oid, bool cursor, int row,
 	char buf[16];
 
 	/* Write the description */
-	Term_putstr(col, row, -1, attr, commands[oid].desc);
+	Term_putstr(col, row, -1, attr, angdroid_game_ui_text(commands[oid].desc, angdroid_zh_tw_enabled()));
 
 	/*
 	 * Include keypress for commands that aren't placeholders to drive the
@@ -1246,7 +1248,7 @@ static void cmd_list_entry(struct menu *menu, int oid, bool cursor, int row,
 						   int col, int width)
 {
 	uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
-	Term_putstr(col, row, -1, attr, cmds_all[oid].name);
+	Term_putstr(col, row, -1, attr, angdroid_game_ui_text(cmds_all[oid].name, angdroid_zh_tw_enabled()));
 }
 
 static struct menu *command_menu;

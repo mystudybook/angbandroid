@@ -50,6 +50,7 @@
 #include "ui-target.h"
 
 #include "droid.h"
+#include "zh-tw-ui.h"
 
 static bool inkey_xtra;
 uint32_t inkey_scan;		/* See the "inkey()" function */
@@ -1056,10 +1057,10 @@ static int handle_name_mouse(char *buf, size_t buflen, size_t *curs,
 	m = menu_dynamic_new();
 
 	m->selections = labels;
-	menu_dynamic_add_label(m, "Accept", 'a', ACT_CTX_NAME_ACCEPT, labels);
-	menu_dynamic_add_label(m, "Set to random name", 'r',
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Accept", angdroid_zh_tw_enabled()), 'a', ACT_CTX_NAME_ACCEPT, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Set to random name", angdroid_zh_tw_enabled()), 'r',
 		ACT_CTX_NAME_RANDOM, labels);
-	menu_dynamic_add_label(m, "Clear name", 'c', ACT_CTX_NAME_CLEAR,
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Clear name", angdroid_zh_tw_enabled()), 'c', ACT_CTX_NAME_CLEAR,
 		labels);
 
 	screen_save();
@@ -1111,7 +1112,7 @@ bool get_character_name(char *buf, size_t buflen)
 	event_signal(EVENT_MESSAGE_FLUSH);
 
 	/* Display prompt */
-	prt("Enter a name for your character (* for a random name): ", 0, 0);
+	prt(angdroid_game_ui_text("Enter a name for your character (* for a random name): ", angdroid_zh_tw_enabled()), 0, 0);
 
 	/* Save the player name */
 	my_strcpy(buf, player->full_name, buflen);

@@ -48,6 +48,7 @@
 #include "ui-target.h"
 
 #include "droid.h"
+#include "zh-tw-ui.h"
 
 /**
  * Redraw the screen
@@ -133,7 +134,7 @@ void do_cmd_xxx_options(void)
  */
 void do_cmd_unknown(void)
 {
-	prt("Type '?' for help.", 0, 0);
+	prt(angdroid_game_ui_text("Type '?' for help.", angdroid_zh_tw_enabled()), 0, 0);
 }
 
 
@@ -166,16 +167,16 @@ void textui_cmd_retire(void)
 
 	/* Verify */
 	if (player->total_winner) {
-		if (!get_check("Do you want to retire? "))
+		if (!get_check(angdroid_game_ui_text("Do you want to retire? ", angdroid_zh_tw_enabled())))
 			return;
 	} else {
 		struct keypress ch;
 
-		if (!get_check("Do you really want to retire?"))
+		if (!get_check(angdroid_game_ui_text("Do you really want to retire?", angdroid_zh_tw_enabled())))
 			return;
 
 		/* Special Verification for retirement */
-		prt("Please verify RETIRING THIS CHARACTER by typing the '@' sign: ", 0, 0);
+		prt(angdroid_game_ui_text("Please verify RETIRING THIS CHARACTER by typing the '@' sign: ", angdroid_zh_tw_enabled()), 0, 0);
 		event_signal(EVENT_INPUT_FLUSH);
 
         soft_kbd_flash("@");

@@ -20,6 +20,8 @@
 #include "player-calcs.h"
 #include "ui-input.h"
 #include "ui-output.h"
+#include "droid.h"
+#include "zh-tw-ui.h"
 #include "z-textblock.h"
 
 /**
@@ -182,7 +184,7 @@ struct keypress textui_textblock_show(textblock *tb, region orig_area, const cha
 
 		Term_erase(area.col, area.row + area.page_rows, area.width);
 		Term_erase(area.col, area.row + area.page_rows + 1, area.width);
-		c_put_str(COLOUR_L_BLUE, "(Up/down or ESCAPE to exit.)",
+		c_put_str(COLOUR_L_BLUE, angdroid_game_ui_text("(Up/down or ESCAPE to exit.)", angdroid_zh_tw_enabled()),
 				area.row + area.page_rows + 1, area.col);
 
 		/* Pager mode */
@@ -216,7 +218,7 @@ struct keypress textui_textblock_show(textblock *tb, region orig_area, const cha
 
 		Term_erase(area.col, area.row + n_lines, area.width);
 		Term_erase(area.col, area.row + n_lines + 1, area.width);
-		c_put_str(COLOUR_L_BLUE, "(Press any key to continue.)",
+		c_put_str(COLOUR_L_BLUE, angdroid_game_ui_text("(Press any key to continue.)", angdroid_zh_tw_enabled()),
 				area.row + n_lines + 1, area.col);
 		ch = inkey();
 	}
