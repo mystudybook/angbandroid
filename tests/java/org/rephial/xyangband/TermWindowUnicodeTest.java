@@ -98,6 +98,15 @@ public final class TermWindowUnicodeTest {
         check(w.buffer[0][1].textColumns == 1 && w.buffer[0][1].isGraphicTile(), "tile maintains original flags");
     }
 
+    private static void testTilePaddingSentinelIsNotText() {
+        TermWindow w = new TermWindow(1, 3, 0, 0);
+        write(w, "\u1E00");
+        check(!w.buffer[0][0].isBigPad(), "real U+1E00 glyph must not be treated as a tile pad");
+        w.buffer[0][1].ch = TermView.BIG_PAD;
+        w.buffer[0][1].textCodePoint = 0;
+        check(w.buffer[0][1].isBigPad(), "graphics tile pad sentinel still works");
+    }
+
     public static void main(String[] args) {
         testPlacement();
         testOverwriteAndErase();
@@ -106,6 +115,7 @@ public final class TermWindowUnicodeTest {
         testResizeAndClear();
         testCopyAndScroll();
         testTileDoesNotInheritTextSpan();
+        testTilePaddingSentinelIsNotText();
         System.out.println("PASS: terminal Unicode buffer and overwrite tests (" + cases + " assertions)");
     }
 }
