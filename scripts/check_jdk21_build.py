@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline contract checks for the Android JDK 21 / AGP 8.9 migration.
+"""Offline contract checks for Android JDK 21 / Gradle 9.1 / AGP 9.0.1.
 
 Static configuration checks only: this does NOT download dependencies,
 run Gradle or compile an APK.
@@ -32,9 +32,10 @@ def main():
     manifest_path = ROOT / "app/src/main/AndroidManifest.xml"
 
     expected = {
-        "AGP 8.9.2": "com.android.tools.build:gradle:8.9.2" in top,
-        "Gradle 8.11.1": "gradle-8.11.1-bin.zip" in wrapper,
+        "AGP 9.0.1": "com.android.tools.build:gradle:9.0.1" in top,
+        "Gradle 9.1.0": "gradle-9.1.0-bin.zip" in wrapper,
         "JDK 21 required": "JavaVersion.current() < JavaVersion.VERSION_21" in settings,
+        "Gradle 9 supported JDK max": "JavaVersion.current() > JavaVersion.VERSION_25" in settings,
         "JDK 21 compiler toolchain": "JavaLanguageVersion.of(21)" in app,
         "Java 17 Android bytecode": "sourceCompatibility JavaVersion.VERSION_17" in app
             and "targetCompatibility JavaVersion.VERSION_17" in app,
@@ -48,6 +49,8 @@ def main():
             and "jcenter()" not in top,
         "AndroidX enabled": "android.useAndroidX=true" in props,
         "Legacy resource switch compatibility": "android.nonFinalResIds=false" in props,
+        "AGP 9 compile-time R compatibility": "android.enableAppCompileTimeRClass=false" in props,
+        "No unused Kotlin compilation": "android.builtInKotlin=false" in props,
         "Legacy transitive R compatibility": "android.nonTransitiveRClass=false" in props,
         "Tracked Gradle defaults": "/gradle.properties" not in ignored,
         "Machine-specific SDK stays private": "/local.properties" in ignored,
@@ -58,8 +61,16 @@ def main():
             and "localProperties.getProperty('ABI_FILTERS')" in app,
         "Default debug ABI is ARM64": "debugAbiSpec = 'arm64-v8a'" in app,
         "Valid native ABI filter checked": "supportedAbis.contains(it)" in app,
-        "AGP 8 mutable ABI collection": "abiFilters.addAll(my_abi_filters)" in app
+        "AGP 9 mutable ABI collection": "abiFilters.addAll(my_abi_filters)" in app
             and "abiFilters = []" not in app,
+        "Legacy variant APIs not used":
+            all(token not in app + top for token in (
+                "applicationVariants", "libraryVariants", "variantFilter",
+                "dexOptions", "compileOptions <<"
+            )),
+        "No separately applied Kotlin Gradle plugin":
+            "org.jetbrains.kotlin.android" not in app + top
+            and "kotlin-android" not in app + top,
         "No mandatory custom local.properties reader": "def local_props(key)" not in app,
         "Build verification logs active Java": "sh ./gradlew --version" in read("scripts/verify-zh-tw.sh"),
         "Optional ABI override in verification": '"-PABI_FILTERS=$ABI_FILTERS"' in read("scripts/verify-zh-tw.sh"),
@@ -80,7 +91,7 @@ def main():
             print("FAIL:", problem)
         return 1
 
-    print(f"PASS: {len(expected)} Android JDK 21 / AGP 8.9 configuration checks")
+    print(f"PASS: {len(expected)} Android JDK 21 / Gradle 9.1 / AGP 9.0.1 configuration checks")
     print("NOTE: Static checks only; run sh scripts/verify-zh-tw.sh --android to build")
     return 0
 
