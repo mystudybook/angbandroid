@@ -46,6 +46,8 @@ run_check "Legacy NPP bool headers across supported C standards" sh "$ROOT/scrip
 run_check "Native shared-library symbol ownership" python3 "$ROOT/scripts/check_native_link_ownership.py"
 run_check "Native/Java Unicode protocol wiring" python3 "$ROOT/scripts/check-native-unicode-contract.py"
 run_check "Native Angband game zh-TW text isolation" python3 "$ROOT/scripts/check_native_game_localization.py"
+run_check "Canonical translation coverage audit" python3 "$ROOT/scripts/audit-zh-tw-coverage.py"
+run_check "Coverage audit JSON regression" python3 "$ROOT/tests/test_localization_coverage.py"
 
 android_debug_build() {
     if [ ! -f "$ROOT/gradlew" ]; then

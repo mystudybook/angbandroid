@@ -331,6 +331,25 @@ English grammar, monster attack descriptions, the full monster lore
 body, or other game variants. The original records, unique names,
 pluralization and saved data are unchanged.
 
+## Machine-readable full-project translation coverage audit (2026-11-03)
+
+Added `scripts/audit-zh-tw-coverage.py` as a read-only, offline source
+inventory. It compares exact translated item and non-unique monster names
+with `object.txt` and `monster.txt`, counts the curated monster flavor
+descriptions against all source races, and lists the native source files
+for each game variant. Run:
+
+```bash
+python3 scripts/audit-zh-tw-coverage.py
+python3 scripts/audit-zh-tw-coverage.py --json > translation-gaps.json
+```
+
+The audit explicitly reports **INCOMPLETE** while larger lore and narrative
+translation and independent localization of the other native game variants
+remain. This is coverage tracking, not a claim of native APK or device
+testing. `sh scripts/verify-zh-tw.sh` now collects its summary and runs an
+offline JSON regression for the source-complete name catalogs.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
