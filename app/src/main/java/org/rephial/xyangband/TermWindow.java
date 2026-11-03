@@ -52,7 +52,8 @@ public class TermWindow {
 
 		public boolean isBigPad()
 		{
-			return ch == TermView.BIG_PAD;
+			// U+1E00 is also a valid text character; distinguish it from tile padding.
+			return ch == TermView.BIG_PAD && textCodePoint == 0;
 		}
 
 		public boolean isTextContinuation() { return textColumns == 0; }
