@@ -90,6 +90,26 @@ public final class TermWindowUnicodeTest {
         check(dest.buffer[1][0].ch == ' ' && dest.buffer[1][1].ch == ' ', "scroll clears new bottom row");
     }
 
+    private static void testExplicitJniByteLength() {
+        TermWindow w = new TermWindow(2, 8, 0, 0);
+        byte[] padded = "中XY".getBytes(StandardCharsets.UTF_8);
+        w.addnstr(3, padded, "UTF-8");
+        check(w.buffer[0][0].ch == '中' && w.buffer[0][1].isTextContinuation(),
+                "JNI byte length preserves complete UTF-8 character");
+        check(w.buffer[0][2].ch == ' ' && w.col == 2,
+                "unused trailing bytes are not decoded");
+
+        w.addnstr(99, "AB".getBytes(StandardCharsets.UTF_8), "UTF-8");
+        check(w.buffer[0][2].ch == 'A' && w.buffer[0][3].ch == 'B',
+                "oversized JNI count is safely clamped to byte array length");
+
+        int cursor = w.col;
+        w.addnstr(0, padded, "UTF-8");
+        w.addnstr(-1, padded, "UTF-8");
+        w.addnstr(4, null, "UTF-8");
+        check(w.col == cursor, "zero, negative and null JNI input does not move the cursor");
+    }
+
     private static void testClearToBottomClearsCompleteLowerRows() {
         TermWindow w = new TermWindow(3, 6, 0, 0);
         write(w, "AB中D");
@@ -151,6 +171,7 @@ public final class TermWindowUnicodeTest {
 
     public static void main(String[] args) {
         testPlacement();
+        testExplicitJniByteLength();
         testOverwriteAndErase();
         testBoundary();
         testSupplementary();
