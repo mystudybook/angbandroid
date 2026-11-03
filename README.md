@@ -8,7 +8,7 @@
 - **[Android Studio / JDK 21 升級與編譯設定](docs/JDK21_BUILD.md)**
 - [遊戲文字顯示／Unicode 技術問題](docs/CJK_RENDERING_AUDIT.md)
 - **一次執行所有離線檢查，並輸出測試紀錄：** `sh scripts/verify-zh-tw.sh`（結果存成 `zh-tw-validation.log`）
-- **需要包含 APK 編譯時：** `sh scripts/verify-zh-tw.sh --android`；需本機 **JDK 21、Android SDK Platform 35、NDK 21.0.6113669** 與含 `ABI_FILTERS` 的 `local.properties`。已升級至 **Gradle 8.11.1 / AGP 8.9.2**。
+- **需要包含 APK 編譯時：** `sh scripts/verify-zh-tw.sh --android`；需本機 **JDK 21、Android SDK Platform 35、NDK 21.0.6113669**。Debug 預設使用 `arm64-v8a`，無須手動建立 `ABI_FILTERS`；x86_64 模擬器可執行 `ABI_FILTERS=x86_64 sh scripts/verify-zh-tw.sh --android`。已升級至 **Gradle 8.11.1 / AGP 8.9.2**。
 - 分項執行：`python3 scripts/check_zh_tw_resources.py`、`sh scripts/test-terminal-unicode.sh`、`sh scripts/test-native-utf8.sh`。
 - 原生 UTF-8 傳輸與中日韓字寬分類測試已加入；完整原生游標座標與雙格布局仍待同步，尚未完成 APK／實機測試。
 
