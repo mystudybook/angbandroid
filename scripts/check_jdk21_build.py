@@ -89,6 +89,15 @@ def main():
                 "app/src/main/cpp/unangband066/CMakeLists.txt",
             )
         ),
+        "Optional Tome 2.4 and bundled vendor CMake 4 policies": all(
+            "cmake_minimum_required(VERSION 3.10)" in read(path)
+            for path in (
+                "app/src/main/cpp/tome24x/CMakeLists.txt",
+                "app/src/main/cpp/tome24x/vendor/CppQuickCheck-2018-03-28/CMakeLists.txt",
+                "app/src/main/cpp/tome24x/vendor/bandit/CMakeLists.txt",
+                "app/src/main/cpp/tome24x/vendor/bandit/bandit/assertion_frameworks/snowhouse/CMakeLists.txt",
+            )
+        ),
         "Root native CMake project declaration":
             "project(angbandroid LANGUAGES C CXX)" in read(
                 "app/src/main/cpp/CMakeLists.txt"

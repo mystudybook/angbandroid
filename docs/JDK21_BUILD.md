@@ -106,7 +106,7 @@ Homebrew formula versions change.
 **CMake 4 migration:** CMake 4 removes policy compatibility with versions
 earlier than 3.5. All 12 native `CMakeLists.txt` files have been updated from
 `cmake_minimum_required(VERSION 3.4.1)` to `VERSION 3.10`, and the native
-root declares a project. All 11 bundled game engines remain in the build.
+root declares a project. The root native build still includes the original 10 game modules and loader. The optional `tome24x` directory and three bundled vendor CMake project entry points also now declare minimum version 3.10 for CMake 4 compatibility, but they are not connected to the Android root build and are **not** compiled into the APK. This is a CMake policy update, not a claim of successful source or APK compilation.
 The migration does not yet imply a successful Android native build.
 
 ```bash
