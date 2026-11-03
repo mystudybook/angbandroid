@@ -477,4 +477,13 @@
     <string name="installer_verify_file_failed">Error: Could not verify installed file: %1$s</string>
     <string name="installer_install_files_failed">Error: Could not install game files. %1$s</string>
     <string name="installer_copy_saves_failed">Error: Could not copy save files from the previous version. %1$s</string>
+
+    <!-- Editable control captions; never translate the action IDs or key sequences. -->
+    <string name="keymap_editor_action">Action:</string>
+    <string name="keymap_editor_row_1">Row 1:</string>
+    <string name="keymap_editor_row_2">Row 2:</string>
+    <string name="adv_button_keymap_action">Keymap action:</string>
+    <string name="adv_button_always_visible">Always visible</string>
+    <string name="quantity_all">All</string>
+    <string name="opacity_opaque">Opaque</string>
 </resources>
