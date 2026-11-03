@@ -18,7 +18,7 @@ int main(void)
     assert(strcmp(angdroid_zh_tw_spell_name("not a canonical spell", 1),
                   "not a canonical spell") == 0);
     assert(angdroid_zh_tw_spell_name(NULL, 1) == NULL);
-    assert(angdroid_utf8_display_columns("偵測陷阱、門與樓梯") == 20);
+    assert(angdroid_utf8_display_columns("偵測陷阱、門與樓梯") == 18);
     puts("PASS: source Angband spell-name display dictionary");
     return 0;
 }
