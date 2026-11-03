@@ -142,4 +142,19 @@ static inline void angdroid_union_dirty_range(
     if (last > *dirty_last) *dirty_last = last;
 }
 
+
+/*
+ * Direct cell writes (Term_draw and Term_queue_chars) address fixed map
+ * columns. A wide glyph must not consume the adjacent grid cell: that cell
+ * may contain an unrelated map feature, a tile or another UI control.
+ * Keep text flowing through Term_addstr/Term_addch for two-column CJK.
+ */
+static inline wchar_t angdroid_fixed_cell_glyph(wchar_t ch, int attr)
+{
+    if (ch == ANGDROID_TEXT_CONTINUATION ||
+        angdroid_is_wide_text(ch, attr))
+        return L'?';
+    return ch;
+}
+
 #endif
