@@ -20,9 +20,9 @@ public class KeyMapPreference
 	public KeyMapPreference(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		this.context = context;
-		setDialogTitle("Press a hardware key...");
-		setPositiveButtonText("Clear");
-		setNegativeButtonText("Cancel");
+		setDialogTitle(context.getString(R.string.keymap_press_hardware_key));
+		setPositiveButtonText(context.getString(R.string.keymap_clear_assignment));
+		setNegativeButtonText(context.getString(R.string.action_cancel));
 	}
 	@Override
     protected void onPrepareDialogBuilder(AlertDialog.Builder builder) {
@@ -81,12 +81,12 @@ public class KeyMapPreference
 		if (key_code == KeyEvent.KEYCODE_BACK){
 			new AlertDialog.Builder(context)
 				.setTitle("Angband")
-				.setMessage("Really assign the Back key?")
-				.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+				.setMessage(R.string.keymap_confirm_back_key)
+				.setNegativeButton(R.string.action_cancel, new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int whichButton) {
 						}
 					})
-				.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+				.setPositiveButton(R.string.action_ok, new DialogInterface.OnClickListener() {
 						public void onClick(DialogInterface dialog, int whichButton) {
 							saveMap();
 						}
@@ -119,7 +119,7 @@ public class KeyMapPreference
 		SharedPreferences settings =  getSharedPreferences();
 		String val = settings.getString(getKey(),"");
 
-		String desc = "<none>";
+		String desc = context.getString(R.string.keymap_unassigned);
 
 		if (val != null && val.length()>0) {
 			if (val.startsWith("C"))
@@ -134,91 +134,91 @@ public class KeyMapPreference
 	protected String keyCodeDescription(int code, boolean alt) {
 		switch (code) {
 		case KeyEvent.KEYCODE_ALT_LEFT:
-			return "Left Alt";
+			return context.getString(R.string.keymap_key_left_alt);
 		case KeyEvent.KEYCODE_ALT_RIGHT:
-			return "Right Alt";
+			return context.getString(R.string.keymap_key_right_alt);
 		case KeyEvent.KEYCODE_SHIFT_LEFT:
-			return "Left Shift";
+			return context.getString(R.string.keymap_key_left_shift);
 		case KeyEvent.KEYCODE_SHIFT_RIGHT:
-			return "Right Shift";
+			return context.getString(R.string.keymap_key_right_shift);
 		case KeyEvent.KEYCODE_CAMERA:
-			return "Camera";
+			return context.getString(R.string.keymap_key_camera);
 		case KeyEvent.KEYCODE_SEARCH:
-			return "Search";
+			return context.getString(R.string.keymap_key_search);
 		case KeyEvent.KEYCODE_BACK:
-			return "Back";
+			return context.getString(R.string.keymap_key_back);
 		case KeyEvent.KEYCODE_MENU:
-			return "Menu";
+			return context.getString(R.string.keymap_key_menu);
 		case KeyEvent.KEYCODE_DEL:
-			return "Backspace";
+			return context.getString(R.string.keymap_key_backspace);
 		case KeyEvent.KEYCODE_SPACE:
-			return "Space";
+			return context.getString(R.string.keymap_key_space);
 		case KeyEvent.KEYCODE_VOLUME_UP:
-			return "Volume Up";
+			return context.getString(R.string.keymap_key_volume_up);
 		case KeyEvent.KEYCODE_VOLUME_DOWN:
-			return "Volume Down";
+			return context.getString(R.string.keymap_key_volume_down);
 		case KeyEvent.KEYCODE_MOVE_END:
-			return "End";
+			return context.getString(R.string.keymap_key_end);
 		case KeyEvent.KEYCODE_MOVE_HOME:
-			return "Home";
+			return context.getString(R.string.keymap_key_home);
 		case KeyEvent.KEYCODE_DPAD_CENTER:
-			return "D-Pad Center";
+			return context.getString(R.string.keymap_key_dpad_center);
 		case KeyEvent.KEYCODE_DPAD_LEFT:
-			return "D-Pad Left";
+			return context.getString(R.string.keymap_key_dpad_left);
 		case KeyEvent.KEYCODE_DPAD_RIGHT:
-			return "D-Pad Right";
+			return context.getString(R.string.keymap_key_dpad_right);
 		case KeyEvent.KEYCODE_DPAD_DOWN:
-			return "D-Pad Down";
+			return context.getString(R.string.keymap_key_dpad_down);
 		case KeyEvent.KEYCODE_DPAD_UP:
-			return "D-Pad Up";
+			return context.getString(R.string.keymap_key_dpad_up);
 		case KeyEvent.KEYCODE_SOFT_LEFT:
-			return "Left Softkey";
+			return context.getString(R.string.keymap_key_softkey_left);
 		case KeyEvent.KEYCODE_SOFT_RIGHT:
-			return "Right Softkey";
+			return context.getString(R.string.keymap_key_softkey_right);
 		case KeyEvent.KEYCODE_SYM:
-			return "Sym";
+			return context.getString(R.string.keymap_key_sym);
 		case KeyEvent.KEYCODE_TAB:
-			return "Tab";
+			return context.getString(R.string.keymap_key_tab);
 		case KeyEvent.KEYCODE_PAGE_DOWN:
-			return "Page Down";
+			return context.getString(R.string.keymap_key_page_down);
 		case KeyEvent.KEYCODE_PAGE_UP:
-			return "Page Up";
+			return context.getString(R.string.keymap_key_page_up);
 		case KeyEvent.KEYCODE_NOTIFICATION:
-			return "Notification";
+			return context.getString(R.string.keymap_key_notification);
 		case KeyEvent.KEYCODE_MUTE:
-			return "Mute";
+			return context.getString(R.string.keymap_key_mute);
 		case KeyEvent.KEYCODE_ENDCALL:
-			return "End Call";
+			return context.getString(R.string.keymap_key_end_call);
 		case KeyEvent.KEYCODE_CALL:
-			return "Call";
+			return context.getString(R.string.keymap_key_call);
 		case KeyEvent.KEYCODE_CLEAR:
-			return "Clear";
+			return context.getString(R.string.keymap_key_clear);
 		case KeyEvent.KEYCODE_BUTTON_L1:
 			return "L1";
 		case KeyEvent.KEYCODE_BUTTON_L2:
 			return "L2";
 		case KeyEvent.KEYCODE_BUTTON_MODE:
-			return "Mode";
+			return context.getString(R.string.keymap_key_mode);
 		case KeyEvent.KEYCODE_BUTTON_R1:
 			return "R1";
 		case KeyEvent.KEYCODE_BUTTON_R2:
 			return "R2";
 		case KeyEvent.KEYCODE_BUTTON_SELECT:
-			return "Select";
+			return context.getString(R.string.keymap_key_select);
 		case KeyEvent.KEYCODE_BUTTON_START:
-			return "Start";
+			return context.getString(R.string.keymap_key_start);
 		case KeyEvent.KEYCODE_BUTTON_THUMBL:
-			return "Left Thumb";
+			return context.getString(R.string.keymap_key_thumb_left);
 		case KeyEvent.KEYCODE_BUTTON_THUMBR:
-			return "Right Thumb";
+			return context.getString(R.string.keymap_key_thumb_right);
 		case KeyEvent.KEYCODE_ENTER:
-			return "Enter";
+			return context.getString(R.string.keymap_key_enter);
 		case KeyEvent.KEYCODE_ESCAPE:
-			return "Escape";
+			return context.getString(R.string.keymap_key_escape);
 		case 97: //Samsung Epic 4G
-			return "Emoticon";
+			return context.getString(R.string.keymap_key_emoticon);
 		default:
-			return (alt?"Alt+":"")+"Key "+code;
+			return (alt ? "Alt+" : "") + context.getString(R.string.keymap_unknown_key, code);
 		}
 	}
 
