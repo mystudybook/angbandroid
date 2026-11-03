@@ -13,7 +13,7 @@ static void expect_translated(const char *english, const char *chinese)
 
 int main(void)
 {
-    assert(ANGDROID_ZH_TW_MONSTER_NAMES == 38);
+    assert(ANGDROID_ZH_TW_MONSTER_NAMES == 128);
     expect_translated("kobold", "狗頭人");
     expect_translated("small kobold", "小型狗頭人");
     expect_translated("floating eye", "漂浮之眼");
@@ -22,11 +22,19 @@ int main(void)
     expect_translated("grey mold", "灰色黴菌");
     expect_translated("wild dog", "野狗");
     expect_translated("yellow mushroom patch", "黃色蘑菇群");
+    expect_translated("cave spider", "洞穴蜘蛛");
+    expect_translated("green ooze", "綠色軟泥怪");
+    expect_translated("large kobold", "大型狗頭人");
+    expect_translated("kobold shaman", "狗頭人薩滿");
+    expect_translated("orc shaman", "半獸人薩滿");
+    expect_translated("baby red dragon", "幼年紅龍");
+    expect_translated("cave bear", "洞穴熊");
+    expect_translated("giant spider", "巨型蜘蛛");
 
     /* Fallback is deliberately left to the unchanged original list path. */
     assert(angdroid_zh_tw_monster_list_name("unknown monster") == NULL);
     assert(angdroid_zh_tw_monster_list_name("Kobold") == NULL);
     assert(angdroid_zh_tw_monster_list_name(NULL) == NULL);
-    puts("PASS: 38 CJK monster list entries, exact matching and English fallback");
+    puts("PASS: 128 CJK monster list entries, exact matching and English fallback");
     return 0;
 }
