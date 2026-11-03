@@ -4,6 +4,7 @@
 #include <string.h>
 #include "../../app/src/main/cpp/angband/zh-tw-ui.h"
 #include "../../app/src/main/cpp/angband/zh-tw-combat.h"
+#include "../../app/src/main/cpp/angband/zh-tw-magic.h"
 #include "../../app/src/main/cpp/curses/unicode_display.h"
 
 int main(void)
@@ -84,6 +85,17 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);
     assert(angdroid_utf8_display_columns("繁體中文") == 8);
+    assert(strcmp(angdroid_zh_tw_magic_term("cast", 1), "施放") == 0);
+    assert(strcmp(angdroid_zh_tw_magic_term("recite", 1), "誦念") == 0);
+    assert(strcmp(angdroid_zh_tw_magic_term("chant", 1), "吟唱") == 0);
+    assert(strcmp(angdroid_zh_tw_magic_term("perform", 1), "舉行") == 0);
+    assert(strcmp(angdroid_zh_tw_magic_term("spell", 1), "法術") == 0);
+    assert(strcmp(angdroid_zh_tw_magic_term("prayer", 1), "祈禱") == 0);
+    assert(strcmp(angdroid_zh_tw_magic_term("verse", 1), "詠唱") == 0);
+    assert(strcmp(angdroid_zh_tw_magic_term("ritual", 1), "儀式") == 0);
+    assert(strcmp(angdroid_zh_tw_magic_term("spell", 0), "spell") == 0);
+    assert(strcmp(angdroid_zh_tw_magic_term("unmapped", 1), "unmapped") == 0);
+    assert(angdroid_zh_tw_magic_term(NULL, 1) == NULL);
     assert(strcmp(angdroid_melee_verb_zh_tw("hit"), "擊中了") == 0);
     assert(strcmp(angdroid_melee_verb_zh_tw("poison"),
                   "以毒素傷害了") == 0);

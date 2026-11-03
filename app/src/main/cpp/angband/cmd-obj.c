@@ -27,6 +27,7 @@
 #include "obj-desc.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-magic.h"
 #include "obj-gear.h"
 #include "obj-ignore.h"
 #include "obj-info.h"
@@ -1090,7 +1091,9 @@ void do_cmd_cast(struct command *cmd)
 
 		/* Warning */
 		if (angdroid_zh_tw_enabled())
-            msg("法力不足，無法使用這項法術或祈禱。");
+            msg("法力不足，無法%s這項%s。",
+                angdroid_zh_tw_magic_term(verb, true),
+                angdroid_zh_tw_magic_term(noun, true));
         else
             msg("You do not have enough mana to %s this %s.", verb, noun);
 

@@ -32,6 +32,7 @@
 #include "ui-spell.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-magic.h"
 
 
 /**
@@ -285,7 +286,9 @@ static int spell_menu_select(struct menu *m, const char *noun, const char *verb)
 
 	/* Format, capitalise and display */
 	if (angdroid_zh_tw_enabled()) {
-        strnfmt(buf, sizeof buf, "選擇%s（%s）？按 ? 切換說明", noun, verb);
+        strnfmt(buf, sizeof buf, "選擇%s（%s）？按 ? 切換說明",
+            angdroid_zh_tw_magic_term(noun, true),
+            angdroid_zh_tw_magic_term(verb, true));
     } else {
         strnfmt(buf, sizeof buf, "%s which %s? ('?' to toggle description)",
                 verb, noun);
@@ -310,7 +313,8 @@ static void spell_menu_browse(struct menu *m, const char *noun)
 
 	region_erase_bordered(&m->active);
 	if (angdroid_zh_tw_enabled())
-        prt(format("瀏覽%s（按 ? 切換說明）", noun), 0, 0);
+        prt(format("瀏覽%s（按 ? 切換說明）",
+            angdroid_zh_tw_magic_term(noun, true)), 0, 0);
     else
         prt(format("Browsing %ss. ('?' to toggle description)", noun), 0, 0);
 
@@ -395,7 +399,8 @@ int textui_get_spell(struct player *p, const char *verb,
 
 	/* Create prompt */
 	if (angdroid_zh_tw_enabled())
-        strnfmt(prompt, sizeof prompt, "選擇要%s的書本：", verb);
+        strnfmt(prompt, sizeof prompt, "選擇要%s的書本：",
+            angdroid_zh_tw_magic_term(verb, true));
     else {
         strnfmt(prompt, sizeof prompt, "%s which book?", verb);
         my_strcap(prompt);

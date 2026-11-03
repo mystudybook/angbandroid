@@ -57,6 +57,7 @@ def main():
     game_ui = source(CPP / "angband/ui-game.c", errors)
     obj_cmd = source(CPP / "angband/cmd-obj.c", errors)
     spell_ui = source(CPP / "angband/ui-spell.c", errors)
+    magic_terms = source(CPP / "angband/zh-tw-magic.h", errors)
     player_spell = source(CPP / "angband/player-spell.c", errors)
     cave_cmd = source(CPP / "angband/cmd-cave.c", errors)
     player_attack = source(CPP / "angband/player-attack.c", errors)
@@ -305,6 +306,17 @@ def main():
            "HP and armor translation must honor the lore knowledge gate")
     expect('textblock_append(tb, "%s has slain %d of your ancestors"' in monster_lore,
            "Monster lore English kill grammar was removed")
+    for term in ('"cast", "施放"', '"recite", "誦念"',
+                 '"chant", "吟唱"', '"perform", "舉行"',
+                 '"spell", "法術"', '"prayer", "祈禱"',
+                 '"verse", "詠唱"', '"ritual", "儀式"'):
+        expect(term in magic_terms, "Missing original realm.txt term " + term)
+    expect("angdroid_zh_tw_magic_term(noun, true)" in spell_ui
+           and "angdroid_zh_tw_magic_term(verb, true)" in spell_ui,
+           "Spell menu Chinese still leaks English realm terms")
+    expect('msg("法力不足，無法%s這項%s。"' in obj_cmd
+           and 'msg("You do not have enough mana to %s this %s."' in obj_cmd,
+           "Mana warning must preserve Chinese and English literal formats")
     if errors:
         for item in errors:
             print("FAIL:", item)

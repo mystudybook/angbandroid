@@ -251,6 +251,18 @@ lore knowledge and unique status gates, hit-chance calculation, color
 categories and English fallback are all preserved. This pass does not
 translate more complex ability, spell and movement narrative paragraphs.
 
+## Spell realm action and noun translations (2026-11-03)
+
+The original Angband `gamedata/realm.txt` declares four spellcasting
+realms (arcane, divine, nature, shadow). Their canonical verbs
+`cast/recite/chant/perform` and spell nouns `spell/prayer/verse/ritual`
+now have exact display-only mappings. Spell selection and browsing no
+longer show untranslated English realm verbs/nouns inside Chinese prompts.
+The low-mana warning also uses appropriate noun/verb terms. Unknown and
+English-mode terms still fall back to the original values, and realm data
+and spell commands are unchanged. The standalone C99 game UI test covers
+all four realms.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
