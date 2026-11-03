@@ -20,6 +20,22 @@ static void expect_utf8(const wchar_t *input, size_t count,
     assert(output[bytes] == '\0');
 }
 
+
+static void expect_wide(const char *utf8, const uint32_t *expected, size_t count)
+{
+    wchar_t output[32];
+    size_t n;
+    size_t i;
+    memset(output, 0x55, sizeof(output));
+    n = angdroid_decode_utf8_wide(output, utf8, 32);
+    assert(n == count);
+    assert(output[count] == 0);
+    for (i = 0; i < count; ++i) {
+        assert((uint32_t)output[i] == expected[i]);
+    }
+    assert(angdroid_decode_utf8_wide(NULL, utf8, 0) == count);
+}
+
 int main(void)
 {
     const wchar_t ascii[] = {L'A', L'B', L'C'};
@@ -53,6 +69,24 @@ int main(void)
     assert(zero[0] == '\0');
     assert(angdroid_encode_wide_utf8(NULL, 0, NULL, 0) == (size_t)-1);
 
-    puts("PASS: 9 native UTF-8 conversion cases (C locale)");
+    {
+        const uint32_t mixed[] = {L'A', 0x4E2Du, L'B', 0x9F8Du};
+        const uint32_t supplementary[] = {0x20000u};
+        const uint32_t bad[] = {0xFFFDu, 0xFFFDu, L'A'};
+        const uint32_t overlong[] = {0xFFFDu, 0xFFFDu};
+        wchar_t short_output[2] = {0, 0};
+
+        expect_wide("A\xE4\xB8\xAD""B\xE9\xBE\x8D", mixed, 4);
+        expect_wide("\xF0\xA0\x80\x80", supplementary, 1);
+        expect_wide("\xE4\x80""A", bad, 3);
+        expect_wide("\xC0\xAF", overlong, 2);
+        assert(angdroid_decode_utf8_wide(short_output,
+               "A\xE4\xB8\xAD""B", 2) == 2);
+        assert(short_output[0] == L'A' && short_output[1] == 0x4E2D);
+        assert(angdroid_decode_utf8_wide(NULL, NULL, 0) == (size_t)-1);
+        assert(angdroid_decode_utf8_wide(short_output, "A", -1) == (size_t)-1);
+    }
+
+    puts("PASS: 16 native UTF-8 encode/decode cases (C locale)");
     return 0;
 }
