@@ -199,4 +199,27 @@
     <string name="profile_savefile_hint">存檔檔名</string>
     <string name="splash_start">開始遊戲</string>
     <string name="splash_storage">檔案管理</string>
+
+    <!-- In-game quick settings and confirmation buttons. -->
+    <string name="quick_settings">快速設定</string>
+    <string name="quick_fit_width">符合畫面寬度</string>
+    <string name="quick_fit_height">符合畫面高度</string>
+    <string name="quick_reset_layout_landscape">重設橫向版面</string>
+    <string name="quick_reset_layout_portrait">重設直向版面</string>
+    <string name="quick_add_floating_button">新增浮動按鈕</string>
+    <string name="quick_show_full_keyboard">顯示完整鍵盤</string>
+    <string name="quick_change_ribbon_style">切換快捷按鈕列樣式</string>
+    <string name="quick_manage_keymaps">管理按鍵對應</string>
+    <string name="quick_show_button_ribbon">顯示快捷按鈕列</string>
+    <string name="quick_enable_software_input">啟用螢幕輸入控制</string>
+    <string name="quick_toggle_running_off">關閉連續移動</string>
+    <string name="quick_toggle_running_on">開啟連續移動</string>
+    <string name="quick_change_opacity">調整透明度</string>
+    <string name="quick_rearrange_floating_buttons">重新排列浮動按鈕</string>
+    <string name="quick_reset_dpad_position">重設方向鍵位置</string>
+    <string name="quick_copy_keymaps">複製按鍵對應與浮動按鈕</string>
+    <string name="quick_app_files_location">App 檔案位置</string>
+    <string name="quick_select_source_profile">選擇來源角色設定檔</string>
+    <string name="action_yes">是</string>
+    <string name="action_no">否</string>
 </resources>
