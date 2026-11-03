@@ -1,9 +1,27 @@
 apply plugin: 'com.android.application'
 
-//def my_boost_dir = local_props("boost.dir")
-//def my_boost_dir_libs = my_boost_dir + "/libs"
-//def my_boost_dir_inc  = my_boost_dir + "/include"
-def my_abi_filters = local_props("ABI_FILTERS")
+// Android Studio writes SDK paths to local.properties. Its ABI_FILTERS entry
+// is optional for backwards compatibility with existing local checkouts.
+// Prefer -PABI_FILTERS=x86_64 or ~/.gradle/gradle.properties for local overrides.
+def debugAbiSpec = providers.gradleProperty('ABI_FILTERS').orNull
+if (!debugAbiSpec) {
+    def localFile = rootProject.file('local.properties')
+    if (localFile.isFile()) {
+        def localProperties = new Properties()
+        localFile.withInputStream { input -> localProperties.load(input) }
+        debugAbiSpec = localProperties.getProperty('ABI_FILTERS')
+    }
+}
+// Most Android phones and Apple Silicon Android emulators are ARM64.
+// A standard Intel emulator can use -PABI_FILTERS=x86_64 instead.
+if (!debugAbiSpec?.trim()) debugAbiSpec = 'arm64-v8a'
+def my_abi_filters = debugAbiSpec.split(/[,;]/)
+    .collect { it.trim() }.findAll { it }.unique()
+def supportedAbis = ['armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64']
+if (!my_abi_filters.every { supportedAbis.contains(it) }) {
+    throw new GradleException(
+        "Invalid ABI_FILTERS: ${debugAbiSpec}. Valid values: ${supportedAbis.join(', ')}")
+}
 
 android {
     // Required by AGP 8+. Keep the original applicationId for local upgrades.
@@ -81,14 +99,4 @@ dependencies {
     implementation 'androidx.documentfile:documentfile:1.0.1'
 }
 
-//------------------------------------------------------------
-def local_props(key) { // reads ~ value from local.properties file
-    Properties properties = new Properties()
-    properties.load(project.rootProject.file('local.properties').newDataInputStream())
-    def val = properties.getProperty(key, null)
-    if (val == null)
-        throw new GradleException("""\
-                cant find value '${key}' in file 'local.properties'.  """)
 
-    return val
-}
