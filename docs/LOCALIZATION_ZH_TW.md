@@ -12,7 +12,7 @@ This is an **unofficial** localization of the Android Angband port. The intended
 - Source-level verification checked **186 Java/XML string references** and **18 array references** with no unresolved names; translated array sizes and formatting placeholders match English defaults. All twelve preference entry/entryValues array pairs inspected have matching item counts; persisted value arrays remain untranslated. These are not Android runtime tests.
 - A reusable Python 3 verifier is available: `python3 scripts/check_zh_tw_resources.py`. It checks Java/XML resources, array pairs, placeholders, preferences and localized help images. **This script has not yet been executed on a full local checkout.**
 - No changes to settings persistence, internal variant IDs or native gameplay rules. Unicode text rendering is now being improved in the Android Java terminal layer; no native game text translations have been made.
-- Java 21 offline tests passed on a manually transferred copy of the committed classes: **14 Unicode-width cases, 33 terminal-buffer assertions, and 15,000 seeded mixed operations**. The repository runner is `sh scripts/test-terminal-unicode.sh` and now includes buffer and stress tests. Android Gradle/NDK compilation, emulator testing and screenshot review have **not** been performed.
+- Local JDK 21 offline regression checks passed on a synchronized copy of the updated Java terminal and tests: **14 Unicode-width cases, 52 terminal-buffer assertions, and 15,000 seeded mixed operations**. The newer assertions check whole-lower-row clearing and JNI byte-length handling. The repository runner is `sh scripts/test-terminal-unicode.sh` and now includes buffer and stress tests. Android Gradle/NDK compilation, emulator testing and screenshot review have **not** been performed.
 - Native C Unicode conversion now includes strict UTF-8 encoding and decoding, width-aware `Term_addstr()` / `Term_addch()`, continuation cells and marker-aware redraw hooks. Additional native row-fit, grapheme-boundary and redraw helpers are under test. The core **is still not considered fully Chinese-capable** without NDK compilation, end-to-end integration and layout validation.
 
 ## Essential localization rules
@@ -31,6 +31,10 @@ This is an **unofficial** localization of the Android Angband port. The intended
 5. Catalog and translate the Angband core's user-visible strings and suitable entries in `variant_lib/angband/gamedata`. Do not translate identifiers or data syntax. Treat other included variants as separate projects.
 6. Build with the project's Android SDK / NDK requirements and test the app with a zh-TW device locale, then conduct a gameplay smoke test and save compatibility check.
 7. Review distribution rights and the current Google Play submission requirements before preparing an independent application ID, branding, disclosures, and a release.
+
+## Recent renderer fixes
+
+The Android terminal now clears every lower-row column in `clrtobot()` and respects the explicit JNI byte length in `addnstr()`. Native partial redraw preserves unrelated pending screen changes through `angdroid_union_dirty_range()`. The native helper passed seven isolated host C99 union tests; the full Gradle/NDK application and real handset are still untested.
 
 ## CJK input concerns
 
