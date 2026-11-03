@@ -55,9 +55,9 @@ public class ProfilesActivity extends Activity{
 				@Override
 					public void onCreateContextMenu(ContextMenu menu, View v,
 													ContextMenuInfo menuInfo) {
-					menu.setHeaderTitle("Profile");
-					menu.add(0, CONTEXTMENU_EDITITEM, 0, "Edit");
-					menu.add(0, CONTEXTMENU_DELETEITEM, 0, "Delete");
+					menu.setHeaderTitle(R.string.profile_context_title);
+					menu.add(0, CONTEXTMENU_EDITITEM, 0, R.string.profile_edit_action);
+					menu.add(0, CONTEXTMENU_DELETEITEM, 0, R.string.profile_delete_action);
 				}
 			});
 
@@ -105,7 +105,7 @@ public class ProfilesActivity extends Activity{
 				refreshProListItems();
 			}
 			else
-				Preferences.alert(this, "Not Allowed", "You cannot delete the last profile");
+				Preferences.alert(this, getString(R.string.dialog_not_allowed), getString(R.string.dialog_cannot_delete_last_profile));
 			return true; 
 		case CONTEXTMENU_EDITITEM:
 			Intent intent = new Intent(this, ProfileAddActivity.class);
