@@ -54,7 +54,7 @@
 
 #define ADD_LABEL(text, cmd, valid) { \
 	cmdkey = cmd_lookup_key_unktrl((cmd), mode); \
-	menu_dynamic_add_label_valid(m, (text), cmdkey, (cmd), labels, (valid)); \
+	menu_dynamic_add_label_valid(m, angdroid_game_ui_text((text), angdroid_zh_tw_enabled()), cmdkey, (cmd), labels, (valid)); \
 }
 
 /**

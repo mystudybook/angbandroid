@@ -47,6 +47,9 @@ Game data, player name rules, `CMD_*` values, menu keys and savefile formats
 are unchanged. Chinese character-creation prompt centering measures terminal
 display columns rather than UTF-8 byte lengths.
 
+The first batch also covers common item actions, combat/action menu labels,
+movement, save commands and touch context menu commands (render-only).
+
 This is not a full Angband translation: race/class names, most combat narration,
 spell messages and all other variants retain English. A host C99 test in
 `tests/native/test_game_ui_locale.c` and static source checks are now part

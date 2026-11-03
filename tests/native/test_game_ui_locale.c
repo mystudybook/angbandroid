@@ -11,6 +11,10 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text("New game", 1), "建立新遊戲") == 0);
     assert(strcmp(angdroid_game_ui_text("Point-based", 1), "點數分配") == 0);
     assert(strcmp(angdroid_game_ui_text("Save and quit", 1), "儲存並離開") == 0);
+    assert(strcmp(angdroid_game_ui_text("Inscribe an object", 1), "為物品刻字") == 0);
+    assert(strcmp(angdroid_game_ui_text("Cast a spell", 1), "施放法術") == 0);
+    assert(strcmp(angdroid_game_ui_text("Ignore an item", 1), "忽略物品") == 0);
+    assert(strcmp(angdroid_game_ui_text("Walk Towards", 1), "走向此處") == 0);
     assert(strcmp(angdroid_game_ui_text("Use %s: %s", 1), "使用 %s：%s") == 0);
     assert(strcmp(angdroid_game_ui_text("Saving game... failed!", 1),
                   "遊戲儲存失敗！") == 0);
