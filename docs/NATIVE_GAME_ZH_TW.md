@@ -192,6 +192,14 @@ edge. The zh-TW message history heading shows scrolling as columns.
 The `test_unicode_display.c` host regression covers CJK boundaries and
 highlight column positions.
 
+## Trap, monster and magic-device interaction (2026-11-03)
+
+Translated trap disarm, failure and activation notices, monster dropped-item
+and door-interaction messages, and failed activations for rods, wands and
+staves. The message sound category, underlying entity name and gameplay
+logic remain unchanged. Parameterized messages use literal Chinese and
+English format strings to meet NDK format-security requirements.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

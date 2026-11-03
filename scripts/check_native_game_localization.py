@@ -253,6 +253,13 @@ def main():
     expect('msgt(msg_type, "Your %s %s %s%s. %s"' in player_attack
            and 'msgt(msg_type, "你的 %s %s %s%s。%s"' in player_attack,
            "Ranged translation must preserve its English fallback")
+    expect('msgt(MSG_DISARM, "你成功解除「%s」。", trap->kind->name)' in cave_cmd,
+           "Trap disarm message must retain event and parameter")
+    expect('msg("你觸發了「%s」！", trap->kind->name)' in cave_cmd,
+           "Trap triggered message translation not connected")
+    expect('msg("你沒能正確%s。", action_zh)' in obj_cmd
+           and 'msg("You failed to %s properly.", action)' in obj_cmd,
+           "Device usage warning must preserve English format fallback")
     if errors:
         for item in errors:
             print("FAIL:", item)

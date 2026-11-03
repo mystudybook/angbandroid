@@ -56,20 +56,25 @@ static int check_devices(struct object *obj)
 {
 	int fail;
 	const char *action;
+    const char *action_zh = NULL;
 	const char *what = NULL;
 	bool activated = false;
 
 	/* Get the right string */
 	if (tval_is_rod(obj)) {
 		action = "zap the rod";
+        action_zh = "啟動魔棒";
 	} else if (tval_is_wand(obj)) {
 		action = "use the wand";
+        action_zh = "使用魔杖";
 		what = "wand";
 	} else if (tval_is_staff(obj)) {
 		action = "use the staff";
+        action_zh = "使用法杖";
 		what = "staff";
 	} else {
 		action = "activate it";
+        action_zh = "啟動物品";
 		activated = true;
 	}
 
@@ -79,14 +84,21 @@ static int check_devices(struct object *obj)
 	/* Roll for usage */
 	if (randint1(1000) < fail) {
 		event_signal(EVENT_INPUT_FLUSH);
-		msg("You failed to %s properly.", action);
+		if (angdroid_zh_tw_enabled())
+            msg("你沒能正確%s。", action_zh);
+        else
+            msg("You failed to %s properly.", action);
 		return false;
 	}
 
 	/* Notice empty staffs */
 	if (what && obj->pval <= 0) {
 		event_signal(EVENT_INPUT_FLUSH);
-		msg("The %s has no charges left.", what);
+		if (angdroid_zh_tw_enabled())
+            msg("這根%s的使用次數已耗盡。",
+                strcmp(what, "wand") == 0 ? "魔杖" : "法杖");
+        else
+            msg("The %s has no charges left.", what);
 		return false;
 	}
 
@@ -313,8 +325,11 @@ void do_cmd_wield(struct command *cmd)
 	if (!obj_can_takeoff(equip_obj)) {
 		object_desc(o_name, sizeof(o_name), equip_obj, ODESC_BASE,
 			player);
-		msg("You cannot remove the %s you are %s.", o_name,
-			equip_describe(player, slot));
+		if (angdroid_zh_tw_enabled())
+            msg("你無法卸下目前裝備的 %s。", o_name);
+        else
+            msg("You cannot remove the %s you are %s.", o_name,
+                equip_describe(player, slot));
 		return;
 	}
 
@@ -1165,7 +1180,10 @@ void do_cmd_study_book(struct command *cmd)
 	}
 
 	if (spell_index < 0) {
-		msg("You cannot learn any %ss in that book.", book->realm->spell_noun);
+		if (angdroid_zh_tw_enabled())
+            msg("這本書沒有可以學習的新法術。");
+        else
+            msg("You cannot learn any %ss in that book.", book->realm->spell_noun);
 	} else {
 		spell_learn(spell_index);
 		player->upkeep->energy_use = z_info->move_energy;

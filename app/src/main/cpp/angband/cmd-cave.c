@@ -816,7 +816,10 @@ static bool do_cmd_disarm_aux(struct loc grid)
 
 	/* Two chances - one to disarm, one not to set the trap off */
 	if (randint0(100) < chance) {
-		msgt(MSG_DISARM, "You have disarmed the %s.", trap->kind->name);
+		if (angdroid_zh_tw_enabled())
+            msgt(MSG_DISARM, "你成功解除「%s」。", trap->kind->name);
+        else
+            msgt(MSG_DISARM, "You have disarmed the %s.", trap->kind->name);
 		player_exp_gain(player, 1 + power);
 
 		/* Trap is gone */
@@ -825,12 +828,18 @@ static bool do_cmd_disarm_aux(struct loc grid)
 		}
 	} else if (randint0(100) < chance) {
 		event_signal(EVENT_INPUT_FLUSH);
-		msg("You failed to disarm the %s.", trap->kind->name);
+		if (angdroid_zh_tw_enabled())
+            msg("你沒有解除「%s」。", trap->kind->name);
+        else
+            msg("You failed to disarm the %s.", trap->kind->name);
 
 		/* Player can try again */
 		more = true;
 	} else {
-		msg("You set off the %s!", trap->kind->name);
+		if (angdroid_zh_tw_enabled())
+            msg("你觸發了「%s」！", trap->kind->name);
+        else
+            msg("You set off the %s!", trap->kind->name);
 		hit_trap(grid, -1);
 	}
 
@@ -1899,7 +1908,10 @@ void do_cmd_mon_command(struct command *cmd)
 			object_desc(o_name, sizeof(o_name), obj,
 				ODESC_PREFIX | ODESC_FULL, player);
 			if (!ignore_item_ok(player, obj)) {
-				msg("%s drops %s.", m_name, o_name);
+				if (angdroid_zh_tw_enabled())
+                    msg("%s 丟下了 %s。", m_name, o_name);
+                else
+                    msg("%s drops %s.", m_name, o_name);
 			}
 
 			break;
@@ -1980,9 +1992,15 @@ void do_cmd_mon_command(struct command *cmd)
 							int k = square_door_power(cave, grid);
 							if (randint0(mon->hp / 10) > k) {
 								if (can_bash) {
-									msg("%s slams against the door.", m_name);
+									if (angdroid_zh_tw_enabled())
+                                        msg("%s 猛撞著門。", m_name);
+                                    else
+                                        msg("%s slams against the door.", m_name);
 								} else {
-									msg("%s fiddles with the lock.", m_name);
+									if (angdroid_zh_tw_enabled())
+                                        msg("%s 正在撬門鎖。", m_name);
+                                    else
+                                        msg("%s fiddles with the lock.", m_name);
 								}
 
 								/* Reduce the power of the door by one */
