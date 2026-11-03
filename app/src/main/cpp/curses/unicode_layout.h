@@ -168,4 +168,11 @@ static inline wchar_t angdroid_public_grid_glyph(wchar_t ch)
     return ch == ANGDROID_TEXT_CONTINUATION ? L' ' : ch;
 }
 
+
+/* Prevent a literal noncharacter from being confused with a grid marker. */
+static inline wchar_t angdroid_stream_glyph(wchar_t ch)
+{
+    return ch == ANGDROID_TEXT_CONTINUATION ? L'?' : ch;
+}
+
 #endif
