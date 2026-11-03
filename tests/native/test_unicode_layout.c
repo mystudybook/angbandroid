@@ -179,6 +179,21 @@ int main(void)
         assert(first == 2 && last == 7);
     }
 
-    puts("PASS: native Unicode width, redraw, partner and dirty-range union tests");
+    {
+        /* Direct map cells are fixed-grid locations, unlike text streams. */
+        assert(angdroid_fixed_cell_glyph(0x4E2D, 1) == L'?');
+        assert(angdroid_fixed_cell_glyph(0x9F8D, 1) == L'?');
+        assert(angdroid_fixed_cell_glyph(0x3002, 1) == L'?');
+        assert(angdroid_fixed_cell_glyph(0x20000, 1) == L'?');
+        assert(angdroid_fixed_cell_glyph(L'A', 1) == L'A');
+        assert(angdroid_fixed_cell_glyph(L'@', 1) == L'@');
+        assert(angdroid_fixed_cell_glyph(L' ', 1) == L' ');
+        assert(angdroid_fixed_cell_glyph(0x00DF, 1) == 0x00DF);
+        assert(angdroid_fixed_cell_glyph(ANGDROID_TEXT_CONTINUATION, 1) == L'?');
+        assert(angdroid_fixed_cell_glyph(0x4E2D, 0x80) == 0x4E2D);
+        assert(angdroid_fixed_cell_glyph(0xF0, 0x80) == 0xF0);
+        assert(angdroid_fixed_cell_glyph(0xE000, 1) == 0xE000);
+    }
+    puts("PASS: native Unicode width, redraw, partner, dirty-range and grid tests");
     return 0;
 }
