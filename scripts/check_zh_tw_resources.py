@@ -26,6 +26,7 @@ UI_XML = [
 ]
 ANDROID = "{http://schemas.android.com/apk/res/android}"
 RESOURCE_REF = re.compile(r"^@string/([A-Za-z0-9_]+)$")
+ARRAY_REF = re.compile(r"^@array/([A-Za-z0-9_]+)$")
 JAVA_RESOURCE_REF = re.compile(r"\\bR\\.string\\.([A-Za-z0-9_]+)\\b")
 FORMAT_ARGUMENT = re.compile(r"%(?:[0-9]+\\$)?[a-zA-Z]")
 JAVA_UI = [
@@ -102,6 +103,7 @@ def main():
                 )
 
     referenced = set()
+    array_referenced = set()
     preference_untranslated = []
     for path in UI_XML:
         try:
@@ -110,6 +112,31 @@ def main():
             errors.append(f"Invalid UI XML: {path}: {exc}")
             continue
         for elem in root.iter():
+            entries = elem.attrib.get(ANDROID + "entries", "")
+            values = elem.attrib.get(ANDROID + "entryValues", "")
+            entry_match = ARRAY_REF.fullmatch(entries)
+            value_match = ARRAY_REF.fullmatch(values)
+            if entry_match:
+                array_referenced.add(entry_match.group(1))
+            if value_match:
+                array_referenced.add(value_match.group(1))
+            if entry_match and value_match:
+                entry_id = entry_match.group(1)
+                value_id = value_match.group(1)
+                display = english.get(entry_id)
+                persisted = english.get(value_id)
+                if not display or display.tag != "string-array":
+                    errors.append(f"Unresolved display array: {entry_id}")
+                if not persisted or persisted.tag != "string-array":
+                    errors.append(f"Unresolved value array: {value_id}")
+                if display is not None and persisted is not None and (
+                    len(display.findall("item")) != len(persisted.findall("item"))
+                ):
+                    errors.append(f"Entries and entryValues count differs: {entry_id}/{value_id}")
+                if entry_id in PERSISTED and entry_id in chinese:
+                    errors.append(f"Translated persisted labels reused for display: {entry_id}")
+                if value_id in chinese:
+                    errors.append(f"Localized array must not store preference values: {value_id}")
             for name, value in elem.attrib.items():
                 if name not in {
                     ANDROID + "title", ANDROID + "summary",
@@ -132,6 +159,10 @@ def main():
             errors.append(f"Cannot read Java source: {path}: {exc}")
             continue
         referenced.update(JAVA_RESOURCE_REF.findall(source))
+
+    for name in sorted(array_referenced):
+        if name not in english:
+            errors.append(f"Unresolved array resource: {name}")
 
     for name in sorted(referenced):
         if name not in english:
@@ -165,7 +196,8 @@ def main():
     )
     print(
         f"  English resources: {len(english)} | zh-TW resources: {len(chinese)} "
-        f"| referenced UI strings: {len(referenced)}"
+        f"| referenced UI strings: {len(referenced)} "
+        f"| referenced arrays: {len(array_referenced)}"
     )
     return 0
 
