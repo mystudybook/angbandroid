@@ -23,23 +23,35 @@ A local JDK 21 validation of a manually transferred copy of the committed Java s
 
 These were **offline Java tests**, not a full GitHub checkout build, Android Gradle build, emulator run, or screenshot review. Run `sh scripts/test-terminal-unicode.sh` on a fresh checkout to reproduce.
 
-## Native UTF-8 transport and width groundwork (2026-11-03)
+## Native CJK grid integration (2026-11-03)
 
-- `app/src/main/cpp/curses/waddnwstr()` now encodes an explicitly sized `wchar_t` sequence as UTF-8 rather than relying on the process C locale and `wcstombs()`. The new `unicode_utf8.h` helper handles BMP, supplementary-plane code points, and invalid Unicode scalars, while checking output capacity. Conversion failures no longer leak the temporary wide buffer.
-- `waddnstr()` now rejects invalid or empty byte transfers before calling JNI.
-- `unicode_width.h` mirrors Java's `TerminalUnicode` East Asian two-column classification. **The native width helper is preparatory only; it is not yet wired into `ui-term.c`'s cursor or screen-grid logic.**
-- `sh scripts/test-native-utf8.sh` compiles and runs two standalone native C tests: 9 UTF-8 transport cases in the strict C locale, and 14 representative native width cases. These passed on a local host C compiler. They do not replace an Android NDK build.
-- Use `sh scripts/verify-zh-tw.sh` from the repository root to combine the offline Python, Java and C checks in `zh-tw-validation.log`.
+This stage has been committed to `master`, but **has not passed Android NDK compilation or emulator/gameplay integration tests**:
 
-## Confirmed native column-width mismatch — important
+- `curses/unicode_utf8.h` now provides locale-independent UTF-8 encoding **and decoding** with validation and replacement of malformed code points. `common/angdroid.c` installs these conversions as the base Angband `text_mbcs_hook` / `text_wctomb_hook`; other variants keep their own encoding choices.
+- `curses/unicode_layout.h` defines a private U+FDD0 **continuation marker**, row-width clipping, and a helper that separates visible redraw runs from continuation columns. `unicode_width.h` matches the Java width classifier.
+- `angband/ui-term.c` now uses width-aware `Term_addstr()` and `Term_addch()`. The native cursor advances two physical columns for common Han glyphs, and the screen buffer stores a continuation marker in the second column. Writing or erasing either half also invalidates the other half. A wide glyph that does not fit on the final column is not split.
+- `common/angdroid.c` removes internal continuation markers from `Term_text_android()` redraw runs while preserving their **physical x offsets**. Its `Term_pict_android()` sends unflagged Unicode glyphs through the text renderer instead of truncating them into 8-bit tile IDs. Existing high-bit tile indices remain on the tile path.
+- `curses/waddnwstr()` encodes explicit `wchar_t` lengths as UTF-8 without relying on the C locale; failures are bounds-checked and allocation is freed.
 
-The Java terminal now correctly reserves two cells for a Chinese glyph, **but Angband's native terminal currently counts each wide character as exactly one column**:
+## Regression checks
 
-- `app/src/main/cpp/angband/ui-term.c`, `Term_queue_chars()`: queues one `wchar_t` for each `x++`; there is no wide-character continuation cell.
-- The same file, `Term_addstr()`: queues `n` characters and then advances the native cursor using `Term->scr->cx += n`.
-- `app/src/main/cpp/common/angdroid.c`, `Term_text_android()`: forwards the original native `(x,y,n,wchar_t*)` positions through `wmove()` and `waddnwstr()`.
+Run from the repository root:
 
-For a string `A中B龍`, the Java buffer reserves six display columns, while native `Term_addstr()` counts four. This will cause native cursor coordinates and Java renderer coordinates to diverge for actual translated gameplay. **Do not present the current implementation as end-to-end Chinese support.** Before translating core data, decide how to represent wide-glyph continuation cells in native `ui-term.c`, or introduce an explicit native-to-Android logical/physical column mapping with full redraw behavior. Existing ASCII/tile modes must remain compatible.
+```bash
+sh scripts/verify-zh-tw.sh
+```
+
+The script checks Android resources, Java Unicode terminal behavior, native UTF-8 encode/decode, native width/row fitting, native continuation redraw segmentation, and static source wiring. It produces `zh-tw-validation.log`.
+
+Local host-C compilation of isolated equivalent helper implementations passed strict C99 `-Wall -Wextra -Werror -pedantic` checks for width, row fitting, redraw-run segmentation and UTF-8 decoding. **The full repository tests have not been run in an Android build environment in this round**, and source-level checks do not replace an end-to-end renderer test.
+
+## Remaining integration issues — do not assume game-wide CJK support
+
+- The main cursor paths `Term_addstr()` and `Term_addch()` now account for double-width glyphs, but **direct cell APIs such as `Term_draw()`, legacy `Term_queue_chars()`, game map coordinate calculations and various UI layout routines may still assume one logical cell per character**. The native/Java policy is not yet verified consistently across all rendering paths.
+- Rendering a changed lead or continuation cell must remain correct during incremental refresh, scrolling, graphics switching and background redraw. Native code was updated, but it needs Android emulator screenshots and tests.
+- Combining marks, emoji sequences and grapheme clusters still need handling; the implemented classifier currently supports widths 1 and 2, not zero-width attachments.
+- The special internal U+FDD0 continuation marker is reserved, not user-displayable text. Control paths must not expose it to Java.
+- Map tiles, half-tile redraws, alternate Angband variants and savefile compatibility require separate regression testing.
 
 ## Important limitations and remaining tasks
 
