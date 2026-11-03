@@ -904,15 +904,15 @@ static enum birth_stage roller_command(bool first_call)
 		prev_roll = false;
 
 	/* Prepare a prompt (must squeeze everything in) */
-	strnfcat(prompt, sizeof (prompt), &promptlen, angdroid_game_ui_text("['r' to reroll", angdroid_zh_tw_enabled()));
+	strnfcat(prompt, sizeof (prompt), &promptlen, "%s", angdroid_game_ui_text("['r' to reroll", angdroid_zh_tw_enabled()));
 	if (prev_roll) {
 		soft_kbd_flash("rp?\x18");
-		strnfcat(prompt, sizeof(prompt), &promptlen, angdroid_game_ui_text(", 'p' for previous roll", angdroid_zh_tw_enabled()));
+		strnfcat(prompt, sizeof(prompt), &promptlen, "%s", angdroid_game_ui_text(", 'p' for previous roll", angdroid_zh_tw_enabled()));
 	}
 	else {
 		soft_kbd_flash("r?\x18");
 	}
-	strnfcat(prompt, sizeof (prompt), &promptlen, angdroid_game_ui_text(" or 'Enter' to accept]", angdroid_zh_tw_enabled()));
+	strnfcat(prompt, sizeof (prompt), &promptlen, "%s", angdroid_game_ui_text(" or 'Enter' to accept]", angdroid_zh_tw_enabled()));
 
 	/* Prompt for it */
 	prt(prompt, Term->hgt - 1, birth_prompt_column(prompt));

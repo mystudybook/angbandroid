@@ -10,6 +10,11 @@ int main(void)
     const char *unknown = "Untranslated data";
     assert(strcmp(angdroid_game_ui_text("New game", 1), "建立新遊戲") == 0);
     assert(strcmp(angdroid_game_ui_text("Point-based", 1), "點數分配") == 0);
+    assert(strcmp(angdroid_game_ui_text("['r' to reroll", 1), "[r 重擲") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'p' for previous roll", 1),
+                  "，p 上次") == 0);
+    assert(strcmp(angdroid_game_ui_text(" or 'Enter' to accept]", 1),
+                  "，Enter 確認]") == 0);
     assert(strcmp(angdroid_game_ui_text("Save and quit", 1), "儲存並離開") == 0);
     assert(strcmp(angdroid_game_ui_text("Inscribe an object", 1), "為物品刻字") == 0);
     assert(strcmp(angdroid_game_ui_text("Cast a spell", 1), "施放法術") == 0);

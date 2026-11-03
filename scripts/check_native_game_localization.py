@@ -136,6 +136,17 @@ def main():
            "Command category translation is not display-only")
     expect("birth_prompt_column(prompt)" in birth_ui,
            "CJK character creation prompt width is not measured")
+    # strnfcat() is a printf-style API: a dynamic translation may only
+    # be a value argument, never the format string (NDK -Wformat-security).
+    for english in ("['r' to reroll", ", 'p' for previous roll",
+                    " or 'Enter' to accept]"):
+        expected = '"%s", angdroid_game_ui_text("' + english + '"'
+        expect(expected in birth_ui,
+               "Localized roller prompt needs a literal %s format: " + english)
+    expect(not re.search(
+        r"strnfcat\\s*\\([^;]*?&promptlen,\\s*angdroid_game_ui_text\\s*\\(",
+        birth_ui),
+        "Unsafe localized strnfcat format string reintroduced")
     expect('angdroid_game_ui_text("New game"' in game_ui,
            "Savegame selector is not translated at display time")
     expect("test_game_ui_locale.c" in native_tests,

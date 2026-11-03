@@ -58,6 +58,21 @@ spell messages and all other variants retain English. A host C99 test in
 of the local verification script; a real Android gameplay/viewport test is
 still needed.
 
+## 2026-11-03 Android NDK format-security build fix
+
+Android NDK r28c revealed three `-Werror=format-security` errors in
+`ui-birth.c` when passing localized roller prompt fragments as the fourth
+(format-string) argument to the printf-style `strnfcat()` function.
+Each now passes a literal `"%s"` as the format string and passes the
+localized text as the following value argument. This prevents format-string
+injection and preserves the localized prompt and its existing length
+accounting. The source check guards all three call sites, and the standalone
+C99 text test checks the expected prompt fragments and English fallback.
+
+A host Clang/GCC-compatible proof of the literal-format calling pattern
+compiled with `-Werror=format-security`. The full Android project must still
+be rebuilt on the user's SDK/NDK environment to verify the actual project.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
