@@ -71,20 +71,20 @@ public class ProfileAddActivity extends Activity {
 															  newName,
 															  newSaveFile);
 		if (msg != null) {
-			Preferences.alert(this, "Not Allowed", msg);
+			Preferences.alert(this, getString(R.string.dialog_not_allowed), msg);
 			return;
 		}
 
 		if (origSaveFile.compareTo(newSaveFile)!=0
 			&& Preferences.saveFileExists(newSaveFile)) {
 			new AlertDialog.Builder(this) 
-				.setTitle("Are you sure?") 
-				.setMessage("The save file already exists on the card") 
-				.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+				.setTitle(R.string.dialog_are_you_sure) 
+				.setMessage(R.string.dialog_savefile_exists) 
+				.setNegativeButton(R.string.action_cancel, new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
 					}
 				})
-				.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+				.setPositiveButton(R.string.action_ok, new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
 						doSave();
 					}
