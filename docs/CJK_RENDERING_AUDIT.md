@@ -39,6 +39,17 @@ This stage has been committed to `master`, but **has not passed Android NDK comp
 - `unicode_layout.h` now exposes `angdroid_expand_redraw_columns()` and `angdroid_wide_partner_column()`. The native `Term_queue_char()` overwrite path uses the same testable partner-cell rule rather than duplicating glyph-span checks.
 - `tests/native/test_unicode_layout.c` covers 8 redraw-boundary cases and 14 overwrite-partner assertions in addition to existing Unicode width/marker tests. An isolated local C99 copy of the helper logic passed these 22 checks under `-Wall -Wextra -Werror -pedantic`. **A complete checkout/NDK build has not been run for this change.**
 
+## Additional terminal integrity fixes (2026-11-03)
+
+- `TermWindow.clrtobot()` now clears the current row from the cursor and **all columns** on subsequent rows. Previously it incorrectly reused the original cursor column on every row, potentially leaving stale Chinese characters and continuation cells on lower rows.
+- `TermWindow.addnstr(n, bytes, encoding)` now respects the explicit JNI **byte count**, clamps it to the actual byte-array size, and ignores null, zero or negative lengths. Previously it decoded the entire Java byte array regardless of `n`.
+- `Term_redraw_section()` now **unions** its requested row/column bounds with native updates already queued for refresh instead of replacing them. `angdroid_union_dirty_range()` is shared with host-C tests so a localized CJK redraw cannot discard unrelated pending redraws.
+- Source-level checks in `scripts/check-native-unicode-contract.py` cover the three behaviors above.
+
+### Verified at the host-language level
+
+A local JDK compilation of the corresponding Java classes/tests passed **14 width cases**, **52 terminal-buffer assertions**, and **15,000 seeded mixed terminal operations**. A host C99 `-Wall -Wextra -Werror -pedantic` build passed **7 redraw-dirty-range union cases** using an isolated copy of the committed helper implementation. These checks **do not establish that the complete current checkout or Android APK compiles**, and Android on-device CJK rendering is still unverified.
+
 ## Regression checks
 
 Run from the repository root:
