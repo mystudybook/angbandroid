@@ -45,6 +45,7 @@ def main():
     mon_header = source(CPP / "angband/zh-tw-monsters.h", errors)
     obj = source(CPP / "angband/obj-desc.c", errors)
     obj_header = source(CPP / "angband/zh-tw-items.h", errors)
+    display_width = source(CPP / "curses/unicode_display.h", errors)
     monster_list = source(CPP / "angband/ui-mon-list.c", errors)
     object_list = source(CPP / "angband/ui-obj-list.c", errors)
     native_tests = source(ROOT / "scripts/test-native-utf8.sh", errors)
@@ -77,9 +78,9 @@ def main():
 
     for cfile, header, macro, target, count in (
         (mon, mon_header, "ANGDROID_ZH_TW_MONSTER_NAMES",
-         "angdroid_zh_tw_monster_list_name(race->name)", 38),
+         "angdroid_zh_tw_monster_list_name(race->name)", 128),
         (obj, obj_header, "ANGDROID_ZH_TW_ITEM_KINDS",
-         "angdroid_zh_tw_item_kind_name(kind->name)", 37),
+         "angdroid_zh_tw_item_kind_name(kind->name)", 76),
     ):
         mapping = table(header)
         match = re.search(r"#define\s+" + macro + r"\s+(\d+)", header)
@@ -93,6 +94,16 @@ def main():
                f"Empty translation: {macro}")
         expect(target in cfile,
                f"Dictionary is not wired to the display-only helper: {macro}")
+    for symbol in ("angdroid_utf8_display_columns",
+                   "angdroid_utf8_clip_columns",
+                   "angdroid_utf8_printf_field_bytes"):
+        expect(symbol in display_width,
+               f"Missing Unicode column helper: {symbol}")
+        expect(symbol in monster_list and symbol in object_list,
+               f"Native monster/item lists are not both using {symbol}")
+    expect("test_unicode_display.c" in native_tests,
+           "CJK UTF-8 clipping regression is not registered")
+
     expect("!rf_has(race->flags, RF_UNIQUE)" in mon,
            "Unique monster names must remain in their original display form")
     expect("if (!easy_know && !kind->aware && kind->flavor)" in obj,
@@ -115,7 +126,7 @@ def main():
             print("FAIL:", item)
         return 1
     print(f"PASS: {checks} native game-localization source safeguards")
-    print("  Monster list entries: 38 | item kind labels: 37")
+    print("  Monster list entries: 128 | item kind labels: 76")
     print("  Death menu labels: 9 | death prompts: 11")
     print("NOTE: Requires Android NDK and on-device zh-TW gameplay validation")
     return 0
