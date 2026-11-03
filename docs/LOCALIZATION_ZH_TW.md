@@ -4,27 +4,29 @@ This is an **unofficial** localization of the Android Angband port. The intended
 
 ## Status
 
-- `values-zh-rTW/strings.xml` contains **154 translated string resources** (40 initial + 99 preference UI + 15 launcher/profile/dialog strings) and **4 translated display-only arrays** (28 items).
+- `values-zh-rTW/strings.xml` now contains **192 translated string resources** (40 initial + 99 preferences + 15 launcher/profile/dialogs + 21 game quick settings + 17 storage messages), and **7 display-only arrays** (42 localized items).
 - In `res/xml/preferences.xml`, **99 hard-coded UI labels and summaries** now reference localized strings. The remaining 67 hard-coded labels are literal keyboard letters/digits/symbol keycaps (deliberately unchanged).
-- Localized launcher buttons, profile editor hints and buttons, profile context actions, several profile dialogs and the help activity title.
-- Static source checks verified all 140 observed Java/XML `R.string` and `@string` references exist in the English defaults, translated keys exist in English, array sizes agree and literal percentage strings have `formatted="false"`. These checks are not an Android compilation.
-- A reusable Python 3 static verifier is available: `python3 scripts/check_zh_tw_resources.py`. **It has been added but not executed in an Android build environment yet.**
-- No changes to settings persistence, internal variant IDs, gameplay logic, or asset bundles.
+- Localized launcher buttons, profile editor hints/buttons, profile context actions, basic dialogs, in-game quick settings, and storage manager buttons/messages.
+- The Chinese HTML guide is `app/src/main/assets/help_zh_tw.html`; `HelpActivity` selects it for the `zh-TW` device locale, retaining the upstream `help.html` as English fallback.
+- Split D-Pad colors, quick-key popup position and storage location display arrays from their stable persisted `entryValues`.
+- Source-level verification checked **182 Java/XML string references** and **18 array references** with no unresolved names; translated array sizes and formatting placeholders match English defaults. All twelve preference entry/entryValues array pairs inspected have matching item counts; persisted value arrays remain untranslated. These are not Android runtime tests.
+- A reusable Python 3 verifier is available: `python3 scripts/check_zh_tw_resources.py`. It checks Java/XML resources, array pairs, placeholders, preferences and localized help images. **This script has not yet been executed on a full local checkout.**
+- No changes to settings persistence, internal variant IDs, or native gameplay logic. The only added game-adjacent asset is the localized HTML guide.
 - Compilation, emulator testing, and screenshot review have **not** been performed.
 
 ## Essential localization rules
 
 - Translate **display labels only**. Never translate keys, serialized values, command keystrokes, plugin identifiers, or game data identifiers used by loaders.
-- Some existing preference menus use the same resource array for `android:entries` and `android:entryValues` (e.g. `storageLocations`, `DPadColors`, and `FastKeysPopupPosition`). Do **not** translate these arrays in place: split display entries and stable entry values before localizing them.
+- Some original preference menus used the same array for `android:entries` and `android:entryValues`. We separated the display labels for `storageLocations`, `DPadColors` and `FastKeysPopupPosition`; the persisted English strings are unchanged. Continue applying this separation rule to any future editable options.
 - Keep English as the fallback locale. Use Android `values-zh-rTW` for Taiwanese Traditional Chinese. Verify device locale behavior.
 - Preserve game names, artists' names, licenses, and attribution.
 
 ## Next implementation steps
 
 1. **Done (first pass):** extract and translate preference title/summary labels, leaving keyboard keycap literals and persistent values intact.
-2. **In progress:** extract hard-coded English UI text from remaining Java classes (notably `StorageActivity`, `GameActivity`, and profile-validation messages).
-3. Translate `app/src/main/assets/help.html` with an explicit locale-aware loading strategy.
-4. Validate Unicode/CJK display in native Angband: its core uses UTF-8 and wide characters in parts of the rendering pipeline, but the Android terminal currently uses bundled monospace fonts such as `VeraMoBd.ttf` and `6x13.ttf`. Test missing glyphs, display width, wrapping, clipping, and input before translating gameplay strings.
+2. **In progress:** continue extracting remaining Java UI text (including `ProfileList` validation, custom input controls, file-system exception messages and other interactive screens). `StorageActivity` and the main `GameActivity` quick settings have been handled.
+3. **Done (first pass):** translated Android help HTML with locale-aware loading and English fallback. Review text and screenshots on a device.
+4. **Blocked pending renderer work:** the terminal truncates character values with `& 0xFF`, draws text into one-cell clips and has no verified CJK font/column-width handling. See [`docs/CJK_RENDERING_AUDIT.md`](CJK_RENDERING_AUDIT.md) for specific source evidence and a safe proof-of-concept plan.
 5. Catalog and translate the Angband core's user-visible strings and suitable entries in `variant_lib/angband/gamedata`. Do not translate identifiers or data syntax. Treat other included variants as separate projects.
 6. Build with the project's Android SDK / NDK requirements and test the app with a zh-TW device locale, then conduct a gameplay smoke test and save compatibility check.
 7. Review distribution rights and the current Google Play submission requirements before preparing an independent application ID, branding, disclosures, and a release.
