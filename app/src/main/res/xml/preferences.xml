@@ -9,7 +9,7 @@
 		<ListPreference android:key="angband.tmp_storage"
 			android:title="@string/pref_storage_location"
 			android:summary="@string/pref_restart_required"
-			android:entries="@array/storageLocations"
+			android:entries="@array/storageLocationLabels"
 			android:entryValues="@array/storageLocations"
 			android:defaultValue="External" />
 	</PreferenceCategory>
@@ -59,7 +59,7 @@
 			<org.rephial.xyangband.SeekBarPreference android:key="angband.reduce_buttons" android:title="@string/pref_button_width_for_long_selections_lists_try_with_50" seekBar:min="0" seekBar:max="100" seekBar:defaultVal="0" />
 			<CheckBoxPreference android:key="angband.showautolist" android:defaultValue="false" android:title="@string/pref_auto_display_long_lists" android:summary="@string/pref_when_you_are_prompted_for_selection" />
 			<CheckBoxPreference android:key="angband.useicons" android:defaultValue="true" android:title="@string/pref_use_icons" android:summary="@string/pref_use_icons_for_ribbon_buttons" />
-			<ListPreference android:title="@string/pref_position_of_fast_keys_popup" android:key="angband.fk_popup_pos" android:defaultValue="Hidden" android:entries="@array/FastKeysPopupPosition" android:entryValues="@array/FastKeysPopupPosition" />
+			<ListPreference android:title="@string/pref_position_of_fast_keys_popup" android:key="angband.fk_popup_pos" android:defaultValue="Hidden" android:entries="@array/FastKeysPopupPositionLabels" android:entryValues="@array/FastKeysPopupPosition" />
 			<CheckBoxPreference android:key="angband.quantity_popup" android:defaultValue="true" android:title="@string/pref_enable_the_quantity_popup" />
 		</PreferenceScreen>
 		<PreferenceScreen android:title="@string/pref_hardware_key_mapping" android:summary="@string/pref_configure_hardware_buttons_on_your_device_to_perform_various_functions">
@@ -169,8 +169,8 @@
 			<org.rephial.xyangband.SeekBarPreference android:key="angband.touchmultiplier" android:title="@string/pref_touch_directional_size_multiplier" android:dependency="angband.touchright" seekBar:min="0" seekBar:max="100" seekBar:defaultVal="0" />
 			<CheckBoxPreference android:key="angband.enable_touch_drag" android:defaultValue="true" android:dependency="angband.touchright" android:title="@string/pref_allow_drag_and_drop_of_the_touch_directionals" />
 			<ListPreference android:title="@string/pref_center_screen_tap_action" android:summary="@string/pref_select_functionality_for_center_screen_tap" android:key="angband.centerscreentap" android:defaultValue="Five" android:entries="@array/virtKeyActionDescriptions" android:entryValues="@array/virtKeyActions" />
-			<ListPreference android:title="@string/pref_d_pad_color_1" android:key="angband.dpad_color1" android:defaultValue="@string/def_dpad_color1" android:entries="@array/DPadColors" android:entryValues="@array/DPadColors" />
-			<ListPreference android:title="@string/pref_d_pad_color_2" android:key="angband.dpad_color2" android:defaultValue="@string/def_dpad_color2" android:entries="@array/DPadColors" android:entryValues="@array/DPadColors" />
+			<ListPreference android:title="@string/pref_d_pad_color_1" android:key="angband.dpad_color1" android:defaultValue="@string/def_dpad_color1" android:entries="@array/DPadColorLabels" android:entryValues="@array/DPadColors" />
+			<ListPreference android:title="@string/pref_d_pad_color_2" android:key="angband.dpad_color2" android:defaultValue="@string/def_dpad_color2" android:entries="@array/DPadColorLabels" android:entryValues="@array/DPadColors" />
 		</PreferenceScreen>
 		<CheckBoxPreference android:key="angband.debug_keycodes" android:defaultValue="false" android:title="@string/pref_debug_keycodes_external_keyboards" android:summary="@string/pref_display_the_numeric_codes_on_screen" />
 	</PreferenceCategory>
