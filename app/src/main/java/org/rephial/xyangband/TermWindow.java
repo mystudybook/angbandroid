@@ -175,9 +175,12 @@ public class TermWindow {
 	}
 
 	public void clrtobot() {
-		//Log.d("Angband","TermWindow.clrtobot ("+row+","+col+")");
-		for (int r=row;r<rows;r++) {
-			for (int c=col;c<cols;c++) {
+		// Clear from the cursor to EOL on the current row, then every
+		// column on subsequent rows. Starting each row at 'col' leaves
+		// stale characters behind, including wide-text continuation cells.
+		for (int r = row; r < rows; r++) {
+			int first = (r == row) ? col : 0;
+			for (int c = first; c < cols; c++) {
 				clearPoint(r, c);
 			}
 		}
