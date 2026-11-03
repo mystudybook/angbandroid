@@ -81,7 +81,7 @@ NDK not configured. Download it with SDK manager.
 Preferred NDK version is '28.2.13676358'.
 ```
 
-This means no complete Android C/C++ or APK build ran. The build now pins NDK r28c explicitly with modern Gradle 9 `property = value` declarations and checks local SDK packages **before** attempting the Gradle build. Deprecated AGP 9 compatibility flags (`android.nonFinalResIds=false`, `android.builtInKotlin=false`, and `android.enableAppCompileTimeRClass=false`) are left unchanged intentionally, because they are not the error in this log.
+This means no complete Android C/C++ or APK build ran. The same log also contains a warning about SDK repository XML version 4 being read by tools that recognize only version 3. Update **Android SDK Command-line Tools (latest)** in SDK Manager if this warning persists; it is a separate warning, not the fatal NDK error. The build now pins NDK r28c explicitly with modern Gradle 9 `property = value` declarations and checks local SDK packages **before** attempting the Gradle build. Deprecated AGP 9 compatibility flags (`android.nonFinalResIds=false`, `android.builtInKotlin=false`, and `android.enableAppCompileTimeRClass=false`) are left unchanged intentionally, because they are not the error in this log.
 
 For an Android Studio user, select **Tools → SDK Manager → SDK Tools → Show Package Details**, and install NDK 28.2.13676358, CMake 3.10.2, and Build Tools 36.0.0 as needed. API 35 is under SDK Platforms. Or, if Command-line Tools are installed and the path is correct:
 
