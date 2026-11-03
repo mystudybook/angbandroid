@@ -6,8 +6,12 @@ apply plugin: 'com.android.application'
 def my_abi_filters = local_props("ABI_FILTERS")
 
 android {
-    compileSdkVersion 34
-    buildToolsVersion "30.0.3"
+    // Required by AGP 8+. Keep the original applicationId for local upgrades.
+    namespace "org.rephial.xyangband"
+    compileSdk 35
+
+    // Preserve the known native toolchain while migrating Gradle/JDK.
+    // Upgrade NDK/CMake separately after validating native compilation.
     ndkVersion "21.0.6113669"
     defaultConfig {
         applicationId "org.rephial.xyangband"
@@ -32,6 +36,16 @@ android {
             }
         }
     }
+    // Build and compile with a JDK 21 toolchain. Android 5.1 remains
+    // supported by using Java 17 language/bytecode compatibility instead
+    // of requiring Java 21 runtime APIs on Android devices.
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    buildFeatures {
+        buildConfig true
+    }
     buildTypes {
         debug {
             ndk {
@@ -50,6 +64,12 @@ android {
             path "src/main/cpp/CMakeLists.txt"
             version "3.10.2"
         }
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
     }
 }
 
