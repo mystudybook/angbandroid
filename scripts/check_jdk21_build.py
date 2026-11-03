@@ -39,10 +39,10 @@ def main():
         "Java 17 Android bytecode": "sourceCompatibility JavaVersion.VERSION_17" in app
             and "targetCompatibility JavaVersion.VERSION_17" in app,
         "Android namespace": 'namespace "org.rephial.xyangband"' in app,
-        "Android compile SDK 35": bool(re.search(r"\\bcompileSdk\\s+35\\b", app)),
+        "Android compile SDK 35": bool(re.search(r"\bcompileSdk\s+35\b", app)),
         "Android applicationId unchanged": 'applicationId "org.rephial.xyangband"' in app,
-        "Target SDK unchanged": bool(re.search(r"\\btargetSdk\\s+34\\b", app)),
-        "Min SDK unchanged": bool(re.search(r"\\bminSdkVersion\\s+22\\b", app)),
+        "Target SDK unchanged": bool(re.search(r"\btargetSdk\s+34\b", app)),
+        "Min SDK unchanged": bool(re.search(r"\bminSdkVersion\s+22\b", app)),
         "NDK unchanged": 'ndkVersion "21.0.6113669"' in app,
         "Maven Central repositories": top.count("mavenCentral()") == 2
             and "jcenter()" not in top,
