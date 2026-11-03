@@ -23,6 +23,16 @@ A local JDK 21 validation of a manually transferred copy of the committed Java s
 
 These were **offline Java tests**, not a full GitHub checkout build, Android Gradle build, emulator run, or screenshot review. Run `sh scripts/test-terminal-unicode.sh` on a fresh checkout to reproduce.
 
+## Confirmed native column-width mismatch — important
+
+The Java terminal now correctly reserves two cells for a Chinese glyph, **but Angband's native terminal currently counts each wide character as exactly one column**:
+
+- `app/src/main/cpp/angband/ui-term.c`, `Term_queue_chars()`: queues one `wchar_t` for each `x++`; there is no wide-character continuation cell.
+- The same file, `Term_addstr()`: queues `n` characters and then advances the native cursor using `Term->scr->cx += n`.
+- `app/src/main/cpp/common/angdroid.c`, `Term_text_android()`: forwards the original native `(x,y,n,wchar_t*)` positions through `wmove()` and `waddnwstr()`.
+
+For a string `A中B龍`, the Java buffer reserves six display columns, while native `Term_addstr()` counts four. This will cause native cursor coordinates and Java renderer coordinates to diverge for actual translated gameplay. **Do not present the current implementation as end-to-end Chinese support.** Before translating core data, decide how to represent wide-glyph continuation cells in native `ui-term.c`, or introduce an explicit native-to-Android logical/physical column mapping with full redraw behavior. Existing ASCII/tile modes must remain compatible.
+
 ## Important limitations and remaining tasks
 
 - **Native terminal layout:** Check Angband's `wcwidth`-like rules, `wchar_t` output, curses compatibility, command prompts, the text UI's own wrapping decisions and cursor coordinates. Java's new two-column policy and native layout must agree on real device screens.
