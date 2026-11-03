@@ -14,7 +14,9 @@ javac -encoding UTF-8 -d "$BUILD_DIR" \
   "$ROOT/app/src/main/java/org/rephial/xyangband/TerminalUnicode.java" \
   "$ROOT/app/src/main/java/org/rephial/xyangband/TermWindow.java" \
   "$ROOT/tests/java/org/rephial/xyangband/TerminalUnicodeTest.java" \
-  "$ROOT/tests/java/org/rephial/xyangband/TermWindowUnicodeTest.java"
+  "$ROOT/tests/java/org/rephial/xyangband/TermWindowUnicodeTest.java" \
+  "$ROOT/tests/java/org/rephial/xyangband/TermWindowStressTest.java"
 
 java -cp "$BUILD_DIR" org.rephial.xyangband.TerminalUnicodeTest
 java -cp "$BUILD_DIR" org.rephial.xyangband.TermWindowUnicodeTest
+java -cp "$BUILD_DIR" org.rephial.xyangband.TermWindowStressTest
