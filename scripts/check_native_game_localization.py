@@ -490,10 +490,10 @@ def main():
     mon_msg_originals = source(CPP / "angband/list-mon-message.h", errors)
     mon_msg_zh = source(CPP / "angband/zh-tw-mon-messages.h", errors)
     original_codes = set(re.findall(
-        r"^\\s*MON_MSG\\(\\s*([A-Z][A-Z0-9_]*)\\s*,",
+        r"^\s*MON_MSG\(\s*([A-Z][A-Z0-9_]*)\s*,",
         mon_msg_originals, re.M)) - {"MAX"}
     translated_codes = set(re.findall(
-        r"^ZH_MON_MSG\\(([A-Z][A-Z0-9_]*),",
+        r"^ZH_MON_MSG\(([A-Z][A-Z0-9_]*),",
         mon_msg_zh, re.M))
     expect(len(original_codes) == 55 and original_codes == translated_codes,
            "Missing or extra named monster event translation")
