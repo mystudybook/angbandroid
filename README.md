@@ -2,7 +2,7 @@
 
 ## 繁體中文化（非官方）
 
-這個 Fork 正在進行台灣繁體中文（zh-TW）中文化。**目前已包含部分 Android 介面、設定、檔案管理和使用說明的中文翻譯，目前已加入首批原生遊戲訊息、38 個怪物清單顯示名稱與 37 個道具種類顯示名稱，但完整怪物敘述、道具文法及戰鬥訊息仍未翻譯。** Android 介面目前已有 **260 個繁體中文字串及 8 組顯示用字串陣列**，包含實體按鍵設定、編輯器、浮動按鈕及遊戲檔案安裝錯誤提示。 此版本未完成 APK／模擬器／實機驗收，也尚未確認所有素材的再發行授權，請不要直接作為正式 Google Play 中文版發行。
+這個 Fork 正在進行台灣繁體中文（zh-TW）中文化。**目前已包含部分 Android 介面、設定、檔案管理和使用說明的中文翻譯，目前已加入首批原生遊戲訊息、128 個怪物清單顯示名稱與 76 個道具種類顯示名稱，但完整怪物敘述、道具文法及戰鬥訊息仍未翻譯。** Android 介面目前已有 **260 個繁體中文字串及 8 組顯示用字串陣列**，包含實體按鍵設定、編輯器、浮動按鈕及遊戲檔案安裝錯誤提示。 此版本未完成 APK／模擬器／實機驗收，也尚未確認所有素材的再發行授權，請不要直接作為正式 Google Play 中文版發行。
 
 - [中文化進度與測試方法](docs/LOCALIZATION_ZH_TW.md)
 - **[原生遊戲文字、怪物和道具中文化進度](docs/NATIVE_GAME_ZH_TW.md)**
@@ -11,7 +11,7 @@
 - **一次執行所有離線檢查，並輸出測試紀錄：** `sh scripts/verify-zh-tw.sh`（結果存成 `zh-tw-validation.log`）
 - **需要包含 APK 編譯時：** `sh scripts/verify-zh-tw.sh --android`；需本機 **JDK 21、Android SDK Platform 35、NDK 21.0.6113669**。Debug 預設使用 `arm64-v8a`，無須手動建立 `ABI_FILTERS`；x86_64 模擬器可執行 `ABI_FILTERS=x86_64 sh scripts/verify-zh-tw.sh --android`。已升級至 **Gradle 9.1.0 / AGP 9.0.1**，仍使用 **JDK 21**；請安裝 SDK Build Tools 36.0.0。
 - 分項執行：`python3 scripts/check_zh_tw_resources.py`、`sh scripts/test-terminal-unicode.sh`、`sh scripts/test-native-utf8.sh`。
-- 原生 UTF-8 傳輸與中日韓字寬分類測試已加入；完整原生游標座標與雙格布局仍待同步，尚未完成 APK／實機測試。
+- 原生 UTF-8 傳輸、中日韓字寬分類及清單安全截斷／欄位對齊測試已加入；完整原生游標座標與雙格布局仍需實機驗證，尚未完成 APK／實機測試。
 
 以下保留原移植專案的英文說明與原作者資訊。
 
