@@ -107,6 +107,23 @@ public final class TermWindowUnicodeTest {
         check(w.buffer[0][1].isBigPad(), "graphics tile pad sentinel still works");
     }
 
+    private static void testPartialOverlayEdges() {
+        TermWindow target = new TermWindow(1, 6, 0, 0);
+        write(target, "中abc");
+        TermWindow overlay = new TermWindow(1, 2, 0, 1);
+        write(overlay, "XY");
+        target.overwrite(overlay);
+        check(target.buffer[0][0].ch == ' ', "overlay through trail clears old wide lead");
+        check(target.buffer[0][1].ch == 'X' && target.buffer[0][2].ch == 'Y', "overlay letters copied");
+
+        TermWindow source = new TermWindow(1, 4, 0, 0);
+        write(source, "中A");
+        TermWindow clipped = new TermWindow(1, 2, 0, 1);
+        clipped.overwrite(source);
+        check(clipped.buffer[0][0].textColumns == 1 && clipped.buffer[0][0].ch == ' ', "orphan continuation cleared on clipped copy");
+        check(clipped.buffer[0][1].ch == 'A', "clipped overlay keeps independent characters");
+    }
+
     public static void main(String[] args) {
         testPlacement();
         testOverwriteAndErase();
@@ -116,6 +133,7 @@ public final class TermWindowUnicodeTest {
         testCopyAndScroll();
         testTileDoesNotInheritTextSpan();
         testTilePaddingSentinelIsNotText();
+        testPartialOverlayEdges();
         System.out.println("PASS: terminal Unicode buffer and overwrite tests (" + cases + " assertions)");
     }
 }
