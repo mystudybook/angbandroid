@@ -27,7 +27,7 @@
 					android:layout_weight="0"
 					android:paddingLeft="5dp"
 					android:paddingRight="5dp"
-					android:text="Action:" />
+					android:text="@string/keymap_editor_action" />
 
 				<EditText
 					android:id="@+id/action"
@@ -51,7 +51,7 @@
 					android:layout_weight="0"
 					android:paddingLeft="5dp"
 					android:paddingRight="5dp"
-					android:text="Label:" />
+					android:text="@string/fab_label" />
 
 				<EditText
 					android:id="@+id/label"
@@ -59,7 +59,7 @@
 					android:layout_height="wrap_content"
 					android:layout_weight="0"
 					android:ems="5"
-					android:hint="optional"
+					android:hint="@string/fab_label_optional"
 					android:inputType="text"
 					android:maxLength="4" />
 
@@ -118,13 +118,13 @@
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
 					android:layout_weight="0"
-					android:text="Overview" />
+					android:text="@string/fab_overview" />
 
 				<CheckBox
 					android:id="@+id/fixed"
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
-					android:text="Fixed XY" />
+					android:text="@string/fab_fixed_position" />
 
 			</LinearLayout>
 
@@ -134,7 +134,7 @@
 				android:layout_weight="0"
 				android:paddingLeft="5dp"
 				android:paddingRight="5dp"
-				android:text="Icon:" />
+				android:text="@string/fab_icon" />
 
 			<TableLayout
 				android:layout_width="wrap_content"
@@ -175,7 +175,7 @@
 					android:paddingLeft="5dp"
 					android:paddingRight="5dp"
 					android:minWidth="200dp"
-					android:text="Global button size:" />
+					android:text="@string/fab_global_size" />
 
 				<SeekBar
 					android:id="@+id/global_size_mult"
@@ -200,7 +200,7 @@
 					android:paddingLeft="5dp"
 					android:paddingRight="5dp"
 					android:minWidth="200dp"
-					android:text="This button size:" />
+					android:text="@string/fab_button_size" />
 
 				<SeekBar
 					android:id="@+id/custom_size_mult"
@@ -225,7 +225,7 @@
 					android:paddingLeft="5dp"
 					android:paddingRight="5dp"
 					android:minWidth="200dp"
-					android:text="This button opacity:" />
+					android:text="@string/fab_button_opacity" />
 
 				<SeekBar
 					android:id="@+id/custom_opacity"
