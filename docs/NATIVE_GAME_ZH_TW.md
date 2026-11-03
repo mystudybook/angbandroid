@@ -299,6 +299,14 @@ This covers `object_kind_name()` for identified items, **not** full
 artifact titles, or the other game variants. English grammar templates,
 game data and save records remain untouched.
 
+## Expanded non-unique monster names (2026-11-03)
+
+Added 130 more exact non-unique monster display labels, bringing
+the curated `monster.txt` list-name dictionary from 128 to 258 names.
+Unique monster names and the `<player>` pseudo-monster are never localized
+by this lookup. This preserves unique titles and normal English plural
+grammar in combat, savefiles, and all existing monster data.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
