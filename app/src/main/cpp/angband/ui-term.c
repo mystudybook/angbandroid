@@ -2197,7 +2197,7 @@ errr Term_addstr(int n, int a, const char *buf)
 
 	available = w - Term->scr->cx;
 	fit = angdroid_fit_terminal_text(s, (size_t)count,
-		(size_t)available);
+		(size_t)available, a);
 	xpos = Term->scr->cx;
 	for (i = 0; i < (int)fit.codepoints; ++i) {
 		wchar_t ch = s[i];
