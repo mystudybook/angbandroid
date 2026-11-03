@@ -23,10 +23,12 @@ def main():
             'partial_redraw_expansion': "angdroid_expand_redraw_columns(Term->wid, &first, &last,",
             'redraw_range_is_row_local': "int first = x1;",
             'partner_cell_on_overwrite': "angdroid_wide_partner_column(t->wid, x,",
+            'merge_existing_dirty_ranges': "angdroid_union_dirty_range(first, last,",
         },
         "app/src/main/cpp/curses/unicode_layout.h": {
             'redraw_helper': "static inline void angdroid_expand_redraw_columns(",
             'wide_partner_helper': "static inline int angdroid_wide_partner_column(",
+            'dirty_range_union_helper': "static inline void angdroid_union_dirty_range(",
             'preserves_large_tile': "previous_attrs[*first] == 255",
         },
         "app/src/main/cpp/common/angdroid.c": {
@@ -42,6 +44,9 @@ def main():
         "app/src/main/java/org/rephial/xyangband/TermWindow.java": {
             'continuation_cells': "public boolean isTextContinuation()",
             'wide_cursor': "if (width == 2) advance();",
+            'explicit_jni_length': "new String(cp, 0, byteCount, encoding)",
+            'jni_length_clamp': "Math.min(n, cp.length)",
+            'clear_bottom_row_origin': "int first = (r == row) ? col : 0;",
         },
         "app/src/main/java/org/rephial/xyangband/TermView.java": {
             'two_cell_clip': "int tw = char_width * (p.textColumns == 2 ? 2 : 1);",
