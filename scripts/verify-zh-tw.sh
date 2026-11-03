@@ -28,6 +28,7 @@ printf 'Repository: %s\n' "$ROOT" >> "$REPORT"
 run_check "Android string resources" python3 "$ROOT/scripts/check_zh_tw_resources.py"
 run_check "Java Unicode terminal" sh "$ROOT/scripts/test-terminal-unicode.sh"
 run_check "Native C UTF-8 and column-width helpers" sh "$ROOT/scripts/test-native-utf8.sh"
+run_check "Native/Java Unicode protocol wiring" python3 "$ROOT/scripts/check-native-unicode-contract.py"
 
 printf '\nResult: %s\n' "$(if [ "$failed" -eq 0 ]; then echo PASS; else echo FAIL; fi)" >> "$REPORT"
 printf 'Verification report: %s\n' "$REPORT"
