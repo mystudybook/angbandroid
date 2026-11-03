@@ -122,6 +122,30 @@ int main(void)
             first_row, normal_attr, first_row, normal_attr);
         assert(first == 0 && last == 5); /* Full-width redraw. */
     }
-    puts("PASS: 30 native Unicode width, marker and partial redraw cases");
+    {
+        const wchar_t row[] = {L'A', 0x4E2D, ANGDROID_TEXT_CONTINUATION,
+                               L'B', 0x9F8D, ANGDROID_TEXT_CONTINUATION};
+        const wchar_t orphan[] = {ANGDROID_TEXT_CONTINUATION, L'X'};
+        const wchar_t not_wide[] = {L'A', 0x4E2D, L' '};
+        const int attrs[] = {1, 1, 1, 1, 1, 1};
+        const int tile_attrs[] = {1, 0x80, 1, 1, 1, 1};
+        const int short_attrs[] = {1, 1};
+
+        assert(angdroid_wide_partner_column(6, 1, row, attrs) == 2);
+        assert(angdroid_wide_partner_column(6, 2, row, attrs) == 1);
+        assert(angdroid_wide_partner_column(6, 4, row, attrs) == 5);
+        assert(angdroid_wide_partner_column(6, 5, row, attrs) == 4);
+        assert(angdroid_wide_partner_column(6, 0, row, attrs) == -1);
+        assert(angdroid_wide_partner_column(6, 3, row, attrs) == -1);
+        assert(angdroid_wide_partner_column(6, -1, row, attrs) == -1);
+        assert(angdroid_wide_partner_column(6, 6, row, attrs) == -1);
+        assert(angdroid_wide_partner_column(2, 0, orphan, short_attrs) == -1);
+        assert(angdroid_wide_partner_column(3, 1, not_wide, attrs) == -1);
+        assert(angdroid_wide_partner_column(6, 1, row, tile_attrs) == -1);
+        assert(angdroid_wide_partner_column(6, 2, row, tile_attrs) == -1);
+        assert(angdroid_wide_partner_column(6, 1, NULL, attrs) == -1);
+        assert(angdroid_wide_partner_column(6, 1, row, NULL) == -1);
+    }
+    puts("PASS: native Unicode width, redraw and wide-cell partner tests");
     return 0;
 }
