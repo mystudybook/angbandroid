@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="org.rephial.xyangband"
-    android:versionCode="420"
-	android:versionName="4.2.0"
-	android:installLocation="auto"
+    android:installLocation="auto"
     >
 
     <application android:icon="@drawable/icon" 
