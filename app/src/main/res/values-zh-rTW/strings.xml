@@ -281,4 +281,50 @@
         <item>Ctrl＋2</item>
         <item>Alt＋2</item>
     </string-array>
+
+    <!-- Hardware key configuration: display labels only; internal key codes are unchanged. -->
+    <string name="keymap_press_hardware_key">請按下實體按鍵…</string>
+    <string name="keymap_clear_assignment">清除指派</string>
+    <string name="keymap_confirm_back_key">確定要指派返回鍵嗎？</string>
+    <string name="keymap_reset_confirm">確定要重設所有實體按鍵的對應嗎？</string>
+    <string name="keymap_unassigned">尚未指派</string>
+    <string name="keymap_unknown_key">按鍵 %1$d</string>
+    <string name="keymap_key_left_alt">左 Alt</string>
+    <string name="keymap_key_right_alt">右 Alt</string>
+    <string name="keymap_key_left_shift">左 Shift</string>
+    <string name="keymap_key_right_shift">右 Shift</string>
+    <string name="keymap_key_camera">相機鍵</string>
+    <string name="keymap_key_search">搜尋鍵</string>
+    <string name="keymap_key_back">返回鍵</string>
+    <string name="keymap_key_menu">選單鍵</string>
+    <string name="keymap_key_backspace">退格鍵</string>
+    <string name="keymap_key_space">空白鍵</string>
+    <string name="keymap_key_volume_up">音量增加鍵</string>
+    <string name="keymap_key_volume_down">音量降低鍵</string>
+    <string name="keymap_key_end">End 鍵</string>
+    <string name="keymap_key_home">Home 鍵</string>
+    <string name="keymap_key_dpad_center">方向鍵中央</string>
+    <string name="keymap_key_dpad_left">方向鍵左</string>
+    <string name="keymap_key_dpad_right">方向鍵右</string>
+    <string name="keymap_key_dpad_down">方向鍵下</string>
+    <string name="keymap_key_dpad_up">方向鍵上</string>
+    <string name="keymap_key_softkey_left">左軟鍵</string>
+    <string name="keymap_key_softkey_right">右軟鍵</string>
+    <string name="keymap_key_sym">符號鍵</string>
+    <string name="keymap_key_tab">Tab 鍵</string>
+    <string name="keymap_key_page_down">下一頁鍵</string>
+    <string name="keymap_key_page_up">上一頁鍵</string>
+    <string name="keymap_key_notification">通知鍵</string>
+    <string name="keymap_key_mute">靜音鍵</string>
+    <string name="keymap_key_end_call">結束通話鍵</string>
+    <string name="keymap_key_call">撥打電話鍵</string>
+    <string name="keymap_key_clear">清除鍵</string>
+    <string name="keymap_key_mode">模式鍵</string>
+    <string name="keymap_key_select">選擇鍵</string>
+    <string name="keymap_key_start">開始鍵</string>
+    <string name="keymap_key_thumb_left">左搖桿按鍵</string>
+    <string name="keymap_key_thumb_right">右搖桿按鍵</string>
+    <string name="keymap_key_enter">Enter 鍵</string>
+    <string name="keymap_key_escape">Esc 鍵</string>
+    <string name="keymap_key_emoticon">表情符號鍵</string>
 </resources>
