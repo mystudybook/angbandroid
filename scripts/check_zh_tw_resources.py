@@ -36,6 +36,7 @@ JAVA_UI = [
         "GameActivity.java", "StorageActivity.java", "InputDialog.java",
         "HelpActivity.java", "AngbandActivity.java", "ProfilesActivity.java",
         "ProfileAddActivity.java", "ProfileList.java", "TermView.java",
+        "KeyMapPreference.java", "KeyMapResetPreference.java", "Installer.java",
     )
 ]
 
@@ -102,6 +103,21 @@ def main():
                     f"Format placeholders differ: {key}: "
                     f"{source_args} != {localized_args}"
                 )
+
+    # New hardware-key dialogs and installer errors must be available in
+    # both supported locales, not silently fall back to English on zh-TW.
+    expected_localized_prefixes = {"keymap_": 44, "installer_": 5}
+    for prefix, minimum in expected_localized_prefixes.items():
+        names = sorted(key for key in english if key.startswith(prefix))
+        if len(names) < minimum:
+            errors.append(
+                f"Expected at least {minimum} English {prefix} resources, "
+                f"found {len(names)}"
+            )
+        for key in names:
+            item = chinese.get(key)
+            if item is None or item.tag != "string" or not (item.text or "").strip():
+                errors.append(f"Missing zh-TW display text: {key}")
 
     # Mouse popup display labels may change with locale, but their eight
     # fixed numeric option IDs must always have a matching visible label.
