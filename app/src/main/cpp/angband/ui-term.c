@@ -2334,13 +2334,27 @@ errr Term_erase(int x, int y, int n)
 	scr_taa = Term->scr->ta[y];
 	scr_tcc = Term->scr->tc[y];
 
+	/*
+	 * Removing either half of a two-column glyph must also erase its
+	 * other half, even if that other half lies outside the requested
+	 * erase region. Term_queue_char() updates the native dirty bounds.
+	 */
+	for (i = 0; i < n; ++i) {
+		int column = x + i;
+		if (scr_cc[column] == ANGDROID_TEXT_CONTINUATION ||
+			angdroid_is_wide_text(scr_cc[column], scr_aa[column])) {
+			Term_queue_char(Term, column, y, COLOUR_WHITE, L' ', 0, 0);
+		}
+	}
+
 	/* Scan every column */
 	for (i = 0; i < n; i++, x++) {
 		int oa = scr_aa[x];
 		wchar_t oc = scr_cc[x];
 
 		/* Hack -- Ignore "non-changes" */
-		if ((oa == COLOUR_WHITE) && (oc == ' ')) continue;
+		if ((oa == COLOUR_WHITE) && (oc == ' ') &&
+			scr_taa[x] == 0 && scr_tcc[x] == 0) continue;
 
 		/* Save the "literal" information */
 		scr_aa[x] = COLOUR_WHITE;
