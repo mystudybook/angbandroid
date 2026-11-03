@@ -60,6 +60,7 @@ def main():
     player_spell = source(CPP / "angband/player-spell.c", errors)
     cave_cmd = source(CPP / "angband/cmd-cave.c", errors)
     player_attack = source(CPP / "angband/player-attack.c", errors)
+    combat_header = source(CPP / "angband/zh-tw-combat.h", errors)
     store_ui = source(CPP / "angband/ui-store.c", errors)
     knowledge_ui = source(CPP / "angband/ui-knowledge.c", errors)
     input_ui = source(CPP / "angband/ui-input.c", errors)
@@ -233,6 +234,16 @@ def main():
            "Fear messaging must preserve original event and English fallback")
     expect('msg("%s", angdroid_game_ui_text("You have nothing to fire with."' in player_attack,
            "Ranged weapon warning not translated safely")
+    for name in ("angdroid_melee_verb_zh_tw", "angdroid_ranged_verb_zh_tw",
+                 "angdroid_hit_quality_zh_tw"):
+        expect(name in combat_header and name in player_attack,
+               "Combat display translation missing: " + name)
+    expect('msgt(msg_type, "You %s %s%s. %s"' in player_attack
+           and 'msgt(msg_type, "你%s %s%s。%s"' in player_attack,
+           "Melee translation must preserve its English fallback")
+    expect('msgt(msg_type, "Your %s %s %s%s. %s"' in player_attack
+           and 'msgt(msg_type, "你的 %s %s %s%s。%s"' in player_attack,
+           "Ranged translation must preserve its English fallback")
     if errors:
         for item in errors:
             print("FAIL:", item)

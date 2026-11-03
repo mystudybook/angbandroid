@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../../app/src/main/cpp/angband/zh-tw-ui.h"
+#include "../../app/src/main/cpp/angband/zh-tw-combat.h"
 #include "../../app/src/main/cpp/curses/unicode_display.h"
 
 int main(void)
@@ -76,6 +77,17 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);
     assert(angdroid_utf8_display_columns("繁體中文") == 8);
+    assert(strcmp(angdroid_melee_verb_zh_tw("hit"), "擊中了") == 0);
+    assert(strcmp(angdroid_melee_verb_zh_tw("fiercely smite"),
+                  "狠狠重擊了") == 0);
+    assert(strcmp(angdroid_ranged_verb_zh_tw("pierces"), "貫穿了") == 0);
+    assert(strcmp(angdroid_ranged_verb_zh_tw("freezes"), "冰凍了") == 0);
+    assert(strcmp(angdroid_hit_quality_zh_tw("It was a great hit!"),
+                  "這次攻擊非常有效！") == 0);
+    assert(angdroid_melee_verb_zh_tw("unknown shape verb") == NULL);
+    assert(angdroid_ranged_verb_zh_tw("unknown missile verb") == NULL);
+    assert(angdroid_hit_quality_zh_tw("unknown result") == NULL);
+    assert(angdroid_melee_verb_zh_tw(NULL) == NULL);
     assert(angdroid_utf8_display_columns("Half-Troll") == 10);
     assert(angdroid_utf8_display_columns("半食人妖") == 8);
     /* A narrow panel must not cut in the middle of a UTF-8 code point. */

@@ -47,6 +47,7 @@
 #include "target.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-combat.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -860,11 +861,24 @@ bool py_attack_real(struct player *p, struct loc grid, bool *fear)
 		if (OPT(p, show_damage))
 			dmg_text = format(" (%d)", dmg);
 
-		if (melee_hit_types[i].text)
+		/* Translate only verified English verbs. Unknown shapeshift
+		 * attacks retain the complete original message, not mixed grammar. */
+		const char *verb_zh = angdroid_zh_tw_enabled() ?
+			angdroid_melee_verb_zh_tw(verb) : NULL;
+		const char *quality_zh = melee_hit_types[i].text ?
+			angdroid_hit_quality_zh_tw(melee_hit_types[i].text) : NULL;
+		if (verb_zh && (!melee_hit_types[i].text || quality_zh)) {
+			if (quality_zh)
+				msgt(msg_type, "你%s %s%s。%s", verb_zh, m_name,
+					dmg_text, quality_zh);
+			else
+				msgt(msg_type, "你%s %s%s。", verb_zh, m_name, dmg_text);
+		} else if (melee_hit_types[i].text) {
 			msgt(msg_type, "You %s %s%s. %s", verb, m_name, dmg_text,
-					melee_hit_types[i].text);
-		else
+				melee_hit_types[i].text);
+		} else {
 			msgt(msg_type, "You %s %s%s.", verb, m_name, dmg_text);
+		}
 	}
 
 	/* Pre-damage side effects */
@@ -1183,12 +1197,25 @@ static void ranged_helper(struct player *p,	struct object *obj, int dir,
 
 						monster_desc(m_name, sizeof(m_name), mon, MDESC_OBJE);
 
-						if (hit_types[j].text) {
-							msgt(msg_type, "Your %s %s %s%s. %s", o_name, 
-								 hit_verb, m_name, dmg_text, hit_types[j].text);
+						/* Preserve unknown brand, slay and shape verbs
+						 * as a complete English fallback sentence. */
+						const char *verb_zh = angdroid_zh_tw_enabled() ?
+							angdroid_ranged_verb_zh_tw(hit_verb) : NULL;
+						const char *quality_zh = hit_types[j].text ?
+							angdroid_hit_quality_zh_tw(hit_types[j].text) : NULL;
+						if (verb_zh && (!hit_types[j].text || quality_zh)) {
+							if (quality_zh)
+								msgt(msg_type, "你的 %s %s %s%s。%s",
+									o_name, verb_zh, m_name, dmg_text, quality_zh);
+							else
+								msgt(msg_type, "你的 %s %s %s%s。",
+									o_name, verb_zh, m_name, dmg_text);
+						} else if (hit_types[j].text) {
+							msgt(msg_type, "Your %s %s %s%s. %s", o_name,
+								hit_verb, m_name, dmg_text, hit_types[j].text);
 						} else {
-							msgt(msg_type, "Your %s %s %s%s.", o_name, hit_verb,
-								 m_name, dmg_text);
+							msgt(msg_type, "Your %s %s %s%s.", o_name,
+								hit_verb, m_name, dmg_text);
 						}
 					}
 

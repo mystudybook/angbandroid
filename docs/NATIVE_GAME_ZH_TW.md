@@ -161,6 +161,24 @@ damage amounts, monster names, ranged item labels and turn consumption are
 unchanged. Complex verb-driven hit narration remains English pending a
 grammar-aware formatter.
 
+## Combat verb and critical-hit translation (2026-11-03)
+
+Added a separate `zh-tw-combat.h` with *exact-match* melee/ranged verb
+translations based on the original Angband 4.2.4 attack defaults and the
+English `variant_lib/angband/gamedata/brand.txt` and `slay.txt` files,
+plus the five known critical-hit descriptions. Only the rendered combat
+message changes: `obj-slays.c`, monster names, effect data, event types,
+damage numbers, attack rolls and savefiles are untouched.
+
+When a verb (for example an uncommon shapeshift attack) or quality phrase
+is not mapped, the *whole English message* is retained. This avoids
+constructing grammatically misleading mixed Chinese and English templates
+from unverified unknown verbs. The known monster or item name can still
+appear in English inside an otherwise Chinese sentence until monster and
+item grammar handling is addressed separately. All translated printf-style
+message formats are literal strings compatible with NDK format security.
+Standalone C99 tests cover known, unknown and null verb cases.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
