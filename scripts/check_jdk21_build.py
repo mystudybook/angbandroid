@@ -72,6 +72,12 @@ def main():
         "NDK unchanged": 'ndkVersion "21.0.6113669"' in app,
         "Maven Central repositories": top.count("mavenCentral()") == 2
             and "jcenter()" not in top,
+        "Gradle 9 provider-based clean task":
+            "tasks.register('clean', Delete)" in top
+            and "rootProject.layout.buildDirectory" in top
+            and "delete rootProject.buildDir" not in top,
+        "Gradle properties use valid comment syntax":
+            all(not line.lstrip().startswith("//") for line in props.splitlines()),
         "AndroidX enabled": "android.useAndroidX=true" in props,
         "Legacy resource switch compatibility": "android.nonFinalResIds=false" in props,
         "AGP 9 compile-time R compatibility": "android.enableAppCompileTimeRClass=false" in props,
