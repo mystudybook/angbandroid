@@ -56,7 +56,8 @@ Run from repository root:
 # Offline checks only
 sh scripts/verify-zh-tw.sh
 
-# Optional: include debug APK Gradle/NDK compilation on a configured Mac
+# Optional: include debug APK Gradle/NDK compilation with JDK 21
+# and installed Android SDK Platform 35 on a configured Mac
 sh scripts/verify-zh-tw.sh --android
 ```
 
@@ -66,7 +67,7 @@ These offline checks require Python 3, a JDK and a host C compiler. They check r
 
 ## Build notes
 
-`app/build.gradle` currently reads `ABI_FILTERS` from the developer's `local.properties`. Its configuration references `compileSdkVersion 34`, `targetSdk 34`, `ndkVersion "21.0.6113669"`, and external CMake. These are existing upstream settings, not a statement that the app currently meets Google Play's latest requirements.
+**JDK 21 migration (2026-11-03):** the project now uses Gradle **8.11.1**, Android Gradle Plugin **8.9.2**, the **JDK 21** toolchain, and `compileSdk 35`. Java source/bytecode stays at **17** for Android compatibility; `targetSdk 34`, `minSdk 22`, NDK `21.0.6113669`, CMake `3.10.2`, and `ABI_FILTERS` from private `local.properties` remain unchanged. Android Studio setup details and known migration limitations: [JDK21_BUILD.md](JDK21_BUILD.md). This is not yet a confirmed Gradle/NDK or Android-emulator build, nor a claim of current Google Play compliance.
 
 ## Licensing notes
 
