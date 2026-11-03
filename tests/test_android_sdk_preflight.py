@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
-"""Self-contained tests for the Android SDK package preflight.
-
-Uses fake SDK directories. Does not need Android Studio or an NDK installed.
-"""
+"""Offline tests for CMake 4.1.2 and Android SDK preflight, with fake tools."""
 from contextlib import redirect_stdout
 from pathlib import Path
+from unittest.mock import patch
 import importlib.util
 import io
 import tempfile
@@ -20,60 +18,98 @@ def touch(path):
     path.write_text("test", encoding="utf-8")
 
 
-def call():
-    stream = io.StringIO()
-    with redirect_stdout(stream):
-        result = checker.main()
-    return result, stream.getvalue()
+def fake_cmake(path, version):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        "#!/bin/sh\nprintf 'cmake version " + version + "\\n'\n",
+        encoding="utf-8"
+    )
+    path.chmod(0o755)
+
+
+def run(which=None):
+    output = io.StringIO()
+    with patch.object(checker.shutil, "which", return_value=which):
+        with redirect_stdout(output):
+            status = checker.main()
+    return status, output.getvalue()
 
 
 def main():
     original_app, original_props = checker.APP, checker.PROPS
+    checks = 0
     try:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
             sdk = root / "sdk"
             sdk.mkdir()
             build = root / "app" / "build.gradle"
             touch(build)
-            build.write_text('''android {
-    compileSdk = 35
-    ndkVersion = "28.2.13676358"
-    externalNativeBuild { cmake { version = "3.10.2" } }
-}
-''', encoding="utf-8")
+            build.write_text(
+                'android {\n  compileSdk = 35\n'
+                '  ndkVersion = "28.2.13676358"\n'
+                '  externalNativeBuild { cmake { version = "4.1.2" } }\n}\n',
+                encoding="utf-8"
+            )
             props = root / "local.properties"
             props.write_text(f"sdk.dir={sdk}\n", encoding="utf-8")
             checker.APP, checker.PROPS = build, props
 
-            status, output = call()
-            assert status == 1 and "MISSING: NDK 28.2.13676358" in output
-            assert "Project pins CMake 3.10.2" in output
-            assert "cmake;3.10.2.4988404" in output
+            status, message = run()
+            assert status == 1 and "MISSING: NDK 28.2.13676358" in message
+            assert "MISSING: CMake 4.1.2" in message
+            checks += 1
 
-            # A different installed version is not interchangeable with the
-            # exact version pinned by app/build.gradle.
-            touch(sdk / "cmake" / "3.22.1" / "bin" / "cmake")
-            status, output = call()
-            assert status == 1 and "MISSING: CMake 3.10.2" in output
-            assert "Other installed SDK CMake versions: 3.22.1" in output
+            # An unrelated SDK CMake directory must not satisfy the pin.
+            fake_cmake(sdk / "cmake" / "3.22.1" / "bin" / "cmake", "3.22.1")
+            status, message = run()
+            assert status == 1 and "SDK CMake directories: 3.22.1" in message
+            checks += 1
 
             touch(sdk / "ndk" / "28.2.13676358" / "source.properties")
-            touch(sdk / "cmake" / "3.10.2.4988404" / "bin" / "cmake")
             touch(sdk / "platforms" / "android-35" / "android.jar")
             touch(sdk / "build-tools" / "36.0.0" / "source.properties")
+            path_cmake = root / "homebrew" / "bin" / "cmake"
+            fake_cmake(path_cmake, "4.1.2")
+            status, message = run(str(path_cmake))
+            assert status == 0 and "PASS: CMake 4.1.2 from PATH" in message
+            checks += 1
 
-            status, output = call()
-            assert status == 0, output
-            for item in ("NDK 28.2.13676358", "CMake 3.10.2",
-                         "Platform 35", "Build Tools 36.0.0"):
-                assert "PASS:" in output and item in output, item
+            # A deliberately wrong explicit cmake.dir must not be ignored
+            # just because the right executable is available on PATH.
+            props.write_text(
+                f"sdk.dir={sdk}\ncmake.dir={sdk / 'cmake' / '3.22.1'}\n",
+                encoding="utf-8"
+            )
+            status, message = run(str(path_cmake))
+            assert status == 1 and "MISMATCH: CMake 3.22.1" in message
+            checks += 1
 
-            (sdk / "ndk" / "28.2.13676358" / "source.properties").unlink()
-            status, output = call()
-            assert status == 1 and "MISSING: NDK 28.2.13676358" in output
+            props.write_text(
+                f"sdk.dir={sdk}\ncmake.dir={path_cmake.parent.parent}\n",
+                encoding="utf-8"
+            )
+            status, message = run()
+            assert status == 0
+            assert "PASS: CMake 4.1.2 from local.properties cmake.dir" in message
+            checks += 1
 
-        print("PASS: SDK/NDK r28c/CMake preflight diagnostics (4 scenarios)")
+            props.write_text(f"sdk.dir={sdk}\n", encoding="utf-8")
+            fake_cmake(sdk / "cmake" / "4.1.2" / "bin" / "cmake", "4.1.2")
+            status, message = run()
+            assert status == 0 and "PASS: CMake 4.1.2 from Android SDK" in message
+            checks += 1
+
+            # Explicit wrong cmake.dir takes priority over SDK and PATH.
+            props.write_text(
+                f"sdk.dir={sdk}\ncmake.dir={sdk / 'cmake' / '3.22.1'}\n",
+                encoding="utf-8"
+            )
+            status, message = run(str(path_cmake))
+            assert status == 1 and "MISMATCH: CMake 3.22.1" in message
+            checks += 1
+
+        print(f"PASS: CMake 4.1.2 / NDK r28c preflight ({checks} scenarios)")
     finally:
         checker.APP, checker.PROPS = original_app, original_props
 
