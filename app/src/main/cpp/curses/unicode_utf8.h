@@ -14,7 +14,7 @@
  * Always NUL-terminates successful output; callers must use the byte length
  * rather than strlen(), because the input may contain U+0000.
  */
-static size_t angdroid_encode_wide_utf8(const wchar_t *input, size_t count,
+static inline size_t angdroid_encode_wide_utf8(const wchar_t *input, size_t count,
                                         char *output, size_t capacity)
 {
     size_t i;
@@ -69,7 +69,7 @@ static size_t angdroid_encode_wide_utf8(const wchar_t *input, size_t count,
  * Invalid byte sequences consume one byte and emit U+FFFD.
  * A NULL destination requests only the decoded scalar count.
  */
-static size_t angdroid_decode_utf8_wide(wchar_t *output, const char *input, int max_chars)
+static inline size_t angdroid_decode_utf8_wide(wchar_t *output, const char *input, int max_chars)
 {
     size_t at = 0;
     size_t count = 0;
