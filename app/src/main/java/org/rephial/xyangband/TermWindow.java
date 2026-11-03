@@ -311,12 +311,18 @@ public class TermWindow {
 			Log.d("Angband", "Encoding exception");
 		}
 
-		// Overwrite n, because the parameter was expressed in bytes,
-		// not in UTF-8 characters
-		n = str.length();
-
-		for (int i = 0; i < n; i++) {
-			addch(str.charAt(i));
+		// The native length is in bytes. Iterate code points instead of
+		// UTF-16 code units so a supplementary glyph is not split into two
+		// broken surrogate cells. TermPoint still stores a BMP char, so use
+		// one visible fallback cell for characters that it cannot represent.
+		for (int i = 0; i < str.length();) {
+			int codePoint = str.codePointAt(i);
+			i += Character.charCount(codePoint);
+			if (codePoint <= 0xFFFF && !(codePoint >= 0xD800 && codePoint <= 0xDFFF)) {
+				addch((char)codePoint);
+			} else {
+				addch('?');
+			}
 		}
 	}
 
