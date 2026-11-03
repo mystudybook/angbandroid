@@ -467,6 +467,16 @@ Unknown terms and English-language mode keep their original text.
 The original gamedata, savefiles and item identification logic remain
 unchanged. A new standalone C99 test is wired into the native test script.
 
+## Monster status messages (2026-11-04)
+
+Added all 55 named event-code messages (death, resistance, elemental
+damage, sleep, fear, stun, confusion, changes, and more). Display-only
+Chinese subjects are composed with the source monster count, visibility,
+offscreen flag and proper name. Message stack deduplication, event and
+sound categories, damage rounding and the source English grammar remain
+intact. Seven special pain codes still use their English data-file
+phrases and will need separate translated pain-message data.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

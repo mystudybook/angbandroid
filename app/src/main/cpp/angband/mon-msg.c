@@ -23,6 +23,8 @@
 #include "mon-util.h"
 #include "game-input.h"
 #include "player-calcs.h"
+#include "droid.h"
+#include "zh-tw-monsters.h"
 
 /**
  * Maxinum number of stacked monster messages
@@ -458,6 +460,40 @@ static int get_message_type(int msg_code, const struct monster_race *race)
 	return type;
 }
 
+/* Translate by existing enum code so translated sentences never pass
+ * through the English singular/plural bracket parser. */
+static const char *get_monster_message_zh_tw(int code)
+{
+    switch (code) {
+#define ZH_MON_MSG(name, text) case MON_MSG_##name: return text;
+#include "zh-tw-mon-messages.h"
+#undef ZH_MON_MSG
+        default: return NULL;
+    }
+}
+
+/* Keep unique proper names and known vs invisible monster identity. */
+static void get_subject_zh_tw(char *buf, size_t buflen,
+        struct monster_race *race, int count, bool invisible, bool offscreen)
+{
+    const char *name;
+    if (invisible) {
+        if (count == 1) my_strcpy(buf, "它", buflen);
+        else strnfmt(buf, buflen, "%d 隻怪物", count);
+    } else if (rf_has(race->flags, RF_UNIQUE)) {
+        my_strcpy(buf, race->name, buflen);
+    } else {
+        name = angdroid_zh_tw_monster_list_name(race->name);
+        if (!name) name = race->name;
+        if (count == 1) my_strcpy(buf, name, buflen);
+        else strnfmt(buf, buflen, "%d 個%s", count, name);
+    }
+    if (!invisible && rf_has(race->flags, RF_NAME_COMMA))
+        my_strcat(buf, "，", buflen);
+    if (offscreen) my_strcat(buf, "（畫面外）", buflen);
+    my_strcat(buf, " ", buflen);
+}
+
 /**
  * Show the given monster message.
  */
@@ -482,6 +518,35 @@ static void show_message(struct monster_race_message *msg)
 			msg->msg_code,
 			msg->race,
 			msg->count > 1);
+
+    /* Unmapped, race-specific pain messages retain the complete
+     * original English pathway, grammar and related sound. */
+    if (angdroid_zh_tw_enabled()) {
+        const char *localized = get_monster_message_zh_tw(msg->msg_code);
+        if (localized) {
+            char subject_zh[256] = "";
+            if (!skip_subject(msg->msg_code))
+                get_subject_zh_tw(subject_zh, sizeof(subject_zh),
+                    msg->race, msg->count,
+                    (msg->flags & MON_MSG_FLAG_INVISIBLE) != 0,
+                    (msg->flags & MON_MSG_FLAG_OFFSCREEN) != 0);
+            if (msg->flags & MON_MSG_FLAG_DAMAGE) {
+                if (msg->count <= 1) {
+                    msgt(msg_type, "%s%s（%d）", subject_zh, localized,
+                        msg->damage);
+                } else {
+                    int average = msg->damage / msg->count
+                        + (msg->damage % msg->count
+                        >= (msg->count + 1) / 2 ? 1 : 0);
+                    msgt(msg_type, "%s%s（平均 %d）", subject_zh,
+                        localized, average);
+                }
+            } else {
+                msgt(msg_type, "%s%s", subject_zh, localized);
+            }
+            return;
+        }
+    }
 
 	/* Show the message */
 	if (msg->flags & MON_MSG_FLAG_DAMAGE) {
