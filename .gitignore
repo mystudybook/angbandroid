@@ -13,3 +13,6 @@ reset-author.bat
 /app/release
 *.old
 *.bkp
+
+# Generated localized terminal verification report
+/zh-tw-validation.log
