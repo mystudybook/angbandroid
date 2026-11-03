@@ -44,6 +44,9 @@ def main():
     cmake = declared_version(source, "version", "3.10.2")
     api = declared_version(source, "compileSdk", "35")
     tools = "36.0.0"
+    # SDK Manager uses its full package revision as the on-disk directory.
+    # AGP's CMake DSL accepts the shorter "3.10.2" version.
+    cmake_package = f"{cmake}.4988404" if cmake == "3.10.2" else cmake
     root = sdk_path()
     print(f"Android SDK location: {root or '<not configured>'}")
     print(f"Required packages: NDK {ndk}, CMake {cmake}, API {api}, Build Tools {tools}")
@@ -55,8 +58,8 @@ def main():
     expected = (
         (f"NDK {ndk}", root / "ndk" / ndk / "source.properties",
          f"ndk;{ndk}"),
-        (f"CMake {cmake}", root / "cmake" / cmake / "bin" / "cmake",
-         f"cmake;{cmake}.4988404" if cmake == "3.10.2" else f"cmake;{cmake}"),
+        (f"CMake {cmake}", root / "cmake" / cmake_package / "bin" / "cmake",
+         f"cmake;{cmake_package}"),
         (f"Android SDK Platform {api}", root / "platforms" /
          f"android-{api}" / "android.jar", f"platforms;android-{api}"),
         (f"SDK Build Tools {tools}", root / "build-tools" / tools /
