@@ -47,13 +47,21 @@ android_debug_build() {
         printf 'Missing gradlew in the project root\n'
         return 1
     fi
-    if [ ! -f "$ROOT/local.properties" ]; then
-        printf 'Missing local.properties (SDK path and ABI_FILTERS are required)\n'
-        return 1
-    fi
+    # Android Studio usually creates local.properties for the SDK path.
+    # It is no longer required solely for the optional ABI_FILTERS property.
     (
         cd "$ROOT" || exit 1
-        sh ./gradlew --no-daemon :app:assembleDebug
+        printf 'JAVA_HOME=%s\n' "${JAVA_HOME:-<not set>}"
+        java -version || return 1
+        javac -version || return 1
+        sh ./gradlew --version || return 1
+        if [ -n "${ABI_FILTERS:-}" ]; then
+            printf 'Debug native ABIs (environment override): %s\n' "$ABI_FILTERS"
+            sh ./gradlew --no-daemon --stacktrace "-PABI_FILTERS=$ABI_FILTERS" :app:assembleDebug
+        else
+            printf 'Debug native ABIs: project default arm64-v8a (unless overridden)\n'
+            sh ./gradlew --no-daemon --stacktrace :app:assembleDebug
+        fi
     )
 }
 
