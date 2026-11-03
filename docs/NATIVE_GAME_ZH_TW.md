@@ -243,6 +243,14 @@ The remaining monster encyclopaedia paragraphs about combat, magic,
 movement, abilities and drops still require separate sentence-level
 translation. Host C99 tests guard the exact dictionary and fallback.
 
+## Monster fight history and known monster defenses (2026-11-03)
+
+Monster lore kill/ancestor history, known HP and armor, base player hit
+chance, and group behavior use complete Chinese sentences. The original
+lore knowledge and unique status gates, hit-chance calculation, color
+categories and English fallback are all preserved. This pass does not
+translate more complex ability, spell and movement narrative paragraphs.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

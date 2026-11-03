@@ -878,6 +878,38 @@ void lore_append_kills(textblock *tb, const struct monster_race *race,
 	/* Extract a gender (if applicable) */
 	msex = lore_monster_sex(race);
 
+    /* Chinese uses complete sentences; keep original lore and kill counts. */
+    if (angdroid_zh_tw_enabled()) {
+        bool unique = rf_has(known_flags, RF_UNIQUE);
+        bool output = true;
+        if (unique) {
+            bool dead = race->max_num == 0;
+            if (lore->deaths) {
+                textblock_append(tb, "這名敵人曾殺害你的 %d 位先祖", lore->deaths);
+                textblock_append(tb, "%s", dead ?
+                    "，但你已經報仇！  " : "，血仇尚未清算。  ");
+            } else if (dead) {
+                textblock_append(tb, "你已經擊敗這名敵人。  ");
+            } else output = false;
+        } else if (lore->deaths) {
+            textblock_append(tb, "你的 %d 位先祖曾被這種怪物殺害，", lore->deaths);
+            if (lore->pkills)
+                textblock_append(tb, "而你已經至少擊殺 %d 隻。  ", lore->pkills);
+            else if (lore->tkills)
+                textblock_append(tb, "而你的先祖至少擊殺了 %d 隻。  ", lore->tkills);
+            else
+                textblock_append_c(tb, COLOUR_RED, "至今尚未有人成功擊敗牠。  ");
+        } else if (lore->pkills) {
+            textblock_append(tb, "你至少擊殺過 %d 隻這種怪物。  ", lore->pkills);
+        } else if (lore->tkills) {
+            textblock_append(tb, "你的先祖至少擊殺過 %d 隻這種怪物。  ", lore->tkills);
+        } else {
+            textblock_append(tb, "尚無擊殺這種怪物的戰鬥紀錄。  ");
+        }
+        if (output) textblock_append(tb, "\n");
+        return;
+    }
+
 	/* Treat by whether unique, then by whether they have any player kills */
 	if (rf_has(known_flags, RF_UNIQUE)) {
 		/* Hack -- Determine if the unique is "dead" */
@@ -1070,6 +1102,24 @@ void lore_append_toughness(textblock *tb, const struct monster_race *race,
 
 	/* Extract a gender (if applicable) */
 	msex = lore_monster_sex(race);
+
+    /* The player's hit chance and armor knowledge are unaffected by locale. */
+    if (angdroid_zh_tw_enabled() && lore->armour_known) {
+        random_chance chance;
+        int hit_percent;
+        textblock_append(tb, "%s", rf_has(known_flags, RF_UNIQUE) ?
+            "這隻怪物的生命值為 " : "這類怪物的平均生命值為 ");
+        textblock_append_c(tb, COLOUR_L_BLUE, "%d", race->avg_hp);
+        textblock_append(tb, "，護甲值為 ");
+        textblock_append_c(tb, COLOUR_L_BLUE, "%d", race->ac);
+        textblock_append(tb, "。  ");
+        hit_chance(&chance, chance_of_melee_hit_base(player, weapon), race->ac);
+        hit_percent = random_chance_scaled(chance, 100);
+        textblock_append(tb, "若能看清牠，你的近戰命中率約為 ");
+        textblock_append_c(tb, COLOUR_L_BLUE, "%d", hit_percent);
+        textblock_append(tb, "%%。  ");
+        return;
+    }
 
 	/* Describe monster "toughness" */
 	if (lore->armour_known) {
@@ -1471,14 +1521,21 @@ void lore_append_friends(textblock *tb, const struct monster_race *race,
 	/* Extract a gender (if applicable) */
 	msex = lore_monster_sex(race);
 
-	/* Describe friends */
-	if (race->friends || race->friends_base) {
-		textblock_append(tb, "%s may appear with other monsters",
-						 lore_pronoun_nominative(msex, true));
-		if (rf_has(known_flags, RF_GROUP_AI))
-			textblock_append(tb, " and hunts in packs");
-		textblock_append(tb, ".  ");
-	}
+    /* Localized group behavior uses complete sentences. */
+    if (race->friends || race->friends_base) {
+        if (angdroid_zh_tw_enabled()) {
+            textblock_append(tb, "這隻怪物可能與其他怪物一同出現");
+            if (rf_has(known_flags, RF_GROUP_AI))
+                textblock_append(tb, "，也可能成群狩獵");
+            textblock_append(tb, "。  ");
+        } else {
+            textblock_append(tb, "%s may appear with other monsters",
+                lore_pronoun_nominative(msex, true));
+            if (rf_has(known_flags, RF_GROUP_AI))
+                textblock_append(tb, " and hunts in packs");
+            textblock_append(tb, ".  ");
+        }
+    }
 }
 
 /**

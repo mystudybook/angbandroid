@@ -295,6 +295,16 @@ def main():
            "Monster lore title translation or unique fallback missing")
     expect("test_monster_lore_locale.c" in native_tests,
            "Monster lore host test not registered")
+    for phrase in ("這名敵人曾殺害你的 %d 位先祖",
+                   "這類怪物的平均生命值為",
+                   "若能看清牠，你的近戰命中率約為",
+                   "這隻怪物可能與其他怪物一同出現"):
+        expect(phrase in monster_lore,
+               "Missing complete zh-TW lore paragraph: " + phrase)
+    expect('if (angdroid_zh_tw_enabled() && lore->armour_known)' in monster_lore,
+           "HP and armor translation must honor the lore knowledge gate")
+    expect('textblock_append(tb, "%s has slain %d of your ancestors"' in monster_lore,
+           "Monster lore English kill grammar was removed")
     if errors:
         for item in errors:
             print("FAIL:", item)
