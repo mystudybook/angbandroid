@@ -93,6 +93,51 @@ For an Android Studio user, select **Tools → SDK Manager → SDK Tools → Sho
 
 Then rerun `sh scripts/verify-zh-tw.sh --android`. The first stage in the Android build now identifies which package is missing and skips Gradle until the missing tools have been installed. This cannot guarantee the APK builds successfully after those packages are present.
 
+## 2026-11-03 second Android Studio build log — CMake not found
+
+In the next uploaded Android Studio build output, Android resource processing and
+`:app:compileDebugJavaWithJavac` succeeded. The build then stopped at
+`:app:configureCMakeDebug[arm64-v8a]` with:
+
+```text
+[CXX1300] CMake '3.10.2' was not found in SDK, PATH, or by cmake.dir property.
+```
+
+**This is a missing local SDK tool, not a Java compile error or proof of a
+native C/C++ source defect.** `app/build.gradle` deliberately retains
+`version = "3.10.2"` for the older multi-variant game source tree
+(`app/src/main/cpp/CMakeLists.txt` starts at `cmake_minimum_required(VERSION 3.4.1)`).
+We have not yet validated a move to a newer CMake release; installing the pinned
+version is the least disruptive route to the first working APK.
+
+Install **CMake 3.10.2.4988404** from Android Studio **Tools → SDK Manager →
+SDK Tools → Show Package Details → CMake**, or run:
+
+```bash
+"$HOME/Library/Android/sdk/cmdline-tools/latest/bin/sdkmanager" \
+  --install "cmake;3.10.2.4988404"
+```
+
+Check that the expected binary exists:
+
+```bash
+"$HOME/Library/Android/sdk/cmake/3.10.2.4988404/bin/cmake" --version
+```
+
+Other installed versions (for example, 3.22.1) do not satisfy the explicit
+`version = "3.10.2"` setting. `scripts/check_android_sdk.py` now shows
+other locally installed CMake versions when the configured version is missing.
+After installation, **pull the latest `master`** and rerun
+`sh scripts/verify-zh-tw.sh --android`. Using Android Studio's Run action
+alone does not invoke that Python preflight; the IDE will show AGP's native error
+directly if a package is still missing.
+
+The three AGP 9 deprecated feature flags are warnings, not the cause of this
+failure. They are temporarily retained for existing Java resource references
+and legacy plugin compatibility until separately migrated. The next possible
+blocker after CMake is installed may be a real native source or NDK
+compatibility error, which must be assessed from a new log.
+
 ## Diagnosing failures
 
 - **JDK outside supported range (below 21 or above 25):** configure Gradle JDK to 21 in Android Studio and/or set shell `JAVA_HOME` with `/usr/libexec/java_home -v 21`. Gradle 9.1 does not officially support running on JDK 26+.
