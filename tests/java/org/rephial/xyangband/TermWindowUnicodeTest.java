@@ -46,14 +46,22 @@ public final class TermWindowUnicodeTest {
 
     private static void testBoundary() {
         TermWindow w = new TermWindow(2, 3, 0, 0);
+        w.move(1, 0);
+        write(w, "AB");
         w.move(0, 2);
         write(w, "中");
-        check(w.buffer[1][0].ch == '中' && w.buffer[1][1].isTextContinuation(), "wide char wraps as pair");
-        check(w.row == 1 && w.col == 2, "wide wrap cursor");
+        check(w.buffer[0][2].ch == '?' && w.buffer[0][2].textColumns == 1,
+                "wide character at right edge uses visible single-cell fallback");
+        check(w.buffer[1][0].ch == 'A' && w.buffer[1][1].ch == 'B',
+                "CJK fallback must not overwrite the following row");
+        check(!w.buffer[0][2].isTextContinuation(),
+                "last-column fallback never creates a stranded continuation");
         w.move(1, 2);
         write(w, "龍");
-        check(w.buffer[1][2].ch == '?' && w.buffer[1][2].textColumns == 1, "last cell fallback");
-        check(w.buffer[1][0].ch == '中', "last-row fallback does not damage earlier cells");
+        check(w.buffer[1][2].ch == '?' && w.buffer[1][2].textColumns == 1,
+                "last-row right-edge fallback remains single-cell");
+        check(w.buffer[1][0].ch == 'A' && w.buffer[1][1].ch == 'B',
+                "last-row fallback preserves preceding text");
     }
 
     private static void testSupplementary() {
