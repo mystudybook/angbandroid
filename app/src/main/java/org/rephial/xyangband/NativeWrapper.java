@@ -3,6 +3,7 @@ package org.rephial.xyangband;
 import android.os.CountDownTimer;
 import android.util.Log;
 import android.graphics.Color;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,6 +25,14 @@ public class NativeWrapper {
 	native int gameQueryInt(int argc, String[] argv);
 	native byte[] gameQueryString(int argc, String[] argv);
 	native int gameQueryResize(int width, int height);
+
+	/**
+	 * Called once by the native game thread when the plugin starts.
+	 * Game action keys, character save files, and plugin IDs stay unchanged.
+	 */
+	public boolean usesTraditionalChineseGameText() {
+		return GameTextLocale.usesTraditionalChinese(Locale.getDefault());
+	}
 
 	public NativeWrapper(StateManager s) {
 		state = s;
