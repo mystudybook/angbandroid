@@ -188,6 +188,38 @@ The three AGP 9 deprecation warnings remain separate from the native compiler
 failure. Another NDK compile error may appear after this fix; the full APK
 still requires a successful on-device or local Android Gradle build.
 
+## 2026-11-03 fourth Android Studio log — duplicate native symbols
+
+The next uploaded Android Studio build entered `:app:buildCMakeDebug[arm64-v8a]`,
+compiled the C sources, and attempted linking native libraries. Linking
+failed for `npp054`, `npp710`, and `unangband066`:
+
+- Both NPP modules defined `ang_sort_comp`/`ang_sort_swap` in
+  `variable.c` and `z-util.c`, plus `player_uid`/`player_egid`
+  in `variable.c` and `z-file.c`. `variable.c` now owns them;
+  the duplicates in the other files became `extern` declarations.
+- Each NPP module also declared command-menu state `comm`,
+  `comm_descr`, and `poss` separately in `cmd0.c` and
+  `obj-ui.c`, with *different buffer sizes* (22 versus 30). These
+  buffers now have file-local `static` linkage, preserving independent
+  menu state and avoiding incorrect accidental aliasing.
+- The UnAngband `angband_sound_name` table is initialized in
+  `variable.c`, but the declaration in `externs.h` lacked
+  `extern`, causing multiple definitions when included by other C
+  files. The header now declares it correctly.
+- `npp710/generate.c` now preserves integer themed-room type values
+  10 and 11, as already fixed in `npp054`.
+
+`scripts/check_native_link_ownership.py` is included in the offline
+verification to guard these source-level ownership rules. This check
+does not link Android libraries. A complete `:app:assembleDebug`
+with installed CMake 4.1.2 / NDK r28c is still required to verify
+the entire Android native link and APK packaging.
+
+Other nonfatal warnings remain in the uploaded log, including pointer
+casts and obsolete C prototypes; they should be examined separately
+after the blocking link errors.
+
 ## Diagnosing failures
 
 - **JDK outside supported range (below 21 or above 25):** configure Gradle JDK to 21 in Android Studio and/or set shell `JAVA_HOME` with `/usr/libexec/java_home -v 21`. Gradle 9.1 does not officially support running on JDK 26+.

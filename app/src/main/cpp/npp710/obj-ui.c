@@ -2028,10 +2028,11 @@ bool get_item_beside(int *cp, cptr pmt, cptr str, int sq_y, int sq_x)
 /**
  * Menu functions
  */
-char comm[30];
-cmd_code comm_command[30];
-cptr comm_descr[30];
-int poss;
+/* Object action menu state must not alias cmd0.c's command menu. */
+static char comm[30];
+static cmd_code comm_command[30];
+static cptr comm_descr[30];
+static int poss;
 
 
 

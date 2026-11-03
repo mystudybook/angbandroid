@@ -203,9 +203,10 @@ static command_list cmds_all[] =
 /**
  * Menu functions
  */
-char comm[22];
-cptr comm_descr[22];
-int poss;
+/* This command menu has independent state from obj-ui.c's menu. */
+static char comm[22];
+static cptr comm_descr[22];
+static int poss;
 
 /**
  * Item tag/command key

@@ -54,11 +54,9 @@
 # define my_mkdir(path, perms) FALSE
 #endif
 
-/*
- * Player info
- */
-int player_uid;
-int player_egid;
+/* Player IDs are owned by variable.c. */
+extern int player_uid;
+extern int player_egid;
 
 
 
