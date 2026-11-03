@@ -387,16 +387,10 @@ public class TermWindow {
 		if (!Character.isValidCodePoint(cp) ||
 			(cp >= Character.MIN_SURROGATE && cp <= Character.MAX_SURROGATE)) cp = '?';
 		int width = TerminalUnicode.columns(cp);
-		if (width == 2 && col == cols - 1) {
-			if (row + 1 < rows) {
-				col = 0;
-				row++;
-			} else {
-				cp = '?';
-				width = 1;
-			}
-		}
-		if (width == 2 && cols < 2) {
+		if (width == 2 && col + 1 >= cols) {
+			// Native Angband deliberately clips an unplaceable wide glyph at
+			// the right edge. Java must not silently draw it on the next row,
+			// where it could overwrite unrelated game-map or prompt content.
 			cp = '?';
 			width = 1;
 		}
