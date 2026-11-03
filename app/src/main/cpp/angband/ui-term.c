@@ -21,6 +21,7 @@
 #include "z-color.h"
 #include "z-util.h"
 #include "z-virt.h"
+#include "../curses/unicode_layout.h"
 
 /**
  * This file provides a generic, efficient, terminal window package,
@@ -546,7 +547,7 @@ static errr Term_pict_hack(int x, int y, int n, const int *ap,
  *
  * Assumes given location and values are valid.
  */
-void Term_queue_char(term *t, int x, int y, int a, wchar_t c, int ta,
+static void Term_queue_char_raw(term *t, int x, int y, int a, wchar_t c, int ta,
 					 wchar_t tc)
 {
 	int *scr_aa = t->scr->a[y];
@@ -620,6 +621,57 @@ void Term_queue_char(term *t, int x, int y, int a, wchar_t c, int ta,
 				if (x > t->x2[yn]) t->x2[yn] = x;
 			}
 		}
+	}
+}
+
+/*
+ * Keep the native scr/old terminal grid in display columns so Android's
+ * TermWindow and the native cursor use identical x positions for Han glyphs.
+ * Only ordinary text glyphs span two cells. Tile attributes (0x80) retain
+ * their original raw byte/padding semantics.
+ */
+static void Term_clear_wide_neighbor(term *t, int x, int y)
+{
+	wchar_t ch = t->scr->c[y][x];
+	int attr = t->scr->a[y][x];
+
+	if (ch == ANGDROID_TEXT_CONTINUATION && x > 0 &&
+		angdroid_is_wide_text(t->scr->c[y][x - 1],
+			t->scr->a[y][x - 1])) {
+		Term_queue_char_raw(t, x - 1, y, COLOUR_WHITE, L' ', 0, 0);
+	} else if (angdroid_is_wide_text(ch, attr) &&
+		x + 1 < t->wid &&
+		t->scr->c[y][x + 1] == ANGDROID_TEXT_CONTINUATION) {
+		Term_queue_char_raw(t, x + 1, y, COLOUR_WHITE, L' ', 0, 0);
+	}
+}
+
+void Term_queue_char(term *t, int x, int y, int a, wchar_t c, int ta,
+					 wchar_t tc)
+{
+	int wide;
+
+	if (!t || x < 0 || y < 0 || x >= t->wid || y >= t->hgt) return;
+
+	/* The marker belongs to the preceding glyph, not a drawable cell. */
+	if (c == ANGDROID_TEXT_CONTINUATION) {
+		Term_queue_char_raw(t, x, y, a, c, ta, tc);
+		return;
+	}
+
+	Term_clear_wide_neighbor(t, x, y);
+	wide = angdroid_is_wide_text(c, a);
+	if (wide && x + 1 < t->wid) {
+		/* If the next column was itself a leading glyph, remove its
+		 * trailing column before overwriting that lead with our marker. */
+		Term_clear_wide_neighbor(t, x + 1, y);
+		Term_queue_char_raw(t, x, y, a, c, ta, tc);
+		Term_queue_char_raw(t, x + 1, y, a,
+			ANGDROID_TEXT_CONTINUATION, 0, 0);
+	} else {
+		/* Never strand half a full-width glyph at the right edge. */
+		Term_queue_char_raw(t, x, y, a,
+			wide ? L'?' : c, ta, tc);
 	}
 }
 
