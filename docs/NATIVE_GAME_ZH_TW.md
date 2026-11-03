@@ -44,7 +44,9 @@ and save prompts, textblock continuation footers and retirement confirmation.
 English command descriptions in `ui-game.c` remain unchanged for lookup and
 input mappings; `ui-context.c` translates them only when painting menu text.
 Game data, player name rules, `CMD_*` values, menu keys and savefile formats
-are unchanged. Chinese character-creation prompt centering measures terminal
+are unchanged. The race/class skill preview now also displays translated combat/skill
+captions (without changing the calculated stats or realm names).
+Chinese character-creation prompt centering measures terminal
 display columns rather than UTF-8 byte lengths.
 
 The first batch also covers common item actions, combat/action menu labels,

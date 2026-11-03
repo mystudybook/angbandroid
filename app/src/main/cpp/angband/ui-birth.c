@@ -233,17 +233,17 @@ static void skill_help(const int r_skills[], const int c_skills[], int mhp, int 
 	for (i = 0; i < SKILL_MAX ; ++i)
 		skills[i] = (r_skills ? r_skills[i] : 0 ) + (c_skills ? c_skills[i] : 0);
 
-	text_out_e("Hit/Shoot/Throw: %+d/%+d/%+d\n", skills[SKILL_TO_HIT_MELEE],
+	text_out_e(angdroid_zh_tw_enabled() ? "近戰／射擊／投擲：%+d/%+d/%+d\n" : "Hit/Shoot/Throw: %+d/%+d/%+d\n", skills[SKILL_TO_HIT_MELEE],
 			   skills[SKILL_TO_HIT_BOW], skills[SKILL_TO_HIT_THROW]);
-	text_out_e("Hit die: %2d   XP mod: %d%%\n", mhp, exp);
-	text_out_e("Disarm: %+3d/%+3d   Devices: %+3d\n", skills[SKILL_DISARM_PHYS],
+	text_out_e(angdroid_zh_tw_enabled() ? "生命骰：%2d　經驗修正：%d%%\n" : "Hit die: %2d   XP mod: %d%%\n", mhp, exp);
+	text_out_e(angdroid_zh_tw_enabled() ? "解除機關：%+3d/%+3d　裝置：%+3d\n" : "Disarm: %+3d/%+3d   Devices: %+3d\n", skills[SKILL_DISARM_PHYS],
 			   skills[SKILL_DISARM_MAGIC], skills[SKILL_DEVICE]);
-	text_out_e("Save:   %+3d   Stealth: %+3d\n", skills[SKILL_SAVE],
+	text_out_e(angdroid_zh_tw_enabled() ? "豁免：%+3d　潛行：%+3d\n" : "Save:   %+3d   Stealth: %+3d\n", skills[SKILL_SAVE],
 			   skills[SKILL_STEALTH]);
 	if (infra >= 0)
-		text_out_e("Infravision:  %d ft\n", infra * 10);
-	text_out_e("Digging:      %+d\n", skills[SKILL_DIGGING]);
-	text_out_e("Search:       %+d", skills[SKILL_SEARCH]);
+		text_out_e(angdroid_zh_tw_enabled() ? "紅外視覺：%d 呎\n" : "Infravision:  %d ft\n", infra * 10);
+	text_out_e(angdroid_zh_tw_enabled() ? "挖掘：%+d\n" : "Digging:      %+d\n", skills[SKILL_DIGGING]);
+	text_out_e(angdroid_zh_tw_enabled() ? "搜索：%+d" : "Search:       %+d", skills[SKILL_SEARCH]);
 	if (infra < 0)
 		text_out_e("\n");
 }
@@ -374,7 +374,7 @@ static void class_help(int i, void *db, const region *l)
 				realm = realm_next;
 			}
 		}
-		text_out_e("\nLearns %s magic", buf);
+		text_out_e(angdroid_zh_tw_enabled() ? "\n學會 %s 魔法" : "\nLearns %s magic", buf);
 	}
 
 	for (ability = player_abilities; ability; ability = ability->next) {
