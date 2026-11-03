@@ -49,7 +49,6 @@ static angdroid_text_fit angdroid_fit_terminal_text(
         ++fit.codepoints;
         fit.columns += span;
     }
-    if (i == limit && text[i]) fit.clipped = 1;
     return fit;
 }
 
