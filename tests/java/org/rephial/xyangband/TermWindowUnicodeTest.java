@@ -93,7 +93,7 @@ public final class TermWindowUnicodeTest {
     private static void testTileDoesNotInheritTextSpan() {
         TermWindow w = new TermWindow(1, 4, 0, 0);
         write(w, "中");
-        w.addTile(0, 1, 0x80, 0xF0, 0, 0);
+        w.addTile(1, 0, 0x80, 0xF0, 0, 0);
         check(w.buffer[0][0].textColumns == 1 && w.buffer[0][0].ch == ' ', "tile overwrites trailing cell and invalidates text lead");
         check(w.buffer[0][1].textColumns == 1 && w.buffer[0][1].isGraphicTile(), "tile maintains original flags");
     }
