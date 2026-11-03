@@ -23,7 +23,7 @@ The `master` branch uses **JDK 21** to run Gradle and compile Android source.
 ## On macOS
 
 1. Install a JDK 21 distribution (Temurin, or any suitable JDK 21). In Android Studio select **Settings / Preferences → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK → JDK 21**.
-2. Open the **repository root** in Android Studio using **Open**, not the `app` subdirectory.
+2. Use an Android Studio version compatible with **AGP 9.0** (Panda 1 or newer), then open the **repository root** using **Open**, not the `app` subdirectory.
 3. Install Android SDK Platform 35, SDK Build Tools 36.0.0, Android NDK 21.0.6113669, and CMake 3.10.2 in **Tools → SDK Manager**. Enable **Show Package Details** to select specific NDK and CMake versions.
 4. **`ABI_FILTERS` is now optional.** Android Studio can create `local.properties` with the SDK path, and the debug build defaults to `arm64-v8a`. You do not need to add a custom `ABI_FILTERS` line just to open or sync the project. An optional `local.properties` looks like:
 
