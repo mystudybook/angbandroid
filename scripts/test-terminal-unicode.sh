@@ -1,6 +1,6 @@
 #!/bin/sh
-# Pure-Java regression test for East Asian terminal width classification.
-# Does not require the Android SDK or execute a Gradle build.
+# Offline JDK regression tests for terminal Unicode widths and text-cell logic.
+# Android stubs are used only here; production classes are compiled unchanged.
 set -eu
 
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
@@ -8,7 +8,13 @@ BUILD_DIR="$(mktemp -d)"
 trap 'rm -rf "$BUILD_DIR"' EXIT HUP INT TERM
 
 javac -encoding UTF-8 -d "$BUILD_DIR" \
+  "$ROOT/tests/stubs/android/util/Log.java" \
+  "$ROOT/tests/stubs/org/rephial/xyangband/Preferences.java" \
+  "$ROOT/tests/stubs/org/rephial/xyangband/TermView.java" \
   "$ROOT/app/src/main/java/org/rephial/xyangband/TerminalUnicode.java" \
-  "$ROOT/tests/java/org/rephial/xyangband/TerminalUnicodeTest.java"
+  "$ROOT/app/src/main/java/org/rephial/xyangband/TermWindow.java" \
+  "$ROOT/tests/java/org/rephial/xyangband/TerminalUnicodeTest.java" \
+  "$ROOT/tests/java/org/rephial/xyangband/TermWindowUnicodeTest.java"
 
 java -cp "$BUILD_DIR" org.rephial.xyangband.TerminalUnicodeTest
+java -cp "$BUILD_DIR" org.rephial.xyangband.TermWindowUnicodeTest
