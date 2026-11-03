@@ -103,7 +103,7 @@ def main():
         (mon, mon_header, "ANGDROID_ZH_TW_MONSTER_NAMES",
          "angdroid_zh_tw_monster_list_name(race->name)", 128),
         (obj, obj_header, "ANGDROID_ZH_TW_ITEM_KINDS",
-         "angdroid_zh_tw_item_kind_name(kind->name)", 165),
+         "angdroid_zh_tw_item_kind_name(kind->name)", 326),
     ):
         mapping = table(header)
         match = re.search(r"#define\s+" + macro + r"\s+(\d+)", header)
@@ -132,6 +132,17 @@ def main():
         expect(not missing,
                "Localized " + label + " lookup keys not in canonical data: "
                + ", ".join(missing[:15]))
+    # The four virtual kind markers are not real identified item names.
+    real_item_names = {
+        line.split(":", 1)[1]
+        for line in item_data.splitlines()
+        if line.startswith("name:") and
+        not line.split(":", 1)[1].startswith("<")
+    }
+    item_translated_names = {name for name, _ in table(obj_header)}
+    expect(real_item_names == item_translated_names,
+           "Original Angband item-kind catalog incomplete: "
+           + ", ".join(sorted(real_item_names - item_translated_names)[:15]))
     for symbol in ("angdroid_utf8_display_columns",
                    "angdroid_utf8_clip_columns",
                    "angdroid_utf8_printf_field_bytes"):
@@ -339,7 +350,7 @@ def main():
             print("FAIL:", item)
         return 1
     print(f"PASS: {checks} native game-localization source safeguards")
-    print("  Monster list entries: 128 | item kind labels: 165")
+    print("  Monster list entries: 128 | item kind labels: 326")
     print("  Death menu labels: 9 | death prompts: 11")
     print("NOTE: Requires Android NDK and on-device zh-TW gameplay validation")
     return 0

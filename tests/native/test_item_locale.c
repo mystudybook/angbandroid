@@ -13,10 +13,16 @@ static void expect_name(const char *english, const char *traditional)
 
 int main(void)
 {
-    assert(ANGDROID_ZH_TW_ITEM_KINDS == 165);
+    assert(ANGDROID_ZH_TW_ITEM_KINDS == 326);
     expect_name("& Wooden Torch~", "木製火把");
     expect_name("& Lantern~", "提燈");
     expect_name("& Dagger~", "匕首");
+    expect_name("Strength", "力量");
+    expect_name("Resist Poison", "抗毒");
+    expect_name("*Healing*", "強效治療");
+    expect_name("Word of Recall", "回返咒語");
+    expect_name("Dragon's Breath", "龍之吐息");
+    expect_name("Recall", "回返");
     expect_name("& Zweihander~", "雙手大劍");
     expect_name("& Mithril Bolt~", "秘銀弩箭");
     expect_name("Power Dragon Scale Mail~", "力量龍鱗甲");
@@ -39,6 +45,6 @@ int main(void)
     assert(angdroid_zh_tw_item_kind_name("& dagger~") == NULL);
     assert(angdroid_zh_tw_item_kind_name(NULL) == NULL);
 
-    puts("PASS: 76 item-kind display names, exact matching and fallback");
+    puts("PASS: 326 item-kind display names, exact matching and fallback");
     return 0;
 }

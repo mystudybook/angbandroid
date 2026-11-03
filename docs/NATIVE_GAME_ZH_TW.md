@@ -285,6 +285,20 @@ template. Names are translated only in knowledge/identification UI where
 the item has been identified; unknown flavored items remain hidden and
 gameplay grammar templates and save records stay English.
 
+## Complete identified item-kind display catalog (2026-11-03)
+
+Original Angband `object.txt` has 330 different canonical
+`name:` values, including four internal virtual markers. **All 326
+real identified item-kind names now have an exact Chinese display-name
+mapping**, including magic items, scrolls, rings, potions, devices, armor,
+weapons, consumables, gems and treasure. The checker asserts the Chinese
+dictionary matches the complete set of non-virtual source names.
+
+This covers `object_kind_name()` for identified items, **not** full
+`object_desc()` grammar, unidentified flavored items, long descriptions,
+artifact titles, or the other game variants. English grammar templates,
+game data and save records remain untouched.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
