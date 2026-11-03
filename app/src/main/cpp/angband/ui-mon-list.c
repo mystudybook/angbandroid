@@ -28,6 +28,7 @@
 #include "ui-term.h"
 
 #include "droid.h"
+#include "../curses/unicode_display.h"
 
 /**
  * Format a section of the monster list: a header followed by monster list
@@ -78,6 +79,7 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 		max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
 			zh_tw ? "%s沒有怪物。\n" : "%s no monsters.\n", prefix);
 
+		max_line_length = angdroid_utf8_display_columns(line_buffer);
 		if (tb != NULL)
 			textblock_append(tb, "%s", line_buffer);
 
@@ -100,6 +102,7 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 			PLURAL(list->total_monsters[section]), punctuation);
 	}
 
+	max_line_length = angdroid_utf8_display_columns(line_buffer);
 	if (tb != NULL)
 		textblock_append(tb, "%s", line_buffer);
 
@@ -130,7 +133,14 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 
 		/* Get width available for monster name and sleep tag: 2 for char and
 		 * space; location includes padding; last -1 for some reason? */
-		full_width = max_width - 2 - utf8_strlen(location) - 1;
+		/* Reserve the tile, space and distance in TERMINAL columns, not
+		 * UTF-8 bytes or Unicode scalar counts. Avoid unsigned underflow
+		 * on very small subwindows. */
+		{
+			size_t reserved = 3 + angdroid_utf8_display_columns(location);
+			full_width = (max_width > 0 && (size_t)max_width > reserved) ?
+				(size_t)max_width - reserved : 0;
+		}
 
 		asleep_in_section = list->entries[index].asleep[section];
 		count_in_section = list->entries[index].count[section];
@@ -142,18 +152,26 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 			strnfmt(asleep, sizeof(asleep), "%s",
 				zh_tw ? "（睡眠中）" : " (asleep)");
 
-		/* Clip the monster name to fit, and append the sleep tag. */
-		name_width = MIN(full_width - utf8_strlen(asleep), sizeof(line_buffer));
+		/* Never split a UTF-8 glyph. Hide the optional sleep tag if it
+		 * alone is wider than the available terminal columns. */
+		{
+			size_t asleep_columns = angdroid_utf8_display_columns(asleep);
+			if (asleep_columns > full_width) {
+				asleep[0] = '\0';
+				asleep_columns = 0;
+			}
+			name_width = full_width - asleep_columns;
+		}
 		get_mon_name(line_buffer, sizeof(line_buffer),
 					 list->entries[index].race,
 					 list->entries[index].count[section]);
-		utf8_clipto(line_buffer, name_width);
+		angdroid_utf8_clip_columns(line_buffer, name_width);
 		my_strcat(line_buffer, asleep, sizeof(line_buffer));
 
 		/* Calculate the width of the line for dynamic sizing; use a fixed max
 		 * width for location and monster char. */
 		max_line_length = MAX(max_line_length,
-							  utf8_strlen(line_buffer) + 12 + 2);
+							  angdroid_utf8_display_columns(line_buffer) + 12 + 2);
 
 		/* textblock_append_pict will safely add the monster symbol,
 		 * regardless of ASCII/graphics mode. */
@@ -165,10 +183,10 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 		/* Add the left-aligned and padded monster name which will align the
 		 * location to the right. */
 		if (tb != NULL) {
-			/* Hack - Because monster race strings are UTF8, we have to add
-			 * additional padding for any raw bytes that might be consolidated
-			 * into one displayed character. */
-			full_width += strlen(line_buffer) - utf8_strlen(line_buffer);
+			/* printf field width measures bytes; the terminal measures
+			 * CJK glyphs in two columns. Account for both correctly. */
+			full_width = angdroid_utf8_printf_field_bytes(
+				line_buffer, full_width);
 			line_attr = monster_list_entry_line_color(&list->entries[index]);
 			textblock_append_c(tb, line_attr, "%-*s%s\n",
 				(int) full_width, line_buffer, location);
