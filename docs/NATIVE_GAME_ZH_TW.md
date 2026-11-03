@@ -83,6 +83,26 @@ the game's data structures and persisted savefile names are unchanged.
 Other variants and class titles remain unmodified. English fallback
 and representative race/class values have C99 regression coverage.
 
+## Common gameplay screens pass (2026-11-03)
+
+Common player-facing notices now have Traditional Chinese labels in original
+Angband: empty inventory/equipment/quiver, target selection, cancellation,
+save failure/retry, emergency-save prompt, direction prompt, file names,
+confirmation and the continuation footer. The footer is centered using UTF-8
+terminal-column width instead of a hard-coded English string length.
+
+The store/home UI displays Chinese headings, purchase/withdraw prompts,
+context menu actions and common errors (full inventory, insufficient money,
+unavailable store). Crucially, **shop Buy/Sell labels are context-specific**:
+the previous character-stat-point `Buy` and `Sell` labels continue to mean
+increase and decrease a stat; the store independently displays 購買/出售.
+Item counts, prices, object names, save data and command keys are unchanged.
+
+Basic key-map/options labels and common command menu prompts also use
+display-only labels. Translatable fixed messages use `msg("%s", translated)`
+to preserve `-Werror=format-security` compatibility. This scope does not
+include full combat narration, class title progression or all options text.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

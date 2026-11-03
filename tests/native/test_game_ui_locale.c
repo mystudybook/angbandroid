@@ -33,6 +33,18 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text("Race", 1), "種族") == 0);
     assert(strcmp(angdroid_game_ui_text("Class", 1), "職業") == 0);
     assert(strcmp(angdroid_game_ui_text("Human", 0), "Human") == 0);
+    assert(strcmp(angdroid_game_ui_text("Your Home", 1), "我的家") == 0);
+    assert(strcmp(angdroid_game_ui_text("Store Inventory", 1), "商店物品") == 0);
+    assert(strcmp(angdroid_game_ui_text("You have nothing in your inventory.", 1),
+                  "背包裡沒有物品。") == 0);
+    assert(strcmp(angdroid_game_ui_text("Saving failed.  Try again? ", 1),
+                  "儲存失敗，要重試嗎？ ") == 0);
+    assert(strcmp(angdroid_game_ui_text("Cancelled.", 1), "已取消。") == 0);
+    assert(strcmp(angdroid_game_ui_text("[Press any key to continue]", 1),
+                  "按任意鍵繼續") == 0);
+    assert(strcmp(angdroid_game_ui_text("Buy", 1), "提高") == 0);
+    assert(strcmp(angdroid_game_ui_text("Sell", 1), "降低") == 0);
+    assert(strcmp(angdroid_game_ui_text("Your Home", 0), "Your Home") == 0);
     assert(strcmp(angdroid_game_ui_text("New game", 0), "New game") == 0);
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);

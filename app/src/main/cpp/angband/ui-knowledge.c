@@ -65,6 +65,7 @@
 #include "z-util.h"
 
 #include "droid.h"
+#include "zh-tw-ui.h"
 
 /**
  * The first part of this file contains the knowledge menus.  Generic display
@@ -3859,10 +3860,10 @@ void do_cmd_messages(void)
 
 		/* Display prompt (not very informative) */
 		if (strlen(shower))
-			prt("[Movement keys to navigate, '-' for next, '=' to find]",
+			prt(angdroid_game_ui_text("[Movement keys to navigate, '-' for next, '=' to find]", angdroid_zh_tw_enabled()),
 				hgt - 1, 0);
 		else
-			prt("[Movement keys to navigate, '=' to find, or ESCAPE to exit]",
+			prt(angdroid_game_ui_text("[Movement keys to navigate, '=' to find, or ESCAPE to exit]", angdroid_zh_tw_enabled()),
 				hgt - 1, 0);
 			
 		/* Get a command */
@@ -3893,7 +3894,7 @@ void do_cmd_messages(void)
 				case '=':
 				{
 					/* Get the string to find */
-					prt("Find: ", hgt - 1, 0);
+					prt(angdroid_game_ui_text("Find: ", angdroid_zh_tw_enabled()), hgt - 1, 0);
 					if (!askfor_aux(shower, sizeof shower, NULL)) continue;
 		
 					/* Set to find */
@@ -3975,7 +3976,7 @@ void do_cmd_inven(void)
 	int ret = 3;
 
 	if (player->upkeep->inven[0] == NULL) {
-		msg("You have nothing in your inventory.");
+		msg("%s", angdroid_game_ui_text("You have nothing in your inventory.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -3988,7 +3989,7 @@ void do_cmd_inven(void)
 		screen_save();
 
 		/* Get an item to use a context command on (Display the inventory) */
-		if (get_item(&obj, "Select Item:",
+		if (get_item(&obj, angdroid_game_ui_text("Select Item:", angdroid_zh_tw_enabled()),
 				"Error in do_cmd_inven(), please report.",
 				CMD_NULL, NULL, GET_ITEM_PARAMS)) {
 			/* Load screen */
@@ -4021,7 +4022,7 @@ void do_cmd_equip(void)
 	int ret = 3;
 
 	if (!player->upkeep->equip_cnt) {
-		msg("You are not wielding or wearing anything.");
+		msg("%s", angdroid_game_ui_text("You are not wielding or wearing anything.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -4034,7 +4035,7 @@ void do_cmd_equip(void)
 		screen_save();
 
 		/* Get an item to use a context command on (Display the equipment) */
-		if (get_item(&obj, "Select Item:",
+		if (get_item(&obj, angdroid_game_ui_text("Select Item:", angdroid_zh_tw_enabled()),
 				"Error in do_cmd_equip(), please report.",
 				CMD_NULL, NULL, GET_ITEM_PARAMS)) {
 			/* Load screen */
@@ -4070,7 +4071,7 @@ void do_cmd_quiver(void)
 	int ret = 3;
 
 	if (player->upkeep->quiver_cnt == 0) {
-		msg("You have nothing in your quiver.");
+		msg("%s", angdroid_game_ui_text("You have nothing in your quiver.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -4083,7 +4084,7 @@ void do_cmd_quiver(void)
 		screen_save();
 
 		/* Get an item to use a context command on (Display the quiver) */
-		if (get_item(&obj, "Select Item:",
+		if (get_item(&obj, angdroid_game_ui_text("Select Item:", angdroid_zh_tw_enabled()),
 				"Error in do_cmd_quiver(), please report.",
 				CMD_NULL, NULL, GET_ITEM_PARAMS)) {
 			/* Load screen */
@@ -4118,7 +4119,7 @@ void do_cmd_look(void)
 	/* Look around */
 	if (target_set_interactive(TARGET_LOOK, -1, -1))
 	{
-		msg("Target Selected.");
+		msg("%s", angdroid_game_ui_text("Target Selected.", angdroid_zh_tw_enabled()));
 	}
 }
 

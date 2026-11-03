@@ -49,6 +49,8 @@
 #include "ui-spell.h"
 #include "ui-command.h"
 #include "ui-store.h"
+#include "droid.h"
+#include "zh-tw-ui.h"
 #include "z-debug.h"
 
 
@@ -335,13 +337,13 @@ static void store_display_frame(struct store_context *ctx)
 	/* The "Home" is special */
 	if (store->feat == FEAT_HOME) {
 		/* Put the owner name */
-		put_str("Your Home", ctx->scr_places_y[LOC_OWNER], 1);
+		put_str(angdroid_game_ui_text("Your Home", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_OWNER], 1);
 
 		/* Label the object descriptions */
-		put_str("Home Inventory", ctx->scr_places_y[LOC_HEADER], 1);
+		put_str(angdroid_game_ui_text("Home Inventory", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER], 1);
 
 		/* Show weight header */
-		put_str("Weight", ctx->scr_places_y[LOC_HEADER],
+		put_str(angdroid_game_ui_text("Weight", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER],
 				ctx->scr_places_x[LOC_WEIGHT] + 2);
 	} else {
 		/* Normal stores */
@@ -358,14 +360,14 @@ static void store_display_frame(struct store_context *ctx)
 			ctx->scr_places_x[LOC_OWNER] - strlen(buf));
 
 		/* Label the object descriptions */
-		put_str("Store Inventory", ctx->scr_places_y[LOC_HEADER], 1);
+		put_str(angdroid_game_ui_text("Store Inventory", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER], 1);
 
 		/* Showing weight label */
-		put_str("Weight", ctx->scr_places_y[LOC_HEADER],
+		put_str(angdroid_game_ui_text("Weight", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER],
 				ctx->scr_places_x[LOC_WEIGHT] + 2);
 
 		/* Label the asking price (in stores) */
-		put_str("Price", ctx->scr_places_y[LOC_HEADER], ctx->scr_places_x[LOC_PRICE] + 4);
+		put_str(angdroid_game_ui_text("Price", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER], ctx->scr_places_x[LOC_PRICE] + 4);
 	}
 }
 
@@ -446,7 +448,7 @@ static void store_redraw(struct store_context *ctx)
 		if (ctx->flags & STORE_SHOW_HELP)
 			store_display_help(ctx);
 		else
-			prt("Press '?' for help.", ctx->scr_places_y[LOC_HELP_PROMPT], 1);
+			prt(angdroid_game_ui_text("Press '?' for help.", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HELP_PROMPT], 1);
 
 		ctx->flags &= ~(STORE_FRAME_CHANGE);
 	}
@@ -521,7 +523,7 @@ static bool store_sell(struct store_context *ctx)
 	/* Cannot remove stickied objects */
 	if (object_is_equipped(player->body, obj) && !obj_can_takeoff(obj)) {
 		/* Oops */
-		msg("Hmmm, it seems to be stuck.");
+		msg("%s", angdroid_game_ui_text("Hmmm, it seems to be stuck.", angdroid_zh_tw_enabled()));
 
 		/* Nope */
 		return false;
@@ -539,9 +541,9 @@ static bool store_sell(struct store_context *ctx)
 	if (!store_check_num(store, temp_obj)) {
 		object_wipe(temp_obj);
 		if (store->feat == FEAT_HOME)
-			msg("Your home is full.");
+			msg("%s", angdroid_game_ui_text("Your home is full.", angdroid_zh_tw_enabled()));
 		else
-			msg("I have not the room in my store to keep it.");
+			msg("%s", angdroid_game_ui_text("I have not the room in my store to keep it.", angdroid_zh_tw_enabled()));
 
 		return false;
 	}
@@ -619,7 +621,7 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		/* Check if the player can afford any at all */
 		if (store->feat != FEAT_HOME &&
 				player->au < price_item(store, obj, false, 1)) {
-			msg("You do not have enough gold for this item.");
+			msg("%s", angdroid_game_ui_text("You do not have enough gold for this item.", angdroid_zh_tw_enabled()));
 			return false;
 		}
 	} else {
@@ -633,7 +635,7 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 			/* Check if the player can afford any at all */
 			if ((uint32_t)player->au < (uint32_t)price) {
-				msg("You do not have enough gold for this item.");
+				msg("%s", angdroid_game_ui_text("You do not have enough gold for this item.", angdroid_zh_tw_enabled()));
 				return false;
 			}
 
@@ -660,7 +662,7 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		flavor_aware = object_flavor_is_aware(obj);
 		if (amt <= 0 || (!flavor_aware && store->feat != FEAT_HOME &&
 				pack_is_full())) {
-			msg("You cannot carry that many items.");
+			msg("%s", angdroid_game_ui_text("You cannot carry that many items.", angdroid_zh_tw_enabled()));
 			return false;
 		}
 
@@ -688,7 +690,7 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 	/* Ensure we have room */
 	if (!inven_carry_okay(dummy)) {
-		msg("You cannot carry that many items.");
+		msg("%s", angdroid_game_ui_text("You cannot carry that many items.", angdroid_zh_tw_enabled()));
 		object_delete(NULL, NULL, &dummy);
 		return false;
 	}
@@ -910,12 +912,14 @@ static int context_menu_store(struct store_context *ctx, const int oid, int mx, 
 	char *labels = string_make(lower_case);
 	m->selections = labels;
 
-	menu_dynamic_add_label(m, "Inspect inventory", 'I', ACT_INSPECT_INVEN, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Inspect inventory", angdroid_zh_tw_enabled()), 'I', ACT_INSPECT_INVEN, labels);
 	if (!ctx->inspect_only) {
-		menu_dynamic_add_label(m, home ? "Stash" : "Sell", 'd',
+		/* Shop 'Sell' differs from the birth screen's 'Sell stat' action. */
+		menu_dynamic_add_label(m,
+			angdroid_zh_tw_enabled() ? (home ? "存放" : "出售") : (home ? "Stash" : "Sell"), 'd',
 			ACT_SELL, labels);
 	}
-	menu_dynamic_add_label(m, "Exit", '`', ACT_EXIT, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Exit", angdroid_zh_tw_enabled()), '`', ACT_EXIT, labels);
 
 	/* Hack -- no flush needed */
 	msg_flag = false;
@@ -924,7 +928,7 @@ static int context_menu_store(struct store_context *ctx, const int oid, int mx, 
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt("(Enter to select, ESC) Command:", 0, 0);
+	prt(angdroid_game_ui_text("(Enter to select, ESC) Command:", angdroid_zh_tw_enabled()), 0, 0);
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
@@ -979,13 +983,16 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 	labels = string_make(lower_case);
 	m->selections = labels;
 
-	menu_dynamic_add_label(m, "Examine", (OPT(player, rogue_like_commands))
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Examine", angdroid_zh_tw_enabled()), (OPT(player, rogue_like_commands))
 		? 'x' : 'l', ACT_EXAMINE, labels);
 	if (!ctx->inspect_only) {
-		menu_dynamic_add_label(m, home ? "Take" : "Buy", 'p',
+		/* Shop 'Buy' differs from the birth screen's 'Buy stat' action. */
+		menu_dynamic_add_label(m,
+			angdroid_zh_tw_enabled() ? (home ? "取出" : "購買") : (home ? "Take" : "Buy"), 'p',
 			ACT_BUY, labels);
 		if (obj->number > 1) {
-			menu_dynamic_add_label(m, home ? "Take one" : "Buy one",
+			menu_dynamic_add_label(m,
+				angdroid_game_ui_text(home ? "Take one" : "Buy one", angdroid_zh_tw_enabled()),
 				'o', ACT_BUY_ONE, labels);
 		}
 		/*
@@ -1104,10 +1111,10 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 				/* use the old way of purchasing items */
 				msg_flag = false;
 				if (store->feat != FEAT_HOME) {
-					prt("Purchase which item? (ESC to cancel, Enter to select)",
+					prt(angdroid_game_ui_text("Purchase which item? (ESC to cancel, Enter to select)", angdroid_zh_tw_enabled()),
 						0, 0);
 				} else {
-					prt("Get which item? (Esc to cancel, Enter to select)",
+					prt(angdroid_game_ui_text("Get which item? (Esc to cancel, Enter to select)", angdroid_zh_tw_enabled()),
 						0, 0);
 				}
 				oid = store_get_stock(m, oid);
@@ -1120,7 +1127,7 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 			case 'x':
 				/* use the old way of examining items */
 				msg_flag = false;
-				prt("Examine which item? (ESC to cancel, Enter to select)",
+				prt(angdroid_game_ui_text("Examine which item? (ESC to cancel, Enter to select)", angdroid_zh_tw_enabled()),
 					0, 0);
 				oid = store_get_stock(m, oid);
 				prt("", 0, 0);
@@ -1258,7 +1265,7 @@ void enter_store(game_event_type type, game_event_data *data, void *user)
 
 	/* Check that we're on a store */
 	if (!store) {
-		msg("You see no store here.");
+		msg("%s", angdroid_game_ui_text("You see no store here.", angdroid_zh_tw_enabled()));
 		return;
 	}
 

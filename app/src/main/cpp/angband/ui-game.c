@@ -624,7 +624,7 @@ void check_for_player_interrupt(game_event_type type, game_event_data *data,
 			/* Flush and disturb */
 			event_signal(EVENT_INPUT_FLUSH);
 			disturb(player);
-			msg("Cancelled.");
+			msg("%s", angdroid_game_ui_text("Cancelled.", angdroid_zh_tw_enabled()));
 		}
 	}
 }
@@ -681,7 +681,7 @@ static bool start_game(bool new_game)
 		newer = file_newer(panicfile, loadpath);
 		safe_setuid_drop();
 		if (newer) {
-			if (get_check("A panic save exists.  Use it? ")) {
+			if (get_check(angdroid_game_ui_text("A panic save exists.  Use it? ", angdroid_zh_tw_enabled()))) {
 				loadpath = panicfile;
 			}
 		} else {
@@ -1054,7 +1054,7 @@ bool save_game_checked(void)
 
 	/* Save monster memory to user directory */
 	if (!lore_save("lore.txt")) {
-		msg("lore save failed!");
+		msg("%s", angdroid_game_ui_text("lore save failed!", angdroid_zh_tw_enabled()));
 		event_signal(EVENT_MESSAGE_FLUSH);
 	}
 
@@ -1114,9 +1114,9 @@ void close_game(bool prompt_failed_save)
 		/* Save dead player */
 		while (prompting && !savefile_save(savefile)) {
 			if (!prompt_failed_save
-					|| !get_check("Saving failed.  Try again? ")) {
+					|| !get_check(angdroid_game_ui_text("Saving failed.  Try again? ", angdroid_zh_tw_enabled()))) {
 				prompting = false;
-				msg("death save failed!");
+				msg("%s", angdroid_game_ui_text("death save failed!", angdroid_zh_tw_enabled()));
 				event_signal(EVENT_MESSAGE_FLUSH);
 			}
 		}
@@ -1124,7 +1124,7 @@ void close_game(bool prompt_failed_save)
 		/* Save the game */
 		while (prompting && !save_game_checked()) {
 			if (!prompt_failed_save
-					|| !get_check("Saving failed.  Try again? ")) {
+					|| !get_check(angdroid_game_ui_text("Saving failed.  Try again? ", angdroid_zh_tw_enabled()))) {
 				prompting = false;
 			}
 		}
@@ -1132,7 +1132,7 @@ void close_game(bool prompt_failed_save)
 		if (Term->mapped_flag) {
 			struct keypress ch;
 
-			prt("Press Return (or Escape).", 0, 40);
+			prt(angdroid_game_ui_text("Press Return (or Escape).", angdroid_zh_tw_enabled()), 0, 40);
 			ch = inkey();
 			if (ch.code != ESCAPE)
 				predict_score(false);

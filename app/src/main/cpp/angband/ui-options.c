@@ -38,6 +38,7 @@
 #include "ui-target.h"
 
 #include "droid.h"
+#include "zh-tw-ui.h"
 
 /**
  * Prompt the user for a filename to save the pref file to.
@@ -55,7 +56,7 @@ static bool get_pref_path(const char *what, int row, char *buf, size_t max)
 	}
 	prt(format("%s to a pref file", what), row, 0);
 	prt("", row + 1, 0);
-	prt("File: ", row + 2, 0);
+	prt(angdroid_game_ui_text("File: ", angdroid_zh_tw_enabled()), row + 2, 0);
 	prt("", row + 3, 0);
 
 	/* Get the filesystem-safe name and append .prf */
@@ -251,9 +252,9 @@ static bool use_option_context_menu(struct menu *m, const ui_event *in,
 		option_type_name(page));
 	menu_dynamic_add_label(cm, save_label, 's', ACT_CTX_OPT_SAVE, labels);
 	if (m->flags == MN_DBL_TAP) {
-		menu_dynamic_add_label(cm, "Restore from saved defaults", 'r',
+		menu_dynamic_add_label(cm, angdroid_game_ui_text("Restore from saved defaults", angdroid_zh_tw_enabled()), 'r',
 			ACT_CTX_OPT_RESTORE, labels);
-		menu_dynamic_add_label(cm, "Reset to factory defaults", 'x',
+		menu_dynamic_add_label(cm, angdroid_game_ui_text("Reset to factory defaults", angdroid_zh_tw_enabled()), 'x',
 			ACT_CTX_OPT_RESET, labels);
 	}
 
@@ -406,7 +407,7 @@ static void do_cmd_options_win(const char *name, int row)
 	/* Interact */
 	while (1) {
 		/* Prompt */
-		prt("Window flags (<dir> to move, 't'/Enter to toggle, or ESC)", 0, 0);
+		prt(angdroid_game_ui_text("Window flags (<dir> to move, 't'/Enter to toggle, or ESC)", angdroid_zh_tw_enabled()), 0, 0);
 
 		/* Display the windows */
 		for (j = 0; j < ANGBAND_TERM_MAX; j++) {
@@ -600,7 +601,7 @@ static void ui_keymap_query(const char *title, int row)
 	const struct keypress *act;
 
 	prt(title, 13, 0);
-	prt("Key: ", 14, 0);
+	prt(angdroid_game_ui_text("Key: ", angdroid_zh_tw_enabled()), 14, 0);
 	
 	/* Get a keymap trigger & mapping */
 	c = keymap_get_trigger();
@@ -609,17 +610,17 @@ static void ui_keymap_query(const char *title, int row)
 	/* Keymap found? */
 	if (!act) {
 		/* Prompt */
-		prt("No keymap with that trigger.  Press any key to continue.", 16, 0);
+		prt(angdroid_game_ui_text("No keymap with that trigger.  Press any key to continue.", angdroid_zh_tw_enabled()), 16, 0);
 		inkey();
 	} else {
 		/* Analyze the current action */
 		keypress_to_text(tmp, sizeof(tmp), act, false);
 	
 		/* Display the current action */
-		prt("Found: ", 15, 0);
+		prt(angdroid_game_ui_text("Found: ", angdroid_zh_tw_enabled()), 15, 0);
 		Term_addstr(-1, COLOUR_WHITE, tmp);
 
-		prt("Press any key to continue.", 17, 0);
+		prt(angdroid_game_ui_text("Press any key to continue.", angdroid_zh_tw_enabled()), 17, 0);
 		inkey();
 	}
 }
@@ -634,12 +635,12 @@ static void ui_keymap_create(const char *title, int row)
 	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
 
 	prt(title, 13, 0);
-	prt("Key: ", 14, 0);
+	prt(angdroid_game_ui_text("Key: ", angdroid_zh_tw_enabled()), 14, 0);
 
 	c = keymap_get_trigger();
 	if (c.code == '=') {
 		c_prt(COLOUR_L_RED, "The '=' key is reserved.", 16, 2);
-		prt("Press any key to continue.", 18, 0);
+		prt(angdroid_game_ui_text("Press any key to continue.", angdroid_zh_tw_enabled()), 18, 0);
 		inkey();
 		return;
 	}
@@ -700,7 +701,7 @@ static void ui_keymap_create(const char *title, int row)
 		}
 	}
 
-	if (c.code && get_check("Keep this keymap? ")) {
+	if (c.code && get_check(angdroid_game_ui_text("Keep this keymap? ", angdroid_zh_tw_enabled()))) {
 		keymap_add(mode, c, keymap_buffer, true);
 		prt("To use in other sessions, save the keymaps to a file.  Press a key to continue.", 17, 0);
 		inkey();
@@ -713,17 +714,17 @@ static void ui_keymap_remove(const char *title, int row)
 	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
 
 	prt(title, 13, 0);
-	prt("Key: ", 14, 0);
+	prt(angdroid_game_ui_text("Key: ", angdroid_zh_tw_enabled()), 14, 0);
 
 	c = keymap_get_trigger();
 
 	if (keymap_remove(mode, c))
-		prt("Removed.", 16, 0);
+		prt(angdroid_game_ui_text("Removed.", angdroid_zh_tw_enabled()), 16, 0);
 	else
-		prt("No keymap to remove!", 16, 0);
+		prt(angdroid_game_ui_text("No keymap to remove!", angdroid_zh_tw_enabled()), 16, 0);
 
 	/* Prompt */
-	prt("Press any key to continue.", 17, 0);
+	prt(angdroid_game_ui_text("Press any key to continue.", angdroid_zh_tw_enabled()), 17, 0);
 	inkey();
 }
 
@@ -736,7 +737,7 @@ static void keymap_browse_hook(int oid, void *db, const region *loc)
 	clear_from(13);
 
 	/* Show current action */
-	prt("Current action (if any) shown below:", 13, 0);
+	prt(angdroid_game_ui_text("Current action (if any) shown below:", angdroid_zh_tw_enabled()), 13, 0);
 	keypress_to_text(tmp, sizeof(tmp), keymap_buffer, false);
 	prt(tmp, 14, 0);
 }
@@ -1223,7 +1224,7 @@ static void do_cmd_pref_file_hack(long row)
 	}
 	prt("Command: Load a user pref file", row, 0);
 	prt("", row + 1, 0);
-	prt("File: ", row + 2, 0);
+	prt(angdroid_game_ui_text("File: ", angdroid_zh_tw_enabled()), row + 2, 0);
 	prt("", row + 3, 0);
 
 	/* Get the filesystem-safe name and append .prf */

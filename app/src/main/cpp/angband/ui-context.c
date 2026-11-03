@@ -127,7 +127,7 @@ static int context_menu_player_2(int mx, int my)
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt("(Enter to select, ESC) Command:", 0, 0);
+	prt(angdroid_game_ui_text("(Enter to select, ESC) Command:", angdroid_zh_tw_enabled()), 0, 0);
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
@@ -319,7 +319,7 @@ int context_menu_player(int mx, int my)
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt("(Enter to select, ESC) Command:", 0, 0);
+	prt(angdroid_game_ui_text("(Enter to select, ESC) Command:", angdroid_zh_tw_enabled()), 0, 0);
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
@@ -392,7 +392,7 @@ int context_menu_player(int mx, int my)
 
 		case MENU_VALUE_LOOK:
 			if (target_set_interactive(TARGET_LOOK, player->grid.x, player->grid.y))
-				msg("Target Selected.");
+				msg("%s", angdroid_game_ui_text("Target Selected.", angdroid_zh_tw_enabled()));
 			break;
 
 		case MENU_VALUE_CHARACTER:
@@ -514,7 +514,7 @@ int context_menu_cave(struct chunk *c, int y, int x, int adjacent, int mx,
 	region_erase_bordered(&m->boundary);
 
 	if (player->timed[TMD_IMAGE]) {
-		prt("(Enter to select command, ESC to cancel) You see something strange:", 0, 0);
+		prt(angdroid_zh_tw_enabled() ? "Enter 選取／Esc 取消：你看到奇怪的東西" : "(Enter to select command, ESC to cancel) You see something strange:", 0, 0);
 	} else if (square(c, grid)->mon) {
 		char m_name[80];
 		struct monster *mon = square_monster(c, grid);
@@ -595,7 +595,7 @@ int context_menu_cave(struct chunk *c, int y, int x, int adjacent, int mx,
 		case MENU_VALUE_LOOK:
 			/* Look at the spot */
 			if (target_set_interactive(TARGET_LOOK, x, y)) {
-				msg("Target Selected.");
+				msg("%s", angdroid_game_ui_text("Target Selected.", angdroid_zh_tw_enabled()));
 			}
 			break;
 
@@ -931,7 +931,7 @@ static int show_command_list(struct cmd_info cmd_list[], int size, int mx,
 	screen_save();
 	region_erase_bordered(&m->boundary);
 
-	prt("(Enter to select, ESC) Command:", 0, 0);
+	prt(angdroid_game_ui_text("(Enter to select, ESC) Command:", angdroid_zh_tw_enabled()), 0, 0);
 	selected = menu_dynamic_select(m);
 	menu_dynamic_free(m);
 
@@ -968,7 +968,7 @@ int context_menu_command(int mx, int my)
 	screen_save();
 	region_erase_bordered(&m->boundary);
 
-	prt("(Enter to select, ESC) Command:", 0, 0);
+	prt(angdroid_game_ui_text("(Enter to select, ESC) Command:", angdroid_zh_tw_enabled()), 0, 0);
 	selected = menu_dynamic_select(m);
 	menu_dynamic_free(m);
 
@@ -1057,7 +1057,7 @@ void textui_process_click(ui_event e)
 			} else if (e.mouse.mods & KC_MOD_ALT) {
 				/* alt-click - look */
 				if (target_set_interactive(TARGET_LOOK, x, y)) {
-					msg("Target Selected.");
+					msg("%s", angdroid_game_ui_text("Target Selected.", angdroid_zh_tw_enabled()));
 				}
 			} else {
 				/* Pathfind does not work well on trap detection borders,

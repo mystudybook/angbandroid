@@ -54,6 +54,9 @@ def main():
     player_ui = source(CPP / "angband/ui-player.c", errors)
     context_ui = source(CPP / "angband/ui-context.c", errors)
     game_ui = source(CPP / "angband/ui-game.c", errors)
+    store_ui = source(CPP / "angband/ui-store.c", errors)
+    knowledge_ui = source(CPP / "angband/ui-knowledge.c", errors)
+    input_ui = source(CPP / "angband/ui-input.c", errors)
     java_tests = source(ROOT / "scripts/test-terminal-unicode.sh", errors)
 
     expect("usesTraditionalChineseGameText()" in java,
@@ -164,6 +167,24 @@ def main():
     expect("angdroid_game_ui_text(player->race->name" in player_ui
            and "angdroid_game_ui_text(player->class->name" in player_ui,
            "Character sheet is not using display-only race and class labels")
+    for english, chinese in (("Your Home", "我的家"),
+                             ("Store Inventory", "商店物品"),
+                             ("Cancelled.", "已取消。"),
+                             ("You have nothing in your inventory.",
+                              "背包裡沒有物品。")):
+        expect(english in game_ui_header and chinese in game_ui_header,
+               "Missing gameplay Chinese display text: " + english)
+    expect('msg("%s", angdroid_game_ui_text(' in store_ui,
+           "Store messages need a literal printf format")
+    expect('msg("%s", angdroid_game_ui_text(' in knowledge_ui,
+           "Inventory warnings need a literal printf format")
+    expect('msg("%s", angdroid_game_ui_text(' in game_ui,
+           "Game save/cancel messages need a literal printf format")
+    expect('angdroid_utf8_display_columns(continue_prompt)' in input_ui,
+           "Localized pause line must use CJK column width")
+    expect('home ? "存放" : "出售"' in store_ui and
+           'home ? "取出" : "購買"' in store_ui,
+           "Store Buy/Sell must differ from character stat adjustment labels")
     if errors:
         for item in errors:
             print("FAIL:", item)

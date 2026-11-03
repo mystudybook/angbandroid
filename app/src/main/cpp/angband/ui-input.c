@@ -51,6 +51,7 @@
 
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "../curses/unicode_display.h"
 
 static bool inkey_xtra;
 uint32_t inkey_scan;		/* See the "inkey()" function */
@@ -1318,7 +1319,7 @@ static bool get_file_text(const char *suggested_name, char *path, size_t len)
 	
 	if (!arg_force_name) {
 			
-			if (!get_string("File name: ", buf, sizeof buf)) return false;
+			if (!get_string(angdroid_game_ui_text("File name: ", angdroid_zh_tw_enabled()), buf, sizeof buf)) return false;
 
 			/* Make sure it's actually a filename */
 			if (buf[0] == '\0' || buf[0] == ' ') return false;
@@ -1331,7 +1332,7 @@ static bool get_file_text(const char *suggested_name, char *path, size_t len)
 		time(&ltime);
 		today = localtime(&ltime);
 
-		prt("File name: ", 0,0);
+		prt(angdroid_game_ui_text("File name: ", angdroid_zh_tw_enabled()), 0,0);
 
 		/* Overwrite the ".txt" that was added */
 		assert(strlen(buf) >= 4);
@@ -1348,7 +1349,7 @@ static bool get_file_text(const char *suggested_name, char *path, size_t len)
 	path_build(path, len, ANGBAND_DIR_USER, buf);
 
 	/* Check if it already exists */
-	if (file_exists(path) && !get_check("Replace existing file? "))
+	if (file_exists(path) && !get_check(angdroid_game_ui_text("Replace existing file? ", angdroid_zh_tw_enabled())))
 		return false;
 
 	/* Tell the user where it's saved to. */
@@ -1429,7 +1430,11 @@ bool get_com_ex(const char *prompt, ui_event *command)
 void pause_line(struct term *tm)
 {
 	prt("", tm->hgt - 1, 0);
-	put_str("[Press any key to continue]", tm->hgt - 1, (tm->wid - 27) / 2);
+	/* Correct centering for wide UTF-8 glyphs (two terminal columns each). */
+	const char *continue_prompt = angdroid_game_ui_text("[Press any key to continue]", angdroid_zh_tw_enabled());
+	int text_columns = (int)angdroid_utf8_display_columns(continue_prompt);
+	put_str(continue_prompt, tm->hgt - 1,
+		text_columns >= tm->wid ? 0 : (tm->wid - text_columns) / 2);
 	(void)anykey();
 	prt("", tm->hgt - 1, 0);
 }
@@ -1488,7 +1493,7 @@ static bool textui_get_rep_dir(int *dp, bool allow_5)
 		if (ke.type == EVT_NONE ||
 				(ke.type == EVT_KBRD
 				&& !target_dir_allow(ke.key, allow_5))) {
-			prt("Direction or <click> (Escape to cancel)? ", 0, 0);
+			prt(angdroid_game_ui_text("Direction or <click> (Escape to cancel)? ", angdroid_zh_tw_enabled()), 0, 0);
 			ke = inkey_ex();
 		}
 
@@ -1920,7 +1925,7 @@ bool key_confirm_command(unsigned char c)
 		n = check_for_inscrip(obj, "^*") +
 				check_for_inscrip(obj, verify_inscrip);
 		while (n--) {
-			if (!get_check("Are you sure? "))
+			if (!get_check(angdroid_game_ui_text("Are you sure? ", angdroid_zh_tw_enabled())))
 				return false;
 		}
 	}
