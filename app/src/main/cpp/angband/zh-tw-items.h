@@ -10,7 +10,7 @@
 #include <stddef.h>
 #include <string.h>
 
-#define ANGDROID_ZH_TW_ITEM_KINDS 37
+#define ANGDROID_ZH_TW_ITEM_KINDS 76
 
 static inline const char *angdroid_zh_tw_item_kind_name(const char *english)
 {
@@ -55,6 +55,45 @@ static inline const char *angdroid_zh_tw_item_kind_name(const char *english)
         { "& Pair~ of Leather Boots", "皮靴" },
         { "& Metal Cap~", "金屬帽" },
         { "& Hard Leather Cap~", "硬皮帽" },
+        { "& Pair~ of Mithril Shod Boots", "秘銀護靴" },
+        { "& Pair~ of Ethereal Slippers", "以太拖鞋" },
+        { "& Iron Helm~", "鐵盔" },
+        { "& Steel Helm~", "鋼盔" },
+        { "& Iron Crown~", "鐵冠" },
+        { "& Golden Crown~", "金冠" },
+        { "& Jewel Encrusted Crown~", "寶石鑲嵌王冠" },
+        { "& Robe~", "長袍" },
+        { "Soft Leather Armour~", "軟皮甲" },
+        { "Studded Leather Armour~", "鑲釘皮甲" },
+        { "Hard Leather Armour~", "硬皮甲" },
+        { "Leather Scale Mail~", "鱗片皮甲" },
+        { "Metal Scale Mail~", "金屬鱗甲" },
+        { "Chain Mail~", "鎖子甲" },
+        { "Augmented Chain Mail~", "強化鎖子甲" },
+        { "Bar Chain Mail~", "條狀鎖子甲" },
+        { "Metal Brigandine Armour~", "金屬札甲" },
+        { "Partial Plate Armour~", "半身板甲" },
+        { "Metal Lamellar Armour~", "金屬片甲" },
+        { "Full Plate Armour~", "全身板甲" },
+        { "Ribbed Plate Armour~", "肋條板甲" },
+        { "Mithril Chain Mail~", "秘銀鎖子甲" },
+        { "Mithril Plate Mail~", "秘銀板甲" },
+        { "Adamantite Plate Mail~", "精金板甲" },
+        { "& Cloak~", "披風" },
+        { "& Fur Cloak~", "毛皮披風" },
+        { "& Elven Cloak~", "精靈披風" },
+        { "& Ethereal Cloak~", "以太披風" },
+        { "& Set~ of Leather Gloves", "皮手套" },
+        { "& Set~ of Gauntlets", "護手" },
+        { "& Set~ of Mithril Gauntlets", "秘銀護手" },
+        { "& Set~ of Caestus", "拳鬥手套" },
+        { "& Set~ of Alchemist's Gloves", "鍊金術士手套" },
+        { "& Wicker Shield~", "藤編盾" },
+        { "& Small Metal Shield~", "小型金屬盾" },
+        { "& Leather Shield~", "皮盾" },
+        { "& Large Metal Shield~", "大型金屬盾" },
+        { "& Knight's Shield~", "騎士盾" },
+        { "& Mithril Shield~", "秘銀盾" },
     };
     size_t i;
     if (!english) return NULL;
