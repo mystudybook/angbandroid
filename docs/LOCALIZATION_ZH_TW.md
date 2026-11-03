@@ -4,9 +4,9 @@ This is an **unofficial** localization of the Android Angband port. The intended
 
 ## Status
 
-- `values-zh-rTW/strings.xml` now contains **196 translated string resources** (40 initial + 99 preferences + 15 launcher/profile/dialogs + 21 game quick settings + 17 storage messages + 4 profile validation messages), and **7 display-only arrays** (42 localized items).
+- `values-zh-rTW/strings.xml` now contains **196 translated string resources** (40 initial + 99 preferences + 15 launcher/profile/dialogs + 21 game quick settings + 17 storage messages + 4 profile validation messages), and **8 display-only arrays** (50 localized items).
 - In `res/xml/preferences.xml`, **99 hard-coded UI labels and summaries** now reference localized strings. The remaining 67 hard-coded labels are literal keyboard letters/digits/symbol keycaps (deliberately unchanged).
-- Localized launcher buttons, profile editor hints/buttons, profile context actions, localized profile validation, basic dialogs, in-game quick settings, and storage manager buttons/messages.
+- Localized launcher buttons, profile editor hints/buttons, profile context actions, localized profile validation, basic dialogs, in-game quick settings, storage manager buttons/messages, and the special mouse-button popup.
 - The Chinese HTML guide is `app/src/main/assets/help_zh_tw.html`; `HelpActivity` selects it for the `zh-TW` device locale, retaining the upstream `help.html` as English fallback.
 - Split D-Pad colors, quick-key popup position and storage location display arrays from their stable persisted `entryValues`.
 - Source-level verification checked **186 Java/XML string references** and **18 array references** with no unresolved names; translated array sizes and formatting placeholders match English defaults. All twelve preference entry/entryValues array pairs inspected have matching item counts; persisted value arrays remain untranslated. These are not Android runtime tests.
@@ -35,6 +35,10 @@ This is an **unofficial** localization of the Android Angband port. The intended
 ## Fixed-position map grid safety (2026-11-03)
 
 The native grid now distinguishes **streamed terminal text** from **fixed-coordinate map cells**. `Term_addstr()` / `Term_addch()` continue to use two columns for Chinese text, while `Term_draw()` / `Term_queue_chars()` preserve their fixed cell positions and replace otherwise overflowing wide map glyphs with `?`. Existing tile indices, direct-cell terrain clearing, and private-use control characters are preserved. The native `Term_what()` hides the internal continuation marker from game logic; literal U+FDD0 input is also sanitized. Tests and static source checks cover the behavior, but Android compilation and device rendering are **not yet verified**.
+
+## Mobile mouse controls (2026-11-03)
+
+The special mouse-button popup now displays its labels from the `mouse_input_labels` resource array. Its eight commands are defined by stable numeric option IDs in `MouseInputOptions.java`, **not by searching localized labels for `Shift`, `Ctrl`, `Alt` or `2`**. This also fixes the old `Shitf-1` typo that prevented the first Shift mouse action from working correctly. The pure-Java `MouseInputOptionsTest` passes 19 mapping/invalid-input assertions and runs from `scripts/test-terminal-unicode.sh`. Device touch verification remains pending.
 
 ## Recent renderer fixes
 
