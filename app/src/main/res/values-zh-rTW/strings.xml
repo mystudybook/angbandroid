@@ -81,4 +81,105 @@
         <item>左上</item>
         <item>右上</item>
     </string-array>
+
+    <!-- Localized labels for Android preference screen. -->
+    <string name="pref_game_profile">遊戲設定檔</string>
+    <string name="pref_storage_location">儲存位置</string>
+    <string name="pref_restart_required">需要重新啟動</string>
+    <string name="pref_halve_max_distance_of_ranged_attacks_for_v_and_fa_for_small_displays_needs_restart">遠程攻擊最大距離減半（適用 V 和 FA 小螢幕模式，需重新啟動）</string>
+    <string name="pref_graphics_options">圖形選項</string>
+    <string name="pref_tileset_tile_multiplier_decoration_etc">圖塊組、圖塊縮放與裝飾等設定</string>
+    <string name="pref_tileset">圖塊組</string>
+    <string name="pref_select_the_tileset">選擇圖塊組</string>
+    <string name="pref_use_graphics_for_sil_q">在 Sil-Q 使用圖形模式</string>
+    <string name="pref_tile_multiplier">圖塊縮放倍數</string>
+    <string name="pref_columns_x_rows">欄數 × 列數</string>
+    <string name="pref_draw_health_bars">顯示生命值條</string>
+    <string name="pref_above_player_and_monsters">顯示在玩家與怪物上方</string>
+    <string name="pref_show_small_ascii_helper_for_tiles_suggested_value_40" formatted="false">在圖塊上顯示小型 ASCII 輔助文字（建議 40%）</string>
+    <string name="pref_show_mouse_icon">顯示滑鼠圖示</string>
+    <string name="pref_it_allows_you_to_execute_actions_on_a_grid">可在地圖格子上執行動作</string>
+    <string name="pref_sub_windows_settings">子視窗設定</string>
+    <string name="pref_map_views_in_graphics_mode_are_not_supported">（不支援圖形模式的地圖視窗）</string>
+    <string name="pref_number_of_sub_windows">子視窗數量</string>
+    <string name="pref_issue_a_redraw_ctrl_r_after_modifying_this">修改後請按 Ctrl-R 重新繪製畫面</string>
+    <string name="pref_number_of_columns_max_80">欄數（最多 80）</string>
+    <string name="pref_number_of_rows_max_24">列數（最多 24）</string>
+    <string name="pref_font_multiplier_50_to_150" formatted="false">字體縮放（50% 至 150%）</string>
+    <string name="pref_layout_sub_windows_horizontally">水平排列子視窗</string>
+    <string name="pref_angband_top_bar">Angband 頂端資訊列</string>
+    <string name="pref_stats_and_other_indicators_go_to_top_instead_of_left">將能力值及其他指示資訊顯示於上方而非左側</string>
+    <string name="pref_font_multiplier_for_top_bar_100_to_200" formatted="false">頂端資訊列字體縮放（100% 至 200%）</string>
+    <string name="pref_enable_software_input">啟用螢幕輸入控制</string>
+    <string name="pref_if_hidden_tap_bottom_left_corner_to_enable">隱藏時，可點選左下角重新顯示</string>
+    <string name="pref_soft_keyboard_options">螢幕鍵盤選項</string>
+    <string name="pref_configure_type_and_size_of_qwerty_keyboard">設定 QWERTY 鍵盤類型及尺寸</string>
+    <string name="pref_keyboard_position">鍵盤位置</string>
+    <string name="pref_keyboard_opacity">鍵盤透明度</string>
+    <string name="pref_middle_opacity">中間區域透明度</string>
+    <string name="pref_use_full_keyboard">使用完整鍵盤</string>
+    <string name="pref_turn_off_to_display_a_mini_keyboard">關閉後顯示迷你鍵盤</string>
+    <string name="pref_vertical_keyboard">直向排列鍵盤</string>
+    <string name="pref_less_columns_more_rows">減少欄數並增加列數</string>
+    <string name="pref_show_keymaps_if_keymap_mode_is_on">快捷鍵模式開啟時顯示按鍵對應</string>
+    <string name="pref_hide_keys_after_5_seconds">5 秒後隱藏按鍵</string>
+    <string name="pref_high_contrast_visuals">高對比顯示</string>
+    <string name="pref_keyboard_width">鍵盤寬度</string>
+    <string name="pref_keyboard_height">鍵盤高度</string>
+    <string name="pref_button_ribbon_options">快捷按鈕列選項</string>
+    <string name="pref_configure_things_like_button_size_or_management_of_long_lists">設定按鈕大小及長清單操作等</string>
+    <string name="pref_ribbon_button_size_multiplier">快捷按鈕大小倍數</string>
+    <string name="pref_button_width_for_long_selections_lists_try_with_50" formatted="false">長選項清單的按鈕寬度（可試用 50%）</string>
+    <string name="pref_auto_display_long_lists">自動顯示長清單</string>
+    <string name="pref_when_you_are_prompted_for_selection">需要選擇項目時顯示</string>
+    <string name="pref_use_icons">使用圖示</string>
+    <string name="pref_use_icons_for_ribbon_buttons">在快捷按鈕列顯示圖示</string>
+    <string name="pref_position_of_fast_keys_popup">快速按鍵彈出視窗位置</string>
+    <string name="pref_enable_the_quantity_popup">啟用數量輸入視窗</string>
+    <string name="pref_hardware_key_mapping">實體按鍵對應</string>
+    <string name="pref_configure_hardware_buttons_on_your_device_to_perform_various_functions">設定裝置實體按鍵的功能</string>
+    <string name="pref_display_functions">顯示功能</string>
+    <string name="pref_change_display_font_size_virtual_keyboard">變更顯示方式、字體大小及虛擬鍵盤</string>
+    <string name="pref_toggle_virtual_keyboard">切換虛擬鍵盤</string>
+    <string name="pref_zoom_in">放大</string>
+    <string name="pref_zoom_out">縮小</string>
+    <string name="pref_letters_and_numbers">英文字母與數字</string>
+    <string name="pref_a_z_0_9">A–Z、0–9</string>
+    <string name="pref_modifiers_and_movers">修飾鍵與移動鍵</string>
+    <string name="pref_esc_ctrl_shift_alt_space_enter_directions">Esc、Ctrl、Shift、Alt、空白鍵、Enter 與方向鍵</string>
+    <string name="pref_arrow_down">向下鍵</string>
+    <string name="pref_arrow_left">向左鍵</string>
+    <string name="pref_arrow_right">向右鍵</string>
+    <string name="pref_arrow_up">向上鍵</string>
+    <string name="pref_dpad_center">方向鍵中央</string>
+    <string name="pref_home">Home 鍵</string>
+    <string name="pref_end">End 鍵</string>
+    <string name="pref_page_up">上一頁</string>
+    <string name="pref_page_down">下一頁</string>
+    <string name="pref_backspace">退格鍵</string>
+    <string name="pref_control_key">Ctrl 鍵</string>
+    <string name="pref_enter_key">Enter 鍵</string>
+    <string name="pref_back">返回鍵</string>
+    <string name="pref_esc_key">Esc 鍵</string>
+    <string name="pref_left_alt_fn_key">左 Alt/Fn 鍵</string>
+    <string name="pref_left_shift_key">左 Shift 鍵</string>
+    <string name="pref_right_alt_fn_key">右 Alt/Fn 鍵</string>
+    <string name="pref_right_shift_key">右 Shift 鍵</string>
+    <string name="pref_space">空白鍵</string>
+    <string name="pref_symbols">符號</string>
+    <string name="pref_punctuation_and_other_non_alpha_numeric_keys">標點符號及其他非英數按鍵</string>
+    <string name="pref_ctrl_key_double_tap">連按兩下 Ctrl 鍵</string>
+    <string name="pref_double_tap_function_for_hardware_button_mapped_to_the_ctrl_key_function">設定對應 Ctrl 功能的實體按鍵連按兩下時執行的動作</string>
+    <string name="pref_reset_all_hardware_keys">重設所有實體按鍵</string>
+    <string name="pref_restores_all_key_mappings_back_to_the_default_configuration">將所有實體按鍵對應還原為預設設定</string>
+    <string name="pref_directional_pad_d_pad">方向鍵（D-Pad）</string>
+    <string name="pref_configure_options_for_the_d_pad">設定方向鍵選項</string>
+    <string name="pref_touch_directional_size_multiplier">觸控方向鍵大小倍數</string>
+    <string name="pref_allow_drag_and_drop_of_the_touch_directionals">允許拖曳觸控方向鍵</string>
+    <string name="pref_center_screen_tap_action">點選畫面中央時的動作</string>
+    <string name="pref_select_functionality_for_center_screen_tap">選擇點選畫面中央時執行的功能</string>
+    <string name="pref_d_pad_color_1">方向鍵顏色 1</string>
+    <string name="pref_d_pad_color_2">方向鍵顏色 2</string>
+    <string name="pref_debug_keycodes_external_keyboards">偵錯按鍵代碼（外接鍵盤）</string>
+    <string name="pref_display_the_numeric_codes_on_screen">在畫面上顯示按鍵代碼數字</string>
 </resources>
