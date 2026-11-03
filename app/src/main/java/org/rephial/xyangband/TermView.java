@@ -889,13 +889,23 @@ public class TermView extends View implements OnGestureListener {
 				paint.setColor(color);
 				paint.setAlpha(255);
 
-				int w2 = (int)paint.measureText(str, 0, 1);
+				Paint glyphPaint = paint;
+				if (TerminalUnicode.isWide(ch)) {
+					// Retain the one-cell layout for now; use the device CJK fallback.
+					glyphPaint = new Paint(paint);
+					glyphPaint.setTypeface(Typeface.DEFAULT_BOLD);
+					float glyphWidth = glyphPaint.measureText(str);
+					if (glyphWidth > tw && tw > 0) {
+						glyphPaint.setTextScaleX((float)tw / glyphWidth);
+					}
+				}
+				int w2 = (int)glyphPaint.measureText(str, 0, 1);
 				int pad = Math.max((tw - w2) / 2, 0);
 
 				p_canvas.drawText(str,
-					x + pad,
-					y + th - paint.descent(),
-					paint);
+						x + pad,
+						y + th - glyphPaint.descent(),
+						glyphPaint);
 			}
 		}
 	}
@@ -3165,11 +3175,7 @@ public class TermView extends View implements OnGestureListener {
 			// Use Android's system font fallback for East Asian BMP characters.
 			// This is intentionally a one-cell compatibility fallback, not yet
 			// a full double-column terminal layout implementation.
-			boolean eastAsian = (ch >= 0x2E80 && ch <= 0x9FFF)
-				|| (ch >= 0xAC00 && ch <= 0xD7A3)
-				|| (ch >= 0xF900 && ch <= 0xFAFF)
-				|| (ch >= 0xFE10 && ch <= 0xFE6F)
-				|| (ch >= 0xFF01 && ch <= 0xFF60);
+			boolean eastAsian = TerminalUnicode.isWide(ch);
 			if (eastAsian) {
 				fore_temp = new Paint(fore);
 				fore_temp.setTypeface(Typeface.DEFAULT_BOLD);
