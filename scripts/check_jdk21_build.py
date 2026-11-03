@@ -70,6 +70,32 @@ def main():
         "Target SDK unchanged": bool(re.search(r"\btargetSdk\s*=\s*34\b", app)),
         "Min SDK unchanged": bool(re.search(r"\bminSdk\s*=\s*22\b", app)),
         "NDK r28c pinned": 'ndkVersion = "28.2.13676358"' in app,
+
+        "CMake 4.1.2 pinned": 'version = "4.1.2"' in app,
+        "Native CMake minimum updated for all game modules": all(
+            "cmake_minimum_required(VERSION 3.10)" in read(path)
+            for path in (
+                "app/src/main/cpp/CMakeLists.txt",
+                "app/src/main/cpp/loader/CMakeLists.txt",
+                "app/src/main/cpp/angband/CMakeLists.txt",
+                "app/src/main/cpp/faangband/CMakeLists.txt",
+                "app/src/main/cpp/frogcomposband/CMakeLists.txt",
+                "app/src/main/cpp/npp041/CMakeLists.txt",
+                "app/src/main/cpp/npp054/CMakeLists.txt",
+                "app/src/main/cpp/npp710/CMakeLists.txt",
+                "app/src/main/cpp/silq/CMakeLists.txt",
+                "app/src/main/cpp/zangband275/CMakeLists.txt",
+                "app/src/main/cpp/tome23x/CMakeLists.txt",
+                "app/src/main/cpp/unangband066/CMakeLists.txt",
+            )
+        ),
+        "Root native CMake project declaration":
+            "project(angbandroid LANGUAGES C CXX)" in read(
+                "app/src/main/cpp/CMakeLists.txt"
+            ),
+        "CMake preflight supports external installation":
+            "find_cmake(root, cmake)" in read("scripts/check_android_sdk.py")
+            and 'local_prop("cmake.dir")' in read("scripts/check_android_sdk.py"),
         "Maven Central repositories": top.count("mavenCentral()") == 2
             and "jcenter()" not in top,
         "Gradle 9 provider-based clean task":
