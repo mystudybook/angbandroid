@@ -19,7 +19,7 @@ typedef struct {
     int clipped;
 } angdroid_text_fit;
 
-static int angdroid_is_wide_text(wchar_t ch, int attr)
+static inline int angdroid_is_wide_text(wchar_t ch, int attr)
 {
     if ((attr & 0x80) || ch == ANGDROID_TEXT_CONTINUATION) return 0;
     return angdroid_terminal_columns((uint32_t)ch) == 2;
@@ -30,7 +30,7 @@ static int angdroid_is_wide_text(wchar_t ch, int attr)
  * a native row. The length argument is in wchar_t units, not UTF-8 bytes.
  * Does not wrap or split an East Asian full-width character at the edge.
  */
-static angdroid_text_fit angdroid_fit_terminal_text(
+static inline angdroid_text_fit angdroid_fit_terminal_text(
     const wchar_t *text, size_t limit, size_t available_columns)
 {
     angdroid_text_fit fit = {0u, 0u, 0};
@@ -58,7 +58,7 @@ static angdroid_text_fit angdroid_fit_terminal_text(
  * continuation column while retaining physical x offsets. A zero return
  * means no more visible code points remain in this source range.
  */
-static size_t angdroid_next_visible_text_run(
+static inline size_t angdroid_next_visible_text_run(
     const wchar_t *cells, size_t length, size_t *cursor, size_t *start)
 {
     size_t i;
