@@ -327,9 +327,15 @@ public class TermWindow {
 		Log.d("Angband","addnstr ("+row+","+col+") ["+foo+"]");
 		*/
 
+		// JNI supplies an explicit byte count. Never decode unused trailing
+		// buffer data or allow a malformed length to escape the native bridge.
+		if (cp == null || n <= 0) return;
+		int byteCount = Math.min(n, cp.length);
+		if (byteCount == 0) return;
+
 		String str;
 		try {
-			str = new String(cp, encoding);
+			str = new String(cp, 0, byteCount, encoding);
 		} catch(java.io.UnsupportedEncodingException e) {
 			str = "";
 			Log.d("Angband", "Encoding exception");
