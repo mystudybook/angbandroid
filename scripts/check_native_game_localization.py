@@ -55,6 +55,7 @@ def main():
     menu_ui = source(CPP / "angband/ui-menu.c", errors)
     context_ui = source(CPP / "angband/ui-context.c", errors)
     game_ui = source(CPP / "angband/ui-game.c", errors)
+    obj_cmd = source(CPP / "angband/cmd-obj.c", errors)
     spell_ui = source(CPP / "angband/ui-spell.c", errors)
     player_spell = source(CPP / "angband/player-spell.c", errors)
     store_ui = source(CPP / "angband/ui-store.c", errors)
@@ -205,6 +206,16 @@ def main():
            "Spell selection not localized with a literal printf format")
     expect('msgt(MSG_STUDY, "你已學會：%s。"' in player_spell,
            "Spell learning message not localized")
+    for english, chinese in (("That wand has no charges.", "這根魔杖已沒有使用次數。"),
+                             ("Attempt it anyway? ", "仍要嘗試嗎？ ")):
+        expect(english in game_ui_header and chinese in game_ui_header,
+               "Missing item/magic translation: " + english)
+    expect('msg("%s", angdroid_game_ui_text(' in obj_cmd
+           and 'msgt(snd, "%s", angdroid_game_ui_text(' in obj_cmd,
+           "Item feedback must keep literal printf formats and sounds")
+    expect('strnfmt(prompt, sizeof prompt, "正在為 %s 刻字。"' in obj_cmd
+           and 'strnfmt(prompt, sizeof prompt, "Inscribing %s."' in obj_cmd,
+           "Inscription prompt must use literal locale-specific format strings")
     if errors:
         for item in errors:
             print("FAIL:", item)

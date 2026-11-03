@@ -129,6 +129,17 @@ localized, while the spells' underlying names, effect types and data remain
 English. Every translated formatted message uses a language-specific literal
 format string, preserving NDK format-security compilation.
 
+## Item use and low-mana feedback (2026-11-03)
+
+Use/charge/refill messages and prompts for wands, rods, staves, activatable
+objects, lamps, and item inscriptions now include Chinese display text.
+The mana shortage confirmation is translated, with English fallback.
+The underlying item data, charges, effects, inscription content and
+spell command filters are unchanged. Sound-bearing device activation uses
+`msgt(snd, "%s", ...)` to preserve existing event types, and formatted
+inscription prompts use literal per-language format strings to satisfy NDK
+`-Werror=format-security`.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

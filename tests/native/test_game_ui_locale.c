@@ -45,6 +45,14 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text("Buy", 1), "提高") == 0);
     assert(strcmp(angdroid_game_ui_text("Sell", 1), "降低") == 0);
     assert(strcmp(angdroid_game_ui_text("Your Home", 0), "Your Home") == 0);
+    assert(strcmp(angdroid_game_ui_text("That wand has no charges.", 1),
+                  "這根魔杖已沒有使用次數。") == 0);
+    assert(strcmp(angdroid_game_ui_text("Attempt it anyway? ", 1),
+                  "仍要嘗試嗎？ ") == 0);
+    assert(strcmp(angdroid_game_ui_text("Inscribe which item?", 1),
+                  "要為哪件物品刻字？") == 0);
+    assert(strcmp(angdroid_game_ui_text("That wand has no charges.", 0),
+                  "That wand has no charges.") == 0);
     assert(strcmp(angdroid_game_ui_text("You cannot browse that.", 1),
                   "無法瀏覽這本書。") == 0);
     assert(strcmp(angdroid_game_ui_text(" untried", 1), " 未使用") == 0);
