@@ -9,7 +9,7 @@
 - **[Android Studio / Gradle 9 / JDK 21 升級與編譯設定](docs/JDK21_BUILD.md)**
 - [遊戲文字顯示／Unicode 技術問題](docs/CJK_RENDERING_AUDIT.md)
 - **一次執行所有離線檢查，並輸出測試紀錄：** `sh scripts/verify-zh-tw.sh`（結果存成 `zh-tw-validation.log`）
-- **需要包含 APK 編譯時：** `sh scripts/verify-zh-tw.sh --android`；需本機 **JDK 21、Android SDK Platform 35、NDK 21.0.6113669**。Debug 預設使用 `arm64-v8a`，無須手動建立 `ABI_FILTERS`；x86_64 模擬器可執行 `ABI_FILTERS=x86_64 sh scripts/verify-zh-tw.sh --android`。已升級至 **Gradle 9.1.0 / AGP 9.0.1**，仍使用 **JDK 21**；請安裝 SDK Build Tools 36.0.0。
+- **需要包含 APK 編譯時：** `sh scripts/verify-zh-tw.sh --android`；需本機 **JDK 21、Android SDK Platform 35、NDK 28.2.13676358 (r28c)**。Debug 預設使用 `arm64-v8a`，無須手動建立 `ABI_FILTERS`；x86_64 模擬器可執行 `ABI_FILTERS=x86_64 sh scripts/verify-zh-tw.sh --android`。已升級至 **Gradle 9.1.0 / AGP 9.0.1**，仍使用 **JDK 21**；請安裝 SDK Build Tools 36.0.0。
 - 分項執行：`python3 scripts/check_zh_tw_resources.py`、`sh scripts/test-terminal-unicode.sh`、`sh scripts/test-native-utf8.sh`。
 - 原生 UTF-8 傳輸、中日韓字寬分類及清單安全截斷／欄位對齊測試已加入；完整原生游標座標與雙格布局仍需實機驗證，尚未完成 APK／實機測試。
 
