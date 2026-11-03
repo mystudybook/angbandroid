@@ -5,6 +5,7 @@ Static configuration checks only: this does NOT download dependencies,
 run Gradle or compile an APK.
 """
 from pathlib import Path
+import hashlib
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -31,9 +32,27 @@ def main():
     ignored = read(".gitignore")
     manifest_path = ROOT / "app/src/main/AndroidManifest.xml"
 
+    def git_blob_matches(path, expected_sha):
+        try:
+            content = (ROOT / path).read_bytes()
+        except OSError as exc:
+            problems.append(f"{path}: {exc}")
+            return False
+        prefix = f"blob {len(content)}\\0".encode("ascii")
+        return hashlib.sha1(prefix + content).hexdigest() == expected_sha
+
     expected = {
         "AGP 9.0.1": "com.android.tools.build:gradle:9.0.1" in top,
         "Gradle 9.1.0": "gradle-9.1.0-bin.zip" in wrapper,
+        "Official Gradle 9.1.0 wrapper JAR":
+            git_blob_matches("gradle/wrapper/gradle-wrapper.jar",
+                             "8bdaf60c75ab801e22807dde59e12a8735a34077"),
+        "Official Gradle 9.1.0 Unix launcher":
+            git_blob_matches("gradlew",
+                             "61b77d7f371ff8d139d0a518d103a6492dc59696"),
+        "Official Gradle 9.1.0 Windows launcher":
+            git_blob_matches("gradlew.bat",
+                             "bd8a8c0556a94aa0c97aa4ddd44bd20756205bb1"),
         "JDK 21 required": "JavaVersion.current() < JavaVersion.VERSION_21" in settings,
         "Gradle 9 supported JDK max": "JavaVersion.current() > JavaVersion.VERSION_25" in settings,
         "JDK 21 compiler toolchain": "JavaLanguageVersion.of(21)" in app,
