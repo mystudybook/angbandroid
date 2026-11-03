@@ -59,6 +59,7 @@ def main():
     spell_ui = source(CPP / "angband/ui-spell.c", errors)
     player_spell = source(CPP / "angband/player-spell.c", errors)
     cave_cmd = source(CPP / "angband/cmd-cave.c", errors)
+    player_attack = source(CPP / "angband/player-attack.c", errors)
     store_ui = source(CPP / "angband/ui-store.c", errors)
     knowledge_ui = source(CPP / "angband/ui-knowledge.c", errors)
     input_ui = source(CPP / "angband/ui-input.c", errors)
@@ -224,6 +225,14 @@ def main():
     expect('msgt(MSG_STAIRS_UP, "%s", angdroid_game_ui_text(' in cave_cmd
            and 'msgt(MSG_HITWALL, "%s", angdroid_game_ui_text(' in cave_cmd,
            "Localized navigation events must preserve sound categories")
+    expect('msgt(MSG_MISS, "你沒有擊中 %s。", m_name)' in player_attack
+           and 'msgt(MSG_MISS, "You miss %s.", m_name)' in player_attack,
+           "Melee miss messages must retain literal English and Chinese format strings")
+    expect('msgt(MSG_AFRAID, "你太害怕了，無法攻擊 %s！", m_name)' in cave_cmd
+           and 'msgt(MSG_AFRAID, "You are too afraid to attack %s!", m_name)' in cave_cmd,
+           "Fear messaging must preserve original event and English fallback")
+    expect('msg("%s", angdroid_game_ui_text("You have nothing to fire with."' in player_attack,
+           "Ranged weapon warning not translated safely")
     if errors:
         for item in errors:
             print("FAIL:", item)

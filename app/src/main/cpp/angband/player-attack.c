@@ -45,6 +45,8 @@
 #include "player-util.h"
 #include "project.h"
 #include "target.h"
+#include "droid.h"
+#include "zh-tw-ui.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -750,7 +752,10 @@ bool py_attack_real(struct player *p, struct loc grid, bool *fear)
 	/* Handle player fear (only for invisible monsters) */
 	if (player_of_has(p, OF_AFRAID)) {
 		equip_learn_flag(p, OF_AFRAID);
-		msgt(MSG_AFRAID, "You are too afraid to attack %s!", m_name);
+		if (angdroid_zh_tw_enabled())
+            msgt(MSG_AFRAID, "你太害怕了，無法攻擊 %s！", m_name);
+        else
+            msgt(MSG_AFRAID, "You are too afraid to attack %s!", m_name);
 		return false;
 	}
 
@@ -763,11 +768,14 @@ bool py_attack_real(struct player *p, struct loc grid, bool *fear)
 
 	/* If a miss, skip this hit */
 	if (!success) {
-		msgt(MSG_MISS, "You miss %s.", m_name);
+		if (angdroid_zh_tw_enabled())
+            msgt(MSG_MISS, "你沒有擊中 %s。", m_name);
+        else
+            msgt(MSG_MISS, "You miss %s.", m_name);
 
 		/* Small chance of bloodlust side-effects */
 		if (p->timed[TMD_BLOODLUST] && one_in_(50)) {
-			msg("You feel strange...");
+			msg("%s", angdroid_game_ui_text("You feel strange...", angdroid_zh_tw_enabled()));
 			player_over_exert(p, PY_EXERT_SCRAMBLE, 20, 20);
 		}
 
@@ -868,7 +876,7 @@ bool py_attack_real(struct player *p, struct loc grid, bool *fear)
 
 	/* Small chance of bloodlust side-effects */
 	if (p->timed[TMD_BLOODLUST] && one_in_(50)) {
-		msg("You feel something give way!");
+		msg("%s", angdroid_game_ui_text("You feel something give way!", angdroid_zh_tw_enabled()));
 		player_over_exert(p, PY_EXERT_CON, 20, 0);
 	}
 
@@ -941,14 +949,17 @@ static bool attempt_shield_bash(struct player *p, struct monster *mon, bool *fea
 	bash_dam = MIN(bash_dam, 125);
 
 	if (OPT(p, show_damage)) {
-		msgt(MSG_HIT, "You get in a shield bash! (%d)", bash_dam);
+		if (angdroid_zh_tw_enabled())
+            msgt(MSG_HIT, "盾牌猛擊！造成 %d 點傷害。", bash_dam);
+        else
+            msgt(MSG_HIT, "You get in a shield bash! (%d)", bash_dam);
 	} else {
-		msgt(MSG_HIT, "You get in a shield bash!");
+		msgt(MSG_HIT, "%s", angdroid_game_ui_text("You get in a shield bash!", angdroid_zh_tw_enabled()));
 	}
 
 	/* Encourage the player to keep wearing that heavy shield. */
 	if (randint1(bash_dam) > 30 + randint1(bash_dam / 2)) {
-		msgt(MSG_HIT_HI_SUPERB, "WHAMM!");
+		msgt(MSG_HIT_HI_SUPERB, "%s", angdroid_game_ui_text("WHAMM!", angdroid_zh_tw_enabled()));
 	}
 
 	/* Damage, check for fear and death. */
@@ -968,7 +979,7 @@ static bool attempt_shield_bash(struct player *p, struct monster *mon, bool *fea
 	if (35 + adj_dex_th[p->state.stat_ind[STAT_DEX]] < randint1(60)) {
 		energy_lost = randint1(50) + 25;
 		/* Lose 26-75% of a turn due to stumbling after shield bash. */
-		msgt(MSG_GENERIC, "You stumble!");
+		msgt(MSG_GENERIC, "%s", angdroid_game_ui_text("You stumble!", angdroid_zh_tw_enabled()));
 		p->upkeep->energy_use += energy_lost * z_info->move_energy / 100;
 	}
 
@@ -1153,7 +1164,10 @@ static void ranged_helper(struct player *p,	struct object *obj, int dir,
 
 				if (!visible) {
 					/* Invisible monster */
-					msgt(MSG_SHOOT_HIT, "The %s finds a mark.", o_name);
+					if (angdroid_zh_tw_enabled())
+                    msgt(MSG_SHOOT_HIT, "你的 %s 命中了目標。", o_name);
+                else
+                    msgt(MSG_SHOOT_HIT, "The %s finds a mark.", o_name);
 				} else {
 					for (j = 0; j < num_types; j++) {
 						char m_name[80];
@@ -1319,8 +1333,8 @@ void do_cmd_fire(struct command *cmd) {
 
 	/* Get arguments */
 	if (cmd_get_item(cmd, "item", &obj,
-			/* Prompt */ "Fire which ammunition?",
-			/* Error  */ "You have no suitable ammunition to fire.",
+			/* Prompt */ angdroid_game_ui_text("Fire which ammunition?", angdroid_zh_tw_enabled()),
+			/* Error  */ angdroid_game_ui_text("You have no suitable ammunition to fire.", angdroid_zh_tw_enabled()),
 			/* Filter */ obj_can_fire,
 			/* Choice */ USE_INVEN | USE_QUIVER | USE_FLOOR | QUIVER_TAGS)
 		!= CMD_OK)
@@ -1328,19 +1342,19 @@ void do_cmd_fire(struct command *cmd) {
 
 	/* Require a usable launcher */
 	if (!bow || !player->state.ammo_tval) {
-		msg("You have nothing to fire with.");
+		msg("%s", angdroid_game_ui_text("You have nothing to fire with.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
 	/* Check the item being fired is usable by the player. */
 	if (!item_is_available(obj)) {
-		msg("That item is not within your reach.");
+		msg("%s", angdroid_game_ui_text("That item is not within your reach.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
 	/* Check the ammo can be used with the launcher */
 	if (obj->tval != player->state.ammo_tval) {
-		msg("That ammo cannot be fired by your current weapon.");
+		msg("%s", angdroid_game_ui_text("That ammo cannot be fired by your current weapon.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -1380,8 +1394,8 @@ void do_cmd_throw(struct command *cmd) {
 	if (player->upkeep->command_wrk == USE_EQUIP)
 		player->upkeep->command_wrk = USE_INVEN;
 	if (cmd_get_item(cmd, "item", &obj,
-			/* Prompt */ "Throw which item?",
-			/* Error  */ "You have nothing to throw.",
+			/* Prompt */ angdroid_game_ui_text("Throw which item?", angdroid_zh_tw_enabled()),
+			/* Error  */ angdroid_game_ui_text("You have nothing to throw.", angdroid_zh_tw_enabled()),
 			/* Filter */ obj_can_throw,
 			/* Choice */ USE_EQUIP | USE_QUIVER | USE_INVEN | USE_FLOOR | SHOW_THROWING)
 		!= CMD_OK)
@@ -1414,7 +1428,7 @@ void do_cmd_fire_at_nearest(void) {
 
 	/* Require a usable launcher */
 	if (!bow || !player->state.ammo_tval) {
-		msg("You have nothing to fire with.");
+		msg("%s", angdroid_game_ui_text("You have nothing to fire with.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -1430,7 +1444,7 @@ void do_cmd_fire_at_nearest(void) {
 
 	/* Require usable ammo */
 	if (!ammo) {
-		msg("You have no ammunition in the quiver to fire.");
+		msg("%s", angdroid_game_ui_text("You have no ammunition in the quiver to fire.", angdroid_zh_tw_enabled()));
 		return;
 	}
 

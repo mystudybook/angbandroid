@@ -45,6 +45,12 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text("Buy", 1), "提高") == 0);
     assert(strcmp(angdroid_game_ui_text("Sell", 1), "降低") == 0);
     assert(strcmp(angdroid_game_ui_text("Your Home", 0), "Your Home") == 0);
+    assert(strcmp(angdroid_game_ui_text("You stumble!", 1),
+                  "你踉蹌了一下！") == 0);
+    assert(strcmp(angdroid_game_ui_text("You have nothing to fire with.", 1),
+                  "你沒有可用來射擊的武器。") == 0);
+    assert(strcmp(angdroid_game_ui_text("You stumble!", 0),
+                  "You stumble!") == 0);
     assert(strcmp(angdroid_game_ui_text("There is a wall in the way!", 1),
                   "一面牆擋住了去路！") == 0);
     assert(strcmp(angdroid_game_ui_text("You have picked the lock.", 1),

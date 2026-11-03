@@ -149,6 +149,18 @@ movement, destination, terrain identifiers, event sound categories and player
 state are untouched. Any messages with dynamic grammar or monster naming
 remain in English until their templates can be translated safely.
 
+## First combat feedback pass (2026-11-03)
+
+Common player-attack messages are now Chinese: fear preventing an attack,
+melee misses, shield bashes, stumbling, and ammunition or launcher errors.
+The same fear template is used by movement into an enemy. Missile hit feedback
+for a direct hit also has a Chinese variant. Each parameterized message uses
+two language-specific *literal* format strings to satisfy Android NDK
+`-Werror=format-security`. Original `MSG_*` event categories, hit chances,
+damage amounts, monster names, ranged item labels and turn consumption are
+unchanged. Complex verb-driven hit narration remains English pending a
+grammar-aware formatter.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

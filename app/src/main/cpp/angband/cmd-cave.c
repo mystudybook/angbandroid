@@ -1207,7 +1207,10 @@ static bool do_cmd_walk_test(struct player *p, struct loc grid)
 			monster_desc(m_name, sizeof(m_name), mon, MDESC_DEFAULT);
 
 			/* Message */
-			msgt(MSG_AFRAID, "You are too afraid to attack %s!", m_name);
+			if (angdroid_zh_tw_enabled())
+                msgt(MSG_AFRAID, "你太害怕了，無法攻擊 %s！", m_name);
+            else
+                msgt(MSG_AFRAID, "You are too afraid to attack %s!", m_name);
 			equip_learn_flag(p, OF_AFRAID);
 
 			/* Nope */

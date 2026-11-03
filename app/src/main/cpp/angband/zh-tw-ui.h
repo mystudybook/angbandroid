@@ -330,6 +330,19 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"You hear a door burst open!", "你聽到一扇門猛然被撞開！"},
         {"The way is blocked.", "去路被擋住了。"},
         {"Valid commands: move, stand still, 'd'rop, 'm'agic, or 'r'elease.", "可用指令：移動、原地不動、d 丟棄、m 魔法、r 釋放。"},
+        {"You feel strange...", "你感覺有些異樣……"},
+        {"You feel something give way!", "你感覺身體有些支撐不住！"},
+        {"You get in a shield bash!", "你用盾牌猛擊了敵人！"},
+        {"WHAMM!", "砰！"},
+        {"You stumble!", "你踉蹌了一下！"},
+        {"You have nothing to fire with.", "你沒有可用來射擊的武器。"},
+        {"That item is not within your reach.", "這件物品不在你能碰到的範圍內。"},
+        {"That ammo cannot be fired by your current weapon.", "目前的武器無法發射這種彈藥。"},
+        {"You have no ammunition in the quiver to fire.", "你的箭袋裡沒有可發射的彈藥。"},
+        {"Fire which ammunition?", "要發射哪種彈藥？"},
+        {"You have no suitable ammunition to fire.", "你沒有適合發射的彈藥。"},
+        {"Throw which item?", "要投擲哪件物品？"},
+        {"You have nothing to throw.", "你沒有可以投擲的物品。"},
     };
     size_t i;
     if (!zh_tw || !en) return en;
