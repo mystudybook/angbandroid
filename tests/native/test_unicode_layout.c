@@ -8,7 +8,7 @@ static void fit(const wchar_t *s, size_t max_length, size_t room,
                 size_t expected_chars, size_t expected_columns, int clipped)
 {
     angdroid_text_fit result =
-        angdroid_fit_terminal_text(s, max_length, room);
+        angdroid_fit_terminal_text(s, max_length, room, 1);
     assert(result.codepoints == expected_chars);
     assert(result.columns == expected_columns);
     assert(result.clipped == clipped);
@@ -37,6 +37,11 @@ int main(void)
     assert(!angdroid_is_wide_text(L'A', 1));
     assert(!angdroid_is_wide_text(0x4E2D, 0x80)); /* graphical tile */
     assert(!angdroid_is_wide_text(ANGDROID_TEXT_CONTINUATION, 1));
+    {
+        angdroid_text_fit tile_fit = angdroid_fit_terminal_text(wide, 1, 1, 0x80);
+        assert(tile_fit.codepoints == 1 && tile_fit.columns == 1 &&
+               !tile_fit.clipped); /* Tile metadata never consumes 2 columns. */
+    }
 
     {
         const wchar_t cells[] = {
@@ -65,6 +70,6 @@ int main(void)
             assert(count == 0 && cursor == 2);
         }
     }
-    puts("PASS: 21 native Unicode row-fit, marker and redraw-segmentation cases");
+    puts("PASS: 22 native Unicode row-fit, attribute, marker and redraw cases");
     return 0;
 }
