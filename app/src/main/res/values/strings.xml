@@ -424,4 +424,50 @@
         <item>Ctrl+2</item>
         <item>Alt+2</item>
     </string-array>
+
+    <!-- Hardware key configuration: display labels only; internal key codes are unchanged. -->
+    <string name="keymap_press_hardware_key">Press a hardware key…</string>
+    <string name="keymap_clear_assignment">Clear</string>
+    <string name="keymap_confirm_back_key">Really assign the Back key?</string>
+    <string name="keymap_reset_confirm">Reset all hardware key mappings?</string>
+    <string name="keymap_unassigned">Not assigned</string>
+    <string name="keymap_unknown_key">Key %1$d</string>
+    <string name="keymap_key_left_alt">Left Alt</string>
+    <string name="keymap_key_right_alt">Right Alt</string>
+    <string name="keymap_key_left_shift">Left Shift</string>
+    <string name="keymap_key_right_shift">Right Shift</string>
+    <string name="keymap_key_camera">Camera</string>
+    <string name="keymap_key_search">Search</string>
+    <string name="keymap_key_back">Back</string>
+    <string name="keymap_key_menu">Menu</string>
+    <string name="keymap_key_backspace">Backspace</string>
+    <string name="keymap_key_space">Space</string>
+    <string name="keymap_key_volume_up">Volume Up</string>
+    <string name="keymap_key_volume_down">Volume Down</string>
+    <string name="keymap_key_end">End</string>
+    <string name="keymap_key_home">Home</string>
+    <string name="keymap_key_dpad_center">D-Pad Center</string>
+    <string name="keymap_key_dpad_left">D-Pad Left</string>
+    <string name="keymap_key_dpad_right">D-Pad Right</string>
+    <string name="keymap_key_dpad_down">D-Pad Down</string>
+    <string name="keymap_key_dpad_up">D-Pad Up</string>
+    <string name="keymap_key_softkey_left">Left Softkey</string>
+    <string name="keymap_key_softkey_right">Right Softkey</string>
+    <string name="keymap_key_sym">Sym</string>
+    <string name="keymap_key_tab">Tab</string>
+    <string name="keymap_key_page_down">Page Down</string>
+    <string name="keymap_key_page_up">Page Up</string>
+    <string name="keymap_key_notification">Notification</string>
+    <string name="keymap_key_mute">Mute</string>
+    <string name="keymap_key_end_call">End Call</string>
+    <string name="keymap_key_call">Call</string>
+    <string name="keymap_key_clear">Clear</string>
+    <string name="keymap_key_mode">Mode</string>
+    <string name="keymap_key_select">Select</string>
+    <string name="keymap_key_start">Start</string>
+    <string name="keymap_key_thumb_left">Left Thumb</string>
+    <string name="keymap_key_thumb_right">Right Thumb</string>
+    <string name="keymap_key_enter">Enter</string>
+    <string name="keymap_key_escape">Escape</string>
+    <string name="keymap_key_emoticon">Emoticon</string>
 </resources>
