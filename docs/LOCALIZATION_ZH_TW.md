@@ -41,12 +41,16 @@ The profile editor's `res/layout/profileadd.xml` has restrictive `android:digits
 Run from repository root:
 
 ```bash
+# Offline checks only
 sh scripts/verify-zh-tw.sh
+
+# Optional: include debug APK Gradle/NDK compilation on a configured Mac
+sh scripts/verify-zh-tw.sh --android
 ```
 
 This writes `zh-tw-validation.log` in the repository root (gitignored). To run individual stages: `python3 scripts/check_zh_tw_resources.py`, `sh scripts/test-terminal-unicode.sh`, `sh scripts/test-native-utf8.sh`, or `python3 scripts/check-native-unicode-contract.py`.
 
-These offline checks require Python 3, a JDK and a host C compiler. They check resources, Unicode terminal buffers, native encoding/width helpers and protocol source wiring. **They do not compile an Android APK or verify native gameplay and rendering on a device.**
+These offline checks require Python 3, a JDK and a host C compiler. They check resources, Unicode terminal buffers, native encoding/width helpers and protocol source wiring. **Without `--android`, no APK is compiled. With `--android`, Gradle/NDK debug compilation is attempted, but this still does not validate emulator/physical-device gameplay or glyph positioning.**
 
 ## Build notes
 
