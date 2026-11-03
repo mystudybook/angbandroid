@@ -41,6 +41,7 @@ run_check "Android string resources" python3 "$ROOT/scripts/check_zh_tw_resource
 run_check "Java Unicode terminal" sh "$ROOT/scripts/test-terminal-unicode.sh"
 run_check "Native C UTF-8 and column-width helpers" sh "$ROOT/scripts/test-native-utf8.sh"
 run_check "Native/Java Unicode protocol wiring" python3 "$ROOT/scripts/check-native-unicode-contract.py"
+run_check "Native Angband game zh-TW text isolation" python3 "$ROOT/scripts/check_native_game_localization.py"
 
 android_debug_build() {
     if [ ! -f "$ROOT/gradlew" ]; then
