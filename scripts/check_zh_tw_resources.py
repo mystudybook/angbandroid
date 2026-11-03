@@ -27,14 +27,14 @@ UI_XML = [
 ANDROID = "{http://schemas.android.com/apk/res/android}"
 RESOURCE_REF = re.compile(r"^@string/([A-Za-z0-9_]+)$")
 ARRAY_REF = re.compile(r"^@array/([A-Za-z0-9_]+)$")
-JAVA_RESOURCE_REF = re.compile(r"\\bR\\.string\\.([A-Za-z0-9_]+)\\b")
-FORMAT_ARGUMENT = re.compile(r"%(?:[0-9]+\\$)?[a-zA-Z]")
+JAVA_RESOURCE_REF = re.compile(r"\bR\.string\.([A-Za-z0-9_]+)\b")
+FORMAT_ARGUMENT = re.compile(r"%(?:[0-9]+\$)?[a-zA-Z]")
 JAVA_UI = [
     ROOT / "app" / "src" / "main" / "java" / "org" / "rephial" / "xyangband" / file
     for file in (
         "GameActivity.java", "StorageActivity.java", "InputDialog.java",
         "HelpActivity.java", "AngbandActivity.java", "ProfilesActivity.java",
-        "ProfileAddActivity.java",
+        "ProfileAddActivity.java", "ProfileList.java",
     )
 ]
 
