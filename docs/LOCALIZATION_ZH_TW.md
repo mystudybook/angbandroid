@@ -4,8 +4,11 @@ This is an **unofficial** localization of the Android Angband port. The intended
 
 ## Status
 
-- Android resources: initial `values-zh-rTW/strings.xml` added (40 string entries; 4 translated display arrays with 28 entries).
-- Original resource names and display-array item counts checked against the default `values/strings.xml`.
+- `values-zh-rTW/strings.xml` contains **154 translated string resources** (40 initial + 99 preference UI + 15 launcher/profile/dialog strings) and **4 translated display-only arrays** (28 items).
+- In `res/xml/preferences.xml`, **99 hard-coded UI labels and summaries** now reference localized strings. The remaining 67 hard-coded labels are literal keyboard letters/digits/symbol keycaps (deliberately unchanged).
+- Localized launcher buttons, profile editor hints and buttons, profile context actions, several profile dialogs and the help activity title.
+- Static source checks verified all 140 observed Java/XML `R.string` and `@string` references exist in the English defaults, translated keys exist in English, array sizes agree and literal percentage strings have `formatted="false"`. These checks are not an Android compilation.
+- A reusable Python 3 static verifier is available: `python3 scripts/check_zh_tw_resources.py`. **It has been added but not executed in an Android build environment yet.**
 - No changes to settings persistence, internal variant IDs, gameplay logic, or asset bundles.
 - Compilation, emulator testing, and screenshot review have **not** been performed.
 
@@ -18,13 +21,17 @@ This is an **unofficial** localization of the Android Angband port. The intended
 
 ## Next implementation steps
 
-1. Move hard-coded user-facing labels in `app/src/main/res/xml/preferences.xml` into Android string resources; localize their labels and summaries without modifying preference keys/default values.
-2. Extract hard-coded English UI text from `app/src/main/java/org/rephial/xyangband/` to string resources.
+1. **Done (first pass):** extract and translate preference title/summary labels, leaving keyboard keycap literals and persistent values intact.
+2. **In progress:** extract hard-coded English UI text from remaining Java classes (notably `StorageActivity`, `GameActivity`, and profile-validation messages).
 3. Translate `app/src/main/assets/help.html` with an explicit locale-aware loading strategy.
 4. Validate Unicode/CJK display in native Angband: its core uses UTF-8 and wide characters in parts of the rendering pipeline, but the Android terminal currently uses bundled monospace fonts such as `VeraMoBd.ttf` and `6x13.ttf`. Test missing glyphs, display width, wrapping, clipping, and input before translating gameplay strings.
 5. Catalog and translate the Angband core's user-visible strings and suitable entries in `variant_lib/angband/gamedata`. Do not translate identifiers or data syntax. Treat other included variants as separate projects.
 6. Build with the project's Android SDK / NDK requirements and test the app with a zh-TW device locale, then conduct a gameplay smoke test and save compatibility check.
 7. Review distribution rights and the current Google Play submission requirements before preparing an independent application ID, branding, disclosures, and a release.
+
+## CJK input concerns
+
+The profile editor's `res/layout/profileadd.xml` has restrictive `android:digits` attributes on the profile name and savefile inputs. Their translated placeholder labels do not yet imply support for Chinese-character profile names. Review name validation and on-disk savefile compatibility separately before allowing CJK characters in editable names.
 
 ## Build notes
 
