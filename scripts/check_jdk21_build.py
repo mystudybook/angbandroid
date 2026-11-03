@@ -38,7 +38,7 @@ def main():
         except OSError as exc:
             problems.append(f"{path}: {exc}")
             return False
-        prefix = f"blob {len(content)}\\0".encode("ascii")
+        prefix = f"blob {len(content)}\0".encode("ascii")
         return hashlib.sha1(prefix + content).hexdigest() == expected_sha
 
     expected = {
