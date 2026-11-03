@@ -49,6 +49,8 @@
 #include "project.h"
 #include "store.h"
 #include "trap.h"
+#include "droid.h"
+#include "zh-tw-ui.h"
 
 /**
  * Go up one level
@@ -65,14 +67,14 @@ void do_cmd_go_up(struct command *cmd)
 
 	/* Force descend */
 	if (OPT(player, birth_force_descend)) {
-		msg("Nothing happens!");
+		msg("%s", angdroid_game_ui_text("Nothing happens!", angdroid_zh_tw_enabled()));
 		return;
 	}
 	
 	ascend_to = dungeon_get_next_level(player, player->depth, -1);
 	
 	if (ascend_to == player->depth) {
-		msg("You can't go up from here!");
+		msg("%s", angdroid_game_ui_text("You can't go up from here!", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -80,7 +82,7 @@ void do_cmd_go_up(struct command *cmd)
 	player->upkeep->energy_use = z_info->move_energy;
 
 	/* Success */
-	msgt(MSG_STAIRS_UP, "You enter a maze of up staircases.");
+	msgt(MSG_STAIRS_UP, "%s", angdroid_game_ui_text("You enter a maze of up staircases.", angdroid_zh_tw_enabled()));
 
 	/* Create a way back */
 	player->upkeep->create_up_stair = false;
@@ -106,7 +108,7 @@ void do_cmd_go_down(struct command *cmd)
 
 	/* Paranoia, no descent from z_info->max_depth - 1 */
 	if (player->depth == z_info->max_depth - 1) {
-		msg("The dungeon does not appear to extend deeper");
+		msg("%s", angdroid_game_ui_text("The dungeon does not appear to extend deeper", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -115,7 +117,7 @@ void do_cmd_go_down(struct command *cmd)
 		descend_to = dungeon_get_next_level(player,
 			player->max_depth, 1);
 		if (is_quest(player, descend_to) &&
-			!get_check("Are you sure you want to descend? "))
+			!get_check(angdroid_game_ui_text("Are you sure you want to descend? ", angdroid_zh_tw_enabled())))
 			return;
 	}
 
@@ -123,7 +125,7 @@ void do_cmd_go_down(struct command *cmd)
 	player->upkeep->energy_use = z_info->move_energy;
 
 	/* Success */
-	msgt(MSG_STAIRS_DOWN, "You enter a maze of down staircases.");
+	msgt(MSG_STAIRS_DOWN, "%s", angdroid_game_ui_text("You enter a maze of down staircases.", angdroid_zh_tw_enabled()));
 
 	/* Create a way back */
 	player->upkeep->create_up_stair = true;
@@ -142,13 +144,13 @@ static bool do_cmd_open_test(struct player *p, struct loc grid)
 {
 	/* Must have knowledge */
 	if (!square_isknown(cave, grid)) {
-		msg("You see nothing there.");
+		msg("%s", angdroid_game_ui_text("You see nothing there.", angdroid_zh_tw_enabled()));
 		return false;
 	}
 
 	/* Must be a closed door */
 	if (!square_iscloseddoor(cave, grid)) {
-		msgt(MSG_NOTHING_TO_OPEN, "You see nothing there to open.");
+		msgt(MSG_NOTHING_TO_OPEN, "%s", angdroid_game_ui_text("You see nothing there to open.", angdroid_zh_tw_enabled()));
 		if (square_iscloseddoor(p->cave, grid)) {
 			square_forget(cave, grid);
 			square_light_spot(cave, grid);
@@ -181,7 +183,7 @@ static bool do_cmd_open_aux(struct loc grid)
 
 		if (randint0(100) < chance) {
 			/* Message */
-			msgt(MSG_LOCKPICK, "You have picked the lock.");
+			msgt(MSG_LOCKPICK, "%s", angdroid_game_ui_text("You have picked the lock.", angdroid_zh_tw_enabled()));
 
 			/* Open the door */
 			square_open_door(cave, grid);
@@ -198,7 +200,7 @@ static bool do_cmd_open_aux(struct loc grid)
 			event_signal(EVENT_INPUT_FLUSH);
 
 			/* Message */
-			msgt(MSG_LOCKPICK_FAIL, "You failed to pick the lock.");
+			msgt(MSG_LOCKPICK_FAIL, "%s", angdroid_game_ui_text("You failed to pick the lock.", angdroid_zh_tw_enabled()));
 
 			/* We may keep trying */
 			more = true;
@@ -290,7 +292,7 @@ void do_cmd_open(struct command *cmd)
 			monster_wake(mon, false, 100);
 		} else {
 			/* Message */
-			msg("There is a monster in the way!");
+			msg("%s", angdroid_game_ui_text("There is a monster in the way!", angdroid_zh_tw_enabled()));
 
 			/* Attack */
 			py_attack(player, grid);
@@ -316,7 +318,7 @@ static bool do_cmd_close_test(struct player *p, struct loc grid)
 	/* Must have knowledge */
 	if (!square_isknown(cave, grid)) {
 		/* Message */
-		msg("You see nothing there.");
+		msg("%s", angdroid_game_ui_text("You see nothing there.", angdroid_zh_tw_enabled()));
 
 		/* Nope */
 		return (false);
@@ -325,7 +327,7 @@ static bool do_cmd_close_test(struct player *p, struct loc grid)
  	/* Require open/broken door */
 	if (!square_isopendoor(cave, grid) && !square_isbrokendoor(cave, grid)) {
 		/* Message */
-		msg("You see nothing there to close.");
+		msg("%s", angdroid_game_ui_text("You see nothing there to close.", angdroid_zh_tw_enabled()));
 		if (square_isopendoor(p->cave, grid)
 				|| square_isbrokendoor(p->cave, grid)) {
 			square_forget(cave, grid);
@@ -339,7 +341,7 @@ static bool do_cmd_close_test(struct player *p, struct loc grid)
 	/* Don't allow if player is in the way. */
 	if (square(cave, grid)->mon < 0) {
 		/* Message */
-		msg("You're standing in that doorway.");
+		msg("%s", angdroid_game_ui_text("You're standing in that doorway.", angdroid_zh_tw_enabled()));
 
 		/* Nope */
 		return (false);
@@ -366,7 +368,7 @@ static bool do_cmd_close_aux(struct loc grid)
 
 	/* Broken door */
 	if (square_isbrokendoor(cave, grid)) {
-		msg("The door appears to be broken.");
+		msg("%s", angdroid_game_ui_text("The door appears to be broken.", angdroid_zh_tw_enabled()));
 	} else {
 		/* Close door */
 		square_close_door(cave, grid);
@@ -427,7 +429,7 @@ void do_cmd_close(struct command *cmd)
 
 	/* Monster - alert, then attack */
 	if (square(cave, grid)->mon > 0) {
-		msg("There is a monster in the way!");
+		msg("%s", angdroid_game_ui_text("There is a monster in the way!", angdroid_zh_tw_enabled()));
 		py_attack(player, grid);
 	} else
 		/* Door - close it */
@@ -446,13 +448,13 @@ static bool do_cmd_tunnel_test(struct player *p, struct loc grid)
 
 	/* Must have knowledge */
 	if (!square_isknown(cave, grid)) {
-		msg("You see nothing there.");
+		msg("%s", angdroid_game_ui_text("You see nothing there.", angdroid_zh_tw_enabled()));
 		return (false);
 	}
 
 	/* Titanium */
 	if (square_isperm(cave, grid)) {
-		msg("This seems to be permanent rock.");
+		msg("%s", angdroid_game_ui_text("This seems to be permanent rock.", angdroid_zh_tw_enabled()));
 		if (!square_isperm(p->cave, grid)) {
 			square_memorize(cave, grid);
 			square_light_spot(cave, grid);
@@ -462,7 +464,7 @@ static bool do_cmd_tunnel_test(struct player *p, struct loc grid)
 
 	/* Must be a wall/door/etc */
 	if (!(square_isdiggable(cave, grid) || square_iscloseddoor(cave, grid))) {
-		msg("You see nothing there to tunnel.");
+		msg("%s", angdroid_game_ui_text("You see nothing there to tunnel.", angdroid_zh_tw_enabled()));
 		if (square_isdiggable(p->cave, grid)
 				|| square_iscloseddoor(p->cave, grid)) {
 			square_forget(cave, grid);
@@ -592,7 +594,7 @@ static bool do_cmd_tunnel_aux(struct loc grid)
 						&& !ignore_item_ok(player,
 						square_object(cave, grid))
 						&& square_isseen(cave, grid)) {
-					msg("You have found something!");
+					msg("%s", angdroid_game_ui_text("You have found something!", angdroid_zh_tw_enabled()));
 				}
 			} 
 		} else if (gold) {
@@ -668,7 +670,7 @@ void do_cmd_tunnel(struct command *cmd)
 
 	/* Attack any monster we run into */
 	if (square(cave, grid)->mon > 0) {
-		msg("There is a monster in the way!");
+		msg("%s", angdroid_game_ui_text("There is a monster in the way!", angdroid_zh_tw_enabled()));
 		py_attack(player, grid);
 	} else {
 		/* Tunnel through walls */
@@ -686,7 +688,7 @@ static bool do_cmd_disarm_test(struct player *p, struct loc grid)
 {
 	/* Must have knowledge */
 	if (!square_isknown(cave, grid)) {
-		msg("You see nothing there.");
+		msg("%s", angdroid_game_ui_text("You see nothing there.", angdroid_zh_tw_enabled()));
 		return false;
 	}
 
@@ -696,7 +698,7 @@ static bool do_cmd_disarm_test(struct player *p, struct loc grid)
 
 	/* Look for a trap */
 	if (!square_isdisarmabletrap(cave, grid)) {
-		msg("You see nothing there to disarm.");
+		msg("%s", angdroid_game_ui_text("You see nothing there to disarm.", angdroid_zh_tw_enabled()));
 		if (square_isdisarmabletrap(p->cave, grid)) {
 			square_memorize_traps(cave, grid);
 			square_light_spot(cave, grid);
@@ -744,21 +746,21 @@ static bool do_cmd_lock_door(struct loc grid)
 
 	/* Success */
 	if (randint0(100) < j) {
-		msg("You lock the door.");
+		msg("%s", angdroid_game_ui_text("You lock the door.", angdroid_zh_tw_enabled()));
 		square_set_door_lock(cave, grid, power);
 	}
 
 	/* Failure -- Keep trying */
 	else if ((i > 5) && (randint1(i) > 5)) {
 		event_signal(EVENT_INPUT_FLUSH);
-		msg("You failed to lock the door.");
+		msg("%s", angdroid_game_ui_text("You failed to lock the door.", angdroid_zh_tw_enabled()));
 
 		/* We may keep trying */
 		more = true;
 	}
 	/* Failure */
 	else
-		msg("You failed to lock the door.");
+		msg("%s", angdroid_game_ui_text("You failed to lock the door.", angdroid_zh_tw_enabled()));
 
 	/* Result */
 	return more;
@@ -905,7 +907,7 @@ void do_cmd_disarm(struct command *cmd)
 
 			monster_wake(mon, false, 100);
 		} else {
-			msg("There is a monster in the way!");
+			msg("%s", angdroid_game_ui_text("There is a monster in the way!", angdroid_zh_tw_enabled()));
 			py_attack(player, grid);
 		}
 	} else if (obj)
@@ -982,7 +984,7 @@ static void do_cmd_alter_aux(int dir)
         	more = do_cmd_close_aux(grid);
 	} else {
 		/* Oops */
-		msg("You spin around.");
+		msg("%s", angdroid_game_ui_text("You spin around.", angdroid_zh_tw_enabled()));
 	}
 
 	/* Cancel repetition unless we can continue */
@@ -1019,7 +1021,7 @@ static void do_cmd_steal_aux(int dir)
 		steal_monster_item(square_monster(cave, grid), -1);
 	} else {
 		/* Oops */
-		msg("You spin around.");
+		msg("%s", angdroid_game_ui_text("You spin around.", angdroid_zh_tw_enabled()));
 	}
 }
 
@@ -1084,11 +1086,11 @@ void move_player(int dir, bool disarm)
 				square_memorize(cave, grid);
 				square_light_spot(cave, grid);
 			} else if (square_iscloseddoor(cave, grid)) {
-				msgt(MSG_HITWALL, "You feel a door blocking your way.");
+				msgt(MSG_HITWALL, "%s", angdroid_game_ui_text("You feel a door blocking your way.", angdroid_zh_tw_enabled()));
 				square_memorize(cave, grid);
 				square_light_spot(cave, grid);
 			} else {
-				msgt(MSG_HITWALL, "You feel a wall blocking your way.");
+				msgt(MSG_HITWALL, "%s", angdroid_game_ui_text("You feel a wall blocking your way.", angdroid_zh_tw_enabled()));
 				square_memorize(cave, grid);
 				square_light_spot(cave, grid);
 			}
@@ -1101,13 +1103,13 @@ void move_player(int dir, bool disarm)
 					square_light_spot(cave, grid);
 				}
 			} else if (square_iscloseddoor(cave, grid)) {
-				msgt(MSG_HITWALL, "There is a door blocking your way.");
+				msgt(MSG_HITWALL, "%s", angdroid_game_ui_text("There is a door blocking your way.", angdroid_zh_tw_enabled()));
 				if (!square_iscloseddoor(player->cave, grid)) {
 					square_memorize(cave, grid);
 					square_light_spot(cave, grid);
 				}
 			} else {
-				msgt(MSG_HITWALL, "There is a wall blocking your way.");
+				msgt(MSG_HITWALL, "%s", angdroid_game_ui_text("There is a wall blocking your way.", angdroid_zh_tw_enabled()));
 				if (square_ispassable(player->cave, grid)
 						|| square_isrubble(player->cave, grid)
 						|| square_iscloseddoor(player->cave, grid)) {
@@ -1227,7 +1229,7 @@ static bool do_cmd_walk_test(struct player *p, struct loc grid)
 	if (!square_ispassable(cave, grid)) {
 		if (square_isrubble(cave, grid)) {
 			/* Rubble */
-			msgt(MSG_HITWALL, "There is a pile of rubble in the way!");
+			msgt(MSG_HITWALL, "%s", angdroid_game_ui_text("There is a pile of rubble in the way!", angdroid_zh_tw_enabled()));
 			if (!square_isrubble(p->cave, grid)) {
 				square_memorize(cave, grid);
 				square_light_spot(cave, grid);
@@ -1237,7 +1239,7 @@ static bool do_cmd_walk_test(struct player *p, struct loc grid)
 			return true;
 		} else {
 			/* Wall */
-			msgt(MSG_HITWALL, "There is a wall in the way!");
+			msgt(MSG_HITWALL, "%s", angdroid_game_ui_text("There is a wall in the way!", angdroid_zh_tw_enabled()));
 			if (square_ispassable(p->cave, grid)
 					|| square_isrubble(p->cave, grid)
 					|| square_iscloseddoor(p->cave, grid)) {
@@ -1276,7 +1278,7 @@ void do_cmd_walk(struct command *cmd)
 		/* Clear the web, finish turn */
 		struct trap_kind *web = lookup_trap("web");
 
-		msg("You clear the web.");
+		msg("%s", angdroid_game_ui_text("You clear the web.", angdroid_zh_tw_enabled()));
 		assert(web);
 		square_remove_all_traps_of_type(cave, player->grid, web->tidx);
 		player->upkeep->energy_use = z_info->move_energy;
@@ -1317,7 +1319,7 @@ void do_cmd_jump(struct command *cmd)
 		/* Clear the web, finish turn */
 		struct trap_kind *web = lookup_trap("web");
 
-		msg("You clear the web.");
+		msg("%s", angdroid_game_ui_text("You clear the web.", angdroid_zh_tw_enabled()));
 		assert(web);
 		square_remove_all_traps_of_type(cave, player->grid, web->tidx);
 		player->upkeep->energy_use = z_info->move_energy;
@@ -1357,7 +1359,7 @@ void do_cmd_run(struct command *cmd)
 		/* Clear the web, finish turn */
 		struct trap_kind *web = lookup_trap("web");
 
-		msg("You clear the web.");
+		msg("%s", angdroid_game_ui_text("You clear the web.", angdroid_zh_tw_enabled()));
 		assert(web);
 		square_remove_all_traps_of_type(cave, player->grid, web->tidx);
 		player->upkeep->energy_use = z_info->move_energy;
@@ -1398,7 +1400,7 @@ void do_cmd_navigate_down(struct command *cmd)
 
 	/* cancel if confused */
 	if (player->timed[TMD_CONFUSED]) {
-		msg("You cannot explore while confused.");
+		msg("%s", angdroid_game_ui_text("You cannot explore while confused.", angdroid_zh_tw_enabled()));
 	   	return;
 	}
 
@@ -1406,7 +1408,7 @@ void do_cmd_navigate_down(struct command *cmd)
 	/* If we're in a web, deal with that */
 	if (square_iswebbed(cave, player->grid)) {
 		/* Clear the web, finish turn */
-		msg("You clear the web.");
+		msg("%s", angdroid_game_ui_text("You clear the web.", angdroid_zh_tw_enabled()));
 		square_destroy_trap(cave, player->grid);
 		player->upkeep->energy_use = z_info->move_energy;
 		return;
@@ -1432,7 +1434,7 @@ void do_cmd_navigate_down(struct command *cmd)
 	}
 
 	if (visible_monster_count > 0) {
-		msg("Something is here.");
+		msg("%s", angdroid_game_ui_text("Something is here.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -1448,7 +1450,7 @@ void do_cmd_navigate_down(struct command *cmd)
 		return;
 	}
 
-	msg("No known path to downstairs.");
+	msg("%s", angdroid_game_ui_text("No known path to downstairs.", angdroid_zh_tw_enabled()));
 }
 
 /**
@@ -1461,7 +1463,7 @@ void do_cmd_navigate_up(struct command *cmd)
 	int visible_monster_count = 0;
 	/* cancel if confused */
 	if (player->timed[TMD_CONFUSED]) {
-		msg("You cannot explore while confused.");
+		msg("%s", angdroid_game_ui_text("You cannot explore while confused.", angdroid_zh_tw_enabled()));
 	   	return;
 	}
 
@@ -1469,7 +1471,7 @@ void do_cmd_navigate_up(struct command *cmd)
 	/* If we're in a web, deal with that */
 	if (square_iswebbed(cave, player->grid)) {
 		/* Clear the web, finish turn */
-		msg("You clear the web.");
+		msg("%s", angdroid_game_ui_text("You clear the web.", angdroid_zh_tw_enabled()));
 		square_destroy_trap(cave, player->grid);
 		player->upkeep->energy_use = z_info->move_energy;
 		return;
@@ -1495,7 +1497,7 @@ void do_cmd_navigate_up(struct command *cmd)
 	}
 
 	if (visible_monster_count > 0) {
-		msg("Something is here.");
+		msg("%s", angdroid_game_ui_text("Something is here.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -1511,7 +1513,7 @@ void do_cmd_navigate_up(struct command *cmd)
 		return;
 	}
 
-	msg("No known path to upstairs.");
+	msg("%s", angdroid_game_ui_text("No known path to upstairs.", angdroid_zh_tw_enabled()));
 }
 
 /**
@@ -1524,7 +1526,7 @@ void do_cmd_explore(struct command *cmd)
 	bool visible_monster = false;
 	/* cancel if confused */
 	if (player->timed[TMD_CONFUSED]) {
-		msg("You cannot explore while confused.");
+		msg("%s", angdroid_game_ui_text("You cannot explore while confused.", angdroid_zh_tw_enabled()));
 	   	return;
 	}
 
@@ -1532,7 +1534,7 @@ void do_cmd_explore(struct command *cmd)
 	/* If we're in a web, deal with that */
 	if (square_iswebbed(cave, player->grid)) {
 		/* Clear the web, finish turn */
-		msg("You clear the web.");
+		msg("%s", angdroid_game_ui_text("You clear the web.", angdroid_zh_tw_enabled()));
 		square_destroy_trap(cave, player->grid);
 		player->upkeep->energy_use = z_info->move_energy;
 		return;
@@ -1558,7 +1560,7 @@ void do_cmd_explore(struct command *cmd)
 	}
 
 	if (visible_monster) {
-		msg("Something is here.");
+		msg("%s", angdroid_game_ui_text("Something is here.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -1573,7 +1575,7 @@ void do_cmd_explore(struct command *cmd)
 		return;
 	}
 
-	msg("No apparent path for exploration.");
+	msg("%s", angdroid_game_ui_text("No apparent path for exploration.", angdroid_zh_tw_enabled()));
 }
 
 
@@ -1625,7 +1627,7 @@ void do_cmd_hold(struct command *cmd)
 	if (square_isshop(cave, player->grid)) {
 		if (player_is_shapechanged(player)) {
 			if (square(cave, player->grid)->feat != FEAT_HOME) {
-				msg("There is a scream and the door slams shut!");
+				msg("%s", angdroid_game_ui_text("There is a scream and the door slams shut!", angdroid_zh_tw_enabled()));
 			}
 			return;
 		}
@@ -1770,7 +1772,7 @@ void display_feeling(bool obj_only)
 
 	/* No useful feeling in town */
 	if (!player->depth) {
-		msg("Looks like a typical town.");
+		msg("%s", angdroid_game_ui_text("Looks like a typical town.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -1850,7 +1852,7 @@ void do_cmd_mon_command(struct command *cmd)
 			get_aim_dir(&dir);
 			t_mon = target_get_monster();
 			if (!t_mon) {
-				msg("No target monster selected!");
+				msg("%s", angdroid_game_ui_text("No target monster selected!", angdroid_zh_tw_enabled()));
 				return;
 			}
 			mon->target.midx = t_mon->midx;
@@ -1859,7 +1861,7 @@ void do_cmd_mon_command(struct command *cmd)
 			rsf_copy(f, mon->race->spell_flags);
 			spell_index = choose_attack_spell(f, true, true);
 			if (!spell_index) {
-				msg("This monster has no spells!");
+				msg("%s", angdroid_game_ui_text("This monster has no spells!", angdroid_zh_tw_enabled()));
 				return;
 			}
 			do_mon_spell(spell_index, mon, seen);
@@ -1917,7 +1919,7 @@ void do_cmd_mon_command(struct command *cmd)
 
 			/* Don't let immobile monsters be moved */
 			if (rf_has(mon->race->flags, RF_NEVER_MOVE)) {
-				msg("The monster can not move.");
+				msg("%s", angdroid_game_ui_text("The monster can not move.", angdroid_zh_tw_enabled()));
 				return;
 			}
 
@@ -1988,7 +1990,7 @@ void do_cmd_mon_command(struct command *cmd)
 							if (can_bash) {
 								square_smash_door(cave, grid);
 
-								msg("You hear a door burst open!");
+								msg("%s", angdroid_game_ui_text("You hear a door burst open!", angdroid_zh_tw_enabled()));
 
 								/* Fall into doorway */
 								can_move = true;
@@ -2007,12 +2009,12 @@ void do_cmd_mon_command(struct command *cmd)
 				monster_swap(mon->grid, grid);
 				player->upkeep->update |= (PU_UPDATE_VIEW | PU_MONSTERS);
 			} else {
-				msg("The way is blocked.");
+				msg("%s", angdroid_game_ui_text("The way is blocked.", angdroid_zh_tw_enabled()));
 			}
 			break;
 		}
 		default: {
-			msg("Valid commands: move, stand still, 'd'rop, 'm'agic, or 'r'elease.");
+			msg("%s", angdroid_game_ui_text("Valid commands: move, stand still, 'd'rop, 'm'agic, or 'r'elease.", angdroid_zh_tw_enabled()));
 			return;
 		}
 	}

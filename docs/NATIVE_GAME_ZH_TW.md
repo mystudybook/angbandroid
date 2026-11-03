@@ -140,6 +140,15 @@ spell command filters are unchanged. Sound-bearing device activation uses
 inscription prompts use literal per-language format strings to satisfy NDK
 `-Werror=format-security`.
 
+## Movement, terrain and stairs messages (2026-11-03)
+
+The original Angband engine's common terrain interaction messages now have
+Traditional Chinese display text, including open/close/lock doors, digging,
+blocked walls, clearing webs, auto-exploration, and stairs. The underlying
+movement, destination, terrain identifiers, event sound categories and player
+state are untouched. Any messages with dynamic grammar or monster naming
+remain in English until their templates can be translated safely.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

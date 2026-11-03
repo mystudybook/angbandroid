@@ -58,6 +58,7 @@ def main():
     obj_cmd = source(CPP / "angband/cmd-obj.c", errors)
     spell_ui = source(CPP / "angband/ui-spell.c", errors)
     player_spell = source(CPP / "angband/player-spell.c", errors)
+    cave_cmd = source(CPP / "angband/cmd-cave.c", errors)
     store_ui = source(CPP / "angband/ui-store.c", errors)
     knowledge_ui = source(CPP / "angband/ui-knowledge.c", errors)
     input_ui = source(CPP / "angband/ui-input.c", errors)
@@ -216,6 +217,13 @@ def main():
     expect('strnfmt(prompt, sizeof prompt, "正在為 %s 刻字。"' in obj_cmd
            and 'strnfmt(prompt, sizeof prompt, "Inscribing %s."' in obj_cmd,
            "Inscription prompt must use literal locale-specific format strings")
+    for english, chinese in (("There is a wall in the way!", "一面牆擋住了去路！"),
+                             ("You clear the web.", "你清除了蜘蛛網。")):
+        expect(english in game_ui_header and chinese in game_ui_header,
+               "Missing exploration Chinese feedback: " + english)
+    expect('msgt(MSG_STAIRS_UP, "%s", angdroid_game_ui_text(' in cave_cmd
+           and 'msgt(MSG_HITWALL, "%s", angdroid_game_ui_text(' in cave_cmd,
+           "Localized navigation events must preserve sound categories")
     if errors:
         for item in errors:
             print("FAIL:", item)
