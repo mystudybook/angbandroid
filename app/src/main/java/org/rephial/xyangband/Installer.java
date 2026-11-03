@@ -99,10 +99,10 @@ public class Installer {
 	}
 
 	public String errorMessage() {
-		String errorMsg = "Error: failed to write and verify files to external storage, cannot continue.";
+		String errorMsg = activity.getString(R.string.installer_write_verify_failed);
 		switch(state) {
 		case MediaNotReady:
-			errorMsg = "Error: external storage card not found, cannot continue.";
+			errorMsg = activity.getString(R.string.installer_storage_not_ready);
 			break;
 		case Failure:
 			if (message.length() > 0) 
@@ -235,7 +235,7 @@ public class Installer {
 				myfile = new File(filename);
 				if (myfile.length() != totalRead) {
 					//Log.v("Angband", "Installer.length mismatch: " + filename);
-					message = "Error: failed to verify installed file on sdcard: "+filename;
+					message = activity.getString(R.string.installer_verify_file_failed, filename);
 					throw new IllegalStateException();
 				}
 
@@ -254,7 +254,7 @@ public class Installer {
 		} catch (Exception e) {
 			result = false;
 			if (message.length() == 0)
-				message = "Error: failed to install files to sdcard. "+e.getMessage();
+				message = activity.getString(R.string.installer_install_files_failed, e.getMessage());
 			//Log.v("Angband", "error extracting files: " + e);
 		}
 		return result;
@@ -312,7 +312,7 @@ public class Installer {
 			}
 			return true;
 		} catch (Exception e) {
-			message = "Error: failed to copy save file(s) from prior version. "+e.getMessage();
+			message = activity.getString(R.string.installer_copy_saves_failed, e.getMessage());
 			//Log.v("Angband", "error upgrading save files: " + e);
 			return false;
 		}
