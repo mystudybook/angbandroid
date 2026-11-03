@@ -342,4 +342,27 @@
     <string name="profile_savefile_hint">SaveFile</string>
     <string name="splash_start">START</string>
     <string name="splash_storage">STORAGE</string>
+
+    <!-- In-game quick settings and confirmation buttons. -->
+    <string name="quick_settings">Quick Settings</string>
+    <string name="quick_fit_width">Fit Width</string>
+    <string name="quick_fit_height">Fit Height</string>
+    <string name="quick_reset_layout_landscape">Reset Layout (Landscape)</string>
+    <string name="quick_reset_layout_portrait">Reset Layout (Portrait)</string>
+    <string name="quick_add_floating_button">Add Floating Button</string>
+    <string name="quick_show_full_keyboard">Show Full Keyboard</string>
+    <string name="quick_change_ribbon_style">Change Ribbon Style</string>
+    <string name="quick_manage_keymaps">Manage Keymaps</string>
+    <string name="quick_show_button_ribbon">Show Button Ribbon</string>
+    <string name="quick_enable_software_input">Enable Software Input</string>
+    <string name="quick_toggle_running_off">Toggle Running OFF</string>
+    <string name="quick_toggle_running_on">Toggle Running ON</string>
+    <string name="quick_change_opacity">Change Opacity</string>
+    <string name="quick_rearrange_floating_buttons">Rearrange Floating Buttons</string>
+    <string name="quick_reset_dpad_position">Reset D-Pad Position</string>
+    <string name="quick_copy_keymaps">Copy Keymaps and Floating Buttons</string>
+    <string name="quick_app_files_location">Location of App Files</string>
+    <string name="quick_select_source_profile">Select the source Profile</string>
+    <string name="action_yes">Yes</string>
+    <string name="action_no">No</string>
 </resources>
