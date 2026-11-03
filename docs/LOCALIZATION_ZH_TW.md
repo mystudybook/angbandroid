@@ -13,7 +13,7 @@ This is an **unofficial** localization of the Android Angband port. The intended
 - A reusable Python 3 verifier is available: `python3 scripts/check_zh_tw_resources.py`. It checks Java/XML resources, array pairs, placeholders, preferences and localized help images. **This script has not yet been executed on a full local checkout.**
 - No changes to settings persistence, internal variant IDs or native gameplay rules. Unicode text rendering is now being improved in the Android Java terminal layer; no native game text translations have been made.
 - Java 21 offline tests passed on a manually transferred copy of the committed classes: **14 Unicode-width cases, 33 terminal-buffer assertions, and 15,000 seeded mixed operations**. The repository runner is `sh scripts/test-terminal-unicode.sh` and now includes buffer and stress tests. Android Gradle/NDK compilation, emulator testing and screenshot review have **not** been performed.
-- Native C UTF-8 transport has been updated to encode `wchar_t` directly and independently of C locale, with allocation/error checks. Local host-C checks passed **9 UTF-8 encoding cases and 14 native width-classification cases**. The native width classifier is **not** yet connected to `ui-term.c` cursor accounting, so native/Java two-column layout remains incomplete.
+- Native C Unicode conversion now includes strict UTF-8 encoding and decoding, width-aware `Term_addstr()` / `Term_addch()`, continuation cells and marker-aware redraw hooks. Additional native row-fit, grapheme-boundary and redraw helpers are under test. The core **is still not considered fully Chinese-capable** without NDK compilation, end-to-end integration and layout validation.
 
 ## Essential localization rules
 
@@ -27,7 +27,7 @@ This is an **unofficial** localization of the Android Angband port. The intended
 1. **Done (first pass):** extract and translate preference title/summary labels, leaving keyboard keycap literals and persistent values intact.
 2. **In progress:** continue extracting remaining Java UI text (including remaining custom input controls, file-system exception messages and other interactive screens). `ProfileList` validation, `StorageActivity` and the main `GameActivity` quick settings have been handled.
 3. **Done (first pass):** translated Android help HTML with locale-aware loading and English fallback. Review text and screenshots on a device.
-4. **In progress:** the Java terminal now reserves two buffer cells and paints two-column rectangles for East Asian wide Unicode text, including subwindows; normal ASCII and graphic tile paths remain separate. **However, the native Angband `ui-term.c` terminal still advances by one column per `wchar_t`**, so CJK cursor positions disagree across the native/Java boundary. Fix that mismatch before translating and shipping native game text. On-device CJK verification is still pending. See [`docs/CJK_RENDERING_AUDIT.md`](CJK_RENDERING_AUDIT.md).
+4. **In progress:** Java reserves and draws two cells for common East Asian wide glyphs. The base Angband native terminal now also accounts for two columns in `Term_addstr()` and `Term_addch()` and uses marker-aware redraw callbacks. **Direct cell placement, map/UI layout, partial redraw and actual NDK/device compatibility still need validation and further fixes.** See [`docs/CJK_RENDERING_AUDIT.md`](CJK_RENDERING_AUDIT.md).
 5. Catalog and translate the Angband core's user-visible strings and suitable entries in `variant_lib/angband/gamedata`. Do not translate identifiers or data syntax. Treat other included variants as separate projects.
 6. Build with the project's Android SDK / NDK requirements and test the app with a zh-TW device locale, then conduct a gameplay smoke test and save compatibility check.
 7. Review distribution rights and the current Google Play submission requirements before preparing an independent application ID, branding, disclosures, and a release.
@@ -44,9 +44,9 @@ Run from repository root:
 sh scripts/verify-zh-tw.sh
 ```
 
-This writes `zh-tw-validation.log` in the repository root (gitignored). To run only individual stages: `python3 scripts/check_zh_tw_resources.py`, `sh scripts/test-terminal-unicode.sh`, or `sh scripts/test-native-utf8.sh`.
+This writes `zh-tw-validation.log` in the repository root (gitignored). To run individual stages: `python3 scripts/check_zh_tw_resources.py`, `sh scripts/test-terminal-unicode.sh`, `sh scripts/test-native-utf8.sh`, or `python3 scripts/check-native-unicode-contract.py`.
 
-The first checks Android resource consistency without an Android SDK; the second needs a JDK and tests East Asian width classification. Neither is a full Android emulator or gameplay verification.
+These offline checks require Python 3, a JDK and a host C compiler. They check resources, Unicode terminal buffers, native encoding/width helpers and protocol source wiring. **They do not compile an Android APK or verify native gameplay and rendering on a device.**
 
 ## Build notes
 
