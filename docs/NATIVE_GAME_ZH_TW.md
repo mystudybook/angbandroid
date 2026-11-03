@@ -263,6 +263,17 @@ English-mode terms still fall back to the original values, and realm data
 and spell commands are unchanged. The standalone C99 game UI test covers
 all four realms.
 
+## Canonical-name mismatch corrected (2026-11-03)
+
+An inventory of `object.txt` against the display dictionary found an
+unreachable translation: `& Main Gauche~` did not match the actual
+`& Main~ Gauche~` template. The lookup now uses the exact source key.
+The native localization checker now validates every monster, monster-flavor
+and item dictionary English key against the corresponding canonical game
+data `name:` entries, so future spelling and `~` grammar-marker drift
+becomes a test failure. Original item grammar, savefiles and engine data
+are not modified.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

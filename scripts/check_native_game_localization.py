@@ -45,6 +45,8 @@ def main():
     mon_header = source(CPP / "angband/zh-tw-monsters.h", errors)
     obj = source(CPP / "angband/obj-desc.c", errors)
     obj_header = source(CPP / "angband/zh-tw-items.h", errors)
+    monster_data = source(ROOT / "variant_lib/angband/gamedata/monster.txt", errors)
+    item_data = source(ROOT / "variant_lib/angband/gamedata/object.txt", errors)
     display_width = source(CPP / "curses/unicode_display.h", errors)
     monster_list = source(CPP / "angband/ui-mon-list.c", errors)
     object_list = source(CPP / "angband/ui-obj-list.c", errors)
@@ -115,6 +117,21 @@ def main():
                f"Empty translation: {macro}")
         expect(target in cfile,
                f"Dictionary is not wired to the display-only helper: {macro}")
+    # Verify source-name keys against the exact canonical game-data grammar.
+    # e.g. "& Main~ Gauche~" differs from "& Main Gauche~".
+    for label, mapping, original_data in (
+        ("monster", table(mon_header), monster_data),
+        ("item", table(obj_header), item_data),
+        ("lore", table(monster_lore_dict), monster_data),
+    ):
+        originals = {
+            line.split(":", 1)[1]
+            for line in original_data.splitlines() if line.startswith("name:")
+        }
+        missing = [en for en, _ in mapping if en not in originals]
+        expect(not missing,
+               "Localized " + label + " lookup keys not in canonical data: "
+               + ", ".join(missing[:15]))
     for symbol in ("angdroid_utf8_display_columns",
                    "angdroid_utf8_clip_columns",
                    "angdroid_utf8_printf_field_bytes"):

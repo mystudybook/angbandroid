@@ -17,6 +17,9 @@ int main(void)
     expect_name("& Wooden Torch~", "木製火把");
     expect_name("& Lantern~", "提燈");
     expect_name("& Dagger~", "匕首");
+    /* Exact grammar markers in object.txt matter to display-only lookup. */
+    expect_name("& Main~ Gauche~", "副手短劍");
+    assert(angdroid_zh_tw_item_kind_name("& Main Gauche~") == NULL);
     expect_name("& Short Sword~", "短劍");
     expect_name("& Long Sword~", "長劍");
     expect_name("& Katana~", "武士刀");

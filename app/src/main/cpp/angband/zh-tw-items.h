@@ -29,7 +29,7 @@ static inline const char *angdroid_zh_tw_item_kind_name(const char *english)
         { "& Honey-cake~", "蜂蜜蛋糕" },
         { "& Piece~ of Elvish Waybread", "精靈乾糧" },
         { "& Dagger~", "匕首" },
-        { "& Main Gauche~", "副手短劍" },
+        { "& Main~ Gauche~", "副手短劍" },
         { "& Rapier~", "細劍" },
         { "& Short Sword~", "短劍" },
         { "& Cutlass~", "短彎刀" },
