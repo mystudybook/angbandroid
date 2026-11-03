@@ -13,7 +13,7 @@ if [ "${1:-}" = "--android" ]; then
     shift
 fi
 if [ "$#" -gt 1 ]; then
-    printf 'Usage: sh scripts/verify-zh-tw.sh [--android] [report-file]\\n' >&2
+    printf 'Usage: sh scripts/verify-zh-tw.sh [--android] [report-file]\n' >&2
     exit 2
 fi
 REPORT="${1:-$ROOT/zh-tw-validation.log}"
@@ -43,11 +43,11 @@ run_check "Native/Java Unicode protocol wiring" python3 "$ROOT/scripts/check-nat
 
 android_debug_build() {
     if [ ! -f "$ROOT/gradlew" ]; then
-        printf 'Missing gradlew in the project root\\n'
+        printf 'Missing gradlew in the project root\n'
         return 1
     fi
     if [ ! -f "$ROOT/local.properties" ]; then
-        printf 'Missing local.properties (SDK path and ABI_FILTERS are required)\\n'
+        printf 'Missing local.properties (SDK path and ABI_FILTERS are required)\n'
         return 1
     fi
     (
