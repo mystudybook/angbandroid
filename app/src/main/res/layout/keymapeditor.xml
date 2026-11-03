@@ -19,7 +19,7 @@
 			android:layout_weight="0"
 			android:paddingLeft="5dp"
 			android:paddingRight="5dp"
-			android:text="Action:" />
+			android:text="@string/keymap_editor_action" />
 
 		<EditText
 			android:id="@+id/input_text"
@@ -145,7 +145,7 @@
 			android:layout_height="match_parent"
 			android:layout_weight="0"
 			android:gravity="center_vertical"
-			android:text="Row 1:" />
+			android:text="@string/keymap_editor_row_1" />
 
 		<HorizontalScrollView
 			android:layout_width="wrap_content"
@@ -179,7 +179,7 @@
 			android:layout_height="match_parent"
 			android:layout_weight="0"
 			android:gravity="center_vertical"
-			android:text="Row 2:" />
+			android:text="@string/keymap_editor_row_2" />
 
 		<HorizontalScrollView
 			android:layout_width="match_parent"
