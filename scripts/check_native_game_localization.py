@@ -276,8 +276,12 @@ def main():
            "Knowledge divider must not extend past narrow screen")
     expect('format("擊殺怪物：%d/%d（本組／總計）"' in knowledge_ui,
            "Monster kill counter translation missing")
-    expect('angdroid_zh_tw_enabled() ? "全部忽略 %s" : "All %s"' in object_ui,
-           "Dynamic object ignore group missing locale-specific format string")
+    expect('strnfmt(out_val, sizeof out_val, "全部忽略 %s", tmp)' in object_ui
+           and 'strnfmt(out_val, sizeof out_val, "All %s", tmp)' in object_ui,
+           "Object ignore labels must use separate literal printf format strings")
+    expect('strnfmt(out_val, sizeof out_val, "取消忽略全部 %s", tmp)' in object_ui
+           and 'strnfmt(out_val, sizeof out_val, "Unignore all %s", tmp)' in object_ui,
+           "Unignore group must preserve literal Chinese and English printf formats")
     if errors:
         for item in errors:
             print("FAIL:", item)

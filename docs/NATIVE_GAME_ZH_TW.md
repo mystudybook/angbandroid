@@ -222,6 +222,14 @@ groups, while retaining the underlying original item and quality names.
 The English templates remain intact, and no ignore rules or persistence
 formats have changed.
 
+## Format-security follow-up
+
+The ignore-group label formatter now uses an explicit Chinese or English
+literal `strnfmt` format string, rather than a conditional format
+expression. The native source checker asserts both versions remain
+present. This avoids repeating earlier NDK `-Werror=format-security`
+failures in localized printf-like calls.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
