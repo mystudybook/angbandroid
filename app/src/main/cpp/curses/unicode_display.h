@@ -108,6 +108,8 @@ static inline size_t angdroid_utf8_printf_field_bytes(
         while (*p++) ++bytes;
         display = angdroid_utf8_display_columns(text);
     }
+    /* Defensive fallback for accidentally un-clipped content. */
+    if (display > columns) return bytes;
     return columns + bytes - display;
 }
 
