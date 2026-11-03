@@ -48,7 +48,15 @@ def main():
 
             status, output = call()
             assert status == 1 and "MISSING: NDK 28.2.13676358" in output
-            assert "cmake;3.10.2.4988404" not in output or "CMake" in output
+            assert "Project pins CMake 3.10.2" in output
+            assert "cmake;3.10.2.4988404" in output
+
+            # A different installed version is not interchangeable with the
+            # exact version pinned by app/build.gradle.
+            touch(sdk / "cmake" / "3.22.1" / "bin" / "cmake")
+            status, output = call()
+            assert status == 1 and "MISSING: CMake 3.10.2" in output
+            assert "Other installed SDK CMake versions: 3.22.1" in output
 
             touch(sdk / "ndk" / "28.2.13676358" / "source.properties")
             touch(sdk / "cmake" / "3.10.2.4988404" / "bin" / "cmake")
@@ -65,7 +73,7 @@ def main():
             status, output = call()
             assert status == 1 and "MISSING: NDK 28.2.13676358" in output
 
-        print("PASS: SDK/NDK r28c/CMake preflight diagnostics (3 scenarios)")
+        print("PASS: SDK/NDK r28c/CMake preflight diagnostics (4 scenarios)")
     finally:
         checker.APP, checker.PROPS = original_app, original_props
 
