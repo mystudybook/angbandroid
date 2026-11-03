@@ -15,7 +15,7 @@ The `master` branch uses **JDK 21** to run Gradle and compile Android source.
 | targetSdk | **34** | Unchanged in this build migration |
 | minSdk | **22** | Unchanged |
 | Android NDK | **28.2.13676358** (r28c) | Pinned to AGP 9's supported default; requires new native build validation |
-| CMake | **3.10.2** | Project-pinned version; install via SDK Manager |
+| CMake | **4.1.2** | Uses installed CMake via PATH or `cmake.dir` in private `local.properties` |
 | Build Tools | **36.0.0** | Default required by AGP 9.0 |
 
 **JDK vs. Android API:** JDK 21 here is the version of Java used by the developer machine to run Gradle and compile. The application's Java class-file compatibility remains at Java 17. This does **not** mean Android 5.1 devices must install Java 21, or that all JDK 21 library APIs are available in the app.
@@ -24,7 +24,7 @@ The `master` branch uses **JDK 21** to run Gradle and compile Android source.
 
 1. Install a JDK 21 distribution (Temurin, or any suitable JDK 21). In Android Studio select **Settings / Preferences → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK → JDK 21**.
 2. Use an Android Studio version compatible with **AGP 9.0** (Panda 1 or newer), then open the **repository root** using **Open**, not the `app` subdirectory.
-3. Install Android SDK Platform 35, SDK Build Tools 36.0.0, **Android NDK 28.2.13676358 (r28c)**, and CMake 3.10.2 in **Tools → SDK Manager**. Enable **Show Package Details** to select specific NDK and CMake versions.
+3. Install Android SDK Platform 35, SDK Build Tools 36.0.0 and **Android NDK 28.2.13676358 (r28c)** in **Tools → SDK Manager**. Enable **Show Package Details** to choose the NDK revision. CMake **4.1.2** may be installed separately (Homebrew or CMake.app); see the next section.
 4. **`ABI_FILTERS` is now optional.** Android Studio can create `local.properties` with the SDK path, and the debug build defaults to `arm64-v8a`. You do not need to add a custom `ABI_FILTERS` line just to open or sync the project. An optional `local.properties` looks like:
 
 ```properties
@@ -70,7 +70,49 @@ You can also use **Build → Make Project** or **Run** in Android Studio, select
 
 - AGP 9 introduces a new public DSL and enables built-in Kotlin by default. This project applies only `com.android.application` and has Java sources, so `android.builtInKotlin=false` avoids unnecessary Kotlin compilation. The new DSL remains enabled; do not use legacy `android.applicationVariants` APIs.
 - AGP 9 defaults to non-final application compile-time `R` IDs. The project temporarily sets `android.enableAppCompileTimeRClass=false`, `android.nonFinalResIds=false` and `android.nonTransitiveRClass=false` to avoid breaking existing switch statements. Remove the compatibility flags only after the relevant UI code is modernized.
-- `targetSdk 34`, `minSdk 22`, `compileSdk 35`, CMake 3.10.2, Java source/bytecode level 17 and `applicationId` remain unchanged. NDK is now pinned to r28c. A Gradle 9 build is not proof of Google Play submission eligibility.
+- `targetSdk 34`, `minSdk 22`, `compileSdk 35`, Java source/bytecode level 17 and `applicationId` remain unchanged. NDK is pinned to r28c; CMake is now 4.1.2. A Gradle 9 build is not proof of Google Play submission eligibility.
+
+## Using your installed CMake 4.1.2
+
+The project's `app/build.gradle` now specifies `version = "4.1.2"`.
+Android Gradle Plugin can locate that exact version via PATH or an explicit
+`cmake.dir` setting; **SDK Manager does not have to supply CMake 4.1.2**.
+Check the executable already installed on your Mac:
+
+```bash
+cmake --version
+which cmake
+```
+
+For Homebrew, `brew --prefix cmake` gives the installation root (normally
+`/opt/homebrew/opt/cmake` on Apple Silicon). To make Android Studio reliably
+find the same version, add a single line to the root `local.properties`
+(alongside the existing `sdk.dir`):
+
+```properties
+cmake.dir=/opt/homebrew/opt/cmake
+```
+
+**Use the folder containing `bin/cmake`, not the binary path.** If installed
+through the graphical CMake distribution, the folder may instead be
+`/Applications/CMake.app/Contents`. Verify the exact path and that it
+reports version 4.1.2; a newer version is not an exact match for the Gradle
+pin. `local.properties` is ignored by Git and should not be committed.
+
+If you have not installed 4.1.2 yet, get that exact version from Kitware.
+Don't assume that `brew install cmake` will always install 4.1.2 because
+Homebrew formula versions change.
+
+**CMake 4 migration:** CMake 4 removes policy compatibility with versions
+earlier than 3.5. All 12 native `CMakeLists.txt` files have been updated from
+`cmake_minimum_required(VERSION 3.4.1)` to `VERSION 3.10`, and the native
+root declares a project. All 11 bundled game engines remain in the build.
+The migration does not yet imply a successful Android native build.
+
+```bash
+git pull --ff-only origin master
+sh scripts/verify-zh-tw.sh --android
+```
 
 ## 2026-11-03 first macOS build log
 
@@ -83,11 +125,11 @@ Preferred NDK version is '28.2.13676358'.
 
 This means no complete Android C/C++ or APK build ran. The same log also contains a warning about SDK repository XML version 4 being read by tools that recognize only version 3. Update **Android SDK Command-line Tools (latest)** in SDK Manager if this warning persists; it is a separate warning, not the fatal NDK error. The build now pins NDK r28c explicitly with modern Gradle 9 `property = value` declarations and checks local SDK packages **before** attempting the Gradle build. Deprecated AGP 9 compatibility flags (`android.nonFinalResIds=false`, `android.builtInKotlin=false`, and `android.enableAppCompileTimeRClass=false`) are left unchanged intentionally, because they are not the error in this log.
 
-For an Android Studio user, select **Tools → SDK Manager → SDK Tools → Show Package Details**, and install NDK 28.2.13676358, CMake 3.10.2, and Build Tools 36.0.0 as needed. API 35 is under SDK Platforms. Or, if Command-line Tools are installed and the path is correct:
+For an Android Studio user, select **Tools → SDK Manager → SDK Tools → Show Package Details**, and install NDK 28.2.13676358 and Build Tools 36.0.0 as needed. API 35 is under SDK Platforms. CMake 4.1.2 is configured separately as described above. Or, if Command-line Tools are installed and the path is correct:
 
 ```bash
 "$HOME/Library/Android/sdk/cmdline-tools/latest/bin/sdkmanager" --install \
-  "ndk;28.2.13676358" "cmake;3.10.2.4988404" \
+  "ndk;28.2.13676358" \
   "build-tools;36.0.0" "platforms;android-35"
 ```
 
@@ -103,34 +145,18 @@ In the next uploaded Android Studio build output, Android resource processing an
 [CXX1300] CMake '3.10.2' was not found in SDK, PATH, or by cmake.dir property.
 ```
 
-**This is a missing local SDK tool, not a Java compile error or proof of a
-native C/C++ source defect.** `app/build.gradle` deliberately retains
-`version = "3.10.2"` for the older multi-variant game source tree
-(`app/src/main/cpp/CMakeLists.txt` starts at `cmake_minimum_required(VERSION 3.4.1)`).
-We have not yet validated a move to a newer CMake release; installing the pinned
-version is the least disruptive route to the first working APK.
+**This was a missing locally configured CMake 3.10.2 tool, not a
+Java compiler error.** The 3.10.2 pin and legacy
+`cmake_minimum_required(VERSION 3.4.1)` declarations shown in the original
+log were present at the time. **They have now been upgraded to CMake 4.1.2 and
+minimum policy version 3.10 across all 12 native CMakeLists files**.
+The old error remains above for diagnostic history; it is not the current
+required version.
 
-Install **CMake 3.10.2.4988404** from Android Studio **Tools → SDK Manager →
-SDK Tools → Show Package Details → CMake**, or run:
-
-```bash
-"$HOME/Library/Android/sdk/cmdline-tools/latest/bin/sdkmanager" \
-  --install "cmake;3.10.2.4988404"
-```
-
-Check that the expected binary exists:
-
-```bash
-"$HOME/Library/Android/sdk/cmake/3.10.2.4988404/bin/cmake" --version
-```
-
-Other installed versions (for example, 3.22.1) do not satisfy the explicit
-`version = "3.10.2"` setting. `scripts/check_android_sdk.py` now shows
-other locally installed CMake versions when the configured version is missing.
-After installation, **pull the latest `master`** and rerun
-`sh scripts/verify-zh-tw.sh --android`. Using Android Studio's Run action
-alone does not invoke that Python preflight; the IDE will show AGP's native error
-directly if a package is still missing.
+After pulling current `master`, verify that `cmake --version` reports
+4.1.2, configure `cmake.dir` when Android Studio cannot see that executable,
+and rerun `sh scripts/verify-zh-tw.sh --android`. The Python preflight now
+checks CMake versions from `cmake.dir`, SDK directories and PATH.
 
 The three AGP 9 deprecated feature flags are warnings, not the cause of this
 failure. They are temporarily retained for existing Java resource references
@@ -142,7 +168,7 @@ compatibility error, which must be assessed from a new log.
 
 - **JDK outside supported range (below 21 or above 25):** configure Gradle JDK to 21 in Android Studio and/or set shell `JAVA_HOME` with `/usr/libexec/java_home -v 21`. Gradle 9.1 does not officially support running on JDK 26+.
 - **Wrong emulator ABI / missing native library:** use `ABI_FILTERS=x86_64 sh scripts/verify-zh-tw.sh --android` for an x86_64 emulator. The default build targets ARM64; `ABI_FILTERS` is no longer required for Gradle Sync.
-- **Missing SDK/NDK/CMake:** install the pinned packages via SDK Manager and accept SDK licenses.
+- **Missing SDK/NDK:** install the pinned NDK and Android SDK packages via SDK Manager. **Missing CMake 4.1.2:** verify PATH or set `cmake.dir` in private `local.properties` to its installation root.
 - **Gradle Sync or dependency errors:** review the first `FAIL` stage and stack trace in `zh-tw-validation.log`, rather than upgrading Gradle/AGP arbitrarily.
 - **`git pull` reports a local `gradle.properties` conflict:** the migration now tracks a non-secret `gradle.properties`. Back up your local untracked file before pulling and reapply any custom options through `~/.gradle/gradle.properties` as needed.
 - **Android native C/C++ compile errors:** NDK r28c is a significant toolchain change; treat any warnings or compile errors as a separate native compatibility task. The NDK version change has not yet passed the full Gradle/NDK build.
