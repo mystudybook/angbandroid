@@ -24,6 +24,13 @@ static JNIEnv *env;
 
 static jclass NativeWrapperClass;
 static jobject NativeWrapperObj;
+/* Cached at game start. Never look up the Java locale while drawing cells. */
+static int game_text_zh_tw = 0;
+
+int angdroid_zh_tw_enabled(void) {
+    return game_text_zh_tw;
+}
+
 
 /* Java Methods */
 static jmethodID NativeWrapper_fatal;
@@ -558,6 +565,23 @@ JNIEXPORT void JNICALL angdroid_gameStart
 
 	/* Get NativeWrapper class */
 	NativeWrapperClass = (*env)->GetObjectClass(env, NativeWrapperObj);
+
+	/* Select display language only; game records and command IDs remain
+	 * English/stable. Cache this flag once per native game session. */
+	game_text_zh_tw = 0;
+	jmethodID getGameLanguage = JAVA_METHOD("usesTraditionalChineseGameText", "()Z");
+	if (getGameLanguage) {
+		jboolean enabled = (*env)->CallBooleanMethod(env,
+			NativeWrapperObj, getGameLanguage);
+		if ((*env)->ExceptionCheck(env)) {
+			(*env)->ExceptionClear(env);
+		} else {
+			game_text_zh_tw = enabled == JNI_TRUE;
+		}
+	} else if ((*env)->ExceptionCheck(env)) {
+		/* Older Java wrapper builds keep the English fallback. */
+		(*env)->ExceptionClear(env);
+	}
 
 	/* NativeWrapper Methods */
 	NativeWrapper_fatal = JAVA_METHOD("fatal", "(Ljava/lang/String;)V");
