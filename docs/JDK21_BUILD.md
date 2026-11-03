@@ -6,7 +6,7 @@ The `master` branch uses **JDK 21** to run Gradle and compile Android source.
 
 | Component | Version | Notes |
 |---|---|---|
-| JDK to run Gradle | **21** | Required by `settings.gradle`; select JDK 21 in Android Studio |
+| JDK to run Gradle | **21 recommended** | Gradle 8.11.1 supports JDK 21–23; JDK 24+ is not supported by this wrapper |
 | Compiler toolchain | **JDK 21** | `app/build.gradle` sets `JavaLanguageVersion.of(21)` |
 | Java language and class-file target | **17** | Intentional: Android devices do not run a standard JDK 21 JVM |
 | Gradle wrapper | **8.11.1** | Compatible with JDK 21 |
@@ -65,7 +65,7 @@ You can also use **Build → Make Project** or **Run** in Android Studio, select
 
 ## Diagnosing failures
 
-- **JDK version below 21:** configure Gradle JDK to 21 in Android Studio, and/or set shell `JAVA_HOME` with `/usr/libexec/java_home -v 21`.
+- **JDK outside supported range (below 21 or above 23):** configure Gradle JDK to 21 in Android Studio and/or set shell `JAVA_HOME` with `/usr/libexec/java_home -v 21`. Gradle 8.11.1 does not officially support running on JDK 24+.
 - **Wrong emulator ABI / missing native library:** use `ABI_FILTERS=x86_64 sh scripts/verify-zh-tw.sh --android` for an x86_64 emulator. The default build targets ARM64; `ABI_FILTERS` is no longer required for Gradle Sync.
 - **Missing SDK/NDK/CMake:** install the pinned packages via SDK Manager and accept SDK licenses.
 - **Gradle Sync or dependency errors:** review the first `FAIL` stage and stack trace in `zh-tw-validation.log`, rather than upgrading Gradle/AGP arbitrarily.
