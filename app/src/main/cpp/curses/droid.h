@@ -33,6 +33,9 @@ extern void soft_kbd_append(const char *keys);
 
 extern void android_debug(const char *msg);
 
+/* Display locale only; set once from Java during native game startup. */
+extern int angdroid_zh_tw_enabled(void);
+
 extern void strdeldup(char *str);
 
 extern void feed_keymap(const char *buf);
