@@ -241,4 +241,26 @@
     <string name="storage_rename_button">重新命名</string>
     <string name="storage_duplicate">複製</string>
     <string name="storage_back">返回</string>
+
+    <!-- Display-only labels: NEVER change the English persisted entryValues. -->
+    <string-array name="DPadColorLabels">
+        <item>灰色</item>
+        <item>深灰色</item>
+        <item>藍色</item>
+        <item>紅色</item>
+        <item>黃色</item>
+        <item>綠色</item>
+        <item>紫色</item>
+    </string-array>
+    <string-array name="FastKeysPopupPositionLabels">
+        <item>右上</item>
+        <item>右下</item>
+        <item>左上</item>
+        <item>左下</item>
+        <item>隱藏</item>
+    </string-array>
+    <string-array name="storageLocationLabels">
+        <item>外部儲存空間</item>
+        <item>內部儲存空間</item>
+    </string-array>
 </resources>
