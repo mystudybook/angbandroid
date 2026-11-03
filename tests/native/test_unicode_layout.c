@@ -194,6 +194,10 @@ int main(void)
         assert(angdroid_fixed_cell_glyph(0xF0, 0x80) == 0xF0);
         assert(angdroid_fixed_cell_glyph(0xE000, 1) == 0xE000);
     }
-    puts("PASS: native Unicode width, redraw, partner, dirty-range and grid tests");
+    assert(angdroid_public_grid_glyph(ANGDROID_TEXT_CONTINUATION) == L' ');
+    assert(angdroid_public_grid_glyph(L'中') == L'中');
+    assert(angdroid_public_grid_glyph(L'@') == L'@');
+    assert(angdroid_public_grid_glyph(0xE000) == 0xE000);
+    puts("PASS: native Unicode width, redraw, partner and public grid tests");
     return 0;
 }
