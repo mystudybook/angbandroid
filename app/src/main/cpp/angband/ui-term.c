@@ -2134,11 +2134,15 @@ errr Term_addch(int a, wchar_t c)
 	/* Paranoia -- no illegal chars */
 	if (!c) return (-2);
 
-	/* Queue the given character for display */
+	/* The native and Java text buffers must advance by the same
+	 * number of display columns. The final cell cannot hold half a glyph. */
+	int span = angdroid_is_wide_text(c, a) ? 2 : 1;
+	if (Term->scr->cx + span > w) {
+		c = L'?';
+		span = 1;
+	}
 	Term_queue_char(Term, Term->scr->cx, Term->scr->cy, a, c, 0, 0);
-
-	/* Advance the cursor */
-	Term->scr->cx++;
+	Term->scr->cx += span;
 
 	/* Success */
 	if (Term->scr->cx < w) return (0);
@@ -2173,39 +2177,44 @@ errr Term_addch(int a, wchar_t c)
 errr Term_addstr(int n, int a, const char *buf)
 {
 	int k;
-
+	int i;
+	int available;
+	int count;
+	int xpos;
 	int w = Term->wid;
-
 	errr res = 0;
+	angdroid_text_fit fit;
+	wchar_t s[1024] = {0};
 
-	wchar_t s[1024];
-
-	/* Copy to a rewriteable string */
- 	text_mbstowcs(s, buf, 1024);
-
-	/* Handle "unusable" cursor */
 	if (Term->scr->cu) return (-1);
-
-	/* Obtain maximal length */
+	/* Never read beyond the local array or rely on an uninitialized
+	 * terminator when the conversion fills the complete buffer. */
+	text_mbstowcs(s, buf, 1023);
+	s[1023] = 0;
 	k = (n < 0) ? (w + 1) : n;
+	if (k > 1023) k = 1023;
+	for (count = 0; count < k && s[count]; ++count) { /* loop */ }
 
-	/* Obtain the usable string length */
-	for (n = 0; (n < k) && s[n]; n++) /* loop */;
+	available = w - Term->scr->cx;
+	fit = angdroid_fit_terminal_text(s, (size_t)count,
+		(size_t)available);
+	xpos = Term->scr->cx;
+	for (i = 0; i < (int)fit.codepoints; ++i) {
+		wchar_t ch = s[i];
+		int span = angdroid_is_wide_text(ch, a) ? 2 : 1;
+		if (ch == ANGDROID_TEXT_CONTINUATION) ch = L'?';
+		Term_queue_char(Term, xpos, Term->scr->cy, a, ch, 0, 0);
+		xpos += span;
+	}
+	Term->scr->cx = xpos;
 
-	/* React to reaching the edge of the screen */
-	if (Term->scr->cx + n >= w) res = n = w - Term->scr->cx;
-
-	/* Queue the first "n" characters for display */
-	Term_queue_chars(Term->scr->cx, Term->scr->cy, n, a, s);
-
-	/* Advance the cursor */
-	Term->scr->cx += n;
-
-	/* Hack -- Notice "Useless" cursor */
-	if (res) Term->scr->cu = 1;
-
-	/* Success (usually) */
-	return (res);
+	/* Like the original implementation, reaching the last column makes
+	 * the cursor unusable until the game explicitly moves it again. */
+	if (fit.clipped || xpos >= w) {
+		res = fit.codepoints ? (errr)fit.codepoints : 1;
+		Term->scr->cu = 1;
+	}
+	return res;
 }
 
 
