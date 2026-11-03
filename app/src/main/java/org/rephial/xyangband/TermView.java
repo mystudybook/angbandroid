@@ -2984,26 +2984,26 @@ public class TermView extends View implements OnGestureListener {
 		OnClickListener listener = new OnClickListener() {
 			@Override
 			public void onClick(View v) {
+				Object tag = v.getTag();
+				if (!(tag instanceof Integer)) return;
+				int option = (Integer)tag;
+				if (option < 0 || option >= MouseInputOptions.COUNT) return;
 				win.dismiss();
-				int button = 1;
-				int mods = 0;
-				String label = ((Button)v).getText().toString();
-				if (label.contains("2")) button = 2;
-				if (label.contains("Ctrl")) mods = 1;
-				if (label.contains("Shift")) mods = 2;
-				if (label.contains("Alt")) mods = 4;
-				state.addMousePress(y, x, button, mods);
+				state.addMousePress(y, x,
+					MouseInputOptions.button(option),
+					MouseInputOptions.modifiers(option));
 			}
 		};
 
-		String[] labels = new String[]
-				{"1","Shitf-1","Ctrl-1","Alt-1",
-				"2","Shift-2","Ctrl-2","Alt-2"};
+		// Labels are localized, but game commands are stable numeric IDs.
+		// Do not infer modifiers from visible text (or translated labels).
+		String[] labels = getResources().getStringArray(R.array.mouse_input_labels);
 		int cut = 4;
-		for (int i = 0; i < labels.length; i++) {
+		for (int i = 0; i < labels.length && i < MouseInputOptions.COUNT; i++) {
 			Button btn = (Button)game_context.getLayoutInflater().inflate
 					(R.layout.popupbutton, null);
 			btn.setText(labels[i]);
+			btn.setTag(Integer.valueOf(i));
 			btn.setOnClickListener(listener);
 			if (i < cut) {
 				row1.addView(btn);
