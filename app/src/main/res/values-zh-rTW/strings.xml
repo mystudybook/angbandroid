@@ -182,4 +182,21 @@
     <string name="pref_d_pad_color_2">方向鍵顏色 2</string>
     <string name="pref_debug_keycodes_external_keyboards">偵錯按鍵代碼（外接鍵盤）</string>
     <string name="pref_display_the_numeric_codes_on_screen">在畫面上顯示按鍵代碼數字</string>
+
+    <!-- Launcher, profile and dialog UI labels. -->
+    <string name="app_installing_files">正在安裝遊戲檔案…</string>
+    <string name="profile_context_title">角色設定檔</string>
+    <string name="profile_edit_action">編輯</string>
+    <string name="profile_delete_action">刪除</string>
+    <string name="dialog_not_allowed">不允許此操作</string>
+    <string name="dialog_cannot_delete_last_profile">無法刪除最後一個角色設定檔</string>
+    <string name="dialog_are_you_sure">確定要繼續嗎？</string>
+    <string name="dialog_savefile_exists">儲存空間中已存在同名遊戲存檔</string>
+    <string name="action_cancel">取消</string>
+    <string name="action_ok">確定</string>
+    <string name="help_window_title">Angband：說明</string>
+    <string name="profile_name_hint">名稱</string>
+    <string name="profile_savefile_hint">存檔檔名</string>
+    <string name="splash_start">開始遊戲</string>
+    <string name="splash_storage">檔案管理</string>
 </resources>
