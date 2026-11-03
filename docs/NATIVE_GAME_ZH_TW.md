@@ -73,6 +73,16 @@ A host Clang/GCC-compatible proof of the literal-format calling pattern
 compiled with `-Werror=format-security`. The full Android project must still
 be rebuilt on the user's SDK/NDK environment to verify the actual project.
 
+## Race and class display pass (2026-11-03)
+
+The 11 original player-race names from `variant_lib/angband/gamedata/p_race.txt`
+and the 9 original class names from `variant_lib/angband/gamedata/class.txt`
+are now translated in the character-creation menu and character sheet only,
+along with common character-sheet labels. Runtime race/class IDs, names in
+the game's data structures and persisted savefile names are unchanged.
+Other variants and class titles remain unmodified. English fallback
+and representative race/class values have C99 regression coverage.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

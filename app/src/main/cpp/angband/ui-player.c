@@ -42,6 +42,7 @@
 #include "ui-player.h"
 
 #include "droid.h"
+#include "zh-tw-ui.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -693,10 +694,10 @@ static const uint8_t colour_table[] =
 static struct panel *get_panel_topleft(void) {
 	struct panel *p = panel_allocate(6);
 
-	panel_line(p, COLOUR_L_BLUE, "Name", "%s", player->full_name);
-	panel_line(p, COLOUR_L_BLUE, "Race",	"%s", player->race->name);
-	panel_line(p, COLOUR_L_BLUE, "Class", "%s", player->class->name);
-	panel_line(p, COLOUR_L_BLUE, "Title", "%s", show_title());
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Name", angdroid_zh_tw_enabled()), "%s", player->full_name);
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Race", angdroid_zh_tw_enabled()),	"%s", angdroid_game_ui_text(player->race->name, angdroid_zh_tw_enabled()));
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Class", angdroid_zh_tw_enabled()), "%s", angdroid_game_ui_text(player->class->name, angdroid_zh_tw_enabled()));
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Title", angdroid_zh_tw_enabled()), "%s", show_title());
 	panel_line(p, COLOUR_L_BLUE, "HP", "%d/%d", player->chp, player->mhp);
 	panel_line(p, COLOUR_L_BLUE, "SP", "%d/%d", player->csp, player->msp);
 
@@ -709,17 +710,17 @@ static struct panel *get_panel_midleft(void) {
 	uint8_t attr = diff < 0 ? COLOUR_L_RED : COLOUR_L_GREEN;
 
 	panel_line(p, max_color(player->lev, player->max_lev),
-			"Level", "%d", player->lev);
+			angdroid_game_ui_text("Level", angdroid_zh_tw_enabled()), "%d", player->lev);
 	panel_line(p, max_color(player->exp, player->max_exp),
-			"Cur Exp", "%d", player->exp);
-	panel_line(p, COLOUR_L_GREEN, "Max Exp", "%d", player->max_exp);
-	panel_line(p, COLOUR_L_GREEN, "Adv Exp", "%s", show_adv_exp());
+			angdroid_game_ui_text("Cur Exp", angdroid_zh_tw_enabled()), "%d", player->exp);
+	panel_line(p, COLOUR_L_GREEN, angdroid_game_ui_text("Max Exp", angdroid_zh_tw_enabled()), "%d", player->max_exp);
+	panel_line(p, COLOUR_L_GREEN, angdroid_game_ui_text("Adv Exp", angdroid_zh_tw_enabled()), "%s", show_adv_exp());
 	panel_space(p);
-	panel_line(p, COLOUR_L_GREEN, "Gold", "%d", player->au);
-	panel_line(p, attr, "Burden", "%.1f lb",
+	panel_line(p, COLOUR_L_GREEN, angdroid_game_ui_text("Gold", angdroid_zh_tw_enabled()), "%d", player->au);
+	panel_line(p, attr, angdroid_game_ui_text("Burden", angdroid_zh_tw_enabled()), "%.1f lb",
 			   player->upkeep->total_weight / 10.0F);
-	panel_line(p, attr, "Overweight", "%d.%d lb", -diff / 10, abs(diff) % 10);
-	panel_line(p, COLOUR_L_GREEN, "Max Depth", "%s", show_depth());
+	panel_line(p, attr, angdroid_game_ui_text("Overweight", angdroid_zh_tw_enabled()), "%d.%d lb", -diff / 10, abs(diff) % 10);
+	panel_line(p, COLOUR_L_GREEN, angdroid_game_ui_text("Max Depth", angdroid_zh_tw_enabled()), "%s", show_depth());
 
 	return p;
 }

@@ -215,7 +215,9 @@ static void birthmenu_display(struct menu *menu, int oid, bool cursor,
 	struct birthmenu_data *data = menu->menu_data;
 
 	uint8_t attr = curs_attrs[CURS_KNOWN][0 != cursor];
-	c_put_str(attr, data->items[oid], row, col);
+	/* Only translate the rendered label. Keep race/class IDs and names intact. */
+	c_put_str(attr, angdroid_game_ui_text(data->items[oid],
+		angdroid_zh_tw_enabled()), row, col);
 }
 
 /**

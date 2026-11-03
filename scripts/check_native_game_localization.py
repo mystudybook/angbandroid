@@ -51,6 +51,7 @@ def main():
     native_tests = source(ROOT / "scripts/test-native-utf8.sh", errors)
     game_ui_header = source(CPP / "angband/zh-tw-ui.h", errors)
     birth_ui = source(CPP / "angband/ui-birth.c", errors)
+    player_ui = source(CPP / "angband/ui-player.c", errors)
     context_ui = source(CPP / "angband/ui-context.c", errors)
     game_ui = source(CPP / "angband/ui-game.c", errors)
     java_tests = source(ROOT / "scripts/test-terminal-unicode.sh", errors)
@@ -151,6 +152,18 @@ def main():
            "Savegame selector is not translated at display time")
     expect("test_game_ui_locale.c" in native_tests,
            "Missing C99 native UI regression")
+    for english, chinese in (("Human", "人類"), ("Half-Elf", "半精靈"),
+                             ("Kobold", "狗頭人"), ("Warrior", "戰士"),
+                             ("Necromancer", "死靈法師"),
+                             ("Blackguard", "黑衛士")):
+        expect(('"' + english + '"') in game_ui_header
+               and ('"' + chinese + '"') in game_ui_header,
+               "Missing original Angband race/class display translation: " + english)
+    expect("angdroid_game_ui_text(data->items[oid]" in birth_ui,
+           "Race and class menu items are not translated at render time")
+    expect("angdroid_game_ui_text(player->race->name" in player_ui
+           and "angdroid_game_ui_text(player->class->name" in player_ui,
+           "Character sheet is not using display-only race and class labels")
     if errors:
         for item in errors:
             print("FAIL:", item)

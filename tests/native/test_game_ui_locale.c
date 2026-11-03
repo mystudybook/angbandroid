@@ -23,6 +23,16 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text("Use %s: %s", 1), "使用 %s：%s") == 0);
     assert(strcmp(angdroid_game_ui_text("Saving game... failed!", 1),
                   "遊戲儲存失敗！") == 0);
+    /* The source Angband gamedata p_race.txt/class.txt is unchanged. */
+    assert(strcmp(angdroid_game_ui_text("Human", 1), "人類") == 0);
+    assert(strcmp(angdroid_game_ui_text("Half-Troll", 1), "半食人妖") == 0);
+    assert(strcmp(angdroid_game_ui_text("Kobold", 1), "狗頭人") == 0);
+    assert(strcmp(angdroid_game_ui_text("Warrior", 1), "戰士") == 0);
+    assert(strcmp(angdroid_game_ui_text("Necromancer", 1), "死靈法師") == 0);
+    assert(strcmp(angdroid_game_ui_text("Blackguard", 1), "黑衛士") == 0);
+    assert(strcmp(angdroid_game_ui_text("Race", 1), "種族") == 0);
+    assert(strcmp(angdroid_game_ui_text("Class", 1), "職業") == 0);
+    assert(strcmp(angdroid_game_ui_text("Human", 0), "Human") == 0);
     assert(strcmp(angdroid_game_ui_text("New game", 0), "New game") == 0);
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);
