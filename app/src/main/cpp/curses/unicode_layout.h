@@ -52,4 +52,23 @@ static angdroid_text_fit angdroid_fit_terminal_text(
     return fit;
 }
 
+
+/*
+ * Enumerate one visible text run in a native row, omitting the internal
+ * continuation column while retaining physical x offsets. A zero return
+ * means no more visible code points remain in this source range.
+ */
+static size_t angdroid_next_visible_text_run(
+    const wchar_t *cells, size_t length, size_t *cursor, size_t *start)
+{
+    size_t i;
+    if (!cells || !cursor || !start || *cursor >= length) return 0;
+    i = *cursor;
+    while (i < length && cells[i] == ANGDROID_TEXT_CONTINUATION) ++i;
+    *start = i;
+    while (i < length && cells[i] != ANGDROID_TEXT_CONTINUATION) ++i;
+    *cursor = i;
+    return i - *start;
+}
+
 #endif
