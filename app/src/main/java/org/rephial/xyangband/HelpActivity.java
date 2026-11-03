@@ -32,7 +32,7 @@ public class HelpActivity extends Activity {
 	public void onCreate(Bundle b) {
 		super.onCreate(b);
 		setContentView(R.layout.help);
-		this.setTitle(String.format("Angband: Help"));
+		this.setTitle(R.string.help_window_title);
 		WebView help = (WebView) findViewById(R.id.help_text);
 
 		WebSettings settings = help.getSettings();
