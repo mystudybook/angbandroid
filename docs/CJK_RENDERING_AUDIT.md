@@ -58,7 +58,7 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 - `angdroid_fixed_cell_glyph()` renders a wide glyph as `?` in these fixed-cell APIs instead of allocating a second column. Ordinary ASCII/Latin-1, private-use command glyphs and graphical tile attributes retain their original value.
 - `Term_queue_chars()` now checks whether each target overwrites part of an existing wide text glyph and invalidates its other half. It still clears terrain values as it did previously.
 - `Term_what()` now hides the internal U+FDD0 continuation marker from callers, returning a blank cell with `COLOUR_WHITE`. Direct game logic cannot accidentally treat that marker as a game character.
-- Twelve native fixed-grid test assertions and four public-marker tests were added, along with source-level contract checks.
+- Twelve native fixed-grid test assertions and four public-marker tests were added, along with source-level contract checks. Regular text-stream APIs `Term_addch()` and `Term_addstr()` also sanitize literal U+FDD0 input before it reaches the native grid; four additional stream-marker regression assertions cover this rule.
 
 **Trade-off:** Chinese text sent through a *fixed-position per-cell map API* is intentionally replaced with `?` rather than widened. Use `Term_addstr()`/`Term_addch()` for regular two-column user-facing text. This distinction is necessary until the native map grid and textual UI coordinate schemes can be separated more comprehensively.
 
