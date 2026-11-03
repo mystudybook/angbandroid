@@ -80,7 +80,7 @@ public class AngbandDialog {
 		new AlertDialog.Builder(activity) 
 			.setTitle("Angband")
 			.setMessage(msg) 
-			.setNegativeButton("OK", new DialogInterface.OnClickListener() {
+			.setNegativeButton(R.string.action_ok, new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
 						state.fatalMessage=""; 
 						state.fatalError=false; 
@@ -95,7 +95,7 @@ public class AngbandDialog {
 		new AlertDialog.Builder(activity) 
 			.setTitle("Angband") 
 			.setMessage(msg) 
-			.setNegativeButton("OK", new DialogInterface.OnClickListener() {
+			.setNegativeButton(R.string.action_ok, new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int whichButton) {
 						state.warnMessage=""; 
 						state.warnError = false;
