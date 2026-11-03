@@ -64,6 +64,31 @@ public final class TermWindowUnicodeTest {
                 "last-row fallback preserves preceding text");
     }
 
+    private static void testTabStops() {
+        TermWindow w = new TermWindow(3, 24, 0, 0);
+        w.move(0, 0);
+        w.addch('\t');
+        check(w.row == 0 && w.col == 8, "tab at column zero advances eight columns");
+        w.move(0, 1);
+        w.addch('\t');
+        check(w.row == 0 && w.col == 8, "tab at column one advances seven columns");
+        w.move(0, 3);
+        w.addch('\t');
+        check(w.row == 0 && w.col == 8, "tab at column three advances five columns");
+        w.move(0, 7);
+        w.addch('\t');
+        check(w.row == 0 && w.col == 8, "tab at column seven advances one column");
+        w.move(0, 8);
+        w.addch('\t');
+        check(w.row == 0 && w.col == 16, "tab at column eight advances eight columns");
+        w.move(0, 13);
+        w.addch('\t');
+        check(w.row == 0 && w.col == 16, "tab at column thirteen advances three columns");
+        w.move(0, 16);
+        w.addch('\t');
+        check(w.row == 1 && w.col == 0, "tab to last column wraps only after completing stop");
+    }
+
     private static void testSupplementary() {
         TermWindow w = new TermWindow(2, 5, 0, 0);
         write(w, new String(Character.toChars(0x20000)));
@@ -183,6 +208,7 @@ public final class TermWindowUnicodeTest {
         testOverwriteAndErase();
         testBoundary();
         testSupplementary();
+        testTabStops();
         testResizeAndClear();
         testClearToBottomClearsCompleteLowerRows();
         testCopyAndScroll();
