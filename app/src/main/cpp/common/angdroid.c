@@ -548,6 +548,8 @@ static errr Term_text_android(int x, int y, int n, int a, const wchar_t *cp)
 {
 	term_data *td = (term_data*)(Term->data);
 
+	if (!cp || n <= 0) return 0;
+
 	int fg = a % MAX_COLORS;
 	int bg;
 
