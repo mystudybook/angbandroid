@@ -315,6 +315,22 @@ elementals, mature dragons, hydras, hounds, trolls and complex monster
 types. Unique names remain in English, and the list-only translation does
 not alter monster identifiers, pluralization rules or savefiles.
 
+## Complete non-unique monster name catalog (2026-11-03)
+
+The original `monster.txt` contains 624 monster records:
+101 unique named monsters, one
+`<player>` placeholder, and 522 non-unique monsters. **Every
+non-unique monster now has a Traditional Chinese display name** in the
+monster list and matching knowledge-title presentation. The source
+checker requires the display dictionary to exactly match the
+non-unique canonical source-name set, rejecting missing names, duplicates
+and inadvertent translations of unique proper names.
+
+These are display labels only, not a translation of `monster_desc()`
+English grammar, monster attack descriptions, the full monster lore
+body, or other game variants. The original records, unique names,
+pluralization and saved data are unchanged.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

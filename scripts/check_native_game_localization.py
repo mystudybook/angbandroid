@@ -101,7 +101,7 @@ def main():
 
     for cfile, header, macro, target, count in (
         (mon, mon_header, "ANGDROID_ZH_TW_MONSTER_NAMES",
-         "angdroid_zh_tw_monster_list_name(race->name)", 388),
+         "angdroid_zh_tw_monster_list_name(race->name)", 522),
         (obj, obj_header, "ANGDROID_ZH_TW_ITEM_KINDS",
          "angdroid_zh_tw_item_kind_name(kind->name)", 326),
     ):
@@ -143,6 +143,31 @@ def main():
     expect(real_item_names == item_translated_names,
            "Original Angband item-kind catalog incomplete: "
            + ", ".join(sorted(real_item_names - item_translated_names)[:15]))
+    # Every non-unique source monster (excluding the <player> placeholder)
+    # must have a display-only Chinese label. Unique monster proper names
+    # deliberately retain their canonical name and purple rendering.
+    monster_records = []
+    current_name = None
+    current_unique = False
+    for line in monster_data.splitlines():
+        if line.startswith("name:"):
+            if current_name is not None:
+                monster_records.append((current_name, current_unique))
+            current_name = line.split(":", 1)[1]
+            current_unique = False
+        elif current_name is not None and line.startswith("flags:"):
+            if re.search(r"\\bUNIQUE\\b", line):
+                current_unique = True
+    if current_name is not None:
+        monster_records.append((current_name, current_unique))
+    regular_names = {
+        name for name, unique in monster_records
+        if not unique and not name.startswith("<")
+    }
+    translated_monster_names = {name for name, _ in table(mon_header)}
+    expect(regular_names == translated_monster_names,
+           "Original Angband non-unique monster catalog incomplete: "
+           + ", ".join(sorted(regular_names - translated_monster_names)[:15]))
     for symbol in ("angdroid_utf8_display_columns",
                    "angdroid_utf8_clip_columns",
                    "angdroid_utf8_printf_field_bytes"):
@@ -350,7 +375,7 @@ def main():
             print("FAIL:", item)
         return 1
     print(f"PASS: {checks} native game-localization source safeguards")
-    print("  Monster list entries: 388 | item kind labels: 326")
+    print("  Monster list entries: 522 | item kind labels: 326")
     print("  Death menu labels: 9 | death prompts: 11")
     print("NOTE: Requires Android NDK and on-device zh-TW gameplay validation")
     return 0
