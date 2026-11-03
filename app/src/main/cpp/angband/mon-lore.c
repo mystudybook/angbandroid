@@ -1917,8 +1917,11 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 
 	/* Notice lack of attacks */
 	if (rf_has(known_flags, RF_NEVER_BLOW)) {
-		textblock_append(tb, "%s has no physical attacks.  ",
-						 lore_pronoun_nominative(msex, true));
+		if (angdroid_zh_tw_enabled())
+            textblock_append(tb, "這隻怪物不會進行物理攻擊。  ");
+        else
+            textblock_append(tb, "%s has no physical attacks.  ",
+                lore_pronoun_nominative(msex, true));
 		return;
 	}
 
@@ -1937,8 +1940,12 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 
 	/* Describe the lack of knowledge */
 	if (known_attacks == 0) {
-		textblock_append_c(tb, COLOUR_ORANGE, "Nothing is known about %s attack.  ",
-						 lore_pronoun_possessive(msex, false));
+		if (angdroid_zh_tw_enabled())
+            textblock_append_c(tb, COLOUR_ORANGE, "尚不清楚這隻怪物的攻擊方式。  ");
+        else
+            textblock_append_c(tb, COLOUR_ORANGE,
+                "Nothing is known about %s attack.  ",
+                lore_pronoun_possessive(msex, false));
 		return;
 	}
 
@@ -1958,13 +1965,17 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 		effect_str = race->blow[i].effect->desc;
 
 		/* Introduce the attack description */
-		if (described_count == 0)
-			textblock_append(tb, "%s can ",
-							 lore_pronoun_nominative(msex, true));
-		else if (described_count < known_attacks - 1)
-			textblock_append(tb, ", ");
-		else
-			textblock_append(tb, ", and ");
+		if (angdroid_zh_tw_enabled()) {
+            textblock_append(tb, "%s", described_count == 0 ?
+                "這隻怪物可能" : "、");
+        } else if (described_count == 0) {
+            textblock_append(tb, "%s can ",
+                lore_pronoun_nominative(msex, true));
+        } else if (described_count < known_attacks - 1) {
+            textblock_append(tb, ", ");
+        } else {
+            textblock_append(tb, ", and ");
+        }
 
 		/* Describe the method */
 		textblock_append(tb, "%s",
@@ -1975,11 +1986,12 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 		if (effect_str && strlen(effect_str) > 0) {
 			int index = blow_index(race->blow[i].effect->name);
 			/* Describe the attack type */
-			textblock_append(tb, " to ");
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ?
+                "，效果為" : " to ");
 			textblock_append_c(tb, blow_color(player, index), "%s",
                 angdroid_zh_tw_blow_effect(effect_str, angdroid_zh_tw_enabled()));
 
-			textblock_append(tb, " (");
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "（" : " (");
 			/* Describe damage (if known) */
 			if (dice.base || (dice.dice && dice.sides) || dice.m_bonus) {
 				if (dice.base)
@@ -1989,9 +2001,10 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 					textblock_append_c(tb, COLOUR_L_GREEN, "%dd%d", dice.dice, dice.sides);
 
 				if (dice.m_bonus)
-					textblock_append_c(tb, COLOUR_L_GREEN, "M%d", dice.m_bonus);
+                    textblock_append_c(tb, COLOUR_L_GREEN, "M%d", dice.m_bonus);
 
-				textblock_append(tb, ", ");
+                textblock_append(tb, "%s", angdroid_zh_tw_enabled() ?
+                    "，" : ", ");
 			}
 
 			/* Describe hit chances */
@@ -2000,7 +2013,7 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 				player->state.ac + player->state.to_a);
 			int percent = random_chance_scaled(c, 100);
 			textblock_append_c(tb, COLOUR_L_BLUE, "%d", percent);
-			textblock_append(tb, "%%)");
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "%%）" : "%%)");
 
 			total_centidamage += (percent * randcalc(dice, 0, AVERAGE));
 		}
@@ -2008,13 +2021,18 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 		described_count++;
 	}
 
-	textblock_append(tb, ", averaging");
+	textblock_append(tb, "%s", angdroid_zh_tw_enabled() ?
+        "；每回合平均造成" : ", averaging");
 	if (known_attacks < total_attacks) {
-		textblock_append_c(tb, COLOUR_ORANGE, " at least");
+		textblock_append_c(tb, COLOUR_ORANGE, "%s",
+            angdroid_zh_tw_enabled() ? "至少" : " at least");
 	}
 	textblock_append_c(tb, COLOUR_L_GREEN, " %d", total_centidamage/100);
-	textblock_append(tb, " damage on each of %s turns.  ",
-					 lore_pronoun_possessive(msex, false));
+	if (angdroid_zh_tw_enabled())
+        textblock_append(tb, " 點傷害。  ");
+    else
+        textblock_append(tb, " damage on each of %s turns.  ",
+            lore_pronoun_possessive(msex, false));
 }
 
 /**

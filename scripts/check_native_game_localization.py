@@ -441,6 +441,15 @@ def main():
            "Monster spell lore damage source changed")
     expect('ref_race = old_ref;' in monster_lore,
            "Monster spell lore reference cleanup lost")
+    for phrase in ("這隻怪物不會進行物理攻擊", "尚不清楚這隻怪物的攻擊方式",
+                   "這隻怪物可能", "，效果為", "；每回合平均造成", " 點傷害。"):
+        expect(phrase in monster_lore,
+               "Missing Chinese monster melee lore phrase: " + phrase)
+    expect('angdroid_zh_tw_blow_method(' in monster_lore
+           and 'angdroid_zh_tw_blow_effect(' in monster_lore,
+           "Physical attack labels no longer use gamedata term maps")
+    expect('total_centidamage += (percent * randcalc(dice, 0, AVERAGE))' in monster_lore,
+           "Monster attack average damage calculation changed")
     if errors:
         for item in errors:
             print("FAIL:", item)

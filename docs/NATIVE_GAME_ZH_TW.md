@@ -424,6 +424,16 @@ calculations, known-frequency gates, the `ref_race` context and the
 complete English branch remain unchanged. Other live combat and full
 item-effect text are still separate work.
 
+## Monster melee-lore sentence structure (2026-11-03)
+
+The monster encyclopedia's known attack methods and effects now render as
+complete Chinese sentences including no-physical-attack/no-knowledge cases,
+attacks, effects, dice expressions, percentage hit chances and average
+damage per turn. The method and effect display labels use all the exact
+`blow_methods.txt` and `blow_effects.txt` term mappings. The source
+English grammar, attack calculation, known attack flags, color coding
+and battle state remain unchanged.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
