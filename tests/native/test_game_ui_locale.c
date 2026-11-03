@@ -5,6 +5,7 @@
 #include "../../app/src/main/cpp/angband/zh-tw-ui.h"
 #include "../../app/src/main/cpp/angband/zh-tw-combat.h"
 #include "../../app/src/main/cpp/angband/zh-tw-magic.h"
+#include "../../app/src/main/cpp/angband/zh-tw-mon-lore-terms.h"
 #include "../../app/src/main/cpp/curses/unicode_display.h"
 
 int main(void)
@@ -85,6 +86,20 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);
     assert(angdroid_utf8_display_columns("繁體中文") == 8);
+    assert(strcmp(angdroid_zh_tw_blow_method("claw", 1), "爪擊") == 0);
+    assert(strcmp(angdroid_zh_tw_blow_effect("reduce strength", 1),
+                  "降低力量") == 0);
+    assert(strcmp(angdroid_zh_tw_monster_spell("summon ringwraiths", 1),
+                  "召喚戒靈") == 0);
+    assert(strcmp(angdroid_zh_tw_monster_spell("poison", 1),
+                  "毒素") == 0);
+    assert(strcmp(angdroid_zh_tw_blow_effect("poison", 1),
+                  "使人中毒") == 0);
+    assert(strcmp(angdroid_zh_tw_monster_spell("summon ringwraiths", 0),
+                  "summon ringwraiths") == 0);
+    assert(strcmp(angdroid_zh_tw_blow_method("unmapped method", 1),
+                  "unmapped method") == 0);
+    assert(angdroid_zh_tw_monster_spell(NULL, 1) == NULL);
     assert(strcmp(angdroid_game_ui_text("invisible", 1), "隱形") == 0);
     assert(strcmp(angdroid_game_ui_text("pass through walls", 1), "穿牆") == 0);
     assert(strcmp(angdroid_game_ui_text("nether", 1), "冥界") == 0);

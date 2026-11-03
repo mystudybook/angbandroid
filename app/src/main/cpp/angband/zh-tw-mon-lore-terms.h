@@ -1,0 +1,198 @@
+/* Exact original Angband gamedata presentation-only spell and melee labels.
+ * Keep English canonical descriptions, parser symbols, and savefiles unchanged.
+ * Unknown and NULL names use the original English fallback.
+ */
+#ifndef ANGDROID_ZH_TW_MON_LORE_TERMS_H
+#define ANGDROID_ZH_TW_MON_LORE_TERMS_H
+#include <string.h>
+#include <stddef.h>
+struct angdroid_lore_term { const char *en; const char *zh; };
+static inline const char *angdroid_zh_tw_lore_lookup(const char *en,
+        const struct angdroid_lore_term *pairs, size_t count, int zh_tw)
+{
+    size_t i;
+    if (!en || !zh_tw) return en;
+    for (i = 0; i < count; i++)
+        if (strcmp(en, pairs[i].en) == 0) return pairs[i].zh;
+    return en;
+}
+static inline const char *angdroid_zh_tw_blow_method(const char *en, int zh_tw)
+{
+    static const struct angdroid_lore_term pairs[] = {
+        { "hit", "打擊" },
+        { "touch", "觸碰" },
+        { "punch", "揮拳" },
+        { "kick", "踢擊" },
+        { "claw", "爪擊" },
+        { "bite", "咬噬" },
+        { "sting", "刺擊" },
+        { "butt", "頭槌" },
+        { "crush", "碾壓" },
+        { "engulf", "吞噬" },
+        { "crawl on you", "爬到你身上" },
+        { "drool on you", "朝你流口水" },
+        { "spit", "噴吐" },
+        { "gaze", "凝視" },
+        { "wail", "哀嚎" },
+        { "release spores", "釋放孢子" },
+        { "beg", "乞求" },
+        { "insult", "辱罵" },
+        { "moan", "呻吟" },
+    };
+    return angdroid_zh_tw_lore_lookup(en, pairs,
+        sizeof(pairs)/sizeof(pairs[0]), zh_tw);
+}
+
+static inline const char *angdroid_zh_tw_blow_effect(const char *en, int zh_tw)
+{
+    static const struct angdroid_lore_term pairs[] = {
+        { "attack", "普通攻擊" },
+        { "poison", "使人中毒" },
+        { "disenchant", "消除魔法" },
+        { "drain charges", "吸收物品充能" },
+        { "steal gold", "偷取金幣" },
+        { "steal items", "偷走物品" },
+        { "eat your food", "吃掉你的食物" },
+        { "absorb light", "吸收光源" },
+        { "shoot acid", "噴射強酸" },
+        { "electrify", "電擊" },
+        { "burn", "灼燒" },
+        { "freeze", "凍結" },
+        { "blind", "致盲" },
+        { "confuse", "造成混亂" },
+        { "terrify", "造成恐懼" },
+        { "paralyze", "麻痺" },
+        { "reduce strength", "降低力量" },
+        { "reduce intelligence", "降低智力" },
+        { "reduce wisdom", "降低智慧" },
+        { "reduce dexterity", "降低敏捷" },
+        { "reduce constitution", "降低體質" },
+        { "reduce all stats", "降低所有能力值" },
+        { "shatter", "震碎" },
+        { "lower experience", "降低經驗值" },
+        { "cause hallucinations", "造成幻覺" },
+        { "inflict Black Breath", "施加黑色氣息" },
+    };
+    return angdroid_zh_tw_lore_lookup(en, pairs,
+        sizeof(pairs)/sizeof(pairs[0]), zh_tw);
+}
+
+static inline const char *angdroid_zh_tw_monster_spell(const char *en, int zh_tw)
+{
+    static const struct angdroid_lore_term pairs[] = {
+        { "shriek for help", "尖叫求援" },
+        { "lash you if nearby", "近距離鞭擊你" },
+        { "spit at you from a distance", "從遠處朝你噴吐" },
+        { "fling pebbles", "丟擲小石子" },
+        { "sling lead shots", "投射鉛彈" },
+        { "sling seeker shots", "投射追獵彈" },
+        { "fire small arrows", "射出小箭" },
+        { "fire arrows", "射出箭矢" },
+        { "fire large arrows", "射出大型箭矢" },
+        { "fire seeker arrows", "射出追獵箭" },
+        { "fire small bolts", "射出小型弩箭" },
+        { "fire bolts", "射出弩箭" },
+        { "fire seeker bolts", "射出追獵弩箭" },
+        { "acid", "強酸" },
+        { "lightning", "閃電" },
+        { "fire", "火焰" },
+        { "frost", "寒霜" },
+        { "poison", "毒素" },
+        { "nether", "冥界能量" },
+        { "light", "光明" },
+        { "darkness", "黑暗" },
+        { "sound", "聲波" },
+        { "chaos", "混沌" },
+        { "disenchantment", "消魔" },
+        { "nexus", "空間連結" },
+        { "time", "時間" },
+        { "inertia", "惰性" },
+        { "gravity", "重力" },
+        { "shards", "碎片" },
+        { "plasma", "電漿" },
+        { "force", "力場" },
+        { "mana", "法力" },
+        { "throw boulders", "投擲巨石" },
+        { "weave webs", "織出蜘蛛網" },
+        { "produce acid balls", "產生強酸球" },
+        { "produce lightning balls", "產生閃電球" },
+        { "produce fire balls", "產生火球" },
+        { "produce firestorms", "召來火焰風暴" },
+        { "produce balls of cold", "產生寒冰球" },
+        { "produce blizzards", "召來暴風雪" },
+        { "produce poison balls", "產生毒球" },
+        { "produce storms of poison", "召來毒素風暴" },
+        { "produce shardstorms", "召來碎片風暴" },
+        { "invoke storms of knives", "召來刀刃風暴" },
+        { "produce nether balls", "產生冥界能量球" },
+        { "produce nether storms", "召來冥界風暴" },
+        { "produce water balls", "產生水球" },
+        { "invoke mana storms", "召來法力風暴" },
+        { "cast orbs of draining", "施放吸取能量法球" },
+        { "produce balls of darkness", "產生黑暗球" },
+        { "invoke darkness storms", "召來黑暗風暴" },
+        { "produce balls of light", "產生光球" },
+        { "invoke starbursts", "引發星光爆裂" },
+        { "create storms", "召來風暴" },
+        { "create tempests", "召來猛烈風暴" },
+        { "drain mana", "吸取法力" },
+        { "cause mind blasting", "衝擊心靈" },
+        { "cause brain smashing", "重創心智" },
+        { "cause light wounds", "造成輕傷" },
+        { "cause medium wounds", "造成中等傷勢" },
+        { "cause serious wounds", "造成重傷" },
+        { "cause critical wounds", "造成致命傷" },
+        { "cause mortal wounds", "造成瀕死傷勢" },
+        { "produce acid bolts", "射出強酸箭" },
+        { "produce lightning bolts", "射出閃電箭" },
+        { "produce fire bolts", "射出火焰箭" },
+        { "produce frost bolts", "射出寒冰箭" },
+        { "produce poison bolts", "射出毒素箭" },
+        { "produce nether bolts", "射出冥界能量箭" },
+        { "produce water bolts", "射出水箭" },
+        { "produce mana bolts", "射出法力箭" },
+        { "produce plasma bolts", "射出電漿箭" },
+        { "produce ice bolts", "射出冰箭" },
+        { "produce magic missiles", "射出魔法飛彈" },
+        { "shoot sparks of lightning", "射出閃電火花" },
+        { "hurl lances of nether", "擲出冥界長槍" },
+        { "shoot rays of death", "射出死亡射線" },
+        { "terrify", "使人恐懼" },
+        { "blind", "致盲" },
+        { "confuse", "使人混亂" },
+        { "slow", "減速" },
+        { "paralyze", "麻痺" },
+        { "haste-self", "加速自身" },
+        { "heal-self", "治療自身" },
+        { "heal kin", "治療同族" },
+        { "blink-self", "短距離瞬移" },
+        { "teleport-self", "傳送自身" },
+        { "teleport to", "傳送到你身邊" },
+        { "teleport toward", "朝你所在處傳送" },
+        { "teleport away", "傳送離開" },
+        { "teleport level", "樓層傳送" },
+        { "create darkness", "製造黑暗" },
+        { "create traps", "製造陷阱" },
+        { "cause amnesia", "使人失憶" },
+        { "change shape", "改變形態" },
+        { "summon similar monsters", "召喚同類怪物" },
+        { "summon a monster", "召喚一隻怪物" },
+        { "summon monsters", "召喚怪物群" },
+        { "summon animals", "召喚動物" },
+        { "summon spiders", "召喚蜘蛛" },
+        { "summon hounds", "召喚獵犬" },
+        { "summon hydras", "召喚九頭蛇" },
+        { "summon an ainu", "召喚一名愛努" },
+        { "summon a demon", "召喚一隻惡魔" },
+        { "summon an undead", "召喚一隻不死怪物" },
+        { "summon a dragon", "召喚一條龍" },
+        { "summon greater demons", "召喚高階惡魔" },
+        { "summon greater undead", "召喚高階不死怪物" },
+        { "summon ancient dragons", "召喚遠古巨龍" },
+        { "summon ringwraiths", "召喚戒靈" },
+        { "summon uniques", "召喚特殊怪物" },
+    };
+    return angdroid_zh_tw_lore_lookup(en, pairs,
+        sizeof(pairs)/sizeof(pairs[0]), zh_tw);
+}
+#endif

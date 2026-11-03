@@ -395,6 +395,24 @@ color attributes and original English fallbacks are retained. The
 spellcasting and blow-attack descriptions still need separate full
 translation.
 
+## Complete original monster spell and blow descriptor label catalogs (2026-11-03)
+
+Added a separate `zh-tw-mon-lore-terms.h` with exact English/Traditional
+Chinese display-only mappings for **19 attack methods**,
+**26 distinct blow effects**, and **111
+spell lore descriptions** sourced from `blow_methods.txt`,
+`blow_effects.txt` and `monster_spell.txt`. Source checks compare
+each description set exactly, while host tests verify that the same
+word can have distinct translations by semantic category (for example
+the attack effect `poison` vs breath `poison`).
+
+The encyclopedia now translates these component labels wherever the
+existing known-attack/known-spell rendering reads the descriptions;
+spell effect descriptions in canonical source game data, damage values,
+message event types, display colors, and lore-knowledge gates remain
+unchanged. Sentence wrappers, full spellcasting grammar and full live
+combat messages remain separate unfinished work.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

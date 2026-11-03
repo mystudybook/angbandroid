@@ -69,6 +69,10 @@ def main():
     monster_lore = source(CPP / "angband/mon-lore.c", errors)
     monster_lore_ui = source(CPP / "angband/ui-mon-lore.c", errors)
     monster_lore_dict = source(CPP / "angband/zh-tw-lore.h", errors)
+    lore_terms = source(CPP / "angband/zh-tw-mon-lore-terms.h", errors)
+    blow_methods_data = source(ROOT / "variant_lib/angband/gamedata/blow_methods.txt", errors)
+    blow_effects_data = source(ROOT / "variant_lib/angband/gamedata/blow_effects.txt", errors)
+    monster_spell_data = source(ROOT / "variant_lib/angband/gamedata/monster_spell.txt", errors)
     store_ui = source(CPP / "angband/ui-store.c", errors)
     knowledge_ui = source(CPP / "angband/ui-knowledge.c", errors)
     input_ui = source(CPP / "angband/ui-input.c", errors)
@@ -407,6 +411,25 @@ def main():
     expect('if (count && angdroid_zh_tw_enabled())' in monster_lore
            and 'if (end && streq(end, ".  "))' in monster_lore,
            "Chinese monster ability clause and punctuation missing")
+    for symbol, data, field in (
+        ("angdroid_zh_tw_blow_method", blow_methods_data, "desc:"),
+        ("angdroid_zh_tw_blow_effect", blow_effects_data, "desc:"),
+        ("angdroid_zh_tw_monster_spell", monster_spell_data, "lore:"),
+    ):
+        # Each table has a separate exact-match namespace, so identical
+        # English strings (such as "poison") may have different meanings.
+        start = lore_terms.find("static inline const char *" + symbol + "(")
+        expect(start >= 0, "Missing lore term function " + symbol)
+        if start >= 0:
+            end = lore_terms.find("\n}", start)
+            section = lore_terms[start:end + 2]
+            keys = {en for en, _ in table(section)}
+            expected = {line.partition(":")[2] for line in data.splitlines()
+                        if line.startswith(field)}
+            expect(keys == expected,
+                   "Monster lore term set differs from canonical " + symbol)
+        expect(symbol + "(" in monster_lore,
+               "Monster lore term not wired: " + symbol)
     if errors:
         for item in errors:
             print("FAIL:", item)

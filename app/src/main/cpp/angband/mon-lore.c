@@ -39,6 +39,7 @@
 #include "droid.h"
 #include "zh-tw-lore.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-mon-lore-terms.h"
 
 /**
  * Monster genders
@@ -866,7 +867,9 @@ static void lore_append_spell_clause(textblock *tb, bitflag *f, bool know_hp,
 				textblock_append(tb, " ");
 			}
 			textblock_append_c(tb, color, "%s",
-							   mon_spell_lore_description(spell, race));
+                angdroid_zh_tw_monster_spell(
+                    mon_spell_lore_description(spell, race),
+                    angdroid_zh_tw_enabled()));
 			if (damage > 0) {
 				textblock_append_c(tb, color, " (%d)", damage);
 			}
@@ -1928,14 +1931,17 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 			textblock_append(tb, ", and ");
 
 		/* Describe the method */
-		textblock_append(tb, "%s", race->blow[i].method->desc);
+		textblock_append(tb, "%s",
+            angdroid_zh_tw_blow_method(race->blow[i].method->desc,
+                angdroid_zh_tw_enabled()));
 
 		/* Describe the effect (if any) */
 		if (effect_str && strlen(effect_str) > 0) {
 			int index = blow_index(race->blow[i].effect->name);
 			/* Describe the attack type */
 			textblock_append(tb, " to ");
-			textblock_append_c(tb, blow_color(player, index), "%s", effect_str);
+			textblock_append_c(tb, blow_color(player, index), "%s",
+                angdroid_zh_tw_blow_effect(effect_str, angdroid_zh_tw_enabled()));
 
 			textblock_append(tb, " (");
 			/* Describe damage (if known) */
