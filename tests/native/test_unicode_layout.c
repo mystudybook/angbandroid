@@ -198,6 +198,10 @@ int main(void)
     assert(angdroid_public_grid_glyph(L'中') == L'中');
     assert(angdroid_public_grid_glyph(L'@') == L'@');
     assert(angdroid_public_grid_glyph(0xE000) == 0xE000);
-    puts("PASS: native Unicode width, redraw, partner and public grid tests");
+    assert(angdroid_stream_glyph(ANGDROID_TEXT_CONTINUATION) == L'?');
+    assert(angdroid_stream_glyph(L'中') == L'中');
+    assert(angdroid_stream_glyph(L'A') == L'A');
+    assert(angdroid_stream_glyph(0xE000) == 0xE000);
+    puts("PASS: native Unicode width, redraw, grid and stream-marker tests");
     return 0;
 }
