@@ -25,18 +25,18 @@ if (!my_abi_filters.every { supportedAbis.contains(it) }) {
 
 android {
     // Required by AGP 9. Keep the original applicationId for local upgrades.
-    namespace "org.rephial.xyangband"
-    compileSdk 35
+    namespace = "org.rephial.xyangband"
+    compileSdk = 35
 
-    // Preserve the known native toolchain while migrating Gradle/JDK.
-    // Upgrade NDK/CMake separately after validating native compilation.
-    ndkVersion "21.0.6113669"
+    // AGP 9 defaults to NDK r28c; explicitly pin it for reproducible
+    // Apple Silicon and CI builds. Keep the existing CMake pin initially.
+    ndkVersion = "28.2.13676358"
     defaultConfig {
-        applicationId "org.rephial.xyangband"
-        minSdkVersion 22
-        targetSdk 34
-        versionCode 105
-        versionName "1.38.2"
+        applicationId = "org.rephial.xyangband"
+        minSdk = 22
+        targetSdk = 34
+        versionCode = 105
+        versionName = "1.38.2"
         externalNativeBuild {
             cmake {
                 // flags for the c++ compiler eg "-std=c++14 -frtti -fexceptions"
@@ -58,11 +58,11 @@ android {
     // supported by using Java 17 language/bytecode compatibility instead
     // of requiring Java 21 runtime APIs on Android devices.
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
-        buildConfig true
+        buildConfig = true
     }
     buildTypes {
         debug {
@@ -73,15 +73,15 @@ android {
             }
         }
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            ndk { debugSymbolLevel 'FULL' }
+            ndk { debugSymbolLevel = 'FULL' }
         }
     }
     externalNativeBuild {
         cmake {
-            path "src/main/cpp/CMakeLists.txt"
-            version "3.10.2"
+            path = file("src/main/cpp/CMakeLists.txt")
+            version = "3.10.2"
         }
     }
 }
