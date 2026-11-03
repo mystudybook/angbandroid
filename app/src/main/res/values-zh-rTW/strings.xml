@@ -222,4 +222,23 @@
     <string name="quick_select_source_profile">選擇來源角色設定檔</string>
     <string name="action_yes">是</string>
     <string name="action_no">否</string>
+
+    <!-- Storage file manager messages and actions. -->
+    <string name="storage_select_file">請先選擇檔案</string>
+    <string name="storage_rename">重新命名</string>
+    <string name="storage_file_exists">已存在同名檔案：%1$s</string>
+    <string name="storage_cannot_rename_to">無法重新命名為：%1$s</string>
+    <string name="storage_renamed_to">已重新命名為：%1$s</string>
+    <string name="storage_too_many_files">檔案數量過多</string>
+    <string name="storage_duplicated_file">已建立複製檔案：%1$s</string>
+    <string name="storage_file_exported">檔案匯出完成</string>
+    <string name="storage_directory_exists">已存在同名資料夾：%1$s</string>
+    <string name="storage_cannot_rename">無法重新命名：%1$s</string>
+    <string name="storage_file_imported">檔案匯入完成。</string>
+    <string name="storage_file_imported_with_backup">檔案匯入完成，原檔案已重新命名為：%1$s</string>
+    <string name="storage_import">匯入</string>
+    <string name="storage_export">匯出</string>
+    <string name="storage_rename_button">重新命名</string>
+    <string name="storage_duplicate">複製</string>
+    <string name="storage_back">返回</string>
 </resources>
