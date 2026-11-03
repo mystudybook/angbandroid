@@ -13,6 +13,7 @@ This is an **unofficial** localization of the Android Angband port. The intended
 - A reusable Python 3 verifier is available: `python3 scripts/check_zh_tw_resources.py`. It checks Java/XML resources, array pairs, placeholders, preferences and localized help images. **This script has not yet been executed on a full local checkout.**
 - No changes to settings persistence, internal variant IDs or native gameplay rules. Unicode text rendering is now being improved in the Android Java terminal layer; no native game text translations have been made.
 - Java 21 offline tests passed on a manually transferred copy of the committed classes: **14 Unicode-width cases, 33 terminal-buffer assertions, and 15,000 seeded mixed operations**. The repository runner is `sh scripts/test-terminal-unicode.sh` and now includes buffer and stress tests. Android Gradle/NDK compilation, emulator testing and screenshot review have **not** been performed.
+- Native C UTF-8 transport has been updated to encode `wchar_t` directly and independently of C locale, with allocation/error checks. Local host-C checks passed **9 UTF-8 encoding cases and 14 native width-classification cases**. The native width classifier is **not** yet connected to `ui-term.c` cursor accounting, so native/Java two-column layout remains incomplete.
 
 ## Essential localization rules
 
@@ -40,9 +41,10 @@ The profile editor's `res/layout/profileadd.xml` has restrictive `android:digits
 Run from repository root:
 
 ```bash
-python3 scripts/check_zh_tw_resources.py
-sh scripts/test-terminal-unicode.sh
+sh scripts/verify-zh-tw.sh
 ```
+
+This writes `zh-tw-validation.log` in the repository root (gitignored). To run only individual stages: `python3 scripts/check_zh_tw_resources.py`, `sh scripts/test-terminal-unicode.sh`, or `sh scripts/test-native-utf8.sh`.
 
 The first checks Android resource consistency without an Android SDK; the second needs a JDK and tests East Asian width classification. Neither is a full Android emulator or gameplay verification.
 
