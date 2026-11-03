@@ -44,11 +44,12 @@ This stage has been committed to `master`, but **has not passed Android NDK comp
 - `TermWindow.clrtobot()` now clears the current row from the cursor and **all columns** on subsequent rows. Previously it incorrectly reused the original cursor column on every row, potentially leaving stale Chinese characters and continuation cells on lower rows.
 - `TermWindow.addnstr(n, bytes, encoding)` now respects the explicit JNI **byte count**, clamps it to the actual byte-array size, and ignores null, zero or negative lengths. Previously it decoded the entire Java byte array regardless of `n`.
 - `Term_redraw_section()` now **unions** its requested row/column bounds with native updates already queued for refresh instead of replacing them. `angdroid_union_dirty_range()` is shared with host-C tests so a localized CJK redraw cannot discard unrelated pending redraws.
-- Source-level checks in `scripts/check-native-unicode-contract.py` cover the three behaviors above.
+- At the final column, the Java terminal now replaces an unplaceable double-column glyph with `?` rather than silently drawing it on the following row. This matches native Angband's current terminal-edge policy and prevents corrupting unrelated game content.
+- Source-level checks in `scripts/check-native-unicode-contract.py` cover JNI bounds, full-row clearing, right-edge behavior and pending redraw preservation.
 
 ### Verified at the host-language level
 
-A local JDK compilation of the corresponding Java classes/tests passed **14 width cases**, **52 terminal-buffer assertions**, and **15,000 seeded mixed terminal operations**. A host C99 `-Wall -Wextra -Werror -pedantic` build passed **7 redraw-dirty-range union cases** using an isolated copy of the committed helper implementation. These checks **do not establish that the complete current checkout or Android APK compiles**, and Android on-device CJK rendering is still unverified.
+A local JDK compilation of the corresponding Java classes/tests passed **14 width cases**, **53 terminal-buffer assertions**, and **15,000 seeded mixed terminal operations**. A host C99 `-Wall -Wextra -Werror -pedantic` build passed **7 redraw-dirty-range union cases** using an isolated copy of the committed helper implementation. These checks **do not establish that the complete current checkout or Android APK compiles**, and Android on-device CJK rendering is still unverified.
 
 ## Regression checks
 
