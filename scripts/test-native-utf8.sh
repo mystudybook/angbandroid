@@ -25,3 +25,9 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_unicode_layout"
 
 "$BUILD_DIR/test_unicode_layout"
+
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_death_locale.c" \
+    -o "$BUILD_DIR/test_death_locale"
+
+"$BUILD_DIR/test_death_locale"
