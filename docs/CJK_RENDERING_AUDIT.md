@@ -23,6 +23,14 @@ A local JDK 21 validation of a manually transferred copy of the committed Java s
 
 These were **offline Java tests**, not a full GitHub checkout build, Android Gradle build, emulator run, or screenshot review. Run `sh scripts/test-terminal-unicode.sh` on a fresh checkout to reproduce.
 
+## Native UTF-8 transport and width groundwork (2026-11-03)
+
+- `app/src/main/cpp/curses/waddnwstr()` now encodes an explicitly sized `wchar_t` sequence as UTF-8 rather than relying on the process C locale and `wcstombs()`. The new `unicode_utf8.h` helper handles BMP, supplementary-plane code points, and invalid Unicode scalars, while checking output capacity. Conversion failures no longer leak the temporary wide buffer.
+- `waddnstr()` now rejects invalid or empty byte transfers before calling JNI.
+- `unicode_width.h` mirrors Java's `TerminalUnicode` East Asian two-column classification. **The native width helper is preparatory only; it is not yet wired into `ui-term.c`'s cursor or screen-grid logic.**
+- `sh scripts/test-native-utf8.sh` compiles and runs two standalone native C tests: 9 UTF-8 transport cases in the strict C locale, and 14 representative native width cases. These passed on a local host C compiler. They do not replace an Android NDK build.
+- Use `sh scripts/verify-zh-tw.sh` from the repository root to combine the offline Python, Java and C checks in `zh-tw-validation.log`.
+
 ## Confirmed native column-width mismatch — important
 
 The Java terminal now correctly reserves two cells for a Chinese glyph, **but Angband's native terminal currently counts each wide character as exactly one column**:
