@@ -90,6 +90,31 @@ public final class TermWindowUnicodeTest {
         check(dest.buffer[1][0].ch == ' ' && dest.buffer[1][1].ch == ' ', "scroll clears new bottom row");
     }
 
+    private static void testClearToBottomClearsCompleteLowerRows() {
+        TermWindow w = new TermWindow(3, 6, 0, 0);
+        write(w, "AB中D");
+        w.move(1, 0);
+        write(w, "龍XY");
+        w.move(2, 0);
+        write(w, "Z中Q");
+
+        w.move(0, 4);
+        w.clrtobot();
+        check(w.buffer[0][0].ch == 'A' && w.buffer[0][1].ch == 'B',
+                "clrtobot preserves preceding current-row text");
+        check(w.buffer[0][2].ch == '中' && w.buffer[0][3].isTextContinuation(),
+                "clrtobot preserves complete wide text before cursor");
+        check(w.buffer[0][4].ch == ' ' && w.buffer[0][5].ch == ' ',
+                "clrtobot clears current row through final column");
+        for (int r = 1; r < 3; r++) {
+            for (int c = 0; c < 6; c++) {
+                check(w.buffer[r][c].ch == ' ' &&
+                      w.buffer[r][c].textColumns == 1,
+                      "clrtobot clears every lower-row column, including former CJK spans");
+            }
+        }
+    }
+
     private static void testTileDoesNotInheritTextSpan() {
         TermWindow w = new TermWindow(1, 4, 0, 0);
         write(w, "中");
@@ -130,6 +155,7 @@ public final class TermWindowUnicodeTest {
         testBoundary();
         testSupplementary();
         testResizeAndClear();
+        testClearToBottomClearsCompleteLowerRows();
         testCopyAndScroll();
         testTileDoesNotInheritTextSpan();
         testTilePaddingSentinelIsNotText();
