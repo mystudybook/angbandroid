@@ -18,7 +18,7 @@
 			android:layout_weight="0"
 			android:paddingLeft="5dp"
 			android:paddingRight="5dp"
-			android:text="Keymap action:" />
+			android:text="@string/adv_button_keymap_action" />
 
 		<EditText
 			android:id="@+id/keymap_action"
@@ -79,6 +79,6 @@
 		android:id="@+id/always_visible"
 		android:layout_width="wrap_content"
 		android:layout_height="wrap_content"
-		android:text="Always Visible" />
+		android:text="@string/adv_button_always_visible" />
 
 </LinearLayout>
