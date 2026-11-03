@@ -38,6 +38,33 @@ int main(void)
     assert(!angdroid_is_wide_text(0x4E2D, 0x80)); /* graphical tile */
     assert(!angdroid_is_wide_text(ANGDROID_TEXT_CONTINUATION, 1));
 
-    puts("PASS: 16 native Unicode row-fit and continuation cases");
+    {
+        const wchar_t cells[] = {
+            L'A', 0x4E2D, ANGDROID_TEXT_CONTINUATION,
+            L'B', 0x9F8D, ANGDROID_TEXT_CONTINUATION
+        };
+        size_t cursor = 0;
+        size_t start = 0;
+        size_t count;
+        count = angdroid_next_visible_text_run(cells, 6, &cursor, &start);
+        assert(count == 2 && start == 0 && cursor == 2);
+        count = angdroid_next_visible_text_run(cells, 6, &cursor, &start);
+        assert(count == 2 && start == 3 && cursor == 5);
+        count = angdroid_next_visible_text_run(cells, 6, &cursor, &start);
+        assert(count == 0 && start == 6 && cursor == 6);
+
+        cursor = 2; /* Redraw begins on a continuation, not the lead. */
+        count = angdroid_next_visible_text_run(cells, 6, &cursor, &start);
+        assert(count == 2 && start == 3);
+
+        cursor = 0;
+        {
+            const wchar_t pads[] = {ANGDROID_TEXT_CONTINUATION,
+                                    ANGDROID_TEXT_CONTINUATION};
+            count = angdroid_next_visible_text_run(pads, 2, &cursor, &start);
+            assert(count == 0 && cursor == 2);
+        }
+    }
+    puts("PASS: 21 native Unicode row-fit, marker and redraw-segmentation cases");
     return 0;
 }
