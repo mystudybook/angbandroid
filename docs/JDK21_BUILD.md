@@ -65,15 +65,9 @@ You can also use **Build → Make Project** or **Run** in Android Studio, select
 
 ## Gradle 9-specific migration details
 
-- The Gradle wrapper URL now selects **9.1.0**, but `gradle-wrapper.jar`, `gradlew` and `gradlew.bat` may still contain the original wrapper bootstrap version. Gradle documents that older wrapper files generally bootstrap newer distributions correctly. **After a successful Gradle Sync, regenerate the wrapper files twice** to refresh both the scripts and JAR:
+- The Gradle Wrapper distribution URL, `gradle-wrapper.jar`, `gradlew`, and `gradlew.bat` have **all been updated** using the corresponding files from the official `gradle/gradle` `v9.1.0` GitHub tag. The Unix launcher is executable. `scripts/check_jdk21_build.py` verifies their Git blob IDs against the official source.
+- There is no need to regenerate the Wrapper just to open this checkout. If you intentionally regenerate it later, run `./gradlew wrapper --gradle-version 9.1.0` twice to update both the distribution configuration and bootstrap files, then review and commit those files.
 
-```bash
-sh ./gradlew wrapper --gradle-version 9.1.0
-sh ./gradlew wrapper --gradle-version 9.1.0
-git status --short
-```
-
-  Commit those generated wrapper files to GitHub when the local build is working. Do not download arbitrary wrapper JARs.
 - AGP 9 introduces a new public DSL and enables built-in Kotlin by default. This project applies only `com.android.application` and has Java sources, so `android.builtInKotlin=false` avoids unnecessary Kotlin compilation. The new DSL remains enabled; do not use legacy `android.applicationVariants` APIs.
 - AGP 9 defaults to non-final application compile-time `R` IDs. The project temporarily sets `android.enableAppCompileTimeRClass=false`, `android.nonFinalResIds=false` and `android.nonTransitiveRClass=false` to avoid breaking existing switch statements. Remove the compatibility flags only after the relevant UI code is modernized.
 - `targetSdk 34`, `minSdk 22`, `compileSdk 35`, NDK 21.0.6113669, CMake 3.10.2, Java language/bytecode level 17 and `applicationId` remain unchanged. A Gradle 9 build is not proof of Google Play submission eligibility.
