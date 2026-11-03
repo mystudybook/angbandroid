@@ -406,4 +406,10 @@
         <item>External</item>
         <item>Internal</item>
     </string-array>
+
+    <!-- Profile validation messages. -->
+    <string name="profile_validation_name_required">Name is required</string>
+    <string name="profile_validation_savefile_required">Save filename is required</string>
+    <string name="profile_validation_duplicate_name">There is already a profile with that name</string>
+    <string name="profile_validation_duplicate_savefile">There is already a profile using that save filename</string>
 </resources>
