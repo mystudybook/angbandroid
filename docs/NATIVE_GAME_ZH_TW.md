@@ -477,6 +477,16 @@ sound categories, damage rounding and the source English grammar remain
 intact. Seven special pain codes still use their English data-file
 phrases and will need separate translated pain-message data.
 
+## Standalone regression coverage for stacked monster messages
+
+The C99 host test `tests/native/test_monster_messages_locale.c` compiles
+using the original message enum declarations and tests every localized
+message code. The source checker enforces a one-to-one mapping between
+all 55 named original message codes and the localized table, verifies
+the display-only message path and retains the seven variable pain codes
+as English fallback. `scripts/test-native-utf8.sh` now runs this
+regression along with the prior Unicode tests.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

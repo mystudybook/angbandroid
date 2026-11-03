@@ -486,6 +486,28 @@ def main():
                "Missing object property translation: " + term)
     expect('test_object_info_locale.c' in native_tests,
            "Object info host C test not registered")
+    mon_msg_ui = source(CPP / "angband/mon-msg.c", errors)
+    mon_msg_originals = source(CPP / "angband/list-mon-message.h", errors)
+    mon_msg_zh = source(CPP / "angband/zh-tw-mon-messages.h", errors)
+    original_codes = set(re.findall(
+        r"^\\s*MON_MSG\\(\\s*([A-Z][A-Z0-9_]*)\\s*,",
+        mon_msg_originals, re.M)) - {"MAX"}
+    translated_codes = set(re.findall(
+        r"^ZH_MON_MSG\\(([A-Z][A-Z0-9_]*),",
+        mon_msg_zh, re.M))
+    expect(len(original_codes) == 55 and original_codes == translated_codes,
+           "Missing or extra named monster event translation")
+    expect("get_monster_message_zh_tw(msg->msg_code)" in mon_msg_ui
+           and "get_subject_zh_tw(subject_zh, sizeof(subject_zh)" in mon_msg_ui,
+           "Monster message translation and Chinese subjects are not wired")
+    expect("angdroid_zh_tw_monster_list_name(race->name)" in mon_msg_ui
+           and 'if (!skip_subject(msg->msg_code))' in mon_msg_ui,
+           "Monster message names or omit-subject code changed")
+    expect('msgt(msg_type, "%s%s（平均 %d）"' in mon_msg_ui
+           and 'msgt(msg_type, "%s%s (average %d)"' in mon_msg_ui,
+           "Monster damage average translation missing English fallback")
+    expect("test_monster_messages_locale.c" in native_tests,
+           "Monster event C99 regression not registered")
     if errors:
         for item in errors:
             print("FAIL:", item)
