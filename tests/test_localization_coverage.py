@@ -20,4 +20,10 @@ for key in ("identified_item_kind_names", "nonunique_monster_names"):
 assert a["monster_flavor_descriptions"]["translated"] > 0
 assert len(report["variants"]["names"]) >= 11
 assert report["status"] == "incomplete"
+# The independent source checker must use a regex word boundary for UNIQUE.
+# Two backslashes in a Python raw regex would match the literal text "\\b".
+checker = (root / "scripts/check_native_game_localization.py").read_text(
+    encoding="utf-8"
+)
+assert 're.search(r"\\bUNIQUE\\b", line)' in checker
 print("PASS: coverage inventory and source-complete name catalogs")

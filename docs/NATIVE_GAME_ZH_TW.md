@@ -362,6 +362,15 @@ known stationary monsters. It preserves `RF_FORCE_DEPTH`,
 English code as fallback. Unknown race labels remain untranslated rather
 than changing monster flags or stat calculations.
 
+## UNIQUE-word-boundary regression (2026-11-03)
+
+Fixed the canonical monster-source checker to match the `UNIQUE` flag
+using a proper Python regular-expression word boundary rather than a
+literal escaped backslash. The coverage-audit test now checks the source
+checker's pattern. Otherwise the newly enforced non-unique monster
+dictionary equality check would incorrectly treat 101 unique monsters as
+ordinary ones and fail validation.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

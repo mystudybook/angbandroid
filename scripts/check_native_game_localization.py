@@ -156,7 +156,7 @@ def main():
             current_name = line.split(":", 1)[1]
             current_unique = False
         elif current_name is not None and line.startswith("flags:"):
-            if re.search(r"\\bUNIQUE\\b", line):
+            if re.search(r"\bUNIQUE\b", line):
                 current_unique = True
     if current_name is not None:
         monster_records.append((current_name, current_unique))
