@@ -11,8 +11,8 @@ This is an **unofficial** localization of the Android Angband port. The intended
 - Split D-Pad colors, quick-key popup position and storage location display arrays from their stable persisted `entryValues`.
 - Source-level verification checked **186 Java/XML string references** and **18 array references** with no unresolved names; translated array sizes and formatting placeholders match English defaults. All twelve preference entry/entryValues array pairs inspected have matching item counts; persisted value arrays remain untranslated. These are not Android runtime tests.
 - A reusable Python 3 verifier is available: `python3 scripts/check_zh_tw_resources.py`. It checks Java/XML resources, array pairs, placeholders, preferences and localized help images. **This script has not yet been executed on a full local checkout.**
-- No changes to settings persistence, internal variant IDs, or native gameplay logic. The only added game-adjacent asset is the localized HTML guide.
-- Compilation, emulator testing, and screenshot review have **not** been performed.
+- No changes to settings persistence, internal variant IDs or native gameplay rules. Unicode text rendering is now being improved in the Android Java terminal layer; no native game text translations have been made.
+- An isolated pure-Java Unicode classifier was compiled and its 14 width cases passed with a local JDK. Re-run from a full checkout with `sh scripts/test-terminal-unicode.sh`. Android Gradle/NDK compilation, emulator testing and screenshot review have **not** been performed.
 
 ## Essential localization rules
 
@@ -26,7 +26,7 @@ This is an **unofficial** localization of the Android Angband port. The intended
 1. **Done (first pass):** extract and translate preference title/summary labels, leaving keyboard keycap literals and persistent values intact.
 2. **In progress:** continue extracting remaining Java UI text (including remaining custom input controls, file-system exception messages and other interactive screens). `ProfileList` validation, `StorageActivity` and the main `GameActivity` quick settings have been handled.
 3. **Done (first pass):** translated Android help HTML with locale-aware loading and English fallback. Review text and screenshots on a device.
-4. **Blocked pending renderer work:** the terminal truncates character values with `& 0xFF`, draws text into one-cell clips and has no verified CJK font/column-width handling. See [`docs/CJK_RENDERING_AUDIT.md`](CJK_RENDERING_AUDIT.md) for specific source evidence and a safe proof-of-concept plan.
+4. **In progress:** the normal text renderer now preserves BMP Unicode, uses a system-font fallback for East Asian glyphs, and handles the same fallback in subwindows. `TermWindow` now iterates Unicode code points rather than splitting supplementary surrogate pairs. **True two-column terminal layout, native text translation and on-device CJK verification remain unfinished.** See [`docs/CJK_RENDERING_AUDIT.md`](CJK_RENDERING_AUDIT.md).
 5. Catalog and translate the Angband core's user-visible strings and suitable entries in `variant_lib/angband/gamedata`. Do not translate identifiers or data syntax. Treat other included variants as separate projects.
 6. Build with the project's Android SDK / NDK requirements and test the app with a zh-TW device locale, then conduct a gameplay smoke test and save compatibility check.
 7. Review distribution rights and the current Google Play submission requirements before preparing an independent application ID, branding, disclosures, and a release.
@@ -34,6 +34,17 @@ This is an **unofficial** localization of the Android Angband port. The intended
 ## CJK input concerns
 
 The profile editor's `res/layout/profileadd.xml` has restrictive `android:digits` attributes on the profile name and savefile inputs. Their translated placeholder labels do not yet imply support for Chinese-character profile names. Review name validation and on-disk savefile compatibility separately before allowing CJK characters in editable names.
+
+## Verification commands
+
+Run from repository root:
+
+```bash
+python3 scripts/check_zh_tw_resources.py
+sh scripts/test-terminal-unicode.sh
+```
+
+The first checks Android resource consistency without an Android SDK; the second needs a JDK and tests East Asian width classification. Neither is a full Android emulator or gameplay verification.
 
 ## Build notes
 
