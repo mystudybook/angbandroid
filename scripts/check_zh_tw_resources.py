@@ -21,10 +21,21 @@ UI_XML = [
     RES / "xml" / "preferences.xml",
     RES / "layout" / "splash.xml",
     RES / "layout" / "profileadd.xml",
+    RES / "layout" / "storage.xml",
     RES / "menu" / "profile.xml",
 ]
 ANDROID = "{http://schemas.android.com/apk/res/android}"
 RESOURCE_REF = re.compile(r"^@string/([A-Za-z0-9_]+)$")
+JAVA_RESOURCE_REF = re.compile(r"\\bR\\.string\\.([A-Za-z0-9_]+)\\b")
+FORMAT_ARGUMENT = re.compile(r"%(?:[0-9]+\\$)?[a-zA-Z]")
+JAVA_UI = [
+    ROOT / "app" / "src" / "main" / "java" / "org" / "rephial" / "xyangband" / file
+    for file in (
+        "GameActivity.java", "StorageActivity.java", "InputDialog.java",
+        "HelpActivity.java", "AngbandActivity.java", "ProfilesActivity.java",
+        "ProfileAddActivity.java",
+    )
+]
 
 # These are used as persisted identifiers or default values, not just display labels.
 # Do not localize these until the app uses separate stable entryValues.
@@ -81,6 +92,14 @@ def main():
             errors.append(f"Persisted identifier must not be translated: {key}")
         if item.tag == "string-array" and len(default.findall("item")) != len(item.findall("item")):
             errors.append(f"Array item count differs: {key}")
+        if item.tag == "string" and default.tag == "string":
+            source_args = FORMAT_ARGUMENT.findall(default.text or "")
+            localized_args = FORMAT_ARGUMENT.findall(item.text or "")
+            if source_args != localized_args:
+                errors.append(
+                    f"Format placeholders differ: {key}: "
+                    f"{source_args} != {localized_args}"
+                )
 
     referenced = set()
     preference_untranslated = []
@@ -106,9 +125,31 @@ def main():
                     if not re.fullmatch(r"[A-Z0-9]", value) and not value.startswith(SYMBOL_CAPS):
                         preference_untranslated.append(value)
 
+    for path in JAVA_UI:
+        try:
+            source = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            errors.append(f"Cannot read Java source: {path}: {exc}")
+            continue
+        referenced.update(JAVA_RESOURCE_REF.findall(source))
+
     for name in sorted(referenced):
         if name not in english:
-            errors.append(f"Unresolved @string/{name}")
+            errors.append(f"Unresolved string resource: {name}")
+
+    # Confirm translated help assets are present and referenced images still exist.
+    assets = ROOT / "app" / "src" / "main" / "assets"
+    help_zh = assets / "help_zh_tw.html"
+    help_java = JAVA_UI[3]
+    if not (assets / "help.html").is_file() or not help_zh.is_file():
+        errors.append("Localized help and English fallback must both exist")
+    else:
+        guide = help_zh.read_text(encoding="utf-8")
+        for image in re.findall(r'<img[^>]+src="([^"]+)"', guide):
+            if not (assets / image).is_file():
+                errors.append(f"Missing localized-help image: {image}")
+        if 'help_zh_tw.html' not in help_java.read_text(encoding="utf-8"):
+            errors.append("HelpActivity does not reference translated help")
     for label in preference_untranslated:
         errors.append(f"Unextracted preference label: {label}")
 
@@ -119,8 +160,8 @@ def main():
         return 1
 
     print(
-        "PASS: valid XML, English fallbacks, matching array sizes, "
-        "stable preference values and references"
+        "PASS: XML resources, Java/XML references, translation placeholders, "
+        "stable preference values and help assets"
     )
     print(
         f"  English resources: {len(english)} | zh-TW resources: {len(chinese)} "
