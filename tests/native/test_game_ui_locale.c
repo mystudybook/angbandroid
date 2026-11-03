@@ -85,6 +85,12 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);
     assert(angdroid_utf8_display_columns("繁體中文") == 8);
+    assert(strcmp(angdroid_game_ui_text("prefers to ignore", 1),
+                  "通常忽略入侵者") == 0);
+    assert(strcmp(angdroid_game_ui_text("is very observant of", 1),
+                  "對入侵者非常警覺") == 0);
+    assert(strcmp(angdroid_game_ui_text("is ever vigilant for", 1),
+                  "始終警戒入侵者") == 0);
     assert(strcmp(angdroid_game_ui_text("dragon", 1), "龍") == 0);
     assert(strcmp(angdroid_game_ui_text("natural", 1), "自然") == 0);
     assert(strcmp(angdroid_game_ui_text("undead", 1), "不死") == 0);

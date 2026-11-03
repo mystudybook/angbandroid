@@ -385,6 +385,19 @@ def main():
            "Localized movement must preserve relative speed option")
     expect('rf_has(known_flags, RF_NEVER_MOVE)' in monster_lore,
            "Localized movement must preserve known immobilization")
+    expect('擊殺一隻這種怪物可獲得 ' in monster_lore
+           and 'player->lev' in monster_lore,
+           "Monster experience must use equivalent Chinese level calculation")
+    expect('if (angdroid_zh_tw_enabled() && (n > 0 || nspec > 0))' in monster_lore
+           and 'if (!lore->drop_known) return;' in monster_lore,
+           "Monster drop translation must retain known drop gate")
+    expect('這隻怪物%s；可能在 ' in monster_lore
+           and 'if (lore->sleep_known)' in monster_lore,
+           "Monster awareness translation must retain known hearing gate")
+    for term in ("prefers to ignore", "is very observant of",
+                 "is ever vigilant for"):
+        expect(('"'+term+'"') in game_ui_header,
+               "Missing monster awareness term: " + term)
     if errors:
         for item in errors:
             print("FAIL:", item)

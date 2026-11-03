@@ -1269,6 +1269,24 @@ void lore_append_exp(textblock *tb, const struct monster_race *race,
 	assert(tb && race && lore);
 	if (!race->rarity) return;
 
+    /* Chinese experience text avoids English articles, plural suffixes and
+     * ordinals. Keep the exact original experience calculation. */
+    if (angdroid_zh_tw_enabled()) {
+        long whole = (long)race->mexp * race->level / player->lev;
+        long fraction = ((((long)race->mexp * race->level % player->lev) *
+            (long)1000 / player->lev + 5) / 10);
+        char value[20] = "";
+        strnfmt(value, sizeof(value), "%ld", whole);
+        if (fraction) my_strcat(value, format(".%02ld", fraction),
+            sizeof(value));
+        textblock_append(tb, "%s",
+            rf_has(known_flags, RF_UNIQUE) ? "擊殺這名敵人可獲得 " :
+                                             "擊殺一隻這種怪物可獲得 ");
+        textblock_append_c(tb, COLOUR_BLUE, "%s", value);
+        textblock_append(tb, " 點經驗值（以 %d 級角色計算）。  ", player->lev);
+        return;
+    }
+
 	/* Introduction */
 	if (rf_has(known_flags, RF_UNIQUE))
 		textblock_append(tb, "Killing");
@@ -1339,6 +1357,42 @@ void lore_append_drop(textblock *tb, const struct monster_race *race,
 
 	/* Count maximum drop */
 	n = mon_create_drop_count(race, true, false, &nspec);
+
+    /* Chinese uses native quantity classifiers instead of plural suffixes.
+     * The drop_known gate and both drop-count calculations are unchanged. */
+    if (angdroid_zh_tw_enabled() && (n > 0 || nspec > 0)) {
+        textblock_append(tb, "這隻怪物可能攜帶");
+        if (n > 0) {
+            bool only_item = rf_has(known_flags, RF_ONLY_ITEM);
+            bool only_gold = rf_has(known_flags, RF_ONLY_GOLD);
+            if (n == 1) textblock_append_c(tb, COLOUR_BLUE, "一件");
+            else if (n == 2) textblock_append_c(tb, COLOUR_BLUE, "一至兩件");
+            else textblock_append_c(tb, COLOUR_BLUE, "最多 %d 件", n);
+
+            if (rf_has(known_flags, RF_DROP_GREAT))
+                textblock_append_c(tb, COLOUR_BLUE, "極品");
+            else if (rf_has(known_flags, RF_DROP_GOOD))
+                textblock_append_c(tb, COLOUR_BLUE, "優良");
+
+            if (only_item && only_gold)
+                textblock_append_c(tb, COLOUR_BLUE, "異常物品");
+            else if (only_item)
+                textblock_append_c(tb, COLOUR_BLUE, "物品");
+            else if (only_gold)
+                textblock_append_c(tb, COLOUR_BLUE, "財寶");
+            else
+                textblock_append_c(tb, COLOUR_BLUE, "物品或財寶");
+        }
+        if (nspec > 0) {
+            if (n > 0) textblock_append(tb, "，以及");
+            if (nspec == 1) textblock_append(tb, "一件");
+            else if (nspec == 2) textblock_append(tb, "一至兩件");
+            else textblock_append(tb, "最多 %d 件", nspec);
+            textblock_append(tb, "特殊物品");
+        }
+        textblock_append(tb, "。  ");
+        return;
+    }
 
 	/* Drops gold and/or items */
 	if (n > 0 || nspec > 0) {
@@ -1583,16 +1637,22 @@ void lore_append_awareness(textblock *tb, const struct monster_race *race,
 	/* Extract a gender (if applicable) */
 	msex = lore_monster_sex(race);
 
-	/* Do we know how aware it is? */
-	if (lore->sleep_known)
-	{
-		const char *aware = lore_describe_awareness(race->sleep);
-		textblock_append(tb, "%s %s intruders, which %s may notice from ",
-						 lore_pronoun_nominative(msex, true), aware,
-						 lore_pronoun_nominative(msex, false));
-		textblock_append_c(tb, COLOUR_L_BLUE, "%d", 10 * race->hearing);
-		textblock_append(tb, " feet.  ");
-	}
+	/* Preserve sleep_known: Chinese may never reveal unknown hearing. */
+    if (lore->sleep_known) {
+        const char *aware = lore_describe_awareness(race->sleep);
+        if (angdroid_zh_tw_enabled()) {
+            textblock_append(tb, "這隻怪物%s；可能在 ",
+                angdroid_game_ui_text(aware, true));
+            textblock_append_c(tb, COLOUR_L_BLUE, "%d", 10 * race->hearing);
+            textblock_append(tb, " 英呎外察覺入侵者。  ");
+        } else {
+            textblock_append(tb, "%s %s intruders, which %s may notice from ",
+                lore_pronoun_nominative(msex, true), aware,
+                lore_pronoun_nominative(msex, false));
+            textblock_append_c(tb, COLOUR_L_BLUE, "%d", 10 * race->hearing);
+            textblock_append(tb, " feet.  ");
+        }
+    }
 }
 
 /**

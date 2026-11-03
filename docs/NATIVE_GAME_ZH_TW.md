@@ -371,6 +371,18 @@ checker's pattern. Otherwise the newly enforced non-unique monster
 dictionary equality check would incorrectly treat 101 unique monsters as
 ordinary ones and fail validation.
 
+## Experience, drops and awareness paragraphs (2026-11-03)
+
+The original Angband monster encyclopedia now translates XP award and
+level-dependent value, object/gold/special drop possibilities and quality,
+and awareness/hearing-distance sentences using Chinese grammar. The
+code preserves XP rounding, `drop_known`, `sleep_known`,
+`RF_ONLY_ITEM`/`RF_ONLY_GOLD`, drop quality flags and the source's
+colored numerical values; it never reveals hidden monster information.
+Eleven awareness phrases now have exact Chinese mapping, with full
+English fallback. Spell and abilities details still require separate
+sentence-level translation.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

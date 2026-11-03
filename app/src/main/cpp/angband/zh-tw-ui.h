@@ -381,6 +381,17 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         { "very slowly", "非常緩慢" },
         { "incredibly slowly", "極度緩慢" },
         { "erroneously", "異常速度" },
+        { "prefers to ignore", "通常忽略入侵者" },
+        { "pays very little attention to", "幾乎不留意入侵者" },
+        { "pays little attention to", "不太留意入侵者" },
+        { "tends to overlook", "容易忽略入侵者" },
+        { "takes quite a while to see", "要花很久才會注意到入侵者" },
+        { "takes a while to see", "要花一些時間才會注意到入侵者" },
+        { "is fairly observant of", "對入侵者相當警覺" },
+        { "is observant of", "對入侵者保持警覺" },
+        { "is very observant of", "對入侵者非常警覺" },
+        { "is vigilant for", "會警戒入侵者" },
+        { "is ever vigilant for", "始終警戒入侵者" },
     };
     size_t i;
     if (!zh_tw || !en) return en;
