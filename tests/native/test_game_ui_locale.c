@@ -85,6 +85,11 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);
     assert(angdroid_utf8_display_columns("繁體中文") == 8);
+    assert(strcmp(angdroid_game_ui_text("invisible", 1), "隱形") == 0);
+    assert(strcmp(angdroid_game_ui_text("pass through walls", 1), "穿牆") == 0);
+    assert(strcmp(angdroid_game_ui_text("nether", 1), "冥界") == 0);
+    assert(strcmp(angdroid_game_ui_text("slowed", 1), "減速") == 0);
+    assert(strcmp(angdroid_game_ui_text("cold blooded", 0), "cold blooded") == 0);
     assert(strcmp(angdroid_game_ui_text("prefers to ignore", 1),
                   "通常忽略入侵者") == 0);
     assert(strcmp(angdroid_game_ui_text("is very observant of", 1),

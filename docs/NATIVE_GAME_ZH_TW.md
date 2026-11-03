@@ -383,6 +383,18 @@ Eleven awareness phrases now have exact Chinese mapping, with full
 English fallback. Spell and abilities details still require separate
 sentence-level translation.
 
+## Monster abilities, traits and resistances (2026-11-03)
+
+The monster encyclopedia now renders known physical abilities, detection
+traits, vulnerabilities, resistances, protection and status immunities
+with Traditional Chinese flag labels and list grammar. It also translates
+mimicry, rapid breeding, regeneration and lighting/darkening sentences.
+All English flag descriptions remain unchanged in the original game data.
+The same `known_flags` masks, lore knowledge states, `rf_has` tests,
+color attributes and original English fallbacks are retained. The
+spellcasting and blow-attack descriptions still need separate full
+translation.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

@@ -398,6 +398,15 @@ def main():
                  "is ever vigilant for"):
         expect(('"'+term+'"') in game_ui_header,
                "Missing monster awareness term: " + term)
+    for keyword in ("invisible", "open doors", "pass through walls",
+                    "lightning", "nether", "disenchantment", "slowed"):
+        expect(('"' + keyword + '"') in game_ui_header,
+               "Monster ability label not mapped: " + keyword)
+    expect('angdroid_game_ui_text(describe_race_flag(flag), true)' in monster_lore,
+           "Monster ability flags not translated at render time")
+    expect('if (count && angdroid_zh_tw_enabled())' in monster_lore
+           and 'if (end && streq(end, ".  "))' in monster_lore,
+           "Chinese monster ability clause and punctuation missing")
     if errors:
         for item in errors:
             print("FAIL:", item)

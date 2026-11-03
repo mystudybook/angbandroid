@@ -784,6 +784,25 @@ static void lore_append_clause(textblock *tb, bitflag *f, uint8_t attr,
 	int count = rf_count(f);
 	bool comma = count > 2;
 
+    /* Group all labels into a complete Chinese phrase; the English
+     * conjunction and spacing logic is retained unchanged below. */
+    if (count && angdroid_zh_tw_enabled()) {
+        int flag;
+        int index = 0;
+        textblock_append(tb, "%s", start);
+        for (flag = rf_next(f, FLAG_START); flag;
+             flag = rf_next(f, flag + 1)) {
+            if (index++) textblock_append(tb, "、");
+            textblock_append_c(tb, attr, "%s",
+                angdroid_game_ui_text(describe_race_flag(flag), true));
+        }
+        if (end && streq(end, ".  "))
+            textblock_append(tb, "。  ");
+        else
+            textblock_append(tb, "%s", end ? end : "");
+        return;
+    }
+
 	if (count) {
 		int flag;
 		textblock_append(tb, "%s", start);
@@ -1498,42 +1517,48 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 	/* Describe environment-shaping abilities. */
 	create_mon_flag_mask(current_flags, RFT_ALTER, RFT_MAX);
 	rf_inter(current_flags, known_flags);
-	strnfmt(start, sizeof(start), "%s can ", initial_pronoun);
+	if (angdroid_zh_tw_enabled()) my_strcpy(start, "這隻怪物能夠：", sizeof(start));
+    else strnfmt(start, sizeof(start), "%s can ", initial_pronoun);
 	lore_append_clause(tb, current_flags, COLOUR_WHITE, start, "and", ".  ");
 
 	/* Describe detection traits */
 	create_mon_flag_mask(current_flags, RFT_DET, RFT_MAX);
 	rf_inter(current_flags, known_flags);
-	strnfmt(start, sizeof(start), "%s is ", initial_pronoun);
+	if (angdroid_zh_tw_enabled()) my_strcpy(start, "這隻怪物具有以下特性：", sizeof(start));
+    else strnfmt(start, sizeof(start), "%s is ", initial_pronoun);
 	lore_append_clause(tb, current_flags, COLOUR_WHITE, start, "and", ".  ");
 
 	/* Describe special things */
 	if (rf_has(known_flags, RF_UNAWARE))
-		textblock_append(tb, "%s disguises itself as something else.  ",
-						 initial_pronoun);
+		if (angdroid_zh_tw_enabled()) textblock_append(tb, "牠會偽裝成其他東西。  ");
+        else textblock_append(tb, "%s disguises itself as something else.  ", initial_pronoun);
 	if (rf_has(known_flags, RF_MULTIPLY))
-		textblock_append_c(tb, COLOUR_ORANGE, "%s breeds explosively.  ",
-						   initial_pronoun);
+		if (angdroid_zh_tw_enabled()) textblock_append_c(tb, COLOUR_ORANGE, "牠能快速繁殖。  ");
+        else textblock_append_c(tb, COLOUR_ORANGE, "%s breeds explosively.  ", initial_pronoun);
 	if (rf_has(known_flags, RF_REGENERATE))
-		textblock_append(tb, "%s regenerates quickly.  ", initial_pronoun);
+		if (angdroid_zh_tw_enabled()) textblock_append(tb, "牠的再生速度很快。  ");
+        else textblock_append(tb, "%s regenerates quickly.  ", initial_pronoun);
 
 	/* Describe light */
 	if (race->light > 1) {
-		textblock_append(tb, "%s illuminates %s surroundings.  ",
-						 initial_pronoun, lore_pronoun_possessive(msex, false));
+		if (angdroid_zh_tw_enabled()) textblock_append(tb, "牠會照亮周遭環境。  ");
+        else textblock_append(tb, "%s illuminates %s surroundings.  ", initial_pronoun, lore_pronoun_possessive(msex, false));
 	} else if (race->light == 1) {
-		textblock_append(tb, "%s is illuminated.  ", initial_pronoun);
+		if (angdroid_zh_tw_enabled()) textblock_append(tb, "牠的身體散發光芒。  ");
+        else textblock_append(tb, "%s is illuminated.  ", initial_pronoun);
 	} else if (race->light == -1) {
-		textblock_append(tb, "%s is darkened.  ", initial_pronoun);
+		if (angdroid_zh_tw_enabled()) textblock_append(tb, "牠的身體籠罩在黑暗中。  ");
+        else textblock_append(tb, "%s is darkened.  ", initial_pronoun);
 	} else if (race->light < -1) {
-		textblock_append(tb, "%s shrouds %s surroundings in darkness.  ",
-						 initial_pronoun, lore_pronoun_possessive(msex, false));
+		if (angdroid_zh_tw_enabled()) textblock_append(tb, "牠會讓周遭環境陷入黑暗。  ");
+        else textblock_append(tb, "%s shrouds %s surroundings in darkness.  ", initial_pronoun, lore_pronoun_possessive(msex, false));
 	}
 
 	/* Collect susceptibilities */
 	create_mon_flag_mask(current_flags, RFT_VULN, RFT_VULN_I, RFT_MAX);
 	rf_inter(current_flags, known_flags);
-	strnfmt(start, sizeof(start), "%s is hurt by ", initial_pronoun);
+	if (angdroid_zh_tw_enabled()) my_strcpy(start, "這隻怪物害怕：", sizeof(start));
+    else strnfmt(start, sizeof(start), "%s is hurt by ", initial_pronoun);
 	lore_append_clause(tb, current_flags, COLOUR_VIOLET, start, "and", "");
 	if (!rf_is_empty(current_flags)) {
 		prev = true;
@@ -1552,9 +1577,10 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 		}
 	}
 	if (prev) {
-		my_strcpy(start, ", but resists ", sizeof(start));
+		my_strcpy(start, angdroid_zh_tw_enabled() ? "；但能抵抗：" : ", but resists ", sizeof(start));
 	} else {
-		strnfmt(start, sizeof(start), "%s resists ", initial_pronoun);
+		if (angdroid_zh_tw_enabled()) my_strcpy(start, "這隻怪物能抵抗：", sizeof(start));
+        else strnfmt(start, sizeof(start), "%s resists ", initial_pronoun);
 	}
 	lore_append_clause(tb, current_flags, COLOUR_L_UMBER, start, "and", "");
 	if (!rf_is_empty(current_flags)) {
@@ -1584,10 +1610,10 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 		}
 	}
 	if (prev) {
-		my_strcpy(start, ", and does not resist ", sizeof(start));
+		my_strcpy(start, angdroid_zh_tw_enabled() ? "；但無法抵抗：" : ", and does not resist ", sizeof(start));
 	} else {
-		strnfmt(start, sizeof(start), "%s does not resist ",
-			initial_pronoun);
+		if (angdroid_zh_tw_enabled()) my_strcpy(start, "這隻怪物無法抵抗：", sizeof(start));
+        else strnfmt(start, sizeof(start), "%s does not resist ", initial_pronoun);
 	}
 
 	/* Special case for undead */
@@ -1604,9 +1630,10 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 	create_mon_flag_mask(current_flags, RFT_PROT, RFT_MAX);
 	rf_inter(current_flags, known_flags);
 	if (prev) {
-		my_strcpy(start, ", and cannot be ", sizeof(start));
+		my_strcpy(start, angdroid_zh_tw_enabled() ? "；且免疫：" : ", and cannot be ", sizeof(start));
 	} else {
-		strnfmt(start, sizeof(start), "%s cannot be ", initial_pronoun);
+		if (angdroid_zh_tw_enabled()) my_strcpy(start, "這隻怪物免疫：", sizeof(start));
+        else strnfmt(start, sizeof(start), "%s cannot be ", initial_pronoun);
 	}
 	lore_append_clause(tb, current_flags, COLOUR_L_UMBER, start, "or", "");
 	if (!rf_is_empty(current_flags)) {
@@ -1614,7 +1641,7 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 	}
 
 	if (prev)
-		textblock_append(tb, ".  ");
+        textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。  " : ".  ");
 }
 
 /**
