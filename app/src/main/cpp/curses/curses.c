@@ -141,6 +141,8 @@ int addnwstr(int n, const wchar_t *s) {
 }
 
 int waddnstr(WINDOW* w, int n, const char *s) {
+	if (!w || n < 0 || (!s && n > 0)) return ERR;
+	if (n == 0) return 0;
 	jbyteArray array = (*env)->NewByteArray(env, n);
 	if (array == NULL) angdroid_quit("Error: Out of memory");
 	(*env)->SetByteArrayRegion(env, array, 0, n, (void*)s);
