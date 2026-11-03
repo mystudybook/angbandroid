@@ -24,6 +24,8 @@
 #include "obj-knowledge.h"
 #include "obj-tval.h"
 #include "obj-util.h"
+#include "droid.h"
+#include "zh-tw-items.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -52,9 +54,17 @@ void object_kind_name(char *buf, size_t max, const struct object_kind *kind,
 	if (!easy_know && !kind->aware && kind->flavor)
 		my_strcpy(buf, kind->flavor->text, max);
 
-	/* Use proper name (Healing, or whatever) */
-	else
-		(void) obj_desc_name_format(buf, max, 0, kind->name, NULL, false);
+	/* Use the localized DISPLAY name only for a known kind. Keep
+	 * object_desc(), unidentified flavors and the canonical grammar
+	 * template untouched for gameplay and save compatibility. */
+	else {
+		const char *translated = angdroid_zh_tw_enabled() ?
+			angdroid_zh_tw_item_kind_name(kind->name) : NULL;
+		if (translated)
+			my_strcpy(buf, translated, max);
+		else
+			(void) obj_desc_name_format(buf, max, 0, kind->name, NULL, false);
+	}
 }
 
 
