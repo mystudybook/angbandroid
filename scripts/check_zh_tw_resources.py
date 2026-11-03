@@ -26,6 +26,7 @@ UI_XML = [
     RES / "layout" / "adv_button_options.xml",
     RES / "layout" / "quantity_layout.xml",
     RES / "layout" / "opacity_layout.xml",
+    RES / "layout" / "fab_crud.xml",
     RES / "menu" / "profile.xml",
 ]
 ANDROID = "{http://schemas.android.com/apk/res/android}"
@@ -41,6 +42,7 @@ JAVA_UI = [
         "HelpActivity.java", "AngbandActivity.java", "ProfilesActivity.java",
         "ProfileAddActivity.java", "ProfileList.java", "TermView.java",
         "KeyMapPreference.java", "KeyMapResetPreference.java", "Installer.java",
+        "AngbandDialog.java",
     )
 ]
 
@@ -136,6 +138,18 @@ def main():
         item = chinese.get(name)
         if item is None or item.tag != "string" or not (item.text or "").strip():
             errors.append(f"Missing zh-TW control caption: {name}")
+
+    floating_button_keys = (
+        "fab_label", "fab_label_optional", "fab_overview",
+        "fab_fixed_position", "fab_icon", "fab_global_size",
+        "fab_button_size", "fab_button_opacity",
+    )
+    for name in floating_button_keys:
+        if name not in english:
+            errors.append(f"Missing English floating-button caption: {name}")
+        item = chinese.get(name)
+        if item is None or item.tag != "string" or not (item.text or "").strip():
+            errors.append(f"Missing zh-TW floating-button caption: {name}")
 
     # Mouse popup display labels may change with locale, but their eight
     # fixed numeric option IDs must always have a matching visible label.
