@@ -32,13 +32,18 @@ public class HelpActivity extends Activity {
 	public void onCreate(Bundle b) {
 		super.onCreate(b);
 		setContentView(R.layout.help);
-		this.setTitle(String.format("Angband: Help"));
+		this.setTitle(R.string.help_window_title);
 		WebView help = (WebView) findViewById(R.id.help_text);
 
 		WebSettings settings = help.getSettings();
 		settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NARROW_COLUMNS);
 		settings.setUseWideViewPort(false);
-		help.loadUrl("file:///android_asset/help.html");
+		// Keep the upstream English guide as the fallback for other locales.
+        java.util.Locale locale = getResources().getConfiguration().locale;
+        boolean isZhTw = "zh".equals(locale.getLanguage()) && "TW".equals(locale.getCountry());
+        help.loadUrl(isZhTw
+                ? "file:///android_asset/help_zh_tw.html"
+                : "file:///android_asset/help.html");
 		help.computeScroll();
 	}
 

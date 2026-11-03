@@ -239,7 +239,7 @@ public class StorageActivity extends Activity {
 		File source = this.getSelectedFile();
 
 		if (source == null || !source.isFile()) {
-			GameActivity.infoAlert(this, "Select a file");
+			GameActivity.infoAlert(this, getString(R.string.storage_select_file));
 			return;
 		}
 
@@ -254,7 +254,7 @@ public class StorageActivity extends Activity {
 		File source = this.getSelectedFile();
 
 		if (source == null || !source.isFile()) {
-			GameActivity.infoAlert(this, "Select a file");
+			GameActivity.infoAlert(this, getString(R.string.storage_select_file));
 			return;
 		}
 
@@ -279,13 +279,13 @@ public class StorageActivity extends Activity {
 		final File source = this.getSelectedFile();
 
 		if (source == null || !source.isFile()) {
-			GameActivity.infoAlert(this, "Select a file");
+			GameActivity.infoAlert(this, getString(R.string.storage_select_file));
 			return;
 		}
 
 		final StorageActivity storage = this;
 
-		InputDialog.showInputDialog(this, "Rename", source.getName(),
+		InputDialog.showInputDialog(this, getString(R.string.storage_rename), source.getName(),
 				new InputDialog.InputDialogListener() {
 					@Override
 					public void onInputEntered(String input) {
@@ -301,16 +301,16 @@ public class StorageActivity extends Activity {
 						File newFile = new File(storage.cwd, input);
 
 						if (newFile.exists()) {
-							GameActivity.infoAlert(storage, "A file already exists with name " + input);
+							GameActivity.infoAlert(storage, storage.getString(R.string.storage_file_exists, input));
 							return;
 						}
 
 						if (!source.renameTo(newFile)) {
-							GameActivity.infoAlert(storage, "Can't rename to " + input);
+							GameActivity.infoAlert(storage, storage.getString(R.string.storage_cannot_rename_to, input));
 							return;
 						}
 
-						GameActivity.infoAlert(storage, "Done! Renamed to " + input);
+						GameActivity.infoAlert(storage, storage.getString(R.string.storage_renamed_to, input));
 
 						storage.refreshItems();
 					}
@@ -322,7 +322,7 @@ public class StorageActivity extends Activity {
 		final File source = this.getSelectedFile();
 
 		if (source == null || !source.isFile()) {
-			GameActivity.infoAlert(this, "Select a file");
+			GameActivity.infoAlert(this, getString(R.string.storage_select_file));
 			return;
 		}
 
@@ -330,7 +330,7 @@ public class StorageActivity extends Activity {
 
 		File newFile = this.findSafeName(name, "copy");
 		if (newFile == null) {
-			GameActivity.infoAlert(this, "Too many files");
+			GameActivity.infoAlert(this, getString(R.string.storage_too_many_files));
 			return;
 		}
 
@@ -343,7 +343,7 @@ public class StorageActivity extends Activity {
 			sourceStream.close();
 			targetStream.close();
 
-			GameActivity.infoAlert(this, "Done! New file: " + newFile.getName());
+			GameActivity.infoAlert(this, getString(R.string.storage_duplicated_file, newFile.getName()));
 
 			this.refreshItems();
 		}
@@ -402,7 +402,7 @@ public class StorageActivity extends Activity {
 			return;
 		}
 
-		GameActivity.infoAlert(this, "File exported");
+		GameActivity.infoAlert(this, getString(R.string.storage_file_exported));
 	}
 	*/
 
@@ -429,7 +429,7 @@ public class StorageActivity extends Activity {
 			return;
 		}
 
-		GameActivity.infoAlert(this, "File exported");
+		GameActivity.infoAlert(this, getString(R.string.storage_file_exported));
 	}
 
 	protected File findSafeName(String name, String suffix) {
@@ -456,20 +456,20 @@ public class StorageActivity extends Activity {
 			if (targetFile.exists()) {
 
 				if (targetFile.isDirectory()) {
-					GameActivity.infoAlert(this, "A directory already exists with this name " + name);
+					GameActivity.infoAlert(this, getString(R.string.storage_directory_exists, name));
 					return;
 				}
 
 				newFile = this.findSafeName(name, "old");
 				if (newFile == null) {
-					GameActivity.infoAlert(this, "Too many files");
+					GameActivity.infoAlert(this, getString(R.string.storage_too_many_files));
 					return;
 				}
 
 				File oldFile = new File(this.cwd, name);
 
 				if (!oldFile.renameTo(newFile)) {
-					GameActivity.infoAlert(this, "Can't rename " + oldFile.getName());
+					GameActivity.infoAlert(this, getString(R.string.storage_cannot_rename, oldFile.getName()));
 					return;
 				}
 			}
@@ -483,8 +483,8 @@ public class StorageActivity extends Activity {
 			sourceStream.close();
 			targetStream.close();
 
-			String msg = "File imported.";
-			if (newFile != null) msg += " Old file renamed to " + newFile.getName();
+			String msg = getString(R.string.storage_file_imported);
+			if (newFile != null) msg = getString(R.string.storage_file_imported_with_backup, newFile.getName());
 
 			GameActivity.infoAlert(this, msg);
 

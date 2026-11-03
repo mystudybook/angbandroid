@@ -92,7 +92,7 @@ public class AngbandActivity extends Activity
 				switch(msg.what) {
 				case 0:
 					//Log.d("Angband", "handler show progress");
-					progressDialog = ProgressDialog.show(splash, "Angband", "Installing files...", true);
+					progressDialog = ProgressDialog.show(splash, "Angband", splash.getString(R.string.app_installing_files), true);
 					break;
 				case 1:
 					//Log.d("Angband", "handler dismiss progress");
@@ -107,7 +107,7 @@ public class AngbandActivity extends Activity
 					new AlertDialog.Builder(splash)
 						.setTitle("Angband")
 						.setMessage((String)msg.obj)
-						.setNegativeButton("OK", new DialogInterface.OnClickListener() {
+						.setNegativeButton(R.string.action_ok, new DialogInterface.OnClickListener() {
 							public void onClick(DialogInterface dialog, int whichButton) {
 								splash.finish();
 							}

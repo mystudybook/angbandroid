@@ -38,27 +38,27 @@
 		<Button android:id="@+id/btn_import"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:text="IMPORT" />
+			android:text="@string/storage_import" />
 
 		<Button android:id="@+id/btn_export"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:text="EXPORT" />
+			android:text="@string/storage_export" />
 
 		<Button android:id="@+id/btn_rename"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:text="RENAME" />
+			android:text="@string/storage_rename_button" />
 
 		<Button android:id="@+id/btn_duplicate"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:text="DUPLICATE" />
+			android:text="@string/storage_duplicate" />
 
 		<Button android:id="@+id/btn_exit"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:text="BACK" />
+			android:text="@string/storage_back" />
 	</LinearLayout>
 
 	<LinearLayout
@@ -70,11 +70,11 @@
 		<Button android:id="@+id/btn_duplicate_v2"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:text="DUPLICATE" />
+			android:text="@string/storage_duplicate" />
 
 		<Button android:id="@+id/btn_exit_v2"
 			android:layout_width="wrap_content"
 			android:layout_height="wrap_content"
-			android:text="BACK" />
+			android:text="@string/storage_back" />
 	</LinearLayout>
 </LinearLayout>

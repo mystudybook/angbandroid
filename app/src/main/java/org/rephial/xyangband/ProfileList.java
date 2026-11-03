@@ -51,18 +51,23 @@ public class ProfileList extends ArrayList<Profile> {
 		return null;
 	}
 
-	// todo move to strings.xml
+	// Resource IDs let the Activity apply its own locale to validation errors.
+	public int validateChangeErrorResource(int id, String name, String saveFile) {
+		if (name == null || name.length() == 0) return R.string.profile_validation_name_required;
+		if (saveFile == null || saveFile.length() == 0) return R.string.profile_validation_savefile_required;
+		if (findByName(name, id) != null) return R.string.profile_validation_duplicate_name;
+		if (findBySaveFile(saveFile, id) != null) return R.string.profile_validation_duplicate_savefile;
+		return 0;
+	}
+
+	// Preserve the existing English-returning method for compatibility.
 	public String validateChange(int id, String name, String saveFile) {
-		if (name == null || name.length() == 0)
-			return "Name is required";		
-		else if (saveFile == null || saveFile.length() == 0)
-			return "Save filename is required";		
-		else if (findByName(name, id) != null)
-			return "There is already a profile with that name";		
-		else if (findBySaveFile(saveFile, id) != null)
-			return "There is already a profile using that save filename";		
-		else
-			return null;
+		int code = validateChangeErrorResource(id, name, saveFile);
+		if (code == R.string.profile_validation_name_required) return "Name is required";
+		if (code == R.string.profile_validation_savefile_required) return "Save filename is required";
+		if (code == R.string.profile_validation_duplicate_name) return "There is already a profile with that name";
+		if (code == R.string.profile_validation_duplicate_savefile) return "There is already a profile using that save filename";
+		return null;
 	}
 
 	public int getNextId() {

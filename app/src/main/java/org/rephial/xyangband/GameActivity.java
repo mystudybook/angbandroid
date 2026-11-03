@@ -745,53 +745,53 @@ public class GameActivity extends Activity {
 	public void onCreateContextMenu(ContextMenu menu, View v,
 									ContextMenuInfo menuInfo) {
 
-		menu.setHeaderTitle("Quick Settings");
-		menu.add(0, CONTEXTMENU_FITWIDTH_ITEM, 0, "Fit Width");
-		menu.add(0, CONTEXTMENU_FITHEIGHT_ITEM, 0, "Fit Height");
+		menu.setHeaderTitle(R.string.quick_settings);
+		menu.add(0, CONTEXTMENU_FITWIDTH_ITEM, 0, R.string.quick_fit_width);
+		menu.add(0, CONTEXTMENU_FITHEIGHT_ITEM, 0, R.string.quick_fit_height);
 
 		if (state.characterPlaying()) {
-			menu.add(0, CONTEXTMENU_RESET_LAYOUT, 0, "Reset Layout " +
-				(landscapeNow() ? "(Landscape)": "(Portrait)"));
+			menu.add(0, CONTEXTMENU_RESET_LAYOUT, 0, landscapeNow()
+				? R.string.quick_reset_layout_landscape : R.string.quick_reset_layout_portrait);
 		}
 
-		menu.add(0, CONTEXTMENU_ADD_FAB, 0, "Add Floating Button");
+		menu.add(0, CONTEXTMENU_ADD_FAB, 0, R.string.quick_add_floating_button);
 
 		if (topRibbon != null) {
-			menu.add(0, CONTEXTMENU_VKEY_ITEM, 0, "Show Full Keyboard");
-			menu.add(0, CONTEXTMENU_RIBBON_STYLE, 0, "Change Ribbon Style");
-			menu.add(0, CONTEXTMENU_KEYMAPS, 0, "Manage Keymaps");
+			menu.add(0, CONTEXTMENU_VKEY_ITEM, 0, R.string.quick_show_full_keyboard);
+			menu.add(0, CONTEXTMENU_RIBBON_STYLE, 0, R.string.quick_change_ribbon_style);
+			menu.add(0, CONTEXTMENU_KEYMAPS, 0, R.string.quick_manage_keymaps);
 		}
 		else if (Preferences.getEnableSoftInput()) {
-			menu.add(0, CONTEXTMENU_KBD_POSITION, 0, "Keyboard Position");
-			menu.add(0, CONTEXTMENU_VKEY_ITEM, 0, "Show Button Ribbon");
+			menu.add(0, CONTEXTMENU_KBD_POSITION, 0, R.string.pref_keyboard_position);
+			menu.add(0, CONTEXTMENU_VKEY_ITEM, 0, R.string.quick_show_button_ribbon);
 		}
 		else {
-			menu.add(0, CONTEXTMENU_VKEY_ITEM, 0, "Enable Software Input");
+			menu.add(0, CONTEXTMENU_VKEY_ITEM, 0, R.string.quick_enable_software_input);
 		}
 
 		if (state != null) {
-			menu.add(0, CONTEXTMENU_RUNNING, 0, "Toggle Running " +
-				(state.getRunningMode() ? "OFF": "ON"));
+			menu.add(0, CONTEXTMENU_RUNNING, 0, state.getRunningMode()
+				? R.string.quick_toggle_running_off : R.string.quick_toggle_running_on);
 		}
 
-		menu.add(0, CONTEXTMENU_OPACITY, 0, "Change Opacity");
+		menu.add(0, CONTEXTMENU_OPACITY, 0, R.string.quick_change_opacity);
 
 		if (term != null && term.getButtons().size() > 0) {
-			menu.add(0, CONTEXTMENU_FIX_FAB, 0, "Rearrange Floating Buttons");
+			menu.add(0, CONTEXTMENU_FIX_FAB, 0, R.string.quick_rearrange_floating_buttons);
 		}
 
-		menu.add(0, CONTEXTMENU_RESET_DPAD, 0, "Reset D-Pad Position");
-		menu.add(0, CONTEXTMENU_PREFERENCES_ITEM, 0, "Preferences");
-		menu.add(0, CONTEXTMENU_PROFILES_ITEM, 0, "Profiles");
+		menu.add(0, CONTEXTMENU_RESET_DPAD, 0, R.string.quick_reset_dpad_position);
+		menu.add(0, CONTEXTMENU_PREFERENCES_ITEM, 0, R.string.menu_preferences);
+		menu.add(0, CONTEXTMENU_PROFILES_ITEM, 0, R.string.menu_profiles);
 
 		if (Preferences.getProfiles().size() > 1) {
-			menu.add(0, CONTEXTMENU_IMPORT_KEYS, 0, "Copy Keymaps and Floating Buttons");
+			menu.add(0, CONTEXTMENU_IMPORT_KEYS, 0, R.string.quick_copy_keymaps);
 		}
 
-		menu.add(0, CONTEXTMENU_LIBDIR, 0, "Location of App Files");
+		menu.add(0, CONTEXTMENU_LIBDIR, 0, R.string.quick_app_files_location);
 
-		menu.add(0, CONTEXTMENU_HELP_ITEM, 0, "Help");
-		menu.add(0, CONTEXTMENU_QUIT_ITEM, 0, "Quit");
+		menu.add(0, CONTEXTMENU_HELP_ITEM, 0, R.string.menu_help);
+		menu.add(0, CONTEXTMENU_QUIT_ITEM, 0, R.string.menu_quit);
 	}
 
 	public void showKeymapEditor()
@@ -802,18 +802,12 @@ public class GameActivity extends Activity {
 
 	public void setKeyboardPosition()
 	{
-		final String[] list = {
-			"Center",
-			"Bottom-Left",
-			"Bottom-Right",
-			"Top-Left",
-			"Top-Right",
-		};
+		final String[] list = getResources().getStringArray(R.array.keyboardPositionDesc);
 		int current = Preferences.getKeyboardPosition();
 		if (current >= 0 && current < list.length) {
 			list[current] = "* " + list[current];
 		}
-		listAlert(this, "Keyboard Position", list,
+		listAlert(this, getString(R.string.pref_keyboard_position), list,
 				new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialogInterface, int idx) {
@@ -931,7 +925,7 @@ public class GameActivity extends Activity {
 
 		arr.toArray(list);
 
-		listAlert(this,"Select the source Profile", list,
+		listAlert(this, getString(R.string.quick_select_source_profile), list,
 			new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
@@ -955,13 +949,13 @@ public class GameActivity extends Activity {
 			//.setTitle("Angband")
 			.setMessage(msg)
 			.setCancelable(true)
-			.setNegativeButton("No", new DialogInterface.OnClickListener() {
+			.setNegativeButton(R.string.action_no, new DialogInterface.OnClickListener() {
 				@Override
 				public void onClick(DialogInterface dialog, int which) {
 					dialog.dismiss();
 				}
 			})
-			.setPositiveButton("Yes", okHandler)
+			.setPositiveButton(R.string.action_yes, okHandler)
 			.show();
 	}
 
