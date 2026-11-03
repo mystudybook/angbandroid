@@ -318,7 +318,9 @@ public class NativeWrapper {
 
 				if (w != null && !p.isDirty) continue;
 
-				if (p.isBigPad()) {
+				if (p.isBigPad() || p.isTextContinuation()) {
+					// Wide text is painted once by its leading cell.
+					p.isDirty = false;
 					continue;
 				}
 
