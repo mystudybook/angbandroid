@@ -1,5 +1,17 @@
 # Angband for Android 4.2.4 (plus Variants)
 
+## 繁體中文化（非官方）
+
+這個 Fork 正在進行台灣繁體中文（zh-TW）中文化。**目前已包含部分 Android 介面、設定、檔案管理和使用說明的中文翻譯，但遊戲核心的怪物、道具及訊息尚未完整翻譯。** 此版本未完成 APK／模擬器／實機驗收，也尚未確認所有素材的再發行授權，請不要直接作為正式 Google Play 中文版發行。
+
+- [中文化進度與測試方法](docs/LOCALIZATION_ZH_TW.md)
+- [遊戲文字顯示／Unicode 技術問題](docs/CJK_RENDERING_AUDIT.md)
+- 用 JDK 執行東亞字元寬度測試：`sh scripts/test-terminal-unicode.sh`
+- 用 Python 檢查 Android 翻譯資源：`python3 scripts/check_zh_tw_resources.py`
+
+以下保留原移植專案的英文說明與原作者資訊。
+
+
 An unofficial port of the roguelike Angband to Android.
 
 This work is based on the excellent port of **Angband** found [here](https://github.com/takkaria/angband-android).
