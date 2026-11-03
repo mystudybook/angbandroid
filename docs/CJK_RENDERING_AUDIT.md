@@ -51,6 +51,17 @@ This stage has been committed to `master`, but **has not passed Android NDK comp
 
 A local JDK compilation of the corresponding Java classes/tests passed **14 width cases**, **53 terminal-buffer assertions**, and **15,000 seeded mixed terminal operations**. A host C99 `-Wall -Wextra -Werror -pedantic` build passed **7 redraw-dirty-range union cases** using an isolated copy of the committed helper implementation. These checks **do not establish that the complete current checkout or Android APK compiles**, and Android on-device CJK rendering is still unverified.
 
+## Fixed-grid map compatibility (2026-11-03)
+
+`Term_draw(x,y,a,c)` and `Term_queue_chars(x,y,n,a,text)` are **fixed-coordinate cell APIs**, often used for map cells and graphics. Widening a Han character in these calls would overwrite an unrelated neighboring map cell. To preserve the original grid contract:
+
+- `angdroid_fixed_cell_glyph()` renders a wide glyph as `?` in these fixed-cell APIs instead of allocating a second column. Ordinary ASCII/Latin-1, private-use command glyphs and graphical tile attributes retain their original value.
+- `Term_queue_chars()` now checks whether each target overwrites part of an existing wide text glyph and invalidates its other half. It still clears terrain values as it did previously.
+- `Term_what()` now hides the internal U+FDD0 continuation marker from callers, returning a blank cell with `COLOUR_WHITE`. Direct game logic cannot accidentally treat that marker as a game character.
+- Twelve native fixed-grid test assertions and four public-marker tests were added, along with source-level contract checks.
+
+**Trade-off:** Chinese text sent through a *fixed-position per-cell map API* is intentionally replaced with `?` rather than widened. Use `Term_addstr()`/`Term_addch()` for regular two-column user-facing text. This distinction is necessary until the native map grid and textual UI coordinate schemes can be separated more comprehensively.
+
 ## Regression checks
 
 Run from the repository root:
