@@ -13,9 +13,9 @@ public class KeyMapResetPreference
 	public KeyMapResetPreference(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		this.context = context;
-		setDialogTitle("Really reset all keys?");
-		setPositiveButtonText("OK");
-		setNegativeButtonText("Cancel");
+		setDialogTitle(context.getString(R.string.keymap_reset_confirm));
+		setPositiveButtonText(context.getString(R.string.action_ok));
+		setNegativeButtonText(context.getString(R.string.action_cancel));
 	}
 
 	public void onClick(DialogInterface dialog, int which) {
