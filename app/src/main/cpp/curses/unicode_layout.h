@@ -71,4 +71,37 @@ static inline size_t angdroid_next_visible_text_run(
     return i - *start;
 }
 
+
+/*
+ * Expand a requested redraw rectangle to full native display-cell spans.
+ * This is row-local: the caller must not carry adjusted boundaries from one
+ * row to another. Read both requested and previously drawn cells because
+ * either version might contain a wide glyph or an old big-tile pad.
+ */
+static inline void angdroid_expand_redraw_columns(
+    int width, int *first, int *last,
+    const wchar_t *requested_chars, const int *requested_attrs,
+    const wchar_t *previous_chars, const int *previous_attrs)
+{
+    if (width <= 0 || !first || !last ||
+        !requested_chars || !requested_attrs ||
+        !previous_chars || !previous_attrs) return;
+    if (*first < 0 || *last >= width || *first > *last) return;
+
+    if (*first > 0 &&
+        (requested_chars[*first] == ANGDROID_TEXT_CONTINUATION ||
+         previous_chars[*first] == ANGDROID_TEXT_CONTINUATION ||
+         requested_attrs[*first] == 255 ||
+         previous_attrs[*first] == 255)) {
+        --*first;
+    }
+    if (*last + 1 < width &&
+        (angdroid_is_wide_text(requested_chars[*last],
+                               requested_attrs[*last]) ||
+         angdroid_is_wide_text(previous_chars[*last],
+                               previous_attrs[*last]))) {
+        ++*last;
+    }
+}
+
 #endif
