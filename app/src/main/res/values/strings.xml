@@ -365,4 +365,23 @@
     <string name="quick_select_source_profile">Select the source Profile</string>
     <string name="action_yes">Yes</string>
     <string name="action_no">No</string>
+
+    <!-- Storage file manager messages and actions. -->
+    <string name="storage_select_file">Select a file</string>
+    <string name="storage_rename">Rename</string>
+    <string name="storage_file_exists">A file already exists with name %1$s</string>
+    <string name="storage_cannot_rename_to">Can\'t rename to %1$s</string>
+    <string name="storage_renamed_to">Done! Renamed to %1$s</string>
+    <string name="storage_too_many_files">Too many files</string>
+    <string name="storage_duplicated_file">Done! New file: %1$s</string>
+    <string name="storage_file_exported">File exported</string>
+    <string name="storage_directory_exists">A directory already exists with this name %1$s</string>
+    <string name="storage_cannot_rename">Can\'t rename %1$s</string>
+    <string name="storage_file_imported">File imported.</string>
+    <string name="storage_file_imported_with_backup">File imported. Old file renamed to %1$s</string>
+    <string name="storage_import">IMPORT</string>
+    <string name="storage_export">EXPORT</string>
+    <string name="storage_rename_button">RENAME</string>
+    <string name="storage_duplicate">DUPLICATE</string>
+    <string name="storage_back">BACK</string>
 </resources>
