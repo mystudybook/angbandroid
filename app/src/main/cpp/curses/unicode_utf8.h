@@ -61,4 +61,74 @@ static size_t angdroid_encode_wide_utf8(const wchar_t *input, size_t count,
     return offset;
 }
 
+
+/*
+ * Decode a UTF-8 string into 32-bit wchar_t independent of LC_CTYPE.
+ * Matches mbstowcs-style output count/capacity behavior: a terminating
+ * wchar_t NUL is stored only when the output has spare capacity.
+ * Invalid byte sequences consume one byte and emit U+FFFD.
+ * A NULL destination requests only the decoded scalar count.
+ */
+static size_t angdroid_decode_utf8_wide(wchar_t *output, const char *input, int max_chars)
+{
+    size_t at = 0;
+    size_t count = 0;
+    size_t capacity;
+
+    if (!input || max_chars < 0) return (size_t)-1;
+    capacity = (size_t)max_chars;
+
+    while (input[at]) {
+        unsigned char c0 = (unsigned char)input[at];
+        uint32_t cp;
+        int length = 1;
+        int i;
+        int valid = 1;
+
+        if (c0 <= 0x7F) cp = c0;
+        else if (c0 >= 0xC2 && c0 <= 0xDF) {
+            cp = (uint32_t)(c0 & 0x1F);
+            length = 2;
+        } else if (c0 >= 0xE0 && c0 <= 0xEF) {
+            cp = (uint32_t)(c0 & 0x0F);
+            length = 3;
+        } else if (c0 >= 0xF0 && c0 <= 0xF4) {
+            cp = (uint32_t)(c0 & 0x07);
+            length = 4;
+        } else {
+            cp = 0xFFFD;
+            valid = 0;
+        }
+        if (valid) {
+            for (i = 1; i < length; ++i) {
+                unsigned char continuation = (unsigned char)input[at + (size_t)i];
+                if (!continuation || (continuation & 0xC0u) != 0x80u) {
+                    valid = 0;
+                    break;
+                }
+                cp = (cp << 6) | (uint32_t)(continuation & 0x3Fu);
+            }
+            if (cp > 0x10FFFFu || (cp >= 0xD800u && cp <= 0xDFFFu) ||
+                (length == 2 && cp < 0x80u) ||
+                (length == 3 && cp < 0x800u) ||
+                (length == 4 && cp < 0x10000u)) {
+                valid = 0;
+            }
+        }
+        if (!valid) {
+            cp = 0xFFFD;
+            length = 1;
+        }
+        if (output) {
+            if (count >= capacity) return count;
+            output[count] = (wchar_t)cp;
+        }
+        ++count;
+        at += (size_t)length;
+    }
+
+    if (output && count < capacity) output[count] = 0;
+    return count;
+}
+
 #endif
