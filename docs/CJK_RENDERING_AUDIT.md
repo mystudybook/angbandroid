@@ -33,6 +33,12 @@ This stage has been committed to `master`, but **has not passed Android NDK comp
 - `common/angdroid.c` removes internal continuation markers from `Term_text_android()` redraw runs while preserving their **physical x offsets**. Its `Term_pict_android()` sends unflagged Unicode glyphs through the text renderer instead of truncating them into 8-bit tile IDs. Existing high-bit tile indices remain on the tile path.
 - `curses/waddnwstr()` encodes explicit `wchar_t` lengths as UTF-8 without relying on the C locale; failures are bounds-checked and allocation is freed.
 
+## Incremental redraw and overwrite hardening (2026-11-03)
+
+- `Term_redraw_section()` now validates requested bounds and expands **each row independently** when a selected column is a wide glyph's leading or continuation cell. It examines both the requested and previously drawn native grids, and preserves the upstream big-tile pad behavior. The prior implementation modified the shared `x1` across rows, causing unnecessary redraws on later rows.
+- `unicode_layout.h` now exposes `angdroid_expand_redraw_columns()` and `angdroid_wide_partner_column()`. The native `Term_queue_char()` overwrite path uses the same testable partner-cell rule rather than duplicating glyph-span checks.
+- `tests/native/test_unicode_layout.c` covers 8 redraw-boundary cases and 14 overwrite-partner assertions in addition to existing Unicode width/marker tests. An isolated local C99 copy of the helper logic passed these 22 checks under `-Wall -Wextra -Werror -pedantic`. **A complete checkout/NDK build has not been run for this change.**
+
 ## Regression checks
 
 Run from the repository root:
