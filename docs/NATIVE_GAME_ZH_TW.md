@@ -457,6 +457,16 @@ remain English until their grammar can be handled as complete phrases.
 Host tests verify dictionary fallbacks and the static checks protect
 identification gates and formatted success-chance messages.
 
+## Object resistance, modifiers, brand and slay information (2026-11-04)
+
+Added exact, display-only Traditional Chinese terms for original Angband
+elemental damage, stat modifiers, sustain/protection labels, slay targets
+and brand names. Object detail pages now show Chinese resistance,
+vulnerability, immunity and sustain lists, including punctuation.
+Unknown terms and English-language mode keep their original text.
+The original gamedata, savefiles and item identification logic remain
+unchanged. A new standalone C99 test is wired into the native test script.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

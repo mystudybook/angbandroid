@@ -65,6 +65,8 @@ def main():
     player_spell = source(CPP / "angband/player-spell.c", errors)
     cave_cmd = source(CPP / "angband/cmd-cave.c", errors)
     player_attack = source(CPP / "angband/player-attack.c", errors)
+    object_info = source(CPP / "angband/obj-info.c", errors)
+    object_info_terms = source(CPP / "angband/zh-tw-object-info.h", errors)
     object_ui = source(CPP / "angband/ui-object.c", errors)
     target_ui = source(CPP / "angband/ui-target.c", errors)
     combat_header = source(CPP / "angband/zh-tw-combat.h", errors)
@@ -474,6 +476,16 @@ def main():
     expect('zh-tw-item-info.h' in native_tests or
            'test_game_ui_locale.c' in native_tests,
            "Item info standalone regression not registered")
+    expect('angdroid_zh_tw_object_term(list[i], zh_tw)' in object_info,
+           "Item elemental/protection list terms not translated")
+    expect('angdroid_zh_tw_object_term(slays[i].name' in object_info
+           and 'angdroid_zh_tw_object_term(brands[i].name' in object_info,
+           "Slay and brand terms not translated")
+    for term in ("acid", "strength", "fear", "undead", "searching skill"):
+        expect(('"' + term + '"') in object_info_terms,
+               "Missing object property translation: " + term)
+    expect('test_object_info_locale.c' in native_tests,
+           "Object info host C test not registered")
     if errors:
         for item in errors:
             print("FAIL:", item)

@@ -39,6 +39,8 @@
 #include "project.h"
 #include "z-textblock.h"
 #include "droid.h"
+#include "zh-tw-object-info.h"
+#include "droid.h"
 #include "zh-tw-item-info.h"
 
 /**
@@ -79,14 +81,15 @@ static const struct origin_type {
  */
 static void info_out_list(textblock *tb, const char *list[], size_t count)
 {
-	size_t i;
+    size_t i;
+    bool zh_tw = angdroid_zh_tw_enabled();
 
-	for (i = 0; i < count; i++) {
-		textblock_append(tb, "%s", list[i]);
-		if (i != (count - 1)) textblock_append(tb, ", ");
-	}
-
-	textblock_append(tb, ".\n");
+    for (i = 0; i < count; ++i) {
+        textblock_append(tb, "%s", angdroid_zh_tw_object_term(list[i], zh_tw));
+        if (i + 1 < count)
+            textblock_append(tb, "%s", zh_tw ? "、" : ", ");
+    }
+    textblock_append(tb, "%s", zh_tw ? "。\n" : ".\n");
 }
 
 
@@ -177,10 +180,16 @@ static bool describe_stats(textblock *tb, const struct object *obj,
 		/* Actual object */
 		if (detail && !suppress_details) {
 			int attr = (val > 0) ? COLOUR_L_GREEN : COLOUR_RED;
-			textblock_append_c(tb, attr, "%+i %s.\n", val, desc);
+			if (angdroid_zh_tw_enabled())
+                textblock_append_c(tb, attr, "%+i %s。\n", val,
+                    angdroid_zh_tw_object_term(desc, true));
+            else
+                textblock_append_c(tb, attr, "%+i %s.\n", val, desc);
 		} else if (known_effect)
 			/* Ego type or jewellery description */
-			textblock_append(tb, "Affects your %s\n", desc);
+			textblock_append(tb, "%s%s\n",
+                angdroid_zh_tw_enabled() ? "影響你的 " : "Affects your ",
+                angdroid_zh_tw_object_term(desc, angdroid_zh_tw_enabled()));
 	}
 
 	return true;
@@ -205,7 +214,7 @@ static bool describe_elements(textblock *tb,
 		list[i] = (el_info[i].res_level == 3);
 	count = element_info_collect(list, i_descs);
 	if (count) {
-		textblock_append(tb, "Provides immunity to ");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "免疫：" : "Provides immunity to ");
 		info_out_list(tb, i_descs, count);
 		prev = true;
 	}
@@ -215,7 +224,7 @@ static bool describe_elements(textblock *tb,
 		list[i] = (el_info[i].res_level == 1);
 	count = element_info_collect(list, r_descs);
 	if (count) {
-		textblock_append(tb, "Provides resistance to ");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "抵抗：" : "Provides resistance to ");
 		info_out_list(tb, r_descs, count);
 		prev = true;
 	}
@@ -225,7 +234,7 @@ static bool describe_elements(textblock *tb,
 		list[i] = (el_info[i].res_level == -1);
 	count = element_info_collect(list, v_descs);
 	if (count) {
-		textblock_append(tb, "Makes you vulnerable to ");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "容易受到以下傷害：" : "Makes you vulnerable to ");
 		info_out_list(tb, v_descs, count);
 		prev = true;
 	}
@@ -254,7 +263,7 @@ static bool describe_protects(textblock *tb, const bitflag flags[OF_SIZE])
 	if (!count)
 		return false;
 
-	textblock_append(tb, "Provides protection from ");
+	textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "保護你免於：" : "Provides protection from ");
 	info_out_list(tb, p_descs, count);
 
 	return  true;
@@ -276,7 +285,7 @@ static bool describe_ignores(textblock *tb, const struct element_info el_info[])
 	if (!count)
 		return false;
 
-	textblock_append(tb, "Cannot be harmed by ");
+	textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "不會被以下元素損壞：" : "Cannot be harmed by ");
 	info_out_list(tb, descs, count);
 
 	return true;
@@ -298,7 +307,7 @@ static bool describe_hates(textblock *tb, const struct element_info el_info[])
 	if (!count)
 		return false;
 
-	textblock_append(tb, "Can be destroyed by ");
+	textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "可被以下元素摧毀：" : "Can be destroyed by ");
 	info_out_list(tb, descs, count);
 
 	return true;
@@ -322,7 +331,7 @@ static bool describe_sustains(textblock *tb, const bitflag flags[OF_SIZE])
 	if (!count)
 		return false;
 
-	textblock_append(tb, "Sustains ");
+	textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "維持以下屬性：" : "Sustains ");
 	info_out_list(tb, descs, count);
 
 	return true;
@@ -365,9 +374,9 @@ static bool describe_slays(textblock *tb, const struct object *obj)
 	if (!s) return false;
 
 	if (tval_is_weapon(obj) || tval_is_fuel(obj))
-		textblock_append(tb, "Slays ");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "克制以下生物：" : "Slays ");
 	else
-		textblock_append(tb, "It causes your melee attacks to slay ");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "使你的近戰攻擊克制：" : "It causes your melee attacks to slay ");
 
 	for (i = 1; i < z_info->slay_max; i++) {
 		if (s[i]) {
@@ -379,13 +388,14 @@ static bool describe_slays(textblock *tb, const struct object *obj)
 	for (i = 1; i < z_info->slay_max; i++) {
 		if (!s[i]) continue;
 
-		textblock_append(tb, "%s", slays[i].name);
+		textblock_append(tb, "%s", angdroid_zh_tw_object_term(slays[i].name,
+            angdroid_zh_tw_enabled()));
 		if (slays[i].multiplier > 3)
-			textblock_append(tb, " (powerfully)");
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "（強力）" : " (powerfully)");
 		if (count > 1)
-			textblock_append(tb, ", ");
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "、" : ", ");
 		else
-			textblock_append(tb, ".\n");
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		count--;
 	}
 
@@ -403,9 +413,9 @@ static bool describe_brands(textblock *tb, const struct object *obj)
 	if (!b) return false;
 
 	if (tval_is_weapon(obj) || tval_is_fuel(obj))
-		textblock_append(tb, "Branded with ");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "附加元素傷害：" : "Branded with ");
 	else
-		textblock_append(tb, "It brands your melee attacks with ");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "使近戰攻擊附加元素傷害：" : "It brands your melee attacks with ");
 
 	for (i = 1; i < z_info->brand_max; i++) {
 		if (b[i]) {
@@ -418,12 +428,13 @@ static bool describe_brands(textblock *tb, const struct object *obj)
 		if (!b[i]) continue;
 
 		if (brands[i].multiplier < 3)
-			textblock_append(tb, "weak ");
-		textblock_append(tb, "%s", brands[i].name);
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "弱化的" : "weak ");
+		textblock_append(tb, "%s", angdroid_zh_tw_object_term(brands[i].name,
+            angdroid_zh_tw_enabled()));
 		if (count > 1)
-			textblock_append(tb, ", ");
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "、" : ", ");
 		else
-			textblock_append(tb, ".\n");
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		count--;
 	}
 
