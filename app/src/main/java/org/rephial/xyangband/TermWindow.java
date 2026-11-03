@@ -26,6 +26,10 @@ public class TermWindow {
 		public char bgChar = 0;
 		public int bgColor = 0;
 
+		// Display width: 2 = wide text lead, 0 = continuation, 1 = regular.
+		public byte textColumns = 1;
+		public int textCodePoint = 0;
+
 		public boolean isDirty = false;
 		public boolean isUgly = false;
 
@@ -37,6 +41,8 @@ public class TermWindow {
 			bgChar = 0;
 			bgColor = 0;
 			fgColor = DEFAULT_FORE;
+			textColumns = 1;
+			textCodePoint = 0;
 		}
 
 		public boolean isGraphicTile()
@@ -47,6 +53,14 @@ public class TermWindow {
 		public boolean isBigPad()
 		{
 			return ch == TermView.BIG_PAD;
+		}
+
+		public boolean isTextContinuation() { return textColumns == 0; }
+
+		public String displayText() {
+			return textCodePoint > 0
+				? new String(Character.toChars(textCodePoint))
+				: Character.toString(ch);
 		}
 	}
 	public TermPoint[][] buffer = null;
@@ -110,6 +124,7 @@ public class TermWindow {
 				}
 			}
 		}
+		repairTextSpans();
 	}
 
 	public static void init_color(int c, int rgb) {
@@ -126,7 +141,7 @@ public class TermWindow {
 	public void clearPoint(int row, int col) {
 		if (col >= 0 && col < cols &&
 				row >= 0 && row < rows) {
-			buffer[row][col].clear();
+			clearTextSpanAt(row, col);
 		} else {
 			Log.d("Angband","TermWindow.clearPoint - point out of bounds: "+col+","+row);
 		}
@@ -154,7 +169,7 @@ public class TermWindow {
 	public void clrtoeol() {
 		//Log.d("Angband","TermWindow.clrtoeol ("+row+","+col+")");
 		for (int c=col;c<cols;c++) {
-			buffer[row][c].clear();
+			clearPoint(row, c);
 		}
 	}
 
@@ -162,7 +177,7 @@ public class TermWindow {
 		//Log.d("Angband","TermWindow.clrtobot ("+row+","+col+")");
 		for (int r=row;r<rows;r++) {
 			for (int c=col;c<cols;c++) {
-				buffer[r][c].clear();
+				clearPoint(r, c);
 			}
 		}
 	}
@@ -276,15 +291,20 @@ public class TermWindow {
 					if (p2.ch != p1.ch ||
 							p2.fgColor != p1.fgColor ||
 							p2.bgColor != p1.bgColor ||
-							p2.bgChar != p1.bgChar) {
+							p2.bgChar != p1.bgChar ||
+						p2.textColumns != p1.textColumns ||
+						p2.textCodePoint != p1.textCodePoint) {
 						p2.isDirty = true;
 						p2.ch = p1.ch;
 						p2.bgColor = p1.bgColor;
 						p2.fgColor = p1.fgColor;
 						p2.bgChar = p1.bgChar;
+						p2.textColumns = p1.textColumns;
+						p2.textCodePoint = p1.textCodePoint;
 					}
 				}
 			}
+			repairTextSpans();
 		}
 	}
 
@@ -311,19 +331,86 @@ public class TermWindow {
 			Log.d("Angband", "Encoding exception");
 		}
 
-		// The native length is in bytes. Iterate code points instead of
-		// UTF-16 code units so a supplementary glyph is not split into two
-		// broken surrogate cells. TermPoint still stores a BMP char, so use
-		// one visible fallback cell for characters that it cannot represent.
+		// n is a byte count at the JNI boundary. Decode code points and
+		// reserve two terminal cells for wide Unicode text.
 		for (int i = 0; i < str.length();) {
 			int codePoint = str.codePointAt(i);
 			i += Character.charCount(codePoint);
-			if (codePoint <= 0xFFFF && !(codePoint >= 0xD800 && codePoint <= 0xDFFF)) {
-				addch((char)codePoint);
-			} else {
-				addch('?');
+			if (codePoint <= 0x1F) addch((char)codePoint);
+			else addCodePoint(codePoint);
+		}
+	}
+
+
+	/** Erase both halves of a wide character before changing any of its cells. */
+	private void clearTextSpanAt(int y, int x) {
+		if (y < 0 || y >= rows || x < 0 || x >= cols) return;
+		TermPoint p = buffer[y][x];
+		if (p.textColumns == 0 && x > 0 && buffer[y][x - 1].textColumns == 2) {
+			buffer[y][x - 1].clear();
+		}
+		if (p.textColumns == 2 && x + 1 < cols && buffer[y][x + 1].textColumns == 0) {
+			buffer[y][x + 1].clear();
+		}
+		p.clear();
+	}
+
+	/** Repair orphaned halves after resize and partial subwindow blits. */
+	private void repairTextSpans() {
+		for (int y = 0; y < rows; y++) {
+			for (int x = 0; x < cols; x++) {
+				TermPoint p = buffer[y][x];
+				if (p.textColumns == 2 &&
+					(x + 1 >= cols || buffer[y][x + 1].textColumns != 0)) {
+					p.clear();
+				} else if (p.textColumns == 0 &&
+					(x == 0 || buffer[y][x - 1].textColumns != 2)) {
+					p.clear();
+				}
 			}
 		}
+	}
+
+	/** Write terminal text without changing graphic tile or special-key codes. */
+	private void addCodePoint(int cp) {
+		if (col < 0 || col >= cols || row < 0 || row >= rows) return;
+		if (!Character.isValidCodePoint(cp) ||
+			(cp >= Character.MIN_SURROGATE && cp <= Character.MAX_SURROGATE)) cp = '?';
+		int width = TerminalUnicode.columns(cp);
+		if (width == 2 && col == cols - 1) {
+			if (row + 1 < rows) {
+				col = 0;
+				row++;
+			} else {
+				cp = '?';
+				width = 1;
+			}
+		}
+		if (width == 2 && cols < 2) {
+			cp = '?';
+			width = 1;
+		}
+		clearTextSpanAt(row, col);
+		if (width == 2) clearTextSpanAt(row, col + 1);
+		TermPoint p = buffer[row][col];
+		p.ch = (char) (cp <= 0xFFFF ? cp : '?');
+		p.textCodePoint = cp;
+		p.textColumns = (byte)width;
+		p.fgColor = cur_color;
+		p.bgColor = cur_bg_color;
+		p.bgChar = 0;
+		p.isDirty = true;
+		if (width == 2) {
+			TermPoint trailing = buffer[row][col + 1];
+			trailing.ch = ' ';
+			trailing.textColumns = 0;
+			trailing.textCodePoint = 0;
+			trailing.fgColor = cur_color;
+			trailing.bgColor = cur_bg_color;
+			trailing.isDirty = false; // Leading glyph paints both backgrounds.
+		}
+		advance();
+		if (width == 2) advance();
 	}
 
 	public void addTilePad(int x, int y, int tw, int th)
@@ -340,6 +427,7 @@ public class TermWindow {
 				if ((y2 >= rows) || (x2 >= cols)) continue;
 
 				if (y2 > y || x2 > x) {
+					clearTextSpanAt(y2, x2);
 					TermPoint p = buffer[y2][x2];
 					p.isDirty = false;
 					p.ch = TermView.BIG_PAD;
@@ -356,6 +444,7 @@ public class TermWindow {
 
 			move(y,x);
 
+			clearTextSpanAt(y, x);
 			TermPoint p = buffer[y][x];
 
 			if (true /*p.ch != c ||
@@ -367,6 +456,8 @@ public class TermWindow {
 				p.bgChar = (char)tc;
 				p.fgColor = a;
 				p.bgColor = ta;
+				p.textColumns = 1;
+				p.textCodePoint = 0;
 			}
 		}
 	}
@@ -381,6 +472,7 @@ public class TermWindow {
 
 		if (col>-1 && col<cols && row>-1 && row<rows) {
 			if (c > 19) {
+				clearTextSpanAt(row, col);
 				TermPoint p = buffer[row][col];
 
 				if (true /*p.ch != c ||
@@ -392,6 +484,8 @@ public class TermWindow {
 					p.bgChar = 0;
 					p.fgColor = cur_color;
 					p.bgColor = cur_bg_color;
+					p.textColumns = 1;
+					p.textCodePoint = 0;
 				}
 
 				advance();
@@ -429,10 +523,16 @@ public class TermWindow {
 	}
 
 	public void scroll() {
+		if (rows == 0) return;
 		for (int r=1;r<rows;r++) {
 			for (int c=0;c<cols;c++) {
 				buffer[r-1][c] = buffer[r][c];
+				buffer[r-1][c].isDirty = true;
 			}
+		}
+		for (int c=0;c<cols;c++) {
+			buffer[rows-1][c] = new TermPoint();
+			buffer[rows-1][c].isDirty = true;
 		}
 	}
 }
