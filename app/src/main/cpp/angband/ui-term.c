@@ -2465,30 +2465,39 @@ errr Term_redraw_section(int x1, int y1, int x2, int y2)
 
 	wchar_t *c_ptr;
 
-	/* Bounds checking */
+	/* Reject inverted or completely off-screen requests before clipping. */
+	if (!Term || x1 > x2 || y1 > y2) return (-1);
+	if (x1 >= Term->wid || x2 < 0 ||
+		y1 >= Term->hgt || y2 < 0) return (-1);
 	if (y2 >= Term->hgt) y2 = Term->hgt - 1;
 	if (x2 >= Term->wid) x2 = Term->wid - 1;
 	if (y1 < 0) y1 = 0;
 	if (x1 < 0) x1 = 0;
 
-
 	/* Set y limits */
 	Term->y1 = y1;
 	Term->y2 = y2;
 
-	/* Set the x limits */
-	for (i = Term->y1; i <= Term->y2; i++) {
-		if ((x1 > 0) && (Term->old->a[i][x1] == 255))
-			x1--;
+	for (i = y1; i <= y2; i++) {
+		int first = x1;
+		int last = x2;
 
-		Term->x1[i] = x1;
-		Term->x2[i] = x2;
+		/* Invalidate the entire CJK glyph when the requested area starts
+		 * on its trailing column or ends on its leading column. Also keep
+		 * the upstream large-tile padding rule. Importantly, use fresh
+		 * boundaries for every row: an adjustment in the previous row
+		 * must not accidentally enlarge the next row. */
+		angdroid_expand_redraw_columns(Term->wid, &first, &last,
+			Term->scr->c[i], Term->scr->a[i],
+			Term->old->c[i], Term->old->a[i]);
 
+		Term->x1[i] = first;
+		Term->x2[i] = last;
 		c_ptr = Term->old->c[i];
 
-		/* Clear the section so it is redrawn */
-		for (j = x1; j <= x2; j++) {
-			/* Hack - set the old character to "none" */
+		/* Force all affected columns to be refreshed, including the
+		 * visible wide lead that owns any continuation column. */
+		for (j = first; j <= last; j++) {
 			c_ptr[j] = 0;
 		}
 	}
