@@ -24,7 +24,7 @@ if (!my_abi_filters.every { supportedAbis.contains(it) }) {
 }
 
 android {
-    // Required by AGP 8+. Keep the original applicationId for local upgrades.
+    // Required by AGP 9. Keep the original applicationId for local upgrades.
     namespace "org.rephial.xyangband"
     compileSdk 35
 
@@ -67,7 +67,7 @@ android {
     buildTypes {
         debug {
             ndk {
-                // AGP 8 exposes a mutable ABI set; avoid assigning a new
+                // AGP 9 exposes a mutable ABI set; avoid assigning a new
                 // collection to the DSL property during configuration.
                 abiFilters.addAll(my_abi_filters)
             }
