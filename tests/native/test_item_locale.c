@@ -13,10 +13,14 @@ static void expect_name(const char *english, const char *traditional)
 
 int main(void)
 {
-    assert(ANGDROID_ZH_TW_ITEM_KINDS == 76);
+    assert(ANGDROID_ZH_TW_ITEM_KINDS == 165);
     expect_name("& Wooden Torch~", "木製火把");
     expect_name("& Lantern~", "提燈");
     expect_name("& Dagger~", "匕首");
+    expect_name("& Zweihander~", "雙手大劍");
+    expect_name("& Mithril Bolt~", "秘銀弩箭");
+    expect_name("Power Dragon Scale Mail~", "力量龍鱗甲");
+    expect_name("& Massive Iron Crown~", "巨大鐵冠");
     /* Exact grammar markers in object.txt matter to display-only lookup. */
     expect_name("& Main~ Gauche~", "副手短劍");
     assert(angdroid_zh_tw_item_kind_name("& Main Gauche~") == NULL);

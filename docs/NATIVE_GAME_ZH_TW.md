@@ -274,6 +274,17 @@ data `name:` entries, so future spelling and `~` grammar-marker drift
 becomes a test failure. Original item grammar, savefiles and engine data
 are not modified.
 
+## Equipment, food and treasure display-name expansion (2026-11-03)
+
+Expanded the original Angband item-knowledge display-only dictionary from
+76 to 165 exact canonical `object.txt` keys. This batch
+covers more food/drink, dungeon book names, melee/ranged weapons, ammo,
+boots, chests, dragon-scale armor, precious stones and gold types. The
+automated source-name check rejects any misspelled or stale `&`/`~`
+template. Names are translated only in knowledge/identification UI where
+the item has been identified; unknown flavored items remain hidden and
+gameplay grammar templates and save records stay English.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

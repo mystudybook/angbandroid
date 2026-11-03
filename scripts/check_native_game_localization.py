@@ -103,7 +103,7 @@ def main():
         (mon, mon_header, "ANGDROID_ZH_TW_MONSTER_NAMES",
          "angdroid_zh_tw_monster_list_name(race->name)", 128),
         (obj, obj_header, "ANGDROID_ZH_TW_ITEM_KINDS",
-         "angdroid_zh_tw_item_kind_name(kind->name)", 76),
+         "angdroid_zh_tw_item_kind_name(kind->name)", 165),
     ):
         mapping = table(header)
         match = re.search(r"#define\s+" + macro + r"\s+(\d+)", header)
@@ -339,7 +339,7 @@ def main():
             print("FAIL:", item)
         return 1
     print(f"PASS: {checks} native game-localization source safeguards")
-    print("  Monster list entries: 128 | item kind labels: 76")
+    print("  Monster list entries: 128 | item kind labels: 165")
     print("  Death menu labels: 9 | death prompts: 11")
     print("NOTE: Requires Android NDK and on-device zh-TW gameplay validation")
     return 0
