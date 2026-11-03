@@ -26,6 +26,7 @@ def declared_version(content, name, default):
 def local_prop(name):
     if not PROPS.is_file():
         return None
+    found = None
     for line in PROPS.read_text(encoding="utf-8").splitlines():
         if line.lstrip().startswith(("#", "!")) or "=" not in line:
             continue
@@ -33,8 +34,8 @@ def local_prop(name):
         if key.strip() != name:
             continue
         value = value.strip().replace("\\:", ":").replace("\\\\", "\\")
-        return value or None
-    return None
+        found = value or None  # Java Properties: last declaration wins.
+    return found
 
 
 def sdk_path():
@@ -85,7 +86,11 @@ def find_cmake(root, version):
         path = Path(configured).expanduser()
         if not path.is_absolute():
             path = (ROOT / path).resolve()
-        candidates = [("local.properties cmake.dir", cmake_executable(path))]
+        # AGP's cmake.dir refers to an installation directory with bin/cmake.
+        # A direct executable path or bin/ directory may pass a loose
+        # preflight but still fail in AGP, so require the actual install root.
+        executable = path / "bin" / ("cmake.exe" if os.name == "nt" else "cmake")
+        candidates = [("local.properties cmake.dir", executable)]
     else:
         candidates = []
         sdk_cmake = root / "cmake" / version
