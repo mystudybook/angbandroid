@@ -33,6 +33,8 @@
 #include "ui-player.h"
 #include "ui-score.h"
 #include "ui-spoil.h"
+#include "droid.h"
+#include "zh-tw-death.h"
 
 /**
  * Write formatted string `fmt` on line `y`, centred between points x1 and x2.
@@ -178,9 +180,9 @@ static void death_file(const char *title, int row)
 
 		/* Check result */
 		if (success)
-			msg("Character dump successful.");
+			msg("%s", angdroid_death_prompt(ANGDROID_DEATH_DUMP_SUCCESS, angdroid_zh_tw_enabled()));
 		else
-			msg("Character dump failed!");
+			msg("%s", angdroid_death_prompt(ANGDROID_DEATH_DUMP_FAILED, angdroid_zh_tw_enabled()));
 
 		/* Flush messages */
 		event_signal(EVENT_MESSAGE_FLUSH);
@@ -200,7 +202,7 @@ static void death_info(const char *title, int row)
 	display_player(0);
 
 	/* Prompt for inventory */
-	prt("Hit any key to see more information: ", 0, 0);
+	prt(angdroid_death_prompt(ANGDROID_DEATH_MORE_INFORMATION, angdroid_zh_tw_enabled()), 0, 0);
 
 	/* Allow abort at this point */
 	(void)anykey();
@@ -212,7 +214,7 @@ static void death_info(const char *title, int row)
 	if (player->upkeep->equip_cnt) {
 		Term_clear();
 		show_equip(OLIST_WEIGHT | OLIST_SEMPTY | OLIST_DEATH, NULL);
-		prt("You are using: -more-", 0, 0);
+		prt(angdroid_death_prompt(ANGDROID_DEATH_EQUIPMENT, angdroid_zh_tw_enabled()), 0, 0);
 		(void)anykey();
 	}
 
@@ -220,7 +222,7 @@ static void death_info(const char *title, int row)
 	if (player->upkeep->inven_cnt) {
 		Term_clear();
 		show_inven(OLIST_WEIGHT | OLIST_DEATH, NULL);
-		prt("You are carrying: -more-", 0, 0);
+		prt(angdroid_death_prompt(ANGDROID_DEATH_INVENTORY, angdroid_zh_tw_enabled()), 0, 0);
 		(void)anykey();
 	}
 
@@ -228,7 +230,7 @@ static void death_info(const char *title, int row)
 	if (player->upkeep->quiver_cnt) {
 		Term_clear();
 		show_quiver(OLIST_WEIGHT | OLIST_DEATH, NULL);
-		prt("Your quiver holds: -more-", 0, 0);
+		prt(angdroid_death_prompt(ANGDROID_DEATH_QUIVER, angdroid_zh_tw_enabled()), 0, 0);
 		(void)anykey();
 	}
 
@@ -267,7 +269,7 @@ static void death_info(const char *title, int row)
 			}
 
 			/* Caption */
-			prt(format("Your home contains (page %d): -more-", page), 0, 0);
+			prt(format(angdroid_death_prompt(ANGDROID_DEATH_HOME_PAGE, angdroid_zh_tw_enabled()), page), 0, 0);
 
 			/* Wait for it */
 			(void)anykey();
@@ -306,8 +308,8 @@ static void death_examine(const char *title, int row)
 	const char *q, *s;
 
 	/* Get an item */
-	q = "Examine which item? ";
-	s = "You have nothing to examine.";
+	q = angdroid_death_prompt(ANGDROID_DEATH_EXAMINE, angdroid_zh_tw_enabled());
+	s = angdroid_death_prompt(ANGDROID_DEATH_NO_ITEMS, angdroid_zh_tw_enabled());
 
 	while (get_item(&obj, q, s, 0, NULL, (USE_INVEN | USE_QUIVER | USE_EQUIP | IS_HARMLESS))) {
 		char header[120];
@@ -346,7 +348,7 @@ static void death_spoilers(const char *title, int row)
  */
 static void death_new_game(const char *title, int row)
 {
-    play_again = get_check("Start a new game? ");
+    play_again = get_check(angdroid_death_prompt(ANGDROID_DEATH_NEW_GAME, angdroid_zh_tw_enabled()));
 }
 
 /**
@@ -390,6 +392,16 @@ void death_screen(void)
 	event_signal(EVENT_INPUT_FLUSH);
 	event_signal(EVENT_MESSAGE_FLUSH);
 
+	/* Localize display labels only; tags and callback functions
+	 * remain identical for saved keymaps and keyboard navigation. */
+	{
+		size_t i;
+		for (i = 0; i < N_ELEMENTS(death_actions); ++i) {
+			death_actions[i].name = angdroid_death_menu_label(
+				(int)i, angdroid_zh_tw_enabled());
+		}
+	}
+
 	/* Display and use the death menu */
 	death_menu = menu_new_action(death_actions,
 			N_ELEMENTS(death_actions));
@@ -408,7 +420,7 @@ void death_screen(void)
 		}
 		else if (e.type == EVT_SELECT)
 		{
-			done = get_check("Do you want to quit? ");
+			done = get_check(angdroid_death_prompt(ANGDROID_DEATH_QUIT, angdroid_zh_tw_enabled()));
 		}
 	}
 
