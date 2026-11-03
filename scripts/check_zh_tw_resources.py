@@ -22,6 +22,10 @@ UI_XML = [
     RES / "layout" / "splash.xml",
     RES / "layout" / "profileadd.xml",
     RES / "layout" / "storage.xml",
+    RES / "layout" / "keymapeditor.xml",
+    RES / "layout" / "adv_button_options.xml",
+    RES / "layout" / "quantity_layout.xml",
+    RES / "layout" / "opacity_layout.xml",
     RES / "menu" / "profile.xml",
 ]
 ANDROID = "{http://schemas.android.com/apk/res/android}"
@@ -118,6 +122,20 @@ def main():
             item = chinese.get(key)
             if item is None or item.tag != "string" or not (item.text or "").strip():
                 errors.append(f"Missing zh-TW display text: {key}")
+
+    # Names of interactive editor controls must have a zh-TW translation;
+    # shortcut tokens (Ret/Esc/Tab, numeric keycaps) remain intentionally raw.
+    editor_display_keys = (
+        "keymap_editor_action", "keymap_editor_row_1", "keymap_editor_row_2",
+        "adv_button_keymap_action", "adv_button_always_visible",
+        "quantity_all", "opacity_opaque",
+    )
+    for name in editor_display_keys:
+        if name not in english:
+            errors.append(f"Missing English fallback control caption: {name}")
+        item = chinese.get(name)
+        if item is None or item.tag != "string" or not (item.text or "").strip():
+            errors.append(f"Missing zh-TW control caption: {name}")
 
     # Mouse popup display labels may change with locale, but their eight
     # fixed numeric option IDs must always have a matching visible label.
