@@ -263,4 +263,10 @@
         <item>外部儲存空間</item>
         <item>內部儲存空間</item>
     </string-array>
+
+    <!-- Profile validation messages. -->
+    <string name="profile_validation_name_required">請輸入設定檔名稱</string>
+    <string name="profile_validation_savefile_required">請輸入遊戲存檔檔名</string>
+    <string name="profile_validation_duplicate_name">已存在同名設定檔</string>
+    <string name="profile_validation_duplicate_savefile">已有設定檔使用此存檔檔名</string>
 </resources>
