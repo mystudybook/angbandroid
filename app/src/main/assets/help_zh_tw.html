@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Angband Android 版使用說明（繁體中文）</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; margin: 16px; }
+        img { display: block; max-width: 100%; height: auto; margin: 12px 0; }
+        code { overflow-wrap: anywhere; }
+    </style>
+</head>
+<body>
+<h2>Android 版 Angband 使用說明</h2>
+<p>這是經典 Roguelike 遊戲 <strong>Angband</strong> 的非官方 Android 移植版本。本頁是非官方繁體中文翻譯，原始程式及作者資訊保留如下。</p>
+<p>移植專案：<a href="https://github.com/Cuboideb/angbandroid">Cuboideb/angbandroid</a>。本移植版本以<a href="https://github.com/takkaria/angband-android">先前的 Angband Android 移植</a>為基礎，透明鍵盤則參考<a href="https://github.com/Shaosil/Android-Sil">Android-Sil</a>並經過修改。</p>
+<p>在遊戲畫面<strong>長按</strong>即可開啟快速設定與偏好設定。這個移植版本提供多種控制選項，可以依照自己的手機螢幕調整。</p>
+<p>建議先試用：橫向畫面、啟用快捷按鈕列，並在遊戲版本的設定中開啟 <code>center_player</code>。</p>
+
+<h3>角色設定檔與遊戲版本</h3>
+<p>設定檔可用來管理不同角色。每個設定檔都有自己的存檔檔名與按鍵對應設定。</p>
+<p>此版本也包含多種 Angband 變體，例如 FrogComposband、FAangband、Sil-Q 和 NPPAngband；可在「設定」中選擇。建議為不同遊戲版本或角色使用不同設定檔。</p>
+<p>你可以透過快速設定中的「複製按鍵對應與浮動按鈕」，將其他設定檔的配置複製過來。</p>
+
+<h3>輸入方式</h3>
+<p>遊戲支援螢幕鍵盤、快捷按鈕列，以及外接實體鍵盤。</p>
+
+<h3>螢幕鍵盤</h3>
+<p>螢幕鍵盤分為英數與符號兩個頁面，可調整透明度、大小和寬度。當鍵盤較窄時，會改為直向排列。此時可將方向鍵移到右下方，以節省畫面空間。</p>
+<ul>
+    <li>長按遊戲畫面：開啟快速設定。</li>
+    <li>點按 <code>shift</code> 一次：輸入大寫字母；按兩次：發送 Ctrl 組合鍵（如 <code>^P</code>、<code>^F</code>）。</li>
+    <li>長按多數按鍵：設定或移除自訂按鍵對應。</li>
+    <li><code>kmp</code>：切換是否顯示自訂按鍵對應。</li>
+    <li><code>+/-</code>：切換到符號頁面；按 <code>abc</code> 返回。</li>
+</ul>
+
+<h3>快捷按鈕列</h3>
+<p>隱藏螢幕鍵盤時會顯示快捷按鈕列。它有「指令」與「完整」兩種模式。</p>
+<p>指令模式提供常用操作。部分指令不會直接顯示，例如使用魔杖、法杖等，但大多可透過物品欄、Alter 或 Use 指令操作。</p>
+<p>你也可以使用方向鍵，在裝備、背包、地面物品及箭袋等清單間切換。Alter 指令也能開啟寶箱或關門，減少所需按鈕數量。</p>
+<p><img src="ribbon_help.jpg" alt="快捷按鈕列操作說明"></p>
+<p>可以在設定中調整「快捷按鈕大小倍數」等參數。</p>
+
+<h3>透明度</h3>
+<p>在快速設定中選擇「調整透明度」，可快速調整螢幕鍵盤、快捷按鈕列和浮動按鈕的透明度。這項功能也可以指派給按鍵對應，例如眼睛圖示。</p>
+<p><img src="opacity.jpg" alt="透明度設定範例"><img src="eye_icon.jpg" alt="眼睛圖示"></p>
+
+<h3>自訂按鍵對應</h3>
+<p>使用快捷按鈕列時，可在快速設定中選擇「管理按鍵對應」，以建立常用指令的捷徑。</p>
+<p><img src="keymap_editor.jpg" alt="按鍵對應編輯器"></p>
+
+<h3>Android 偏好設定檔</h3>
+<p>每個遊戲版本都可以讀取自己的 <code>android.prf</code>，且移植版本更新時不會覆寫使用者的內容。Angband 和 FAangband 的檔案放在 <code>customize</code> 資料夾；其他變體則放在 <code>pref</code> 資料夾。</p>
+
+<h3>浮動按鈕</h3>
+<p>在快速設定中可以建立浮動按鈕，並將它拖到畫面上的任何位置。每個浮動按鈕必須指定動作（送往遊戲核心的按鍵序列），可另外設定標籤或圖示。</p>
+<p><img src="floating_buttons.jpg" alt="浮動按鈕範例"></p>
+<p>部分浮動按鈕可觸發特殊功能，例如調整透明度或連續移動。</p>
+<p>「overview」按鈕會顯示小型地城概覽圖，可與一般浮動按鈕一樣移動、調整大小與透明度。</p>
+<p><img src="map_fab.jpg" alt="小型地城概覽圖"></p>
+<p>概覽圖也接受觸控：按中央會執行 <code>M</code>（地圖）指令，按外圍則會執行 <code>L</code>（定位）指令。</p>
+
+<h3>觸控方向鍵（D-Pad）</h3>
+<p>遊戲畫面可配置九宮格方向鍵來移動角色，中央格的功能可以自行設定。</p>
+<p>方向鍵也可縮成畫面右側的精簡模式。長按後可以將整組方向鍵拖曳到其他位置。</p>
+<p>除了方向鍵以外，點選終端遊戲畫面的其他位置會向遊戲核心傳送滑鼠點擊事件，可用於移動或選擇選單項目。</p>
+
+<h3>圖形模式</h3>
+<p>Android 移植版支援 Angband 常見的圖塊圖形組，可在設定中選擇。</p>
+<p>也可以試試「ASCII 輔助文字」選項：它會在玩家與怪物圖塊的右下角顯示小型 ASCII 字母，方便從純文字畫面逐漸熟悉圖形模式。</p>
+<p><img src="ascii_helper.jpg" alt="ASCII 輔助文字範例"></p>
+
+<h3>實體鍵盤與其他按鍵</h3>
+<p>裝置的返回鍵可以輸入 Esc。實體按鍵的對應可以在設定中調整；指定新按鍵時，系統會請你按下要設定的實體鍵。</p>
+<p>如果同一個實體按鍵先前已對應其他功能，原本的功能會被解除對應。若將選單鍵指定為其他功能，仍可長按遊戲畫面開啟快速設定。也可以在偏好設定中還原預設按鍵對應。</p>
+<p>按下手機的 Home 鍵後，遊戲會進入背景。原移植版設計為在這個過程中自動儲存遊戲；仍建議依照實際版本確認存檔結果。</p>
+
+<p>祝你遊戲愉快！</p>
+<p>Angband 官方網站：<a href="https://angband.github.io/angband/">https://angband.github.io/angband/</a></p>
+<p>論壇與資源：<a href="http://angband.oook.cz">http://angband.oook.cz</a></p>
+<p>線上英文手冊：<a href="https://angband.readthedocs.io/en/latest/index.html">Angband documentation</a></p>
+
+<h3>原始作者與致謝</h3>
+<p>Android 移植：David Barr、Sergey Belinsky、Dan Vernon。Angband Borg：Dr. Andrew P. White。3.0.6 Squelch：Pete Mack。</p>
+<p>感謝 Angband 開發團隊，以及提供啟發與共用程式碼的 Fredrik Farnstrom（NetHack for Android）。</p>
+</body>
+</html>
