@@ -35,6 +35,12 @@ ARRAY_REF = re.compile(r"^@array/([A-Za-z0-9_]+)$")
 JAVA_RESOURCE_REF = re.compile(r"\bR\.string\.([A-Za-z0-9_]+)\b")
 JAVA_ARRAY_REF = re.compile(r"\bR\.array\.([A-Za-z0-9_]+)\b")
 FORMAT_ARGUMENT = re.compile(r"%(?:[0-9]+\$)?[a-zA-Z]")
+# Command keycaps and numeric selectors are intentionally untranslated.
+COMMAND_KEYCAPS = {"Ret", "Esc", "Space", "Tab", ".", "l", "10", "1"}
+EDITOR_LAYOUT_NAMES = {
+    "keymapeditor.xml", "adv_button_options.xml", "quantity_layout.xml",
+    "opacity_layout.xml", "fab_crud.xml",
+}
 JAVA_UI = [
     ROOT / "app" / "src" / "main" / "java" / "org" / "rephial" / "xyangband" / file
     for file in (
@@ -168,6 +174,16 @@ def main():
             errors.append(f"Invalid UI XML: {path}: {exc}")
             continue
         for elem in root.iter():
+            if path.name in EDITOR_LAYOUT_NAMES:
+                for attr_name in (ANDROID + "text", ANDROID + "hint"):
+                    literal = elem.attrib.get(attr_name)
+                    if literal is not None and (
+                        not RESOURCE_REF.fullmatch(literal)
+                        and literal not in COMMAND_KEYCAPS
+                    ):
+                        errors.append(
+                            f"Hard-coded editor text in {path.name}: {literal}"
+                        )
             entries = elem.attrib.get(ANDROID + "entries", "")
             values = elem.attrib.get(ANDROID + "entryValues", "")
             entry_match = ARRAY_REF.fullmatch(entries)
