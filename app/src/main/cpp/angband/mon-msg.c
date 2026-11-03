@@ -25,6 +25,7 @@
 #include "player-calcs.h"
 #include "droid.h"
 #include "zh-tw-monsters.h"
+#include "zh-tw-mon-pain.h"
 
 /**
  * Maxinum number of stacked monster messages
@@ -462,8 +463,22 @@ static int get_message_type(int msg_code, const struct monster_race *race)
 
 /* Translate by existing enum code so translated sentences never pass
  * through the English singular/plural bracket parser. */
-static const char *get_monster_message_zh_tw(int code)
+static const char *get_monster_message_zh_tw(int code,
+        const struct monster_race *race)
 {
+    const char *source = NULL;
+    switch (code) {
+        case MON_MSG_95: source = race->base->pain->messages[0]; break;
+        case MON_MSG_75: source = race->base->pain->messages[1]; break;
+        case MON_MSG_50: source = race->base->pain->messages[2]; break;
+        case MON_MSG_35: source = race->base->pain->messages[3]; break;
+        case MON_MSG_20: source = race->base->pain->messages[4]; break;
+        case MON_MSG_10: source = race->base->pain->messages[5]; break;
+        case MON_MSG_0:  source = race->base->pain->messages[6]; break;
+        default: break;
+    }
+    if (source) return angdroid_zh_tw_pain_message(source);
+
     switch (code) {
 #define ZH_MON_MSG(name, text) case MON_MSG_##name: return text;
 #include "zh-tw-mon-messages.h"
@@ -519,10 +534,9 @@ static void show_message(struct monster_race_message *msg)
 			msg->race,
 			msg->count > 1);
 
-    /* Unmapped, race-specific pain messages retain the complete
-     * original English pathway, grammar and related sound. */
+    /* Unknown pain text uses the original English pathway and sound. */
     if (angdroid_zh_tw_enabled()) {
-        const char *localized = get_monster_message_zh_tw(msg->msg_code);
+        const char *localized = get_monster_message_zh_tw(msg->msg_code, msg->race);
         if (localized) {
             char subject_zh[256] = "";
             if (!skip_subject(msg->msg_code))

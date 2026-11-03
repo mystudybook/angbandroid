@@ -489,6 +489,8 @@ def main():
     mon_msg_ui = source(CPP / "angband/mon-msg.c", errors)
     mon_msg_originals = source(CPP / "angband/list-mon-message.h", errors)
     mon_msg_zh = source(CPP / "angband/zh-tw-mon-messages.h", errors)
+    pain_source = source(ROOT / "variant_lib/angband/gamedata/pain.txt", errors)
+    pain_zh = source(CPP / "angband/zh-tw-mon-pain.h", errors)
     original_codes = set(re.findall(
         r"^\s*MON_MSG\(\s*([A-Z][A-Z0-9_]*)\s*,",
         mon_msg_originals, re.M)) - {"MAX"}
@@ -527,6 +529,22 @@ def main():
     for terrain in ("rubble", "magma veins", "quartz veins", "granite"):
         expect(('"' + terrain + '"') in object_info_terms,
                "Missing exact terrain name: " + terrain)
+    canonical_pain = {
+        line.split(":", 1)[1] for line in pain_source.splitlines()
+        if line.startswith("message:")
+    }
+    localized_pain = table(pain_zh)
+    expect(len(canonical_pain) == 65 and len(localized_pain) == 65
+           and canonical_pain == {name for name, _ in localized_pain},
+           "Angband pain translations must match every original pain.txt phrase")
+    expect('get_monster_message_zh_tw(msg->msg_code, msg->race)' in mon_msg_ui
+           and 'angdroid_zh_tw_pain_message(source)' in mon_msg_ui,
+           "Monster pain messages are not translated after severity selection")
+    for severity in ("95", "75", "50", "35", "20", "10", "0"):
+        expect('case MON_MSG_' + severity + ':' in mon_msg_ui,
+               "Monster pain severity selection changed: " + severity)
+    expect("test_monster_pain_locale.c" in native_tests,
+           "Monster pain C99 test not registered")
     if errors:
         for item in errors:
             print("FAIL:", item)

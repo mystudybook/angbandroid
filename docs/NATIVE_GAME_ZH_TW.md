@@ -504,6 +504,18 @@ This preserves original digging calculations and text selection conditions.
 English templates remain available, and translated formats are literal
 strings compatible with the NDK format-security checks.
 
+## Monster pain templates translated (2026-11-04)
+
+All **65 unique templates** across 84 entries in the twelve monster
+pain sets from `pain.txt` now have complete Traditional Chinese
+sentences. Each of the seven existing severity codes selects the same
+pain set and text as before, then switches the resulting *display only*
+phrase to Chinese. Unknown strings fall back to the original English
+parser and grammar. Damage thresholds, message events, monster races,
+save data and sound types remain unchanged. A source-to-dictionary
+coverage check and C99 host regression test were added. No complete
+Android compile or device validation has been performed yet.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
