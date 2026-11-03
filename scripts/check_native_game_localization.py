@@ -61,6 +61,8 @@ def main():
     obj_info = source(CPP / "angband/obj-info.c", errors)
     item_info_terms = source(CPP / "angband/zh-tw-item-info.h", errors)
     spell_ui = source(CPP / "angband/ui-spell.c", errors)
+    spell_names = source(CPP / "angband/zh-tw-spell-names.h", errors)
+    class_data = source(ROOT / "variant_lib/angband/gamedata/class.txt", errors)
     magic_terms = source(CPP / "angband/zh-tw-magic.h", errors)
     player_spell = source(CPP / "angband/player-spell.c", errors)
     cave_cmd = source(CPP / "angband/cmd-cave.c", errors)
@@ -558,6 +560,22 @@ def main():
                      'You have slain %s.', 'shimmers and changes!'):
         expect(original in mon_util,
                "Monster kill/shapechange English fallback removed: " + original)
+    spell_keys = {en for en, _ in re.findall(
+        r'^\s*\{\s*"([^"]+)",\s*"([^"]+)"\s*\},\s*$',
+        spell_names, re.MULTILINE)}
+    canonical_spells = {line.split(":")[1]
+                        for line in class_data.splitlines()
+                        if line.startswith("spell:")}
+    expect(spell_keys == canonical_spells,
+           "Spell names must match the full canonical Angband class.txt set")
+    expect('angdroid_zh_tw_spell_name(spell->name' in spell_ui
+           and 'angdroid_utf8_clip_columns(spell_name_buf, 30)' in spell_ui
+           and 'angdroid_utf8_display_columns(spell_name_buf)' in spell_ui,
+           "Spell menu name display needs CJK terminal-column clipping")
+    expect('angdroid_zh_tw_spell_name(spell->name, true)' in player_spell,
+           "Studied spell message should use localized spell name")
+    expect('test_spell_names_locale.c' in native_tests,
+           "Spell-name C99 test missing from native tests")
     if errors:
         for item in errors:
             print("FAIL:", item)

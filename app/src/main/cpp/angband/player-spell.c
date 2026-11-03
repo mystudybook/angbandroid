@@ -29,6 +29,7 @@
 #include "player-spell.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-spell-names.h"
 #include "player-timed.h"
 #include "player-util.h"
 #include "project.h"
@@ -471,7 +472,8 @@ void spell_learn(int spell_index)
 
 	/* Mention the result */
 	if (angdroid_zh_tw_enabled())
-        msgt(MSG_STUDY, "你已學會：%s。", spell->name);
+        msgt(MSG_STUDY, "你已學會：%s。",
+            angdroid_zh_tw_spell_name(spell->name, true));
     else
         msgt(MSG_STUDY, "You have learned the %s of %s.", spell->realm->spell_noun,
              spell->name);

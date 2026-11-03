@@ -76,3 +76,7 @@ CC="${CC:-cc}"
 # Object information property and brand/slay labels.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_object_info_locale.c" -o "$BUILD_DIR/test_object_info_locale"
 "$BUILD_DIR/test_object_info_locale"
+
+# All source class.txt spell names, display-only C99 lookup and English fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_spell_names_locale.c" -o "$BUILD_DIR/test_spell_names_locale"
+"$BUILD_DIR/test_spell_names_locale"

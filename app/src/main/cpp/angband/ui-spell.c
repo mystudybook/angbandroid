@@ -33,6 +33,8 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-magic.h"
+#include "zh-tw-spell-names.h"
+#include "../curses/unicode_display.h"
 
 
 /**
@@ -77,7 +79,9 @@ static void spell_menu_display(struct menu *m, int oid, bool cursor,
 	int attr;
 	const char *illegible = NULL;
 	const char *comment = "";
-	size_t u8len;
+	size_t spell_columns;
+    char spell_name_buf[96];
+    const char *display_spell_name;
 
 	if (!spell) return;
 
@@ -105,20 +109,16 @@ static void spell_menu_display(struct menu *m, int oid, bool cursor,
 		attr = COLOUR_RED;
 	}
 
-	/* Dump the spell --(-- */
-	u8len = utf8_strlen(spell->name);
-	if (u8len < 30) {
-		strnfmt(out, sizeof(out), "%s%*s", spell->name,
-			(int)(30 - u8len), " ");
-	} else {
-		char *name_copy = string_make(spell->name);
-
-		if (u8len > 30) {
-			utf8_clipto(name_copy, 30);
-		}
-		my_strcpy(out, name_copy, sizeof(out));
-		string_free(name_copy);
-	}
+	/* Localize only the presented name, not the class spell entry.
+     * Calculate terminal columns, never UTF-8 bytes or codepoint count:
+     * a Han glyph occupies two cells on Android's curses terminal. */
+    display_spell_name = angdroid_zh_tw_spell_name(spell->name,
+        angdroid_zh_tw_enabled());
+    my_strcpy(spell_name_buf, display_spell_name, sizeof(spell_name_buf));
+    angdroid_utf8_clip_columns(spell_name_buf, 30);
+    spell_columns = angdroid_utf8_display_columns(spell_name_buf);
+    strnfmt(out, sizeof(out), "%s%*s", spell_name_buf,
+        (int)(30 - spell_columns), "");
 	my_strcat(out, format("%2d %4d %3d%%%s", spell->slevel, spell->smana,
 		spell_chance(spell_index), comment), sizeof(out));
 	c_prt(attr, illegible ? illegible : out, row, col);

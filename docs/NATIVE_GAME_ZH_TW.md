@@ -528,6 +528,18 @@ recorded kill history remain unchanged. Visible shape changes use
 a Chinese sentence. Projectile/spell death `note` fragments and all
 gameplay calculations remain on their original pathway.
 
+## All source spell names on selection screens (2026-11-04)
+
+Added display-only Traditional Chinese names for the 133 distinct
+`spell:` values in original Angband `variant_lib/angband/gamedata/class.txt`.
+The spell menu and newly learned spell messages now use this exact mapping,
+but canonical IDs, stored spell names, realm effects and savefiles stay
+unchanged. The spell list clips to whole UTF-8 scalars at 30 terminal display
+columns so Han glyphs do not misalign the required level, mana and fail-rate
+columns. Unknown spell names and English language mode retain the source
+English text. A source-coverage assertion and C99 test prevent omissions
+when the game's spell list changes.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
