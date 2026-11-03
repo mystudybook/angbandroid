@@ -6,8 +6,9 @@
 
 - [中文化進度與測試方法](docs/LOCALIZATION_ZH_TW.md)
 - [遊戲文字顯示／Unicode 技術問題](docs/CJK_RENDERING_AUDIT.md)
-- 用 JDK 執行東亞字元寬度測試：`sh scripts/test-terminal-unicode.sh`
-- 用 Python 檢查 Android 翻譯資源：`python3 scripts/check_zh_tw_resources.py`
+- **一次執行所有離線檢查，並輸出測試紀錄：** `sh scripts/verify-zh-tw.sh`（結果存成 `zh-tw-validation.log`）
+- 分項執行：`python3 scripts/check_zh_tw_resources.py`、`sh scripts/test-terminal-unicode.sh`、`sh scripts/test-native-utf8.sh`。
+- 原生 UTF-8 傳輸與中日韓字寬分類測試已加入；完整原生游標座標與雙格布局仍待同步，尚未完成 APK／實機測試。
 
 以下保留原移植專案的英文說明與原作者資訊。
 
