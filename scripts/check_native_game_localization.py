@@ -63,6 +63,9 @@ def main():
     object_ui = source(CPP / "angband/ui-object.c", errors)
     target_ui = source(CPP / "angband/ui-target.c", errors)
     combat_header = source(CPP / "angband/zh-tw-combat.h", errors)
+    monster_lore = source(CPP / "angband/mon-lore.c", errors)
+    monster_lore_ui = source(CPP / "angband/ui-mon-lore.c", errors)
+    monster_lore_dict = source(CPP / "angband/zh-tw-lore.h", errors)
     store_ui = source(CPP / "angband/ui-store.c", errors)
     knowledge_ui = source(CPP / "angband/ui-knowledge.c", errors)
     input_ui = source(CPP / "angband/ui-input.c", errors)
@@ -282,6 +285,16 @@ def main():
     expect('strnfmt(out_val, sizeof out_val, "取消忽略全部 %s", tmp)' in object_ui
            and 'strnfmt(out_val, sizeof out_val, "Unignore all %s", tmp)' in object_ui,
            "Unignore group must preserve literal Chinese and English printf formats")
+    expect("#define ANGDROID_ZH_TW_MONSTER_LORE 59" in monster_lore_dict,
+           "Monster flavor dictionary size changed")
+    expect("angdroid_zh_tw_monster_flavor(race->name)" in monster_lore
+           and "localized ? localized : race->text" in monster_lore,
+           "Monster flavor display-only mapping or fallback missing")
+    expect("angdroid_zh_tw_monster_list_name(race->name)" in monster_lore_ui
+           and "name_zh ? name_zh : race->name" in monster_lore_ui,
+           "Monster lore title translation or unique fallback missing")
+    expect("test_monster_lore_locale.c" in native_tests,
+           "Monster lore host test not registered")
     if errors:
         for item in errors:
             print("FAIL:", item)

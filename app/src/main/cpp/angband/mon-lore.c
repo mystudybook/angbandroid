@@ -36,6 +36,8 @@
 #include "player-timed.h"
 #include "project.h"
 #include "z-textblock.h"
+#include "droid.h"
+#include "zh-tw-lore.h"
 
 /**
  * Monster genders
@@ -944,7 +946,10 @@ void lore_append_flavor(textblock *tb, const struct monster_race *race)
 {
 	assert(tb && race);
 
-	textblock_append(tb, "%s\n", race->text);
+    /* Flavor localization is display-only and never changes monster records. */
+    const char *localized = angdroid_zh_tw_enabled() ?
+        angdroid_zh_tw_monster_flavor(race->name) : NULL;
+    textblock_append(tb, "%s\n", localized ? localized : race->text);
 }
 
 /**

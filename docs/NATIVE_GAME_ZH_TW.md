@@ -230,6 +230,19 @@ expression. The native source checker asserts both versions remain
 present. This avoids repeating earlier NDK `-Werror=format-security`
 failures in localized printf-like calls.
 
+## Monster lore titles and curated introductions (2026-11-03)
+
+Monster lore titles now reuse the existing Chinese names for *non-unique*
+monsters only; unique monsters and unknown names retain their original
+English and unique colors. 59 early-game monster flavor descriptions
+have curated Traditional Chinese render-time translations, keyed by
+canonical monster name. Underlying monster.txt, lore memory, mechanics and
+savefiles are not modified. Unmapped descriptions fall back to English.
+
+The remaining monster encyclopaedia paragraphs about combat, magic,
+movement, abilities and drops still require separate sentence-level
+translation. Host C99 tests guard the exact dictionary and fallback.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

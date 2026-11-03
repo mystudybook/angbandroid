@@ -24,6 +24,8 @@
 #include "ui-prefs.h"
 #include "ui-term.h"
 #include "z-textblock.h"
+#include "droid.h"
+#include "zh-tw-monsters.h"
 
 /**
  * Place a monster recall title into a textblock.
@@ -50,17 +52,20 @@ void lore_title(textblock *tb, const struct monster_race *race)
 	standard_attr = race->d_attr;
 	optional_attr = monster_x_attr[race->ridx];
 
-	/* A title (use "The" for non-uniques) */
-	if (!rf_has(race->flags, RF_UNIQUE))
-		textblock_append(tb, "The ");
-	else if (OPT(player, purple_uniques)) {
+	/* Translate only curated non-unique display names; preserve uniques. */
+    const char *name_zh = (angdroid_zh_tw_enabled() &&
+        !rf_has(race->flags, RF_UNIQUE)) ?
+        angdroid_zh_tw_monster_list_name(race->name) : NULL;
+    if (!rf_has(race->flags, RF_UNIQUE)) {
+        if (!name_zh) textblock_append(tb, "The ");
+    } else if (OPT(player, purple_uniques)) {
 		standard_attr = COLOUR_VIOLET;
 		if (!(optional_attr & 0x80))
 			optional_attr = COLOUR_VIOLET;
 	}
 
 	/* Dump the name and then append standard attr/char info */
-	textblock_append(tb, "%s", race->name);
+	textblock_append(tb, "%s", name_zh ? name_zh : race->name);
 
 	textblock_append(tb, " ('");
 	textblock_append_pict(tb, standard_attr, standard_char);
@@ -141,11 +146,14 @@ void lore_description(textblock *tb, const struct monster_race *race,
 
 	/* Do we know everything */
 	if (lore_is_fully_known(race))
-		textblock_append(tb, "You know everything about this monster.");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ?
+            "你已經完全了解這隻怪物。" : "You know everything about this monster.");
 
 	/* Notice "Quest" monsters */
 	if (rf_has(race->flags, RF_QUESTOR))
-		textblock_append(tb, "You feel an intense desire to kill this monster...  ");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ?
+            "你強烈地想要擊敗這隻怪物……  " :
+            "You feel an intense desire to kill this monster...  ");
 
 	textblock_append(tb, "\n");
 }
