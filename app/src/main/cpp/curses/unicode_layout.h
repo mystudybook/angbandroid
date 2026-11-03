@@ -104,4 +104,28 @@ static inline void angdroid_expand_redraw_columns(
     }
 }
 
+
+/*
+ * If cell x is one half of a wide glyph, identify the other half.
+ * Return -1 for ordinary cells, tile bytes, invalid positions, or an
+ * orphaned continuation marker. This is independent of curses/term and
+ * can be checked with the host C compiler.
+ */
+static inline int angdroid_wide_partner_column(
+    int width, int x, const wchar_t *cells, const int *attrs)
+{
+    if (!cells || !attrs || width <= 0 || x < 0 || x >= width)
+        return -1;
+
+    if (cells[x] == ANGDROID_TEXT_CONTINUATION &&
+        x > 0 && angdroid_is_wide_text(cells[x - 1], attrs[x - 1]))
+        return x - 1;
+
+    if (x + 1 < width && angdroid_is_wide_text(cells[x], attrs[x]) &&
+        cells[x + 1] == ANGDROID_TEXT_CONTINUATION)
+        return x + 1;
+
+    return -1;
+}
+
 #endif
