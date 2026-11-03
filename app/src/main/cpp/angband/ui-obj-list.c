@@ -25,6 +25,7 @@
 #include "ui-obj-list.h"
 #include "ui-output.h"
 #include "z-textblock.h"
+#include "droid.h"
 
 /**
  * Format a section of the object list: a header followed by object list entry
@@ -61,7 +62,9 @@ static void object_list_format_section(const object_list_t *list,
 	int entry_index;
 	int total;
 	char line_buffer[200];
-	const char *punctuation = (lines_to_display == 0) ? "." : ":";
+	const bool zh_tw = angdroid_zh_tw_enabled();
+	const char *punctuation = (lines_to_display == 0) ?
+		(zh_tw ? "。" : ".") : (zh_tw ? "：" : ":");
 	const char *others = (show_others) ? "other " : "";
 	size_t max_line_length = 0;
 
@@ -72,7 +75,7 @@ static void object_list_format_section(const object_list_t *list,
 
 	if (list->total_entries[section] == 0) {
 		max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
-								  "%s no objects.\n", prefix);
+			zh_tw ? "%s沒有物品。\n" : "%s no objects.\n", prefix);
 
 		if (tb != NULL)
 			textblock_append(tb, "%s", line_buffer);
@@ -84,11 +87,16 @@ static void object_list_format_section(const object_list_t *list,
 		return;
 	}
 
-	max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
-							  "%s %d %sobject%s%s\n", prefix,
-							  list->total_entries[section], others,
-							  PLURAL(list->total_entries[section]),
-							  punctuation);
+	if (zh_tw) {
+		max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
+			"%s有 %d 件%s物品%s\n", prefix, list->total_entries[section],
+			show_others ? "其他" : "", punctuation);
+	} else {
+		max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
+			"%s %d %sobject%s%s\n", prefix,
+			list->total_entries[section], others,
+			PLURAL(list->total_entries[section]), punctuation);
+	}
 
 	if (tb != NULL)
 		textblock_append(tb, "%s", line_buffer);
@@ -174,7 +182,8 @@ static void object_list_format_section(const object_list_t *list,
 	remaining_object_total = total - entry_index;
 
 	if (tb != NULL)
-		textblock_append(tb, "%6s...and %d others.\n", " ", remaining_object_total);
+		textblock_append(tb, zh_tw ? "%6s……另有 %d 件物品。\n" :
+			"%6s...and %d others.\n", " ", remaining_object_total);
 }
 
 /**
@@ -272,7 +281,8 @@ static void object_list_format_textblock(const object_list_t *list,
         
 	object_list_format_section(list, tb, OBJECT_LIST_SECTION_LOS,
 							   los_lines_to_display, max_width,
-							   "You can see", false, &max_los_line);
+							   (angdroid_zh_tw_enabled() ? "視野內" : "You can see"),
+							   false, &max_los_line);
 
 	if (list->total_entries[OBJECT_LIST_SECTION_NO_LOS] > 0) {
          bool show_others = list->total_objects[OBJECT_LIST_SECTION_LOS] > 0;
@@ -282,7 +292,8 @@ static void object_list_format_textblock(const object_list_t *list,
 
          object_list_format_section(list, tb, OBJECT_LIST_SECTION_NO_LOS,
 									no_los_lines_to_display, max_width,
-									"You are aware of", show_others,
+									(angdroid_zh_tw_enabled() ? "感知範圍內" : "You are aware of"),
+									show_others,
 									&max_no_los_line);
 	}
 
