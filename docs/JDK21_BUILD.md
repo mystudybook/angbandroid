@@ -25,14 +25,15 @@ The `master` branch uses **JDK 21** to run Gradle and compile Android source.
 1. Install a JDK 21 distribution (Temurin, or any suitable JDK 21). In Android Studio select **Settings / Preferences → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK → JDK 21**.
 2. Open the **repository root** in Android Studio using **Open**, not the `app` subdirectory.
 3. Install Android SDK Platform 35, SDK Build Tools 35.0.0, Android NDK 21.0.6113669, and CMake 3.10.2 in **Tools → SDK Manager**. Enable **Show Package Details** to select specific NDK and CMake versions.
-4. Confirm that the root `local.properties` (not committed to Git) includes the actual SDK directory and the existing `ABI_FILTERS` setting:
+4. **`ABI_FILTERS` is now optional.** Android Studio can create `local.properties` with the SDK path, and the debug build defaults to `arm64-v8a`. You do not need to add a custom `ABI_FILTERS` line just to open or sync the project. An optional `local.properties` looks like:
 
 ```properties
 sdk.dir=/Users/YOUR_USER/Library/Android/sdk
-ABI_FILTERS=arm64-v8a
 ```
 
-Use `ABI_FILTERS=x86_64` instead for an Intel x86_64 emulator; choose the ABI supported by the emulator or physical device.
+If Android Studio has not created this file, you can instead set `ANDROID_HOME` to the SDK directory. For an Intel `x86_64` emulator, pass `-PABI_FILTERS=x86_64` to Gradle, or use `ABI_FILTERS=x86_64 sh scripts/verify-zh-tw.sh --android`. Multiple ABIs can be separated by commas or semicolons.
+
+For existing installations, an old `ABI_FILTERS` value in `local.properties` is still accepted when no `-PABI_FILTERS` option is supplied. Android recommends keeping `local.properties` for SDK-specific paths, so new custom Gradle settings should normally use a project property or `~/.gradle/gradle.properties` instead.
 
 5. In the Android Studio terminal, make sure JDK 21 is in use (the Android Studio Gradle JDK selection controls IDE builds; `JAVA_HOME` controls shell builds):
 
@@ -43,7 +44,13 @@ sh ./gradlew --version
 sh scripts/verify-zh-tw.sh --android
 ```
 
-The optional `--android` flag invokes Gradle `:app:assembleDebug` after the offline checks. Its log is saved in `zh-tw-validation.log`. When successful, the APK normally appears under `app/build/outputs/apk/debug/app-debug.apk`.
+The optional `--android` flag invokes Gradle `:app:assembleDebug` after the offline checks. It records the active `java`, `javac`, Gradle runtime and a full build stacktrace when necessary in `zh-tw-validation.log`. When successful, the APK normally appears under `app/build/outputs/apk/debug/app-debug.apk`.
+
+For an x86_64 emulator, run:
+
+```bash
+ABI_FILTERS=x86_64 sh scripts/verify-zh-tw.sh --android
+```
 
 You can also use **Build → Make Project** or **Run** in Android Studio, selecting an Android emulator or a physical test device. Prefer a fresh emulator or disposable data; this app uses the same `applicationId` as the upstream port and could encounter existing user save data if installed over another build.
 
@@ -54,11 +61,12 @@ You can also use **Build → Make Project** or **Run** in Android Studio, select
 - Stopped pinning obsolete SDK Build Tools 30.0.3; AGP 8.9 selects Build Tools 35.0.0.
 - Enabled AndroidX and preserved the legacy final/transitive `R` reference behavior through the tracked `gradle.properties`.
 - Preserved existing `applicationId`, `targetSdk`, `minSdk`, and NDK versions to keep behavior changes outside this migration.
+- Removed the mandatory custom `local.properties` ABI field from Gradle Sync; default debug ABI is `arm64-v8a`, with a Gradle project property override and backwards-compatible optional legacy field.
 
 ## Diagnosing failures
 
 - **JDK version below 21:** configure Gradle JDK to 21 in Android Studio, and/or set shell `JAVA_HOME` with `/usr/libexec/java_home -v 21`.
-- **Missing `ABI_FILTERS`:** update root `local.properties`; it is intentionally ignored by Git.
+- **Wrong emulator ABI / missing native library:** use `ABI_FILTERS=x86_64 sh scripts/verify-zh-tw.sh --android` for an x86_64 emulator. The default build targets ARM64; `ABI_FILTERS` is no longer required for Gradle Sync.
 - **Missing SDK/NDK/CMake:** install the pinned packages via SDK Manager and accept SDK licenses.
 - **Gradle Sync or dependency errors:** review the first `FAIL` stage and stack trace in `zh-tw-validation.log`, rather than upgrading Gradle/AGP arbitrarily.
 - **`git pull` reports a local `gradle.properties` conflict:** the migration now tracks a non-secret `gradle.properties`. Back up your local untracked file before pulling and reapply any custom options through `~/.gradle/gradle.properties` as needed.
