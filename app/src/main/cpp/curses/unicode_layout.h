@@ -157,4 +157,15 @@ static inline wchar_t angdroid_fixed_cell_glyph(wchar_t ch, int attr)
     return ch;
 }
 
+
+/*
+ * The continuation marker is an internal display-grid detail and must
+ * never escape through Term_what(), which callers use to inspect cells.
+ * The public API sees an empty cell instead.
+ */
+static inline wchar_t angdroid_public_grid_glyph(wchar_t ch)
+{
+    return ch == ANGDROID_TEXT_CONTINUATION ? L' ' : ch;
+}
+
 #endif
