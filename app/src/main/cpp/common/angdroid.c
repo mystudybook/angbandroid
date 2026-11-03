@@ -24,6 +24,8 @@
 #include "ui-output.h"
 #include "curses.h"
 #include "../curses/unicode_layout.h"
+#include "../curses/unicode_utf8.h"
+#include "z-util.h"
 #include "grafmode.h"
 
 #include "angband.h"
@@ -743,11 +745,34 @@ static void hook_quit(const char* str)
 }
 
 /*
+ * Use a deterministic Unicode conversion policy for the Android terminal.
+ * The display and input paths must not silently interpret UTF-8 as Latin-1
+ * or rely on whichever LC_CTYPE the Android process inherited.
+ */
+static int android_utf8_encode_character(char *out, wchar_t ch)
+{
+	size_t len = angdroid_encode_wide_utf8(&ch, 1, out, 5);
+	return len == (size_t)-1 ? -1 : (int)len;
+}
+
+static int android_utf8_max_character_size(void)
+{
+	return 5; /* Four UTF-8 bytes and a NUL terminator. */
+}
+
+/*
  * Initialization function
  */
 errr init_android(void)
 {
 	int i;
+
+	/* Route UTF-8 conversions through the same strict scalar decoder used
+	 * for the native Android terminal. This is intentionally Angband-only;
+	 * other bundled variants retain their own encoding choices. */
+	text_mbcs_hook = angdroid_decode_utf8_wide;
+	text_wctomb_hook = android_utf8_encode_character;
+	text_wcsz_hook = android_utf8_max_character_size;
 
 	/* Initialize globals XXX XXX XXX */
 
