@@ -45,6 +45,11 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text("Buy", 1), "提高") == 0);
     assert(strcmp(angdroid_game_ui_text("Sell", 1), "降低") == 0);
     assert(strcmp(angdroid_game_ui_text("Your Home", 0), "Your Home") == 0);
+    assert(strcmp(angdroid_game_ui_text("You cannot browse that.", 1),
+                  "無法瀏覽這本書。") == 0);
+    assert(strcmp(angdroid_game_ui_text(" untried", 1), " 未使用") == 0);
+    assert(strcmp(angdroid_game_ui_text("You cannot browse that.", 0),
+                  "You cannot browse that.") == 0);
     assert(strcmp(angdroid_game_ui_text("New game", 0), "New game") == 0);
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);

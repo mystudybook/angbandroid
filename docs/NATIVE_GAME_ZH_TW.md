@@ -120,6 +120,15 @@ selection indices, and gameplay data stay unchanged.
 These are source-level changes with a host Unicode clipping regression
 test; on-device visual checking in both ASCII and tile modes is pending.
 
+## Spell menu and learning feedback (2026-11-03)
+
+The original Angband spell menu displays Chinese prompts for spell selection,
+book browsing and spell statuses. Spell learning and concentration failure
+messages have Chinese variants. The average-damage browser header/footer is
+localized, while the spells' underlying names, effect types and data remain
+English. Every translated formatted message uses a language-specific literal
+format string, preserving NDK format-security compilation.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

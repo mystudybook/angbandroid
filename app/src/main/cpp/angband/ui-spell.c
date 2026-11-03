@@ -30,6 +30,8 @@
 #include "ui-menu.h"
 #include "ui-output.h"
 #include "ui-spell.h"
+#include "droid.h"
+#include "zh-tw-ui.h"
 
 
 /**
@@ -79,10 +81,10 @@ static void spell_menu_display(struct menu *m, int oid, bool cursor,
 	if (!spell) return;
 
 	if (spell->slevel >= 99) {
-		illegible = "(illegible)";
+		illegible = angdroid_game_ui_text("(illegible)", angdroid_zh_tw_enabled());
 		attr = COLOUR_L_DARK;
 	} else if (player->spell_flags[spell_index] & PY_SPELL_FORGOTTEN) {
-		comment = " forgotten";
+		comment = angdroid_game_ui_text(" forgotten", angdroid_zh_tw_enabled());
 		attr = COLOUR_YELLOW;
 	} else if (player->spell_flags[spell_index] & PY_SPELL_LEARNED) {
 		if (player->spell_flags[spell_index] & PY_SPELL_WORKED) {
@@ -91,14 +93,14 @@ static void spell_menu_display(struct menu *m, int oid, bool cursor,
 			comment = help;
 			attr = COLOUR_WHITE;
 		} else {
-			comment = " untried";
+			comment = angdroid_game_ui_text(" untried", angdroid_zh_tw_enabled());
 			attr = COLOUR_L_GREEN;
 		}
 	} else if (spell->slevel <= player->lev) {
-		comment = " unknown";
+		comment = angdroid_game_ui_text(" unknown", angdroid_zh_tw_enabled());
 		attr = COLOUR_L_BLUE;
 	} else {
-		comment = " difficult";
+		comment = angdroid_game_ui_text(" difficult", angdroid_zh_tw_enabled());
 		attr = COLOUR_RED;
 	}
 
@@ -175,7 +177,7 @@ static void spell_menu_browser(int oid, void *data, const region *loc)
 			dice_t *shared_dice = NULL;
 			int i = 0;
 
-			text_out("  Inflicts an average of");
+			text_out("%s", angdroid_zh_tw_enabled() ? "  平均造成" : "  Inflicts an average of");
 			for (struct effect *e = spell->effect; e != NULL; e = effect_next(e)) {
 				if (e->index == EF_SET_VALUE) {
 					shared_dice = e->dice;
@@ -187,7 +189,7 @@ static void spell_menu_browser(int oid, void *data, const region *loc)
 						text_out(",");
 					}
 					if (num_damaging > 1 && i == num_damaging - 1) {
-						text_out(" and");
+						text_out("%s", angdroid_zh_tw_enabled() ? " 與" : " and");
 					}
 					text_out_c(COLOUR_L_GREEN, " %d", effect_avg_damage(e, shared_dice));
 					const char *projection = effect_projection(e);
@@ -197,7 +199,7 @@ static void spell_menu_browser(int oid, void *data, const region *loc)
 					i++;
 				}
 			}
-			text_out(" damage.");
+			text_out("%s", angdroid_zh_tw_enabled() ? " 點傷害。" : " damage.");
 		}
 		text_out("\n\n");
 
@@ -282,9 +284,13 @@ static int spell_menu_select(struct menu *m, const char *noun, const char *verb)
 	region_erase_bordered(&m->active);
 
 	/* Format, capitalise and display */
-	strnfmt(buf, sizeof buf, "%s which %s? ('?' to toggle description)",
-			verb, noun);
-	my_strcap(buf);
+	if (angdroid_zh_tw_enabled()) {
+        strnfmt(buf, sizeof buf, "選擇%s（%s）？按 ? 切換說明", noun, verb);
+    } else {
+        strnfmt(buf, sizeof buf, "%s which %s? ('?' to toggle description)",
+                verb, noun);
+        my_strcap(buf);
+    }
 	prt(buf, 0, 0);
 
 	menu_select(m, 0, true);
@@ -303,7 +309,10 @@ static void spell_menu_browse(struct menu *m, const char *noun)
 	screen_save();
 
 	region_erase_bordered(&m->active);
-	prt(format("Browsing %ss. ('?' to toggle description)", noun), 0, 0);
+	if (angdroid_zh_tw_enabled())
+        prt(format("瀏覽%s（按 ? 切換說明）", noun), 0, 0);
+    else
+        prt(format("Browsing %ss. ('?' to toggle description)", noun), 0, 0);
 
 	d->browse = true;
 	menu_select(m, 0, true);
@@ -324,7 +333,7 @@ void textui_book_browse(const struct object *obj)
 		spell_menu_browse(m, noun);
 		spell_menu_destroy(m);
 	} else {
-		msg("You cannot browse that.");
+		msg("%s", angdroid_game_ui_text("You cannot browse that.", angdroid_zh_tw_enabled()));
 	}
 }
 
@@ -335,8 +344,8 @@ void textui_spell_browse(void)
 {
 	struct object *obj;
 
-	if (!get_item(&obj, "Browse which book? ",
-				  "You have no books that you can read.",
+	if (!get_item(&obj, angdroid_game_ui_text("Browse which book? ", angdroid_zh_tw_enabled()),
+				  angdroid_game_ui_text("You have no books that you can read.", angdroid_zh_tw_enabled()),
 				  CMD_BROWSE_SPELL, obj_can_browse,
 				  (USE_INVEN | USE_FLOOR | IS_HARMLESS)))
 		return;
@@ -385,8 +394,12 @@ int textui_get_spell(struct player *p, const char *verb,
 	struct object *book;
 
 	/* Create prompt */
-	strnfmt(prompt, sizeof prompt, "%s which book?", verb);
-	my_strcap(prompt);
+	if (angdroid_zh_tw_enabled())
+        strnfmt(prompt, sizeof prompt, "選擇要%s的書本：", verb);
+    else {
+        strnfmt(prompt, sizeof prompt, "%s which book?", verb);
+        my_strcap(prompt);
+    }
 
 	if (!get_item(&book, prompt, book_error,
 				  cmd, book_filter, (USE_INVEN | USE_FLOOR)))

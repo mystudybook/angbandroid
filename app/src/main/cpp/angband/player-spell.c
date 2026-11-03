@@ -27,6 +27,8 @@
 #include "object.h"
 #include "player-calcs.h"
 #include "player-spell.h"
+#include "droid.h"
+#include "zh-tw-ui.h"
 #include "player-timed.h"
 #include "player-util.h"
 #include "project.h"
@@ -468,16 +470,22 @@ void spell_learn(int spell_index)
 	player->spell_order[i] = spell_index;
 
 	/* Mention the result */
-	msgt(MSG_STUDY, "You have learned the %s of %s.", spell->realm->spell_noun,
-		 spell->name);
+	if (angdroid_zh_tw_enabled())
+        msgt(MSG_STUDY, "你已學會：%s。", spell->name);
+    else
+        msgt(MSG_STUDY, "You have learned the %s of %s.", spell->realm->spell_noun,
+             spell->name);
 
 	/* One less spell available */
 	player->upkeep->new_spells--;
 
 	/* Message if needed */
 	if (player->upkeep->new_spells)
-		msg("You can learn %d more %s%s.", player->upkeep->new_spells,
-			spell->realm->spell_noun, PLURAL(player->upkeep->new_spells));
+		if (angdroid_zh_tw_enabled())
+            msg("你還可以學習 %d 項新法術。", player->upkeep->new_spells);
+        else
+            msg("You can learn %d more %s%s.", player->upkeep->new_spells,
+                spell->realm->spell_noun, PLURAL(player->upkeep->new_spells));
 
 	/* Redraw Study Status */
 	player->upkeep->redraw |= (PR_STUDY | PR_OBJECT);
@@ -507,7 +515,7 @@ bool spell_cast(int spell_index, int dir, struct command *cmd)
 	/* Fail or succeed */
 	if (randint0(100) < chance) {
 		event_signal(EVENT_INPUT_FLUSH);
-		msg("You failed to concentrate hard enough!");
+		msg("%s", angdroid_game_ui_text("You failed to concentrate hard enough!", angdroid_zh_tw_enabled()));
 	} else {
 		/* Cast the spell */
 		if (!effect_do(spell->effect, source_player(), NULL, &ident, true, dir,

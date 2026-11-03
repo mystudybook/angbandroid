@@ -247,6 +247,15 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"Current action (if any) shown below:", "目前的動作如下："},
         {"File: ", "檔案："},
         {"Window flags (<dir> to move, 't'/Enter to toggle, or ESC)", "視窗選項：方向鍵移動／t、Enter 切換／Esc 返回"},
+        {"(illegible)", "（無法辨識）"},
+        {" forgotten", " 已遺忘"},
+        {" untried", " 未使用"},
+        {" unknown", " 未學會"},
+        {" difficult", " 等級不足"},
+        {"You cannot browse that.", "無法瀏覽這本書。"},
+        {"Browse which book? ", "要瀏覽哪本書？ "},
+        {"You have no books that you can read.", "沒有可以閱讀的法術書。"},
+        {"You failed to concentrate hard enough!", "你無法集中精神，施法失敗！"},
     };
     size_t i;
     if (!zh_tw || !en) return en;

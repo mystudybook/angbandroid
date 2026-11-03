@@ -55,6 +55,8 @@ def main():
     menu_ui = source(CPP / "angband/ui-menu.c", errors)
     context_ui = source(CPP / "angband/ui-context.c", errors)
     game_ui = source(CPP / "angband/ui-game.c", errors)
+    spell_ui = source(CPP / "angband/ui-spell.c", errors)
+    player_spell = source(CPP / "angband/player-spell.c", errors)
     store_ui = source(CPP / "angband/ui-store.c", errors)
     knowledge_ui = source(CPP / "angband/ui-knowledge.c", errors)
     input_ui = source(CPP / "angband/ui-input.c", errors)
@@ -196,6 +198,13 @@ def main():
            "Character sheet value clipping may split UTF-8 glyphs")
     expect("Term_putstr(col, row, -1, COLOUR_WHITE, pl->label)" in player_ui,
            "Character sheet labels may be cut at a UTF-8 byte boundary")
+    expect('"You cannot browse that."' in game_ui_header
+           and '"無法瀏覽這本書。"' in game_ui_header,
+           "Missing spell menu translation")
+    expect('strnfmt(buf, sizeof buf, "選擇%s（%s）？按 ? 切換說明"' in spell_ui,
+           "Spell selection not localized with a literal printf format")
+    expect('msgt(MSG_STUDY, "你已學會：%s。"' in player_spell,
+           "Spell learning message not localized")
     if errors:
         for item in errors:
             print("FAIL:", item)
