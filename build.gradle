@@ -24,6 +24,7 @@ allprojects {
     }
 }
 
-task clean(type: Delete) {
-    delete rootProject.buildDir
+// Gradle 9: register lazily and avoid the deprecated Project.buildDir getter.
+tasks.register('clean', Delete) {
+    delete rootProject.layout.buildDirectory
 }
