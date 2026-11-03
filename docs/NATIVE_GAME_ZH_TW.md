@@ -103,6 +103,23 @@ display-only labels. Translatable fixed messages use `msg("%s", translated)`
 to preserve `-Werror=format-security` compatibility. This scope does not
 include full combat narration, class title progression or all options text.
 
+## CJK character-sheet and dynamic-menu layout fix (2026-11-03)
+
+The native character sheet previously used `strlen()` (UTF-8 bytes) to
+measure labels and values, and even passed the byte count as the text
+length to `Term_putstr()`. It now calculates terminal display columns,
+clips values to whole UTF-8 glyphs and renders strings without byte-count
+truncation. Race/class names are still read from unchanged English data.
+
+The native dynamic context menu also previously sized its dialog with
+`strlen()`, which could overestimate Chinese labels and result in a
+negative starting column on narrow screens. It now uses display columns
+and bounds the menu width to the terminal. All command shortcuts, menu
+selection indices, and gameplay data stay unchanged.
+
+These are source-level changes with a host Unicode clipping regression
+test; on-device visual checking in both ASCII and tile modes is pending.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

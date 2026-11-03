@@ -49,6 +49,15 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);
     assert(angdroid_utf8_display_columns("繁體中文") == 8);
+    assert(angdroid_utf8_display_columns("Half-Troll") == 10);
+    assert(angdroid_utf8_display_columns("半食人妖") == 8);
+    /* A narrow panel must not cut in the middle of a UTF-8 code point. */
+    {
+        char clipped[32] = "半食人妖";
+        angdroid_utf8_clip_columns(clipped, 5);
+        assert(strcmp(clipped, "半食") == 0);
+        assert(angdroid_utf8_display_columns(clipped) == 4);
+    }
     puts("PASS: Angband game UI Traditional Chinese labels");
     return 0;
 }

@@ -24,6 +24,7 @@
 #include "ui-menu.h"
 
 #include "droid.h"
+#include "../curses/unicode_display.h"
 
 /**
  * Cursor colours
@@ -1192,7 +1193,8 @@ size_t menu_dynamic_longest_entry(struct menu *m)
 	struct menu_entry *entry;
 
 	for (entry = menu_priv(m); entry; entry = entry->next) {
-		current = strlen(entry->text);
+		/* Dynamic menu widths are terminal columns, not UTF-8 bytes. */
+		current = angdroid_utf8_display_columns(entry->text);
 		if (current > biggest)
 			biggest = current;
 	}
@@ -1205,7 +1207,10 @@ void menu_dynamic_calc_location(struct menu *m, int mx, int my)
 	region r;
 
 	/* work out display region */
-	r.width = menu_dynamic_longest_entry(m) + 3 + 2; /* +3 for tag, 2 for pad */
+	/* Reserve room for the selector tag and padding, but never place a
+	 * CJK menu outside the terminal when text is unusually long. */
+	r.width = (int)MIN(menu_dynamic_longest_entry(m) + 3 + 2,
+		(size_t)MAX(1, Term->wid - 2));
 	if (mx > Term->wid - r.width - 1) {
 		r.col = Term->wid - r.width - 1;
 	} else {

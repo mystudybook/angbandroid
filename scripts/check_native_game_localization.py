@@ -52,6 +52,7 @@ def main():
     game_ui_header = source(CPP / "angband/zh-tw-ui.h", errors)
     birth_ui = source(CPP / "angband/ui-birth.c", errors)
     player_ui = source(CPP / "angband/ui-player.c", errors)
+    menu_ui = source(CPP / "angband/ui-menu.c", errors)
     context_ui = source(CPP / "angband/ui-context.c", errors)
     game_ui = source(CPP / "angband/ui-game.c", errors)
     store_ui = source(CPP / "angband/ui-store.c", errors)
@@ -185,6 +186,16 @@ def main():
     expect('home ? "存放" : "出售"' in store_ui and
            'home ? "取出" : "購買"' in store_ui,
            "Store Buy/Sell must differ from character stat adjustment labels")
+    expect("angdroid_utf8_display_columns(entry->text)" in menu_ui,
+           "Dynamic menu geometry uses UTF-8 byte length instead of columns")
+    expect("MIN(menu_dynamic_longest_entry(m) + 3 + 2" in menu_ui,
+           "Dynamic menu geometry needs a screen-width bound")
+    expect("angdroid_utf8_display_columns(pl->label)" in player_ui,
+           "Character sheet label alignment uses UTF-8 byte length")
+    expect("angdroid_utf8_clip_columns(value" in player_ui,
+           "Character sheet value clipping may split UTF-8 glyphs")
+    expect("Term_putstr(col, row, -1, COLOUR_WHITE, pl->label)" in player_ui,
+           "Character sheet labels may be cut at a UTF-8 byte boundary")
     if errors:
         for item in errors:
             print("FAIL:", item)

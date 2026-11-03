@@ -43,6 +43,7 @@
 
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "../curses/unicode_display.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -596,30 +597,36 @@ static void display_panel(const struct panel *p, bool left_adj,
 
 	if (left_adj) {
 		for (i = 0; i < p->len; i++) {
-			struct panel_line *pl = &p->lines[i];
-
-			int len = pl->label ? strlen(pl->label) : 0;
-			if (offset < len) offset = len;
+			const struct panel_line *pl = &p->lines[i];
+			int columns = pl->label ?
+				(int)angdroid_utf8_display_columns(pl->label) : 0;
+			if (offset < columns) offset = columns;
 		}
 		offset += 2;
 	}
 
 	for (i = 0; i < p->len; i++, row++) {
-		int len;
-		struct panel_line *pl = &p->lines[i];
+		char value[sizeof(p->lines[i].value)];
+		int columns;
+		int available;
+		const struct panel_line *pl = &p->lines[i];
 
 		if (!pl->label)
 			continue;
 
-		Term_putstr(col, row, strlen(pl->label), COLOUR_WHITE, pl->label);
+		/* A Chinese glyph is multiple UTF-8 bytes but two screen columns.
+		 * Term_putstr(-1) renders all whole scalars, not a byte count. */
+		Term_putstr(col, row, -1, COLOUR_WHITE, pl->label);
 
-		len = strlen(pl->value);
-		len = len < w - offset ? len : w - offset - 1;
-
+		available = w - offset;
+		if (available <= 0) continue;
+		my_strcpy(value, pl->value, sizeof(value));
+		angdroid_utf8_clip_columns(value, (size_t)available);
+		columns = (int)angdroid_utf8_display_columns(value);
 		if (left_adj)
-			Term_putstr(col+offset, row, len, pl->attr, pl->value);
+			Term_putstr(col + offset, row, -1, pl->attr, value);
 		else
-			Term_putstr(col+w-len, row, len, pl->attr, pl->value);
+			Term_putstr(col + w - columns, row, -1, pl->attr, value);
 	}
 }
 
