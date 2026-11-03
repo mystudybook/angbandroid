@@ -486,4 +486,14 @@
     <string name="adv_button_always_visible">Always visible</string>
     <string name="quantity_all">All</string>
     <string name="opacity_opaque">Opaque</string>
+
+    <!-- Floating button editor labels; internal action strings remain unchanged. -->
+    <string name="fab_label">Label:</string>
+    <string name="fab_label_optional">optional</string>
+    <string name="fab_overview">Overview</string>
+    <string name="fab_fixed_position">Fixed XY</string>
+    <string name="fab_icon">Icon:</string>
+    <string name="fab_global_size">Global button size:</string>
+    <string name="fab_button_size">This button size:</string>
+    <string name="fab_button_opacity">This button opacity:</string>
 </resources>
