@@ -38,12 +38,18 @@ def main():
         except OSError as exc:
             problems.append(f"{path}: {exc}")
             return False
+        # Windows checkouts may normalize launcher line endings; Git's
+        # underlying blob still uses LF for these two text files.
+        if path in ("gradlew", "gradlew.bat"):
+            content = content.replace(b"\r\n", b"\n")
         prefix = f"blob {len(content)}\0".encode("ascii")
         return hashlib.sha1(prefix + content).hexdigest() == expected_sha
 
     expected = {
         "AGP 9.0.1": "com.android.tools.build:gradle:9.0.1" in top,
         "Gradle 9.1.0": "gradle-9.1.0-bin.zip" in wrapper,
+        "Wrapper distribution URL validated": "validateDistributionUrl=true" in wrapper,
+        "Wrapper download timeout": "networkTimeout=10000" in wrapper,
         "Official Gradle 9.1.0 wrapper JAR":
             git_blob_matches("gradle/wrapper/gradle-wrapper.jar",
                              "8bdaf60c75ab801e22807dde59e12a8735a34077"),
