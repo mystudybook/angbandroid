@@ -859,7 +859,7 @@ public class TermView extends View implements OnGestureListener {
 				TermWindow.TermPoint p = w.buffer[r2][c];
 
 				// Ignore graphics
-				if (p.isGraphicTile() || p.isBigPad()) continue;
+				if (p.isGraphicTile() || p.isBigPad() || p.isTextContinuation()) continue;
 
 				char ch = p.ch;
 
@@ -867,7 +867,8 @@ public class TermView extends View implements OnGestureListener {
 
 				int x = startX + c * tw;
 
-				if (x + tw > maxWidth) continue;
+				int spanPx = tw * (p.textColumns == 2 ? 2 : 1);
+				if (x + spanPx > maxWidth) continue;
 
 				if (r != lastRow) {
 					lastRow = r;
@@ -878,7 +879,7 @@ public class TermView extends View implements OnGestureListener {
 
 				if (y + th > maxHeight) return;
 
-				String str = ch + "";
+				String str = p.displayText();
 
 				int color = Color.WHITE;
 				TermWindow.ColorPair pair = TermWindow.pairs.get(p.fgColor);
@@ -890,17 +891,18 @@ public class TermView extends View implements OnGestureListener {
 				paint.setAlpha(255);
 
 				Paint glyphPaint = paint;
-				if (TerminalUnicode.isWide(ch)) {
-					// Retain the one-cell layout for now; use the device CJK fallback.
+				int codePoint = p.textCodePoint > 0 ? p.textCodePoint : ch;
+				if (TerminalUnicode.isWide(codePoint)) {
+					// Reserve two terminal cells for a wide Unicode text glyph.
 					glyphPaint = new Paint(paint);
 					glyphPaint.setTypeface(Typeface.DEFAULT_BOLD);
 					float glyphWidth = glyphPaint.measureText(str);
-					if (glyphWidth > tw && tw > 0) {
-						glyphPaint.setTextScaleX((float)tw / glyphWidth);
+					if (glyphWidth > spanPx && spanPx > 0) {
+						glyphPaint.setTextScaleX((float)spanPx / glyphWidth);
 					}
 				}
-				int w2 = (int)glyphPaint.measureText(str, 0, 1);
-				int pad = Math.max((tw - w2) / 2, 0);
+				int w2 = (int)glyphPaint.measureText(str);
+				int pad = Math.max((spanPx - w2) / 2, 0);
 
 				p_canvas.drawText(str,
 						x + pad,
@@ -3147,14 +3149,14 @@ public class TermView extends View implements OnGestureListener {
 			return;
 		}
 
-		if (p.isBigPad()) return;
+		if (p.isBigPad() || p.isTextContinuation()) return;
 
 		char ch = p.ch;
 
 		Paint fore_temp = fore;
-		int tw = char_width;
+		int tw = char_width * (p.textColumns == 2 ? 2 : 1);
 		int th = char_height;
-		int x = c * tw;
+		int x = c * char_width;
 		int y = r * th;
 
 		// The text path already holds decoded UTF-16 characters. Masking to
@@ -3169,25 +3171,22 @@ public class TermView extends View implements OnGestureListener {
 
 		if (ch != ' ') {
 
-			String str = ch + "";
+			String str = p.displayText();
 
-			// The bundled bitmap/monospace fonts do not guarantee CJK coverage.
-			// Use Android's system font fallback for East Asian BMP characters.
-			// This is intentionally a one-cell compatibility fallback, not yet
-			// a full double-column terminal layout implementation.
-			boolean eastAsian = TerminalUnicode.isWide(ch);
+			// The Android terminal uses two cells for East Asian wide text.
+			int codePoint = p.textCodePoint > 0 ? p.textCodePoint : ch;
+			boolean eastAsian = TerminalUnicode.isWide(codePoint);
 			if (eastAsian) {
 				fore_temp = new Paint(fore);
 				fore_temp.setTypeface(Typeface.DEFAULT_BOLD);
 			}
 			fore_temp.setColor(fcolor);
 
-			float w2 = fore_temp.measureText(str, 0, 1);
+			float w2 = fore_temp.measureText(str);
 			if (eastAsian && w2 > tw && tw > 0) {
-				// Keep a CJK character visible inside the existing one-cell clip.
-				// True double-column support needs TermWindow and native cursor work.
+				// Keep unexpected font metrics inside the two-cell glyph rectangle.
 				fore_temp.setTextScaleX((float)tw / w2);
-				w2 = fore_temp.measureText(str, 0, 1);
+				w2 = fore_temp.measureText(str);
 			}
 			float pad = Math.max((tw - w2) / 2, 0);
 			float h2 = fore_temp.descent() - fore_temp.ascent();
