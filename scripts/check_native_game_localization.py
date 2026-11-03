@@ -450,6 +450,11 @@ def main():
            "Physical attack labels no longer use gamedata term maps")
     expect('total_centidamage += (percent * randcalc(dice, 0, AVERAGE))' in monster_lore,
            "Monster attack average damage calculation changed")
+    expect('textblock_append(tb, "%%）");' in monster_lore
+           and 'textblock_append(tb, "%%)");' in monster_lore,
+           "Monster lore must render a single percent glyph in both languages")
+    expect('textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "%%）"' not in monster_lore,
+           "Literal percent format escapes must not go through %s")
     if errors:
         for item in errors:
             print("FAIL:", item)

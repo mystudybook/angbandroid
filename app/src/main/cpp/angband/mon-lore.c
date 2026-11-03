@@ -2013,7 +2013,11 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 				player->state.ac + player->state.to_a);
 			int percent = random_chance_scaled(c, 100);
 			textblock_append_c(tb, COLOUR_L_BLUE, "%d", percent);
-			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "%%）" : "%%)");
+			/* Percent is a literal format escape, not two characters of text. */
+            if (angdroid_zh_tw_enabled())
+                textblock_append(tb, "%%）");
+            else
+                textblock_append(tb, "%%)");
 
 			total_centidamage += (percent * randcalc(dice, 0, AVERAGE));
 		}

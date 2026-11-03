@@ -434,6 +434,13 @@ damage per turn. The method and effect display labels use all the exact
 English grammar, attack calculation, known attack flags, color coding
 and battle state remain unchanged.
 
+## Percent-output safety adjustment
+
+Corrected monster attack hit-chance punctuation to use literal `%%`
+format escapes in both languages. A previous attempt passed `%%）`
+through a `%s` parameter, which would render two percent signs.
+The source checker now guards this regression.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
