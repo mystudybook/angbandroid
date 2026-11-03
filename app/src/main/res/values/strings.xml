@@ -325,4 +325,21 @@
     <string name="pref_d_pad_color_2">D-Pad Color 2</string>
     <string name="pref_debug_keycodes_external_keyboards">Debug keycodes (external keyboards)</string>
     <string name="pref_display_the_numeric_codes_on_screen">Display the numeric codes on screen</string>
+
+    <!-- Launcher, profile and dialog UI labels. -->
+    <string name="app_installing_files">Installing files...</string>
+    <string name="profile_context_title">Profile</string>
+    <string name="profile_edit_action">Edit</string>
+    <string name="profile_delete_action">Delete</string>
+    <string name="dialog_not_allowed">Not Allowed</string>
+    <string name="dialog_cannot_delete_last_profile">You cannot delete the last profile</string>
+    <string name="dialog_are_you_sure">Are you sure?</string>
+    <string name="dialog_savefile_exists">The save file already exists on the card</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_ok">OK</string>
+    <string name="help_window_title">Angband: Help</string>
+    <string name="profile_name_hint">Name</string>
+    <string name="profile_savefile_hint">SaveFile</string>
+    <string name="splash_start">START</string>
+    <string name="splash_storage">STORAGE</string>
 </resources>
