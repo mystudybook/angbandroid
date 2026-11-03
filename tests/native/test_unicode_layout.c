@@ -70,6 +70,58 @@ int main(void)
             assert(count == 0 && cursor == 2);
         }
     }
-    puts("PASS: 22 native Unicode row-fit, attribute, marker and redraw cases");
+    {
+        const wchar_t first_row[] = {
+            L'A', 0x4E2D, ANGDROID_TEXT_CONTINUATION,
+            L'B', 0x9F8D, ANGDROID_TEXT_CONTINUATION
+        };
+        const wchar_t second_row[] = {L'A', L'B', L'C', L'D', L'E', L'F'};
+        const wchar_t erased_row[] = {L'A', L' ', L' ', L'B', L' ', L' '};
+        const int normal_attr[] = {1, 1, 1, 1, 1, 1};
+        const int tile_attr[] = {1, 1, 1, 255, 1, 1};
+        int first;
+        int last;
+
+        first = 2; last = 2;
+        angdroid_expand_redraw_columns(6, &first, &last,
+            first_row, normal_attr, first_row, normal_attr);
+        assert(first == 1 && last == 2); /* Redraw a CJK trailing column. */
+
+        first = 1; last = 1;
+        angdroid_expand_redraw_columns(6, &first, &last,
+            first_row, normal_attr, first_row, normal_attr);
+        assert(first == 1 && last == 2); /* Redraw a CJK leading column. */
+
+        first = 2; last = 4;
+        angdroid_expand_redraw_columns(6, &first, &last,
+            first_row, normal_attr, first_row, normal_attr);
+        assert(first == 1 && last == 5); /* Both boundaries are cut. */
+
+        first = 2; last = 2;
+        angdroid_expand_redraw_columns(6, &first, &last,
+            erased_row, normal_attr, first_row, normal_attr);
+        assert(first == 1 && last == 2); /* Previous glyph owns area. */
+
+        first = 1; last = 1;
+        angdroid_expand_redraw_columns(6, &first, &last,
+            erased_row, normal_attr, first_row, normal_attr);
+        assert(first == 1 && last == 2); /* Previous glyph extends right. */
+
+        first = 3; last = 3;
+        angdroid_expand_redraw_columns(6, &first, &last,
+            second_row, tile_attr, second_row, tile_attr);
+        assert(first == 2 && last == 3); /* Preserve big tile pad rule. */
+
+        first = 2; last = 2; /* Start a new row from caller's original bounds. */
+        angdroid_expand_redraw_columns(6, &first, &last,
+            second_row, normal_attr, second_row, normal_attr);
+        assert(first == 2 && last == 2); /* No cross-row boundary leakage. */
+
+        first = 0; last = 5;
+        angdroid_expand_redraw_columns(6, &first, &last,
+            first_row, normal_attr, first_row, normal_attr);
+        assert(first == 0 && last == 5); /* Full-width redraw. */
+    }
+    puts("PASS: 30 native Unicode width, marker and partial redraw cases");
     return 0;
 }
