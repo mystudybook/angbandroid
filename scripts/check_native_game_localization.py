@@ -270,6 +270,14 @@ def main():
            "Ignore action not translated")
     expect('angdroid_game_ui_text("Inven:"' in object_ui,
            "Inventory chooser header not translated")
+    expect('format("知識圖鑑：%s", title)' in knowledge_ui,
+           "Knowledge browser heading lacks Chinese display text")
+    expect('MIN(79, Term->wid)' in knowledge_ui,
+           "Knowledge divider must not extend past narrow screen")
+    expect('format("擊殺怪物：%d/%d（本組／總計）"' in knowledge_ui,
+           "Monster kill counter translation missing")
+    expect('angdroid_zh_tw_enabled() ? "全部忽略 %s" : "All %s"' in object_ui,
+           "Dynamic object ignore group missing locale-specific format string")
     if errors:
         for item in errors:
             print("FAIL:", item)

@@ -526,7 +526,7 @@ static void display_glyphs(int col, int row, int height, int width, uint8_t a,
 	        Term_erase(col, row + i, width);
 
 	/* Prompt */
-	prt("Choose colour:", row + height/2, col);
+	prt(angdroid_zh_tw_enabled() ? "選擇顏色：" : "Choose colour:", row + height/2, col);
 	Term_locate(&x, &y);
 	for (i = 0; i < MAX_COLORS; i++) big_pad(x + i, y, i, c);
 	
@@ -881,17 +881,20 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 		if (redraw) {
 			/* Print the title bits */
 			region_erase(&title_area);
-			prt(format("Knowledge - %s", title), 2, 0);
-			prt("Group", 4, 0);
-			prt("Name", 4, g_name_len + 3);
+			if (angdroid_zh_tw_enabled())
+                prt(format("知識圖鑑：%s", title), 2, 0);
+            else
+                prt(format("Knowledge - %s", title), 2, 0);
+			prt(angdroid_zh_tw_enabled() ? "分類" : "Group", 4, 0);
+			prt(angdroid_zh_tw_enabled() ? "名稱" : "Name", 4, g_name_len + 3);
 
 			if (otherfields)
 				prt(otherfields, 4, 46);
 
 
 			/* Print dividers: horizontal and vertical */
-			for (i = 0; i < 79; i++)
-				Term_putch(i, 5, COLOUR_WHITE, L'=');
+			for (i = 0; i < MIN(79, Term->wid); i++)
+                Term_putch(i, 5, COLOUR_WHITE, L'=');
 
 			for (i = 0; i < browser_rows; i++)
 				Term_putch(g_name_len + 1, 6 + i, COLOUR_WHITE, L'|');
@@ -1109,7 +1112,8 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 
 	/* Prompt */
 	if (!grp_cnt)
-		prt(format("No %s known.", title), 15, 0);
+		prt(angdroid_zh_tw_enabled() ? format("尚未發現任何%s。", title)
+            : format("No %s known.", title), 15, 0);
 
 	mem_free(g_names);
 	mem_free(g_offset);
@@ -1292,7 +1296,9 @@ static void mon_summary(int gid, const int *item_list, int n, int top,
 	/* Different display for the first item if we've got uniques to show */
 	if (gid == 0 &&
 		rf_has((&r_info[default_join[item_list[0]].oid])->flags, RF_UNIQUE)) {
-		c_prt(COLOUR_L_BLUE, format("%d known uniques, %d slain.", n, kills),
+		c_prt(COLOUR_L_BLUE, (angdroid_zh_tw_enabled()
+            ? format("已知特殊怪物：%d，已擊殺：%d。", n, kills)
+            : format("%d known uniques, %d slain.", n, kills)),
 					row, col);
 	} else {
 		int tkills = 0;
@@ -1300,7 +1306,9 @@ static void mon_summary(int gid, const int *item_list, int n, int top,
 		for (i = 0; i < z_info->r_max; i++)
 			tkills += l_list[i].pkills;
 
-		c_prt(COLOUR_L_BLUE, format("Creatures slain: %d/%d (in group/in total)", kills, tkills), row, col);
+		c_prt(COLOUR_L_BLUE, (angdroid_zh_tw_enabled()
+            ? format("擊殺怪物：%d/%d（本組／總計）", kills, tkills)
+            : format("Creatures slain: %d/%d (in group/in total)", kills, tkills)), row, col);
 	}
 }
 
@@ -2078,7 +2086,7 @@ static void o_xtra_act(struct keypress ch, int oid)
 		screen_save();
 
 		/* Prompt */
-		prt("Inscribe with: ", 0, 0);
+		prt(angdroid_zh_tw_enabled() ? "刻上文字：" : "Inscribe with: ", 0, 0);
 
 		/* Default note */
 		if (k->note_aware || k->note_unaware)
@@ -2236,7 +2244,7 @@ static void rune_xtra_act(struct keypress ch, int oid)
 		screen_save();
 
 		/* Prompt */
-		prt("Inscribe with: ", 0, 0);
+		prt(angdroid_zh_tw_enabled() ? "刻上文字：" : "Inscribe with: ", 0, 0);
 
 		/* Default note */
 		if (rune_note(oid))
@@ -3187,12 +3195,12 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 
 		if (redraw) {
 			region_erase(&header_region);
-			prt("Knowledge - shapes", 2, 0);
-			prt("Name", 4, 0);
+			prt(angdroid_zh_tw_enabled() ? "知識圖鑑：變身形態" : "Knowledge - shapes", 2, 0);
+			prt(angdroid_zh_tw_enabled() ? "名稱" : "Name", 4, 0);
 			for (i = 0; i < MIN(80, wnew); i++) {
 				Term_putch(i, 5, COLOUR_WHITE, L'=');
 			}
-			prt("<dir>, 'r' to recall, ESC", h - 2, 0);
+			prt(angdroid_zh_tw_enabled() ? "方向鍵移動／r 詳情／Esc 返回" : "<dir>, 'r' to recall, ESC", h - 2, 0);
 			redraw = false;
 		}
 
@@ -4414,7 +4422,8 @@ void do_cmd_query_symbol(void)
 	}
 
 	/* Prompt */
-	put_str("Recall details? (y/k/n): ", 0, 40);
+	put_str(angdroid_zh_tw_enabled()
+        ? "查看詳情？(y/k/n)：" : "Recall details? (y/k/n): ", 0, 40);
 
 	/* Query */
 	query = inkey();

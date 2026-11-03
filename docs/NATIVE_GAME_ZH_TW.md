@@ -209,6 +209,19 @@ a hard-coded 80-column x coordinate, which could be negative on mobile
 terminals. It is now anchored to the real terminal width and clamped
 on narrow displays. Game data, item IDs and item filters are unchanged.
 
+## Knowledge browser and ignore filters (2026-11-03)
+
+Knowledge-browser title, group/name headings, monster kill counts,
+shapeshift detail help, color prompts, and inscription prompts now use
+Traditional Chinese, without changing game records or menu hotkeys.
+The fixed-width knowledge divider is also bounded to the terminal width
+for phones that have fewer than 80 text columns.
+
+Object-ignore commands now use Chinese templates for all flavor and ego
+groups, while retaining the underlying original item and quality names.
+The English templates remain intact, and no ignore rules or persistence
+formats have changed.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

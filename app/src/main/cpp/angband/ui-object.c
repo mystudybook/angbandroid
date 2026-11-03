@@ -1659,10 +1659,12 @@ void textui_cmd_ignore_menu(struct object *obj)
 		object_desc(tmp, sizeof(tmp), obj,
 			ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL, player);
 		if (!ignored) {
-			strnfmt(out_val, sizeof out_val, "All %s", tmp);
+			strnfmt(out_val, sizeof out_val,
+                angdroid_zh_tw_enabled() ? "全部忽略 %s" : "All %s", tmp);
 			menu_dynamic_add(m, out_val, IGNORE_THIS_FLAVOR);
 		} else {
-			strnfmt(out_val, sizeof out_val, "Unignore all %s", tmp);
+			strnfmt(out_val, sizeof out_val,
+                angdroid_zh_tw_enabled() ? "取消忽略全部 %s" : "Unignore all %s", tmp);
 			menu_dynamic_add(m, out_val, UNIGNORE_THIS_FLAVOR);
 		}
 	}
@@ -1680,10 +1682,12 @@ void textui_cmd_ignore_menu(struct object *obj)
 		choice.short_name = "";
 		(void) ego_item_name(tmp, sizeof(tmp), &choice);
 		if (!ego_is_ignored(choice.e_idx, choice.itype)) {
-			strnfmt(out_val, sizeof out_val, "All %s", tmp + 4);
+			strnfmt(out_val, sizeof out_val,
+                angdroid_zh_tw_enabled() ? "全部忽略 %s" : "All %s", tmp + 4);
 			menu_dynamic_add(m, out_val, IGNORE_THIS_EGO);
 		} else {
-			strnfmt(out_val, sizeof out_val, "Unignore all %s", tmp + 4);
+			strnfmt(out_val, sizeof out_val,
+                angdroid_zh_tw_enabled() ? "取消忽略全部 %s" : "Unignore all %s", tmp + 4);
 			menu_dynamic_add(m, out_val, UNIGNORE_THIS_EGO);
 		}
 	}
