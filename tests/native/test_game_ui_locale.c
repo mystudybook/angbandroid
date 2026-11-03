@@ -78,6 +78,10 @@ int main(void)
     assert(angdroid_game_ui_text(NULL, 1) == NULL);
     assert(angdroid_utf8_display_columns("繁體中文") == 8);
     assert(strcmp(angdroid_melee_verb_zh_tw("hit"), "擊中了") == 0);
+    assert(strcmp(angdroid_melee_verb_zh_tw("poison"),
+                  "以毒素傷害了") == 0);
+    assert(strcmp(angdroid_ranged_verb_zh_tw("poisons"),
+                  "以毒素傷害了") == 0);
     assert(strcmp(angdroid_melee_verb_zh_tw("fiercely smite"),
                   "狠狠重擊了") == 0);
     assert(strcmp(angdroid_ranged_verb_zh_tw("pierces"), "貫穿了") == 0);

@@ -480,12 +480,14 @@ void spell_learn(int spell_index)
 	player->upkeep->new_spells--;
 
 	/* Message if needed */
-	if (player->upkeep->new_spells)
-		if (angdroid_zh_tw_enabled())
-            msg("你還可以學習 %d 項新法術。", player->upkeep->new_spells);
-        else
-            msg("You can learn %d more %s%s.", player->upkeep->new_spells,
-                spell->realm->spell_noun, PLURAL(player->upkeep->new_spells));
+	if (player->upkeep->new_spells) {
+		if (angdroid_zh_tw_enabled()) {
+			msg("你還可以學習 %d 項新法術。", player->upkeep->new_spells);
+		} else {
+			msg("You can learn %d more %s%s.", player->upkeep->new_spells,
+				spell->realm->spell_noun, PLURAL(player->upkeep->new_spells));
+		}
+	}
 
 	/* Redraw Study Status */
 	player->upkeep->redraw |= (PR_STUDY | PR_OBJECT);
