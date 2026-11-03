@@ -4,12 +4,12 @@ This is an **unofficial** localization of the Android Angband port. The intended
 
 ## Status
 
-- `values-zh-rTW/strings.xml` now contains **192 translated string resources** (40 initial + 99 preferences + 15 launcher/profile/dialogs + 21 game quick settings + 17 storage messages), and **7 display-only arrays** (42 localized items).
+- `values-zh-rTW/strings.xml` now contains **196 translated string resources** (40 initial + 99 preferences + 15 launcher/profile/dialogs + 21 game quick settings + 17 storage messages + 4 profile validation messages), and **7 display-only arrays** (42 localized items).
 - In `res/xml/preferences.xml`, **99 hard-coded UI labels and summaries** now reference localized strings. The remaining 67 hard-coded labels are literal keyboard letters/digits/symbol keycaps (deliberately unchanged).
-- Localized launcher buttons, profile editor hints/buttons, profile context actions, basic dialogs, in-game quick settings, and storage manager buttons/messages.
+- Localized launcher buttons, profile editor hints/buttons, profile context actions, localized profile validation, basic dialogs, in-game quick settings, and storage manager buttons/messages.
 - The Chinese HTML guide is `app/src/main/assets/help_zh_tw.html`; `HelpActivity` selects it for the `zh-TW` device locale, retaining the upstream `help.html` as English fallback.
 - Split D-Pad colors, quick-key popup position and storage location display arrays from their stable persisted `entryValues`.
-- Source-level verification checked **182 Java/XML string references** and **18 array references** with no unresolved names; translated array sizes and formatting placeholders match English defaults. All twelve preference entry/entryValues array pairs inspected have matching item counts; persisted value arrays remain untranslated. These are not Android runtime tests.
+- Source-level verification checked **186 Java/XML string references** and **18 array references** with no unresolved names; translated array sizes and formatting placeholders match English defaults. All twelve preference entry/entryValues array pairs inspected have matching item counts; persisted value arrays remain untranslated. These are not Android runtime tests.
 - A reusable Python 3 verifier is available: `python3 scripts/check_zh_tw_resources.py`. It checks Java/XML resources, array pairs, placeholders, preferences and localized help images. **This script has not yet been executed on a full local checkout.**
 - No changes to settings persistence, internal variant IDs, or native gameplay logic. The only added game-adjacent asset is the localized HTML guide.
 - Compilation, emulator testing, and screenshot review have **not** been performed.
@@ -24,7 +24,7 @@ This is an **unofficial** localization of the Android Angband port. The intended
 ## Next implementation steps
 
 1. **Done (first pass):** extract and translate preference title/summary labels, leaving keyboard keycap literals and persistent values intact.
-2. **In progress:** continue extracting remaining Java UI text (including `ProfileList` validation, custom input controls, file-system exception messages and other interactive screens). `StorageActivity` and the main `GameActivity` quick settings have been handled.
+2. **In progress:** continue extracting remaining Java UI text (including remaining custom input controls, file-system exception messages and other interactive screens). `ProfileList` validation, `StorageActivity` and the main `GameActivity` quick settings have been handled.
 3. **Done (first pass):** translated Android help HTML with locale-aware loading and English fallback. Review text and screenshots on a device.
 4. **Blocked pending renderer work:** the terminal truncates character values with `& 0xFF`, draws text into one-cell clips and has no verified CJK font/column-width handling. See [`docs/CJK_RENDERING_AUDIT.md`](CJK_RENDERING_AUDIT.md) for specific source evidence and a safe proof-of-concept plan.
 5. Catalog and translate the Angband core's user-visible strings and suitable entries in `variant_lib/angband/gamedata`. Do not translate identifiers or data syntax. Treat other included variants as separate projects.
