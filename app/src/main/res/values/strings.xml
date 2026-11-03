@@ -412,4 +412,16 @@
     <string name="profile_validation_savefile_required">Save filename is required</string>
     <string name="profile_validation_duplicate_name">There is already a profile with that name</string>
     <string name="profile_validation_duplicate_savefile">There is already a profile using that save filename</string>
+
+    <!-- Display-only mouse modifier labels; button IDs do not depend on text. -->
+    <string-array name="mouse_input_labels">
+        <item>1</item>
+        <item>Shift+1</item>
+        <item>Ctrl+1</item>
+        <item>Alt+1</item>
+        <item>2</item>
+        <item>Shift+2</item>
+        <item>Ctrl+2</item>
+        <item>Alt+2</item>
+    </string-array>
 </resources>
