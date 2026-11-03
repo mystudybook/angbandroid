@@ -26,6 +26,13 @@ CC="${CC:-cc}"
 
 "$BUILD_DIR/test_unicode_layout"
 
+# CJK display columns differ from Unicode scalar counts.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_unicode_display.c" \
+    -o "$BUILD_DIR/test_unicode_display"
+
+"$BUILD_DIR/test_unicode_display"
+
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_death_locale.c" \
     -o "$BUILD_DIR/test_death_locale"
