@@ -5,10 +5,10 @@
 這個 Fork 正在進行台灣繁體中文（zh-TW）中文化。**目前已包含部分 Android 介面、設定、檔案管理和使用說明的中文翻譯，但遊戲核心的怪物、道具及訊息尚未完整翻譯。** 此版本未完成 APK／模擬器／實機驗收，也尚未確認所有素材的再發行授權，請不要直接作為正式 Google Play 中文版發行。
 
 - [中文化進度與測試方法](docs/LOCALIZATION_ZH_TW.md)
-- **[Android Studio / JDK 21 升級與編譯設定](docs/JDK21_BUILD.md)**
+- **[Android Studio / Gradle 9 / JDK 21 升級與編譯設定](docs/JDK21_BUILD.md)**
 - [遊戲文字顯示／Unicode 技術問題](docs/CJK_RENDERING_AUDIT.md)
 - **一次執行所有離線檢查，並輸出測試紀錄：** `sh scripts/verify-zh-tw.sh`（結果存成 `zh-tw-validation.log`）
-- **需要包含 APK 編譯時：** `sh scripts/verify-zh-tw.sh --android`；需本機 **JDK 21、Android SDK Platform 35、NDK 21.0.6113669**。Debug 預設使用 `arm64-v8a`，無須手動建立 `ABI_FILTERS`；x86_64 模擬器可執行 `ABI_FILTERS=x86_64 sh scripts/verify-zh-tw.sh --android`。已升級至 **Gradle 8.11.1 / AGP 8.9.2**。
+- **需要包含 APK 編譯時：** `sh scripts/verify-zh-tw.sh --android`；需本機 **JDK 21、Android SDK Platform 35、NDK 21.0.6113669**。Debug 預設使用 `arm64-v8a`，無須手動建立 `ABI_FILTERS`；x86_64 模擬器可執行 `ABI_FILTERS=x86_64 sh scripts/verify-zh-tw.sh --android`。已升級至 **Gradle 9.1.0 / AGP 9.0.1**，仍使用 **JDK 21**；請安裝 SDK Build Tools 36.0.0。
 - 分項執行：`python3 scripts/check_zh_tw_resources.py`、`sh scripts/test-terminal-unicode.sh`、`sh scripts/test-native-utf8.sh`。
 - 原生 UTF-8 傳輸與中日韓字寬分類測試已加入；完整原生游標座標與雙格布局仍待同步，尚未完成 APK／實機測試。
 
