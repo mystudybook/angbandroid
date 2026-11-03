@@ -15,6 +15,8 @@ javac -encoding UTF-8 -d "$BUILD_DIR" \
   "$ROOT/app/src/main/java/org/rephial/xyangband/TermWindow.java" \
   "$ROOT/app/src/main/java/org/rephial/xyangband/MouseInputOptions.java" \
   "$ROOT/app/src/main/java/org/rephial/xyangband/GameTextLocale.java" \
+  "$ROOT/app/src/main/java/org/rephial/xyangband/AppLanguageSelection.java" \
+  "$ROOT/tests/java/org/rephial/xyangband/AppLanguageSelectionTest.java" \
   "$ROOT/tests/java/org/rephial/xyangband/GameTextLocaleTest.java" \
   "$ROOT/tests/java/org/rephial/xyangband/MouseInputOptionsTest.java" \
   "$ROOT/tests/java/org/rephial/xyangband/TerminalUnicodeTest.java" \
@@ -26,3 +28,4 @@ java -cp "$BUILD_DIR" org.rephial.xyangband.TermWindowUnicodeTest
 java -cp "$BUILD_DIR" org.rephial.xyangband.TermWindowStressTest
 java -cp "$BUILD_DIR" org.rephial.xyangband.MouseInputOptionsTest
 java -cp "$BUILD_DIR" org.rephial.xyangband.GameTextLocaleTest
+java -cp "$BUILD_DIR" org.rephial.xyangband.AppLanguageSelectionTest

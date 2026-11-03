@@ -10,7 +10,7 @@ import android.widget.EditText;
 
 import org.rephial.xyangband.R;
 
-public class ProfileAddActivity extends Activity {
+public class ProfileAddActivity extends LocalizedActivity {
 
 	private Profile profile;
 	private String origSaveFile = "";

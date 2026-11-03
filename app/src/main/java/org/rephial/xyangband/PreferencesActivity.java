@@ -30,7 +30,7 @@ import android.preference.PreferenceScreen;
 import android.view.WindowManager;
 
 public class PreferencesActivity
-	extends PreferenceActivity implements OnSharedPreferenceChangeListener,
+	extends LocalizedPreferenceActivity implements OnSharedPreferenceChangeListener,
 		OnPreferenceChangeListener {
 
 	@Override
@@ -107,6 +107,12 @@ public class PreferencesActivity
 		else if (pref instanceof PreferenceScreen) {
 			setSummaryAll((PreferenceScreen) pref);
 		}
+		else if (key.equals(Preferences.KEY_APP_LANGUAGE) && pref instanceof ListPreference) {
+			ListPreference language = (ListPreference) pref;
+			CharSequence label = language.getEntry();
+			pref.setSummary(getString(R.string.app_language_restart_summary,
+				label == null ? "" : label.toString()));
+		}
 		else if (key.compareTo(Preferences.KEY_GAME_PROFILE) == 0) {
 			pref.setSummary(Preferences.getActiveProfile().getName());
 		}
@@ -118,6 +124,13 @@ public class PreferencesActivity
 
 	public void	onSharedPreferenceChanged(SharedPreferences
 										  sharedPreferences, String key) {
+		if (Preferences.KEY_APP_LANGUAGE.equals(key)) {
+			// The preference has already been saved by ListPreference.
+			// Re-create only this settings screen so resources use the new locale.
+			// Do not recreate GameActivity: its native game thread may be live.
+			recreate();
+			return;
+		}
 		if (key.compareTo(Preferences.KEY_ACTIVE_PROFILE)==0
 			|| key.compareTo(Preferences.KEY_PROFILES)==0) {
 			setSummaryAll(getPreferenceScreen());

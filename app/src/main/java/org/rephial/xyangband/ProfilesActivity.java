@@ -21,7 +21,7 @@ import org.rephial.xyangband.R;
 import java.util.ArrayList;
 
 
-public class ProfilesActivity extends Activity{
+public class ProfilesActivity extends LocalizedActivity{
 
 	protected static final int CONTEXTMENU_DELETEITEM = 0;
 	protected static final int CONTEXTMENU_EDITITEM = 1;
@@ -75,7 +75,7 @@ public class ProfilesActivity extends Activity{
 
 	public boolean onCreateOptionsMenu(Menu menu) {
 		super.onCreateOptionsMenu(menu);
-		MenuInflater inflater = new MenuInflater(getApplication());
+		MenuInflater inflater = new MenuInflater(this);
 		inflater.inflate(R.menu.profile, menu);
 		return true;
 	}

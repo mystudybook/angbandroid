@@ -51,7 +51,7 @@ import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class GameActivity extends Activity {
+public class GameActivity extends LocalizedActivity {
 
 	public static Typeface monoFont = null;
 	public static Typeface monoBoldFont = null;
@@ -321,7 +321,7 @@ public class GameActivity extends Activity {
 
 	public boolean onCreateOptionsMenu(Menu menu) {
 		super.onCreateOptionsMenu(menu);
-		MenuInflater inflater = new MenuInflater(getApplication());
+		MenuInflater inflater = new MenuInflater(this);
 		inflater.inflate(R.menu.main, menu);
 		return true;
 	}

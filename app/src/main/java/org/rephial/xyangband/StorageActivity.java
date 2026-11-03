@@ -30,7 +30,7 @@ import java.util.Comparator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class StorageActivity extends Activity {
+public class StorageActivity extends LocalizedActivity {
 
 	protected ListView fileList;
 	protected ViewGroup rootView;

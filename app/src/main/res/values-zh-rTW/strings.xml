@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Only user-visible strings are localized here. Never translate persisted values/identifiers. -->
+    <string name="app_language_title">應用程式語言</string>
+    <string name="app_language_restart_hint">重新啟動遊戲後，遊戲內文字才會使用新的語言設定。</string>
+    <string name="app_language_restart_summary">目前選擇：%1$s。重新啟動遊戲後生效。</string>
+    <string-array name="app_language_labels">
+        <item>跟隨系統</item>
+        <item>English</item>
+        <item>繁體中文（台灣）</item>
+    </string-array>
     <string name="menu_preferences">設定</string>
     <string name="menu_profiles">角色設定檔</string>
     <string name="menu_help">說明</string>

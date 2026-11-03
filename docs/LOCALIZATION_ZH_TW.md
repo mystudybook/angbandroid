@@ -2,6 +2,33 @@
 
 This is an **unofficial** localization of the Android Angband port. The intended end goal is to offer a free Traditional Chinese edition, but **publishing is not yet approved or verified**. Preserve original attribution and review the license of every bundled component (including variants, artwork, fonts, and Android port code) before distributing binaries.
 
+## Independent app language (2026-11-03)
+
+Android Settings → Game → **App language / 應用程式語言** offers
+**Follow system / 跟隨系統** (the default for existing users), **English**,
+and **Traditional Chinese (Taiwan) / 繁體中文（台灣）**. The preference
+`angband.app_language` is stored in the existing `angband` SharedPreferences
+file and is intentionally separate from profiles, game IDs, keyboard
+commands and save files.
+
+The selected language controls Android app screen resources, the help HTML,
+and the *already translated* display-only text in the original native Angband
+engine. With Follow system, `zh-TW` or `zh-Hant` uses available Traditional
+Chinese resources; other device languages use the original fallback. This
+does not translate the other included variants or untranslated gameplay text.
+
+The settings screen refreshes after a selection; **quit and restart the game**
+to update already running screens and the native game's cached locale.
+Language changes do **not** automatically kill the game thread or alter
+save data. Changing this preference while a game is running should be
+done after saving progress and followed by a full app/game restart.
+
+Regression checks include `AppLanguageSelectionTest` (10+ pure JDK
+locale/override cases) and `scripts/check_app_language_wiring.py`, both
+run by `sh scripts/verify-zh-tw.sh`. A successful APK build still must
+be followed by checking both English and Traditional Chinese UI,
+help, list overlays and game display on an emulator/phone.
+
 ## Status
 
 - `values-zh-rTW/strings.xml` now contains **260 translated string resources** (196 existing + 44 hardware-key labels + 5 installer errors + 7 editor/quantity/opacity captions + 8 floating-button editor captions), and **8 display-only arrays** (50 localized items).

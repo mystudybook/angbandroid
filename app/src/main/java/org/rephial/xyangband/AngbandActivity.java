@@ -39,7 +39,7 @@ import androidx.core.app.ActivityCompat.OnRequestPermissionsResultCallback;
 
 import org.rephial.xyangband.R;
 
-public class AngbandActivity extends Activity
+public class AngbandActivity extends LocalizedActivity
 	implements OnRequestPermissionsResultCallback {
 
 	protected boolean active = true;

@@ -31,7 +31,7 @@ public class NativeWrapper {
 	 * Game action keys, character save files, and plugin IDs stay unchanged.
 	 */
 	public boolean usesTraditionalChineseGameText() {
-		return GameTextLocale.usesTraditionalChinese(Locale.getDefault());
+		return AppLanguageContext.usesTraditionalChinese(state.context);
 	}
 
 	public NativeWrapper(StateManager s) {

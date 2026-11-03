@@ -42,6 +42,21 @@
 
     <string name="version">0.0.0.1</string>
 
+    <!-- Display labels are localizable; entry values are stable preference IDs. -->
+    <string name="app_language_title">App language</string>
+    <string name="app_language_restart_hint">Restart the game to apply the language to in-game text.</string>
+    <string name="app_language_restart_summary">Selected: %1$s. Restart the game to update in-game text.</string>
+    <string-array name="app_language_labels">
+        <item>Follow system</item>
+        <item>English</item>
+        <item>Traditional Chinese (Taiwan)</item>
+    </string-array>
+    <string-array name="app_language_values">
+        <item>system</item>
+        <item>en</item>
+        <item>zh-TW</item>
+    </string-array>
+
     <string name="menu_preferences">Preferences</string>
     <string name="menu_profiles">Profiles</string>
     <string name="menu_help">Help</string>

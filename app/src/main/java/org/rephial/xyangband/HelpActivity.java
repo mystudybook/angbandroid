@@ -27,7 +27,7 @@ import android.webkit.WebView;
 
 import org.rephial.xyangband.R;
 
-public class HelpActivity extends Activity {
+public class HelpActivity extends LocalizedActivity {
 	@Override
 	public void onCreate(Bundle b) {
 		super.onCreate(b);
@@ -39,8 +39,7 @@ public class HelpActivity extends Activity {
 		settings.setLayoutAlgorithm(WebSettings.LayoutAlgorithm.NARROW_COLUMNS);
 		settings.setUseWideViewPort(false);
 		// Keep the upstream English guide as the fallback for other locales.
-        java.util.Locale locale = getResources().getConfiguration().locale;
-        boolean isZhTw = "zh".equals(locale.getLanguage()) && "TW".equals(locale.getCountry());
+        boolean isZhTw = AppLanguageContext.usesTraditionalChinese(this);
         help.loadUrl(isZhTw
                 ? "file:///android_asset/help_zh_tw.html"
                 : "file:///android_asset/help.html");
