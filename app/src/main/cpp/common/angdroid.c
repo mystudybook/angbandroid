@@ -568,17 +568,16 @@ static errr Term_text_android(int x, int y, int n, int a, const wchar_t *cp)
 	 * Redraws may begin in the middle of a row, so position each run
 	 * using its actual native column rather than counting code points.
 	 */
-	int i = 0;
+	size_t index = 0;
 	wattrset(td->win, fg);
 	wbgattrset(td->win, bg);
-	while (i < n) {
-		int start;
-		while (i < n && cp[i] == ANGDROID_TEXT_CONTINUATION) ++i;
-		start = i;
-		while (i < n && cp[i] != ANGDROID_TEXT_CONTINUATION) ++i;
-		if (i > start) {
-			wmove(td->win, y, x + start);
-			waddnwstr(td->win, i - start, cp + start);
+	while (index < (size_t)n) {
+		size_t start = 0;
+		size_t length = angdroid_next_visible_text_run(
+			cp, (size_t)n, &index, &start);
+		if (length > 0) {
+			wmove(td->win, y, x + (int)start);
+			waddnwstr(td->win, (int)length, cp + start);
 		}
 	}
 
