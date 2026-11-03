@@ -26,6 +26,7 @@
 #include "ui-output.h"
 #include "z-textblock.h"
 #include "droid.h"
+#include "../curses/unicode_display.h"
 
 /**
  * Format a section of the object list: a header followed by object list entry
@@ -77,6 +78,7 @@ static void object_list_format_section(const object_list_t *list,
 		max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
 			zh_tw ? "%s沒有物品。\n" : "%s no objects.\n", prefix);
 
+		max_line_length = angdroid_utf8_display_columns(line_buffer);
 		if (tb != NULL)
 			textblock_append(tb, "%s", line_buffer);
 
@@ -98,6 +100,7 @@ static void object_list_format_section(const object_list_t *list,
 			PLURAL(list->total_entries[section]), punctuation);
 	}
 
+	max_line_length = angdroid_utf8_display_columns(line_buffer);
 	if (tb != NULL)
 		textblock_append(tb, "%s", line_buffer);
 
@@ -121,17 +124,21 @@ static void object_list_format_section(const object_list_t *list,
 
 		/* Get width available for object name: 2 for char and space; location
 		 * includes padding; last -1 for some reason? */
-		full_width = max_width - 2 - utf8_strlen(location) - 1;
+		{
+			size_t reserved = 3 + angdroid_utf8_display_columns(location);
+			full_width = (max_width > 0 && (size_t)max_width > reserved) ?
+				(size_t)max_width - reserved : 0;
+		}
 
 		/* Add the object count and clip the object name to fit. */
 		object_list_format_name(&list->entries[entry_index], line_buffer,
 								sizeof(line_buffer));
-		utf8_clipto(line_buffer, full_width);
+		angdroid_utf8_clip_columns(line_buffer, full_width);
 
 		/* Calculate the width of the line for dynamic sizing; use a fixed max
 		 * width for location and object char. */
 		max_line_length = MAX(max_line_length,
-							  utf8_strlen(line_buffer) + 12 + 2);
+							  angdroid_utf8_display_columns(line_buffer) + 12 + 2);
 
 		/* textblock_append_pict will safely add the object symbol, regardless
 		 * of ASCII/graphics mode. */
@@ -157,7 +164,8 @@ static void object_list_format_section(const object_list_t *list,
 			 * additional padding for any raw bytes that might be consolidated
 			 * into one displayed character.
 			 */
-			full_width += strlen(line_buffer) - utf8_strlen(line_buffer);
+			full_width = angdroid_utf8_printf_field_bytes(
+				line_buffer, full_width);
 			line_attr = object_list_entry_line_attribute(&list->entries[entry_index]);
 			textblock_append_c(tb, line_attr, "%-*s%s\n",
 				(int) full_width, line_buffer, location);
