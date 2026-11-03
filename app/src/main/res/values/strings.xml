@@ -470,4 +470,11 @@
     <string name="keymap_key_enter">Enter</string>
     <string name="keymap_key_escape">Escape</string>
     <string name="keymap_key_emoticon">Emoticon</string>
+
+    <!-- Human-readable installation and save migration errors. -->
+    <string name="installer_write_verify_failed">Error: Failed to write or verify the game files. Cannot continue.</string>
+    <string name="installer_storage_not_ready">Error: External storage is unavailable. Cannot continue.</string>
+    <string name="installer_verify_file_failed">Error: Could not verify installed file: %1$s</string>
+    <string name="installer_install_files_failed">Error: Could not install game files. %1$s</string>
+    <string name="installer_copy_saves_failed">Error: Could not copy save files from the previous version. %1$s</string>
 </resources>
