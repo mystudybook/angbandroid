@@ -36,7 +36,7 @@ run_check() {
 
 printf 'Angband zh-TW offline verification\n' >> "$REPORT"
 printf 'Repository: %s\n' "$ROOT" >> "$REPORT"
-run_check "JDK 21 / AGP 8.9 build configuration" python3 "$ROOT/scripts/check_jdk21_build.py"
+run_check "JDK 21 / Gradle 9.1 / AGP 9 build configuration" python3 "$ROOT/scripts/check_jdk21_build.py"
 run_check "Android string resources" python3 "$ROOT/scripts/check_zh_tw_resources.py"
 run_check "Java Unicode terminal" sh "$ROOT/scripts/test-terminal-unicode.sh"
 run_check "Native C UTF-8 and column-width helpers" sh "$ROOT/scripts/test-native-utf8.sh"
@@ -57,10 +57,10 @@ android_debug_build() {
         sh ./gradlew --version || return 1
         if [ -n "${ABI_FILTERS:-}" ]; then
             printf 'Debug native ABIs (environment override): %s\n' "$ABI_FILTERS"
-            sh ./gradlew --no-daemon --stacktrace "-PABI_FILTERS=$ABI_FILTERS" :app:assembleDebug
+            sh ./gradlew --no-daemon --warning-mode=all --stacktrace "-PABI_FILTERS=$ABI_FILTERS" :app:assembleDebug
         else
             printf 'Debug native ABIs: project default arm64-v8a (unless overridden)\n'
-            sh ./gradlew --no-daemon --stacktrace :app:assembleDebug
+            sh ./gradlew --no-daemon --warning-mode=all --stacktrace :app:assembleDebug
         fi
     )
 }
