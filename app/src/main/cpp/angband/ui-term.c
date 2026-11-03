@@ -2581,9 +2581,12 @@ errr Term_what(int x, int y, int *a, wchar_t *c)
 	if ((x < 0) || (x >= w)) return (-1);
 	if ((y < 0) || (y >= h)) return (-1);
 
-	/* Direct access */
+	/* Do not expose the private CJK continuation marker to game/UI
+	 * callers. It is an internal physical display column, not a glyph. */
 	(*a) = Term->scr->a[y][x];
-	(*c) = Term->scr->c[y][x];
+	(*c) = angdroid_public_grid_glyph(Term->scr->c[y][x]);
+	if (Term->scr->c[y][x] == ANGDROID_TEXT_CONTINUATION)
+		(*a) = COLOUR_WHITE;
 
 	/* Success */
 	return (0);
