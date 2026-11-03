@@ -224,4 +224,105 @@
         <item>Top-Left</item>
         <item>Top-Right</item>
     </string-array>
+
+    <!-- Localized labels for Android preference screen. -->
+    <string name="pref_game_profile">Game Profile</string>
+    <string name="pref_storage_location">Storage Location</string>
+    <string name="pref_restart_required">Restart required</string>
+    <string name="pref_halve_max_distance_of_ranged_attacks_for_v_and_fa_for_small_displays_needs_restart">Halve max distance of ranged attacks for V and FA (for small displays, needs restart)</string>
+    <string name="pref_graphics_options">Graphics options</string>
+    <string name="pref_tileset_tile_multiplier_decoration_etc">Tileset, tile multiplier, decoration, etc.</string>
+    <string name="pref_tileset">Tileset</string>
+    <string name="pref_select_the_tileset">Select the tileset</string>
+    <string name="pref_use_graphics_for_sil_q">Use graphics for Sil-Q</string>
+    <string name="pref_tile_multiplier">Tile Multiplier</string>
+    <string name="pref_columns_x_rows">Columns x Rows</string>
+    <string name="pref_draw_health_bars">Draw health bars</string>
+    <string name="pref_above_player_and_monsters">Above player and monsters</string>
+    <string name="pref_show_small_ascii_helper_for_tiles_suggested_value_40" formatted="false">Show small ascii helper for tiles (suggested value: 40%)</string>
+    <string name="pref_show_mouse_icon">Show Mouse Icon</string>
+    <string name="pref_it_allows_you_to_execute_actions_on_a_grid">It allows you to execute actions on a grid</string>
+    <string name="pref_sub_windows_settings">Sub-Windows settings</string>
+    <string name="pref_map_views_in_graphics_mode_are_not_supported">(Map views in graphics mode are not supported)</string>
+    <string name="pref_number_of_sub_windows">Number of sub-windows</string>
+    <string name="pref_issue_a_redraw_ctrl_r_after_modifying_this">Issue a redraw (Ctrl-R) after modifying this</string>
+    <string name="pref_number_of_columns_max_80">Number of columns (Max: 80)</string>
+    <string name="pref_number_of_rows_max_24">Number of rows (Max: 24)</string>
+    <string name="pref_font_multiplier_50_to_150" formatted="false">Font multiplier (50% to 150%)</string>
+    <string name="pref_layout_sub_windows_horizontally">Layout sub-windows horizontally</string>
+    <string name="pref_angband_top_bar">Angband Top Bar</string>
+    <string name="pref_stats_and_other_indicators_go_to_top_instead_of_left">Stats and other indicators go to top instead of left</string>
+    <string name="pref_font_multiplier_for_top_bar_100_to_200" formatted="false">Font Multiplier for Top Bar (100% to 200%)</string>
+    <string name="pref_enable_software_input">Enable Software Input</string>
+    <string name="pref_if_hidden_tap_bottom_left_corner_to_enable">If hidden, tap bottom left corner to enable</string>
+    <string name="pref_soft_keyboard_options">Soft Keyboard options</string>
+    <string name="pref_configure_type_and_size_of_qwerty_keyboard">Configure type and size of qwerty keyboard</string>
+    <string name="pref_keyboard_position">Keyboard Position</string>
+    <string name="pref_keyboard_opacity">Keyboard Opacity</string>
+    <string name="pref_middle_opacity">Middle Opacity</string>
+    <string name="pref_use_full_keyboard">Use Full Keyboard</string>
+    <string name="pref_turn_off_to_display_a_mini_keyboard">Turn OFF to display a mini-keyboard</string>
+    <string name="pref_vertical_keyboard">Vertical Keyboard</string>
+    <string name="pref_less_columns_more_rows">Less columns, more rows</string>
+    <string name="pref_show_keymaps_if_keymap_mode_is_on">Show keymaps if keymap mode is ON</string>
+    <string name="pref_hide_keys_after_5_seconds">Hide keys after 5 seconds</string>
+    <string name="pref_high_contrast_visuals">High Contrast Visuals</string>
+    <string name="pref_keyboard_width">Keyboard Width</string>
+    <string name="pref_keyboard_height">Keyboard Height</string>
+    <string name="pref_button_ribbon_options">Button Ribbon options</string>
+    <string name="pref_configure_things_like_button_size_or_management_of_long_lists">Configure things like button size or management of long lists</string>
+    <string name="pref_ribbon_button_size_multiplier">Ribbon button size multiplier</string>
+    <string name="pref_button_width_for_long_selections_lists_try_with_50" formatted="false">Button width for long selections lists (try with 50%)</string>
+    <string name="pref_auto_display_long_lists">Auto display long lists</string>
+    <string name="pref_when_you_are_prompted_for_selection">When you are prompted for selection</string>
+    <string name="pref_use_icons">Use Icons</string>
+    <string name="pref_use_icons_for_ribbon_buttons">Use Icons for ribbon buttons</string>
+    <string name="pref_position_of_fast_keys_popup">Position of Fast Keys Popup</string>
+    <string name="pref_enable_the_quantity_popup">Enable the quantity popup</string>
+    <string name="pref_hardware_key_mapping">Hardware Key Mapping</string>
+    <string name="pref_configure_hardware_buttons_on_your_device_to_perform_various_functions">Configure hardware buttons on your device to perform various functions</string>
+    <string name="pref_display_functions">Display Functions</string>
+    <string name="pref_change_display_font_size_virtual_keyboard">Change display, font size, virtual keyboard</string>
+    <string name="pref_toggle_virtual_keyboard">Toggle Virtual Keyboard</string>
+    <string name="pref_zoom_in">Zoom In</string>
+    <string name="pref_zoom_out">Zoom Out</string>
+    <string name="pref_letters_and_numbers">Letters and Numbers</string>
+    <string name="pref_a_z_0_9">A-Z, 0-9</string>
+    <string name="pref_modifiers_and_movers">Modifiers and Movers</string>
+    <string name="pref_esc_ctrl_shift_alt_space_enter_directions">Esc, Ctrl, Shift, Alt, Space, Enter, Directions</string>
+    <string name="pref_arrow_down">Arrow Down</string>
+    <string name="pref_arrow_left">Arrow Left</string>
+    <string name="pref_arrow_right">Arrow Right</string>
+    <string name="pref_arrow_up">Arrow Up</string>
+    <string name="pref_dpad_center">DPad Center</string>
+    <string name="pref_home">Home</string>
+    <string name="pref_end">End</string>
+    <string name="pref_page_up">Page Up</string>
+    <string name="pref_page_down">Page Down</string>
+    <string name="pref_backspace">Backspace</string>
+    <string name="pref_control_key">Control Key</string>
+    <string name="pref_enter_key">Enter Key</string>
+    <string name="pref_back">Back</string>
+    <string name="pref_esc_key">Esc Key</string>
+    <string name="pref_left_alt_fn_key">Left Alt/Fn Key</string>
+    <string name="pref_left_shift_key">Left Shift Key</string>
+    <string name="pref_right_alt_fn_key">Right Alt/Fn Key</string>
+    <string name="pref_right_shift_key">Right Shift Key</string>
+    <string name="pref_space">Space</string>
+    <string name="pref_symbols">Symbols</string>
+    <string name="pref_punctuation_and_other_non_alpha_numeric_keys">Punctuation and other non-alpha numeric keys</string>
+    <string name="pref_ctrl_key_double_tap">Ctrl Key Double-Tap</string>
+    <string name="pref_double_tap_function_for_hardware_button_mapped_to_the_ctrl_key_function">Double tap function for hardware button mapped to the Ctrl Key function</string>
+    <string name="pref_reset_all_hardware_keys">Reset all hardware keys</string>
+    <string name="pref_restores_all_key_mappings_back_to_the_default_configuration">Restores all key mappings back to the default configuration</string>
+    <string name="pref_directional_pad_d_pad">Directional Pad (D-Pad)</string>
+    <string name="pref_configure_options_for_the_d_pad">Configure options for the D-Pad</string>
+    <string name="pref_touch_directional_size_multiplier">Touch directional size multiplier</string>
+    <string name="pref_allow_drag_and_drop_of_the_touch_directionals">Allow drag-and-drop of the touch directionals</string>
+    <string name="pref_center_screen_tap_action">Center screen tap action</string>
+    <string name="pref_select_functionality_for_center_screen_tap">Select functionality for center screen tap</string>
+    <string name="pref_d_pad_color_1">D-Pad Color 1</string>
+    <string name="pref_d_pad_color_2">D-Pad Color 2</string>
+    <string name="pref_debug_keycodes_external_keyboards">Debug keycodes (external keyboards)</string>
+    <string name="pref_display_the_numeric_codes_on_screen">Display the numeric codes on screen</string>
 </resources>
