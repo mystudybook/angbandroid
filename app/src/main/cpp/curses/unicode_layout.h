@@ -31,7 +31,7 @@ static inline int angdroid_is_wide_text(wchar_t ch, int attr)
  * Does not wrap or split an East Asian full-width character at the edge.
  */
 static inline angdroid_text_fit angdroid_fit_terminal_text(
-    const wchar_t *text, size_t limit, size_t available_columns)
+    const wchar_t *text, size_t limit, size_t available_columns, int attr)
 {
     angdroid_text_fit fit = {0u, 0u, 0};
     size_t i;
@@ -41,7 +41,7 @@ static inline angdroid_text_fit angdroid_fit_terminal_text(
         return fit;
     }
     for (i = 0; i < limit && text[i]; ++i) {
-        size_t span = (size_t)(angdroid_terminal_columns((uint32_t)text[i]));
+        size_t span = (size_t)(angdroid_is_wide_text(text[i], attr) ? 2 : 1);
         if (span > available_columns - fit.columns) {
             fit.clipped = 1;
             return fit;
