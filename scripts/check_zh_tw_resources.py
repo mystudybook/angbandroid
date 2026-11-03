@@ -28,13 +28,14 @@ ANDROID = "{http://schemas.android.com/apk/res/android}"
 RESOURCE_REF = re.compile(r"^@string/([A-Za-z0-9_]+)$")
 ARRAY_REF = re.compile(r"^@array/([A-Za-z0-9_]+)$")
 JAVA_RESOURCE_REF = re.compile(r"\bR\.string\.([A-Za-z0-9_]+)\b")
+JAVA_ARRAY_REF = re.compile(r"\bR\.array\.([A-Za-z0-9_]+)\b")
 FORMAT_ARGUMENT = re.compile(r"%(?:[0-9]+\$)?[a-zA-Z]")
 JAVA_UI = [
     ROOT / "app" / "src" / "main" / "java" / "org" / "rephial" / "xyangband" / file
     for file in (
         "GameActivity.java", "StorageActivity.java", "InputDialog.java",
         "HelpActivity.java", "AngbandActivity.java", "ProfilesActivity.java",
-        "ProfileAddActivity.java", "ProfileList.java",
+        "ProfileAddActivity.java", "ProfileList.java", "TermView.java",
     )
 ]
 
@@ -102,6 +103,13 @@ def main():
                     f"{source_args} != {localized_args}"
                 )
 
+    # Mouse popup display labels may change with locale, but their eight
+    # fixed numeric option IDs must always have a matching visible label.
+    for language, values in (("English", english), ("zh-TW", chinese)):
+        options = values.get("mouse_input_labels")
+        if options is None or options.tag != "string-array" or len(options.findall("item")) != 8:
+            errors.append(f"{language}: mouse_input_labels must contain exactly eight labels")
+
     referenced = set()
     array_referenced = set()
     preference_untranslated = []
@@ -159,6 +167,7 @@ def main():
             errors.append(f"Cannot read Java source: {path}: {exc}")
             continue
         referenced.update(JAVA_RESOURCE_REF.findall(source))
+        array_referenced.update(JAVA_ARRAY_REF.findall(source))
 
     for name in sorted(array_referenced):
         if name not in english:
