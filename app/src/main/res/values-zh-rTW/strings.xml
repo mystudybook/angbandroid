@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Only user-visible strings are localized here. Never translate persisted values/identifiers. -->
+    <string name="menu_preferences">設定</string>
+    <string name="menu_profiles">角色設定檔</string>
+    <string name="menu_help">說明</string>
+    <string name="menu_quit">離開</string>
+    <string name="menu_profile_add">編輯設定檔</string>
+    <string name="angband_help">Angband 說明</string>
+    <string name="preferences">設定</string>
+    <string name="profiles">角色設定檔</string>
+    <string name="profileadd">新增設定檔</string>
+    <string name="storage">儲存空間</string>
+    <string name="profile_name_caption">設定檔名稱或說明</string>
+    <string name="profile_savefile_caption">遊戲存檔名稱</string>
+    <string name="display_category">顯示</string>
+    <string name="control_category">操作</string>
+    <string name="game_category">遊戲</string>
+    <string name="description">Angband 是一款探索地城的 Roguelike 角色扮演遊戲。</string>
+    <string name="preferences_vibrate_title">震動</string>
+    <string name="preferences_vibrate_summary">開啟或關閉遊戲中的震動</string>
+    <string name="preferences_fullscreen_title">全螢幕</string>
+    <string name="preferences_fullscreen_summary">開啟或關閉全螢幕模式</string>
+    <string name="preferences_orientation_title">螢幕方向</string>
+    <string name="preferences_orientation_summary">選擇螢幕顯示方向</string>
+    <string name="preferences_keyboardOverlap_title">讓輸入控制項覆蓋畫面</string>
+    <string name="preferences_keyboardOverlap_summary">讓鍵盤或快捷按鈕列顯示在遊戲畫面上方</string>
+    <string name="preferences_gameplugin_title">選擇遊戲版本</string>
+    <string name="preferences_gameplugin_summary">此遊戲設定會儲存在目前使用的角色設定檔中</string>
+    <string name="preferences_enablevkey_title">啟用虛擬鍵盤</string>
+    <string name="preferences_enablevkey_summary">顯示虛擬鍵盤（會強制使用直向模式）</string>
+    <string name="preferences_portraitkb_title">直向鍵盤</string>
+    <string name="preferences_portraitkb_summary">在直向模式顯示虛擬鍵盤</string>
+    <string name="preferences_landscapekb_title">橫向鍵盤</string>
+    <string name="preferences_landscapekb_summary">在橫向模式顯示虛擬鍵盤</string>
+    <string name="preferences_enablevolkeyfontsize_title">用音量鍵調整字體大小</string>
+    <string name="preferences_enablevolkeyfontsize_summary">按音量增減鍵來調整字體大小</string>
+    <string name="preferences_enabletouch_title">啟用觸控方向鍵</string>
+    <string name="preferences_enabletouch_summary">開啟螢幕上的方向控制</string>
+    <string name="preferences_touchright_title">方向鍵靠右</string>
+    <string name="preferences_touchright_summary">將觸控方向鍵放在畫面右側</string>
+    <string name="preferences_skipwelcome_title">略過歡迎畫面</string>
+    <string name="preferences_skipwelcome_summary">啟動時自動略過 Angband 歡迎畫面</string>
+
+    <string-array name="orientationDescriptions">
+        <item>自動旋轉</item>
+        <item>直向</item>
+        <item>橫向</item>
+    </string-array>
+
+    <string-array name="virtKeyActionDescriptions">
+        <item>無</item>
+        <item>Ctrl 鍵</item>
+        <item>Enter 鍵</item>
+        <item>返回（Esc）</item>
+        <item>句點（.）</item>
+        <item>逗號（,）</item>
+        <item>數字五（5）</item>
+        <item>Shift 鍵</item>
+        <item>空白鍵</item>
+        <item>虛擬鍵盤</item>
+        <item>放大</item>
+        <item>縮小</item>
+        <item>將玩家置中（@）</item>
+    </string-array>
+
+    <string-array name="graphicsModesDesc">
+        <item>無</item>
+        <item>原始圖塊</item>
+        <item>Adam Bolt 圖塊</item>
+        <item>David Gervai 圖塊</item>
+        <item>Nomad 圖塊</item>
+        <item>Shockbolt 圖塊（深色）</item>
+        <item>Shockbolt 圖塊（淺色）</item>
+    </string-array>
+
+    <string-array name="keyboardPositionDesc">
+        <item>置中</item>
+        <item>左下</item>
+        <item>右下</item>
+        <item>左上</item>
+        <item>右上</item>
+    </string-array>
+</resources>
