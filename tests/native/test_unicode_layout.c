@@ -26,7 +26,7 @@ int main(void)
     fit(mixed, 20, 3, 2, 3, 1);
     fit(mixed, 20, 2, 1, 1, 1);
     fit(mixed, 20, 1, 1, 1, 1);
-    fit(mixed, 2, 10, 2, 3, 1);
+    fit(mixed, 2, 10, 2, 3, 0);
     fit(wide, 10, 1, 0, 0, 1);
     fit(wide, 10, 2, 1, 2, 0);
     fit(ascii, 10, 2, 2, 2, 0);
