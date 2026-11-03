@@ -30,10 +30,10 @@ Native Angband now uses a **cached display-only Traditional Chinese locale flag*
 
 - The character death menu has **9 translated option labels** and **11 translated prompts**. Command tags and callbacks remain unchanged.
 - Monster and item list headings, counts and monster sleep status have Chinese variants, without changing the original object or monster lists.
-- **38 ordinary monster display names** are translated only by `get_mon_name()` in the monster list; unique monsters and general combat narration remain English.
-- **37 known object-kind display names** are translated only by `object_kind_name()`. Unidentified item flavors, inventory grammar, item descriptions and actual `object_desc()` behavior remain unchanged.
+- **128 ordinary monster display names** are translated only by `get_mon_name()` in the monster list; unique monsters and general combat narration remain English.
+- **76 known object-kind display names** are translated only by `object_kind_name()`. Unidentified item flavors, inventory grammar, item descriptions and actual `object_desc()` behavior remain unchanged.
 - These English names were verified against Angband **4.2.4** upstream `monster.txt`/`object.txt`. Unknown names fall back to the original text. Neither `zipangband` nor any saved data is modified.
-- Added pure Java and native C test cases and `scripts/check_native_game_localization.py` to the one-command check suite. **Native compilation, the bundled zip-data match, terminal text alignment and Android emulator rendering are not yet verified.**
+- Added pure Java and native C test cases plus `scripts/check_native_game_localization.py` to the one-command check suite. Native monster/item list lines now use terminal display-column helpers to clip UTF-8 safely and account for two-column glyphs during padding. **Full Android NDK build, bundled zip-data match, visual alignment and emulator rendering remain unverified.**
 
 See [NATIVE_GAME_ZH_TW.md](NATIVE_GAME_ZH_TW.md) for all implementation boundaries, tested inputs and follow-up work.
 
