@@ -7551,7 +7551,7 @@ static bool build_themed_level(void)
 		if (i < DUN_ROOMS)
 		{
 			/*make the first 33% of  attempts at an unusually large room*/
-			bool large_room = ((dun->cent_n < 1) ? 11 : 10);
+			int large_room = ((dun->cent_n < 1) ? 11 : 10);
 
 			if (!room_build(by, bx, large_room)) continue;
 		}

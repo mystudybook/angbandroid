@@ -164,6 +164,30 @@ and legacy plugin compatibility until separately migrated. The next possible
 blocker after CMake is installed may be a real native source or NDK
 compatibility error, which must be assessed from a new log.
 
+## 2026-11-03 third Android Studio build log — NPP C boolean type
+
+The latest uploaded `:app:assembleDebug` output confirms Java compilation and
+`:app:configureCMakeDebug[arm64-v8a]` completed. The NDK r28c / CMake 4.1.2
+native Ninja build then stopped in `npp054/main-android.c` because
+`npp054/h-basic.h` redefined `bool` as `bool_hack` before including
+`<stdbool.h>`; an already-included `<stdbool.h>` or a newer C dialect
+does not necessarily redefine it, leaving `bool_hack` without a typedef.
+
+Both `npp054` and `npp710` used the same header. They now use the standard
+boolean type when `HAVE_STDBOOL_H` is defined, preserving the legacy
+`typedef char bool_hack` fallback for C++ and older C. The independent
+`npp054/generate.c` warning was also corrected: `room_build` receives
+the intended integer room type 10 or 11, rather than a bool collapsed to 1.
+
+Run `sh scripts/test-native-bool-headers.sh` to check both headers with
+regular and pre-included `<stdbool.h>` under C99 and newer dialects supported
+by the host compiler. The combined offline verification now runs these tests
+automatically. These are **host regression tests**, not an Android APK build.
+
+The three AGP 9 deprecation warnings remain separate from the native compiler
+failure. Another NDK compile error may appear after this fix; the full APK
+still requires a successful on-device or local Android Gradle build.
+
 ## Diagnosing failures
 
 - **JDK outside supported range (below 21 or above 25):** configure Gradle JDK to 21 in Android Studio and/or set shell `JAVA_HOME` with `/usr/libexec/java_home -v 21`. Gradle 9.1 does not officially support running on JDK 26+.

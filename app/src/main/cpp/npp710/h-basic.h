@@ -152,10 +152,8 @@
  * s32b/u32b are exactly 4 bytes (where possible)
  */
 
-/* C++ defines its own bool type, so we hack around it */
-#undef bool
-#define bool bool_hack
-
+/* C99+ (including C23) uses the real bool type. Keep the legacy char-backed
+ * bool alias only in the fallback branch for older C and C++ sources. */
 
 typedef const char *cptr;
 typedef int errr;
@@ -173,7 +171,9 @@ typedef int errr;
 
 #else
 
-  /* Use a char otherwise */
+  /* Keep the old char representation for pre-C99 C and C++ callers. */
+  #undef bool
+  #define bool bool_hack
   typedef char bool;
 
   #undef TRUE

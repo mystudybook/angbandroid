@@ -41,6 +41,7 @@ run_check "Android SDK/NDK preflight regression" python3 "$ROOT/tests/test_andro
 run_check "Android string resources" python3 "$ROOT/scripts/check_zh_tw_resources.py"
 run_check "Java Unicode terminal" sh "$ROOT/scripts/test-terminal-unicode.sh"
 run_check "Native C UTF-8 and column-width helpers" sh "$ROOT/scripts/test-native-utf8.sh"
+run_check "Legacy NPP bool headers across supported C standards" sh "$ROOT/scripts/test-native-bool-headers.sh"
 run_check "Native/Java Unicode protocol wiring" python3 "$ROOT/scripts/check-native-unicode-contract.py"
 run_check "Native Angband game zh-TW text isolation" python3 "$ROOT/scripts/check_native_game_localization.py"
 
