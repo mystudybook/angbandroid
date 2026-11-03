@@ -1,7 +1,9 @@
 #include <stdlib.h>
 #include <wchar.h>
 #include <string.h>
+#include <limits.h>
 #include "curses.h"
+#include "unicode_utf8.h"
 
 #define JAVA_CALL(...) ((*env)->CallVoidMethod(env, NativeWrapperObj, __VA_ARGS__))
 #define JAVA_CALL_INT(...) ((*env)->CallIntMethod(env, NativeWrapperObj, __VA_ARGS__))
@@ -204,25 +206,31 @@ int addntiles(int x, int y, int n,
 */
 
 int waddnwstr(WINDOW* w, int n, const wchar_t *ws) {
-	wchar_t* wbuf = malloc(sizeof(wchar_t)*(n+1));
-	memcpy(wbuf,ws,sizeof(wchar_t)*n);
-	wbuf[n]=0;
+	char *utf8;
+	size_t capacity;
+	size_t length;
+	int result;
 
-	size_t len = wcstombs((char*)NULL, wbuf, 0);
-	// Cant convert
-	if (len == (size_t)-1) {
-		return 0;
+	if (!w || n < 0 || (!ws && n > 0)) return ERR;
+	if (n == 0) return 0;
+
+	/* At most four UTF-8 bytes per Unicode scalar. Also avoid a length
+	 * that cannot be represented by waddnstr()'s int byte count. */
+	if ((size_t)n > (size_t)INT_MAX / 4u) return ERR;
+	capacity = (size_t)n * 4u + 1u;
+	utf8 = malloc(capacity);
+	if (!utf8) return ERR;
+
+	/* Do not rely on LC_CTYPE: Android may start the native core in the
+	 * default C locale, where wcstombs() cannot encode Han characters. */
+	length = angdroid_encode_wide_utf8(ws, (size_t)n, utf8, capacity);
+	if (length == (size_t)-1 || length > (size_t)INT_MAX) {
+		free(utf8);
+		return ERR;
 	}
-	char* s = malloc(len+1);
-
-	wcstombs(s, wbuf, len);
-
-	free(wbuf);
-
-	waddnstr(w, len, s);
-
-	free(s);
-	return 0;
+	result = waddnstr(w, (int)length, utf8);
+	free(utf8);
+	return result;
 }
 
 int move(int y, int x) {
