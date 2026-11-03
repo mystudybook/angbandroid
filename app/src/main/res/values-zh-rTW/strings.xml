@@ -269,4 +269,16 @@
     <string name="profile_validation_savefile_required">請輸入遊戲存檔檔名</string>
     <string name="profile_validation_duplicate_name">已存在同名設定檔</string>
     <string name="profile_validation_duplicate_savefile">已有設定檔使用此存檔檔名</string>
+
+    <!-- Display-only mouse modifier labels; button IDs do not depend on text. -->
+    <string-array name="mouse_input_labels">
+        <item>左鍵</item>
+        <item>Shift＋1</item>
+        <item>Ctrl＋1</item>
+        <item>Alt＋1</item>
+        <item>右鍵</item>
+        <item>Shift＋2</item>
+        <item>Ctrl＋2</item>
+        <item>Alt＋2</item>
+    </string-array>
 </resources>
