@@ -207,6 +207,7 @@
     <string name="profile_savefile_hint">存檔檔名</string>
     <string name="splash_start">開始遊戲</string>
     <string name="splash_storage">檔案管理</string>
+    <string name="splash_language">語言</string>
 
     <!-- In-game quick settings and confirmation buttons. -->
     <string name="quick_settings">快速設定</string>

@@ -33,5 +33,12 @@
 			android:layout_height="wrap_content"
 			android:visibility="invisible"
 			android:text="@string/splash_storage" />
+        <Button
+            android:id="@+id/btn_language"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:visibility="invisible"
+            android:text="@string/splash_language" />
 	</LinearLayout>
 </LinearLayout>

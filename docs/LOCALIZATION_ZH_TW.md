@@ -4,6 +4,8 @@ This is an **unofficial** localization of the Android Angband port. The intended
 
 ## Independent app language (2026-11-03)
 
+The launcher also displays **Language / 語言** after the startup installer completes, allowing language changes before a game begins. The launcher refreshes its resources after a selection.
+
 Android Settings → Game → **App language / 應用程式語言** offers
 **Follow system / 跟隨系統** (the default for existing users), **English**,
 and **Traditional Chinese (Taiwan) / 繁體中文（台灣）**. The preference

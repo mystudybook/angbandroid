@@ -179,6 +179,40 @@ public class AngbandActivity extends LocalizedActivity
 				}
 		);
 		b2.setVisibility(View.VISIBLE);
+
+        // Show language options on the launcher, before a native game is running.
+        Button languageButton = rootView.findViewById(R.id.btn_language);
+        languageButton.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                final String[] labels = getResources().getStringArray(R.array.app_language_labels);
+                final String[] values = getResources().getStringArray(R.array.app_language_values);
+                String selected = AppLanguageContext.selected(AngbandActivity.this);
+                int checked = 0;
+                for (int i = 0; i < values.length; i++) {
+                    if (values[i].equals(selected)) {
+                        checked = i;
+                        break;
+                    }
+                }
+                new AlertDialog.Builder(AngbandActivity.this)
+                    .setTitle(R.string.app_language_title)
+                    .setSingleChoiceItems(labels, checked, new DialogInterface.OnClickListener() {
+                        @Override public void onClick(DialogInterface dialog, int which) {
+                            if (which < 0 || which >= values.length) return;
+                            if (!values[which].equals(AppLanguageContext.selected(AngbandActivity.this))) {
+                                getSharedPreferences(Preferences.NAME, MODE_PRIVATE).edit()
+                                    .putString(Preferences.KEY_APP_LANGUAGE, values[which]).apply();
+                                // Safe here: the game thread has not been started.
+                                recreate();
+                            }
+                            dialog.dismiss();
+                        }
+                    })
+                    .setNegativeButton(R.string.action_cancel, null)
+                    .show();
+            }
+        });
+        languageButton.setVisibility(View.VISIBLE);
 	}
 
 	public synchronized void checkInstall() {

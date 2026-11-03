@@ -357,6 +357,7 @@
     <string name="profile_savefile_hint">SaveFile</string>
     <string name="splash_start">START</string>
     <string name="splash_storage">STORAGE</string>
+    <string name="splash_language">LANGUAGE</string>
 
     <!-- In-game quick settings and confirmation buttons. -->
     <string name="quick_settings">Quick Settings</string>

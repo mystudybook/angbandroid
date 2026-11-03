@@ -33,6 +33,9 @@ require(JAVA / "NativeWrapper.java", "AppLanguageContext.usesTraditionalChinese(
 require(JAVA / "HelpActivity.java", "AppLanguageContext.usesTraditionalChinese(this)")
 require(JAVA / "AppLanguageContext.java", "base.createConfigurationContext(config)")
 require(JAVA / "AppLanguageSelection.java", 'FOLLOW_SYSTEM = "system"')
+require(JAVA / "AngbandActivity.java", "R.id.btn_language")
+require(JAVA / "AngbandActivity.java", "putString(Preferences.KEY_APP_LANGUAGE")
+require(RES / "layout/splash.xml", "@string/splash_language")
 require(ROOT / "scripts/test-terminal-unicode.sh", "AppLanguageSelectionTest")
 
 namespace = "{http://schemas.android.com/apk/res/android}"
@@ -50,7 +53,7 @@ def resources(path):
 
 english = resources(RES / "values/strings.xml")
 chinese = resources(RES / "values-zh-rTW/strings.xml")
-for name in ("app_language_title", "app_language_restart_hint",
+for name in ("splash_language", "app_language_title", "app_language_restart_hint",
              "app_language_restart_summary", "app_language_labels"):
     assert name in english and name in chinese, f"missing localized resource: {name}"
     checks += 1
