@@ -58,6 +58,8 @@ def main():
             and "localProperties.getProperty('ABI_FILTERS')" in app,
         "Default debug ABI is ARM64": "debugAbiSpec = 'arm64-v8a'" in app,
         "Valid native ABI filter checked": "supportedAbis.contains(it)" in app,
+        "AGP 8 mutable ABI collection": "abiFilters.addAll(my_abi_filters)" in app
+            and "abiFilters = []" not in app,
         "No mandatory custom local.properties reader": "def local_props(key)" not in app,
         "Build verification logs active Java": "sh ./gradlew --version" in read("scripts/verify-zh-tw.sh"),
         "Optional ABI override in verification": '"-PABI_FILTERS=$ABI_FILTERS"' in read("scripts/verify-zh-tw.sh"),
