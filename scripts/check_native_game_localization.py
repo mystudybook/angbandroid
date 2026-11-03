@@ -144,7 +144,7 @@ def main():
         expect(expected in birth_ui,
                "Localized roller prompt needs a literal %s format: " + english)
     expect(not re.search(
-        r"strnfcat\\s*\\([^;]*?&promptlen,\\s*angdroid_game_ui_text\\s*\\(",
+        r"strnfcat\s*\([^;]*?&promptlen,\s*angdroid_game_ui_text\s*\(",
         birth_ui),
         "Unsafe localized strnfcat format string reintroduced")
     expect('angdroid_game_ui_text("New game"' in game_ui,
