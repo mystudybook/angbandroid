@@ -2468,9 +2468,9 @@ errr Term_redraw_section(int x1, int y1, int x2, int y2)
 	if (y1 < 0) y1 = 0;
 	if (x1 < 0) x1 = 0;
 
-	/* Set y limits */
-	Term->y1 = y1;
-	Term->y2 = y2;
+	/* Preserve any other dirty rows already queued for this refresh. */
+	if (y1 < Term->y1) Term->y1 = y1;
+	if (y2 > Term->y2) Term->y2 = y2;
 
 	for (i = y1; i <= y2; i++) {
 		int first = x1;
@@ -2485,8 +2485,9 @@ errr Term_redraw_section(int x1, int y1, int x2, int y2)
 			Term->scr->c[i], Term->scr->a[i],
 			Term->old->c[i], Term->old->a[i]);
 
-		Term->x1[i] = first;
-		Term->x2[i] = last;
+		/* Union with pre-existing pending changes in the same row. */
+		if (first < Term->x1[i]) Term->x1[i] = first;
+		if (last > Term->x2[i]) Term->x2[i] = last;
 		c_ptr = Term->old->c[i];
 
 		/* Force all affected columns to be refreshed, including the
