@@ -1,34 +1,37 @@
 # Native Angband Chinese text rendering audit
 
-Status: **analysis only**. The Android-facing UI localization can proceed, but native-game text must not be treated as Chinese-capable yet. Do not translate native gameplay data until a Unicode rendering proof-of-concept and Android device test pass.
+Status: **initial mitigations implemented on `master`; complete Unicode terminal support remains unfinished.** No Android APK build, emulator or physical-device test has been completed.
 
-## Confirmed source-level problems
+## Changes already made
 
-1. **Characters are truncated before drawing.** In `app/src/main/java/org/rephial/xyangband/TermView.java`, both `drawPoint()` and `drawText()` apply `&= 0xFF` to their character values before building a Java `String`. Most Traditional Chinese code points are above U+00FF and cannot survive that operation.
-2. **Every terminal character is rendered into exactly one cell.** `TermView.drawPoint()` and `drawText()` compute the rectangle from `char_width` and `char_height`, then `canvas.clipRect(bg)` to a single cell. Full-width CJK glyphs can be clipped or overlap incorrectly. Fixing only the bit mask is insufficient.
-3. **Terminal string writing advances by UTF-16 code unit, not Unicode code point or visual column width.** `TermWindow.addnstr()` decodes bytes using the selected encoding, then iterates `String.length()` and calls `addch(str.charAt(i))`. BMP Han characters are one UTF-16 unit but occupy two traditional terminal columns; supplementary characters are split into surrogate halves. A width-aware terminal model is required.
-4. **The chosen game font is not validated for Chinese.** `TermView.setFontFace()` loads `6x13.ttf` or `VeraMoBd.ttf`. No CJK font-coverage check or fallback behavior has been demonstrated. Don't assume that removing the bit mask guarantees visible Chinese.
-5. **The encoding changes between bundled variants.** `Plugins.Plugin.getEncoding()` returns `ISO-8859-1` for two NPPAngband variants, otherwise `UTF-8`. Prototype native Chinese rendering with the ordinary Angband variant first; assess other variants independently.
-6. **Byte input alone is not enough.** `NativeWrapper.waddnstr()` passes bytes and the plugin encoding to `TermWindow.addnstr()`. The native Angband core uses UTF-8/wide characters in several places, but the Android rendering layer still needs a coherent Unicode and column-width contract.
+- `TermView.drawPoint()` no longer discards the high byte of UTF-16/BMP characters. Its East Asian glyph path uses an Android system font fallback and scales glyphs to fit the legacy one-cell text clip. This makes a BMP Chinese glyph *eligible* for drawing but is **not proper two-column CJK layout**.
+- `TermView.drawSubWindow()` now shares the East Asian font fallback strategy, including the top information bar.
+- `TerminalUnicode.java` provides a reusable East Asian wide-character classifier, with pure-Java tests in `tests/java/org/rephial/xyangband/TerminalUnicodeTest.java`. An isolated local JDK compilation and test run passed 14 representative width cases, including Han characters, full-width punctuation, ASCII and the private-use special-key range. Run `sh scripts/test-terminal-unicode.sh` on a full checkout to repeat that test.
+- `TermWindow.addnstr()` now iterates decoded text by Unicode code point, avoiding the accidental splitting of supplementary characters into two UTF-16 surrogate halves. **Supplementary code points still fall back to `?`** until the terminal cell model supports full Unicode.
 
-## Proposed implementation order
+## Unresolved architecture work
 
-1. Create a **separate proof-of-concept branch** and a minimal terminal rendering test that injects ASCII, Latin-1, CJK, punctuation, combining characters, and a supplementary Unicode character. Preserve the current renderer for production until results are verified.
-2. Specify the Unicode contract: code points, terminal columns (0/1/2), continuation cells, width of fullwidth glyphs, combining marks, selection/cursor behavior, subwindows and map tiles.
-3. Replace one-byte truncation in text rendering without altering the byte-based special commands, tile codes or color attributes. Keep text and tile paths explicitly separate.
-4. Add fonts with proper redistribution rights and tested CJK glyph coverage. Measure text and clipping using **display columns**, not raw UTF-16 length, while keeping ASCII tiles and existing savefiles intact.
-5. Test UTF-8 decoding end to end from native game text to Java `TermWindow` to Canvas, with representative characters such as `繁體中文、龍、劍、牆、＠`.
-6. Only after that, translate in-game messages and suitable `variant_lib/angband/gamedata` display fields. Keep internal identifiers, parser keys and command characters unchanged.
+1. **Two-column character layout:** `TermWindow` stores one `char` per terminal cell and always advances its cursor one column for each `addch()`. The current drawing workaround scales Han glyphs into one cell rather than reserving a second cell. This can look narrow and is not acceptable as the finished Chinese terminal.
+2. **Continuation cells and overwrite/redraw logic:** Implement width-aware storage (one or two columns), account for combining marks and supplementary code points, repair overwrite/scroll/clear/resize/cursor behavior, and keep `TermWindow.overwrite()` / `NativeWrapper.frosh()` correct.
+3. **Graphic tile codes:** `TermView.drawText()` still uses a one-byte mask in the tile/ASCII fallback path. Do not simply remove that mask without determining how native tile IDs and flags are encoded. CJK game text should first flow through the ordinary text path.
+4. **Font coverage and licensing:** The bundled terminal fonts (`6x13.ttf`, `VeraMoBd.ttf`) are not proven to support Chinese. The system fallback path is new but unverified on devices. If shipping another CJK font, review its redistribution license before bundling.
+5. **Native-layout width:** Native Angband uses UTF-8 and `wchar_t` in parts of the codebase. Ensure its notion of terminal columns matches the Java one, particularly menus, descriptions, wrapping, cursor positioning and non-ASCII special keys.
+6. **Per-variant encoding:** `Plugins.Plugin.getEncoding()` uses `ISO-8859-1` for some NPPAngband variants while ordinary Angband uses UTF-8. Full Chinese gameplay localization must be validated per engine.
+
+## Recommended next steps
+
+1. Introduce a self-contained width-aware text buffer (including continuation markers) with isolated JVM tests and integration into `TermWindow`, leaving tiles and key codes alone.
+2. Verify redraw, overwrite, erase, cursor, subwindow text and text wrapping, using `繁體中文、龍、劍、牆、＠` plus mixed ASCII and CJK strings.
+3. Obtain an Android Gradle/NDK debug build and test on a zh-TW emulator before translating game data. No test should overwrite valuable user save files.
+4. Translate native messages and selected `variant_lib/angband/gamedata` display fields only after confirming rendering. Preserve parser keys, identifiers, gameplay scripting and existing licenses.
 
 ## Acceptance checklist
 
-- ASCII gameplay and all existing font/graphic modes still render correctly.
-- Han ideographs, full-width punctuation and mixed English/Chinese strings display without replacement glyphs, clipping, overlapping or off-by-one cursor movement.
-- Word wrap, modal dialogs, item selection, quick keys, subwindows and terminal redraws remain aligned.
-- English language fallback and all other bundled variants remain playable.
-- Save/load and restart do not corrupt character, world or user preference data.
-- Run Gradle/NDK build, emulator and a physical Android device smoke test before merging.
+- ASCII gameplay and all existing text/graphic modes render correctly.
+- CJK glyphs have appropriate width and do not clip, overlap or misalign the terminal cursor.
+- Combining marks and supplementary Unicode inputs behave predictably.
+- Word wrapping, modal dialogs, item selection, subwindows, redraw and scrolling remain aligned.
+- English fallback and other bundled variants remain playable.
+- Save/load works across app restarts, and an Android debug APK runs on emulator and a real device.
 
-## Scope and evidence limits
-
-This report is grounded in the checked-in source paths above. **No Android build or emulator test has been run here.** Even after fixing the Java renderer, native layout, terminal width calculation and font shaping may require additional changes. This document is not a claim that full native Chinese support has been implemented.
+This is an **engineering audit, not a claim of a completed Chinese game-core port**. Changes are committed directly on `master` as requested.
