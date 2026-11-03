@@ -743,20 +743,28 @@ void Term_queue_chars(int x, int y, int n, int a, const wchar_t *s)
 	int *scr_taa = Term->scr->ta[y];
 	wchar_t *scr_tcc = Term->scr->tc[y];
 
-	/* Queue the attr/chars */
+	/* Each element addresses one fixed column (usually a map cell),
+	 * not a stream of terminal characters. The normal text cursor API is
+	 * responsible for two-column Unicode glyphs. */
 	for ( ; n; x++, s++, n--) {
-		int oa = scr_aa[x];
-		wchar_t oc = scr_cc[x];
+		wchar_t glyph = angdroid_fixed_cell_glyph(*s, a);
+		int oa, ota;
+		wchar_t oc, otc;
 
-		int ota = scr_taa[x];
-		wchar_t otc = scr_tcc[x];
+		/* If this fixed cell overlaps a previously placed wide glyph,
+		 * invalidate its other half before replacing the current cell. */
+		Term_clear_wide_neighbor(Term, x, y);
+		oa = scr_aa[x];
+		oc = scr_cc[x];
+		ota = scr_taa[x];
+		otc = scr_tcc[x];
 
 		/* Hack -- Ignore non-changes */
-		if ((oa == a) && (oc == *s) && (ota == 0) && (otc == 0)) continue;
+		if ((oa == a) && (oc == glyph) && (ota == 0) && (otc == 0)) continue;
 
 		/* Save the "literal" information */
 		scr_aa[x] = a;
-		scr_cc[x] = *s;
+		scr_cc[x] = glyph;
 
 		scr_taa[x] = 0;
 		scr_tcc[x] = 0;
@@ -2093,6 +2101,11 @@ errr Term_draw(int x, int y, int a, wchar_t c)
 
 	/* Paranoia -- illegal char */
 	if (!c) return (-2);
+
+	/* Direct placement uses fixed grid coordinates, frequently map cells.
+	 * Do not consume the next cell when a caller supplies a wide glyph.
+	 * Streamed CJK text should use Term_addstr()/Term_addch(). */
+	c = angdroid_fixed_cell_glyph(c, a);
 
 	/* Queue it for later */
 	Term_queue_char(Term, x, y, a, c, 0, 0);
