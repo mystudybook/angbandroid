@@ -912,7 +912,7 @@ static enum birth_stage roller_command(bool first_call)
 	else {
 		soft_kbd_flash("r?\x18");
 	}
-	strnfcat(prompt, sizeof (prompt), &promptlen, " or 'Enter' to accept]");
+	strnfcat(prompt, sizeof (prompt), &promptlen, angdroid_game_ui_text(" or 'Enter' to accept]", angdroid_zh_tw_enabled()));
 
 	/* Prompt for it */
 	prt(prompt, Term->hgt - 1, birth_prompt_column(prompt));
@@ -1243,7 +1243,7 @@ static enum birth_stage point_based_command(void)
 			}
 			if (in.mouse.y == COSTS_ROW + stat
 					&& (buysell[stat] & 2)) {
-				menu_dynamic_add_label(m, angdroid_game_ui_text(angdroid_game_ui_text("Buy", angdroid_zh_tw_enabled()), angdroid_zh_tw_enabled()), 'b',
+				menu_dynamic_add_label(m, angdroid_game_ui_text("Buy", angdroid_zh_tw_enabled()), 'b',
 					ACT_CTX_BIRTH_PTS_BUY, labels);
 			}
 			menu_dynamic_add_label(m, angdroid_game_ui_text("Accept", angdroid_zh_tw_enabled()), 'a',

@@ -49,6 +49,10 @@ def main():
     monster_list = source(CPP / "angband/ui-mon-list.c", errors)
     object_list = source(CPP / "angband/ui-obj-list.c", errors)
     native_tests = source(ROOT / "scripts/test-native-utf8.sh", errors)
+    game_ui_header = source(CPP / "angband/zh-tw-ui.h", errors)
+    birth_ui = source(CPP / "angband/ui-birth.c", errors)
+    context_ui = source(CPP / "angband/ui-context.c", errors)
+    game_ui = source(CPP / "angband/ui-game.c", errors)
     java_tests = source(ROOT / "scripts/test-terminal-unicode.sh", errors)
 
     expect("usesTraditionalChineseGameText()" in java,
@@ -121,6 +125,21 @@ def main():
                  "test_item_locale.c"):
         expect(name in native_tests, f"Native regression not registered: {name}")
 
+    for english, chinese in (("Point-based", "點數分配"),
+                             ("New game", "建立新遊戲"),
+                             ("Save and quit", "儲存並離開")):
+        expect(english in game_ui_header and chinese in game_ui_header,
+               "Missing original Angband UI translation: " + english)
+    expect("angdroid_game_ui_text(commands[oid].desc" in context_ui,
+           "Command description translation is not display-only")
+    expect("angdroid_game_ui_text(cmds_all[oid].name" in context_ui,
+           "Command category translation is not display-only")
+    expect("birth_prompt_column(prompt)" in birth_ui,
+           "CJK character creation prompt width is not measured")
+    expect('angdroid_game_ui_text("New game"' in game_ui,
+           "Savegame selector is not translated at display time")
+    expect("test_game_ui_locale.c" in native_tests,
+           "Missing C99 native UI regression")
     if errors:
         for item in errors:
             print("FAIL:", item)

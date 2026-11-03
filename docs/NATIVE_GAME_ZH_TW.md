@@ -34,6 +34,25 @@ The Android project bundles game resources inside `app/src/main/res/raw/zipangba
 - The localized monster/object lists now use `curses/unicode_display.h` for **two-column CJK text width**, safe whole-character clipping and byte-aware `printf` padding. Existing `unicode_width.h` remains the display-width classifier. This fixes the previous code-point-count approximation, but actual native terminal positioning and font rendering still require Android emulator testing.
 - The original English menu shortcut keys, action codes, and callback bindings have not been modified.
 
+## First character creation and command menu translation (2026-11-03)
+
+This batch adds display-only Chinese labels for character creation (quickstart,
+race/class/method hints, point allocation, random rolls, name and history,
+confirmation), command categories and context menu captions, savefile selection
+and save prompts, textblock continuation footers and retirement confirmation.
+
+English command descriptions in `ui-game.c` remain unchanged for lookup and
+input mappings; `ui-context.c` translates them only when painting menu text.
+Game data, player name rules, `CMD_*` values, menu keys and savefile formats
+are unchanged. Chinese character-creation prompt centering measures terminal
+display columns rather than UTF-8 byte lengths.
+
+This is not a full Angband translation: race/class names, most combat narration,
+spell messages and all other variants retain English. A host C99 test in
+`tests/native/test_game_ui_locale.c` and static source checks are now part
+of the local verification script; a real Android gameplay/viewport test is
+still needed.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
