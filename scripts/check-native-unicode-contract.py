@@ -20,6 +20,14 @@ def main():
             'queue_wide_marker': "Term_queue_char_raw(t, x + 1, y, a,",
             'erase_half_pair': "Term_clear_wide_neighbor(t, x, y);",
             'erase_span_policy': "Removing either half of a two-column glyph",
+            'partial_redraw_expansion': "angdroid_expand_redraw_columns(Term->wid, &first, &last,",
+            'redraw_range_is_row_local': "int first = x1;",
+            'partner_cell_on_overwrite': "angdroid_wide_partner_column(t->wid, x,",
+        },
+        "app/src/main/cpp/curses/unicode_layout.h": {
+            'redraw_helper': "static inline void angdroid_expand_redraw_columns(",
+            'wide_partner_helper': "static inline int angdroid_wide_partner_column(",
+            'preserves_large_tile': "previous_attrs[*first] == 255",
         },
         "app/src/main/cpp/common/angdroid.c": {
             'unicode_text_runs': "angdroid_next_visible_text_run(",
