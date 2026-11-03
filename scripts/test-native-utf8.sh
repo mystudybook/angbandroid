@@ -80,3 +80,7 @@ CC="${CC:-cc}"
 # All source class.txt spell names, display-only C99 lookup and English fallback.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_spell_names_locale.c" -o "$BUILD_DIR/test_spell_names_locale"
 "$BUILD_DIR/test_spell_names_locale"
+
+# Original Angband class progression titles; game records unchanged.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_class_titles_locale.c" -o "$BUILD_DIR/test_class_titles_locale"
+"$BUILD_DIR/test_class_titles_locale"

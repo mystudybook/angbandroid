@@ -54,6 +54,8 @@ def main():
     game_ui_header = source(CPP / "angband/zh-tw-ui.h", errors)
     birth_ui = source(CPP / "angband/ui-birth.c", errors)
     player_ui = source(CPP / "angband/ui-player.c", errors)
+    class_titles = source(CPP / "angband/zh-tw-class-titles.h", errors)
+    class_titles_data = source(ROOT / "variant_lib/angband/gamedata/class.txt", errors)
     menu_ui = source(CPP / "angband/ui-menu.c", errors)
     context_ui = source(CPP / "angband/ui-context.c", errors)
     game_ui = source(CPP / "angband/ui-game.c", errors)
@@ -576,6 +578,32 @@ def main():
            "Studied spell message should use localized spell name")
     expect('test_spell_names_locale.c' in native_tests,
            "Spell-name C99 test missing from native tests")
+    title_keys = {en for en, _ in re.findall(
+        r'^\s*\{\s*"([^"]+)",\s*"([^"]+)"\s*\},\s*        for item in errors:
+            print("FAIL:", item)
+        return 1
+    print(f"PASS: {checks} native game-localization source safeguards")
+    print("  Monster list entries: 522 | item kind labels: 326")
+    print("  Death menu labels: 9 | death prompts: 11")
+    print("NOTE: Requires Android NDK and on-device zh-TW gameplay validation")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+,
+        class_titles, re.MULTILINE)}
+    canonical_titles = {line.partition(":")[2]
+                        for line in class_titles_data.splitlines()
+                        if line.startswith("title:")}
+    expect(title_keys == canonical_titles,
+           "Class progression title translations must cover canonical class.txt")
+    expect('angdroid_zh_tw_class_title(show_title()' in player_ui,
+           "Character sheet must translate progression titles at render time")
+    expect('char value[96];' in player_ui,
+           "Character sheet title buffer must hold multibyte Chinese text")
+    expect('test_class_titles_locale.c' in native_tests,
+           "Class progression title regression not registered")
     if errors:
         for item in errors:
             print("FAIL:", item)

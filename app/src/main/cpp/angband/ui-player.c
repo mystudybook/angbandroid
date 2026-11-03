@@ -43,6 +43,7 @@
 
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-class-titles.h"
 #include "../curses/unicode_display.h"
 
 /**
@@ -56,7 +57,7 @@
 struct panel_line {
 	uint8_t attr;
 	const char *label;
-	char value[20];
+	char value[96];
 };
 
 /**
@@ -704,7 +705,7 @@ static struct panel *get_panel_topleft(void) {
 	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Name", angdroid_zh_tw_enabled()), "%s", player->full_name);
 	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Race", angdroid_zh_tw_enabled()),	"%s", angdroid_game_ui_text(player->race->name, angdroid_zh_tw_enabled()));
 	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Class", angdroid_zh_tw_enabled()), "%s", angdroid_game_ui_text(player->class->name, angdroid_zh_tw_enabled()));
-	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Title", angdroid_zh_tw_enabled()), "%s", show_title());
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Title", angdroid_zh_tw_enabled()), "%s", angdroid_zh_tw_class_title(show_title(), angdroid_zh_tw_enabled()));
 	panel_line(p, COLOUR_L_BLUE, "HP", "%d/%d", player->chp, player->mhp);
 	panel_line(p, COLOUR_L_BLUE, "SP", "%d/%d", player->csp, player->msp);
 

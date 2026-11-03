@@ -540,6 +540,18 @@ columns. Unknown spell names and English language mode retain the source
 English text. A source-coverage assertion and C99 test prevent omissions
 when the game's spell list changes.
 
+## All 89 original Angband class progression titles (2026-11-04)
+
+Each of the 89 distinct `title:` entries from the original
+`variant_lib/angband/gamedata/class.txt` has an exact, display-only
+Traditional Chinese label. The character sheet translates the current class
+progression title without changing its underlying data, class ID or savefile.
+Unknown titles and special wizard/winner titles use the original display.
+The character-sheet panel value buffer expands from 20 to 96 bytes so
+longer multibyte Chinese titles are not truncated inside a UTF-8 character;
+screen-column clipping still happens in the existing rendering layer.
+A C99 regression and canonical set-coverage check are registered.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
