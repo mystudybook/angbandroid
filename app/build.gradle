@@ -67,8 +67,9 @@ android {
     buildTypes {
         debug {
             ndk {
-                abiFilters = []
-                abiFilters.addAll(my_abi_filters.split(';').collect{it as String})
+                // AGP 8 exposes a mutable ABI set; avoid assigning a new
+                // collection to the DSL property during configuration.
+                abiFilters.addAll(my_abi_filters)
             }
         }
         release {
