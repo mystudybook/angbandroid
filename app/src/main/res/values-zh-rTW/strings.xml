@@ -343,4 +343,14 @@
     <string name="adv_button_always_visible">保持顯示</string>
     <string name="quantity_all">全部</string>
     <string name="opacity_opaque">不透明</string>
+
+    <!-- Floating button editor labels; internal action strings remain unchanged. -->
+    <string name="fab_label">標籤：</string>
+    <string name="fab_label_optional">可選填</string>
+    <string name="fab_overview">地圖概覽</string>
+    <string name="fab_fixed_position">固定座標</string>
+    <string name="fab_icon">圖示：</string>
+    <string name="fab_global_size">全域按鈕大小：</string>
+    <string name="fab_button_size">此按鈕大小：</string>
+    <string name="fab_button_opacity">此按鈕透明度：</string>
 </resources>
