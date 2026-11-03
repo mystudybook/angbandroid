@@ -94,6 +94,26 @@ def main():
             assert "PASS: CMake 4.1.2 from local.properties cmake.dir" in message
             checks += 1
 
+            # Passing the bin/ folder instead of the CMake install root
+            # must not be accepted as a usable AGP cmake.dir.
+            props.write_text(
+                f"sdk.dir={sdk}\ncmake.dir={path_cmake.parent}\n",
+                encoding="utf-8"
+            )
+            status, message = run(str(path_cmake))
+            assert status == 1 and "UNUSABLE: local.properties cmake.dir" in message
+            checks += 1
+
+            # Java Properties uses the final duplicate key.
+            props.write_text(
+                f"sdk.dir={sdk}\ncmake.dir=/not-a-cmake-install\n"
+                f"cmake.dir={path_cmake.parent.parent}\n",
+                encoding="utf-8"
+            )
+            status, message = run()
+            assert status == 0 and "PASS: CMake 4.1.2" in message
+            checks += 1
+
             props.write_text(f"sdk.dir={sdk}\n", encoding="utf-8")
             fake_cmake(sdk / "cmake" / "4.1.2" / "bin" / "cmake", "4.1.2")
             status, message = run()
