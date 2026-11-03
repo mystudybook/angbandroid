@@ -2141,6 +2141,10 @@ errr Term_addch(int a, wchar_t c)
 	/* Paranoia -- no illegal chars */
 	if (!c) return (-2);
 
+	/* A literal U+FDD0 noncharacter is not an internal continuation
+	 * cell; keep it out of the native screen grid. */
+	c = angdroid_stream_glyph(c);
+
 	/* The native and Java text buffers must advance by the same
 	 * number of display columns. The final cell cannot hold half a glyph. */
 	int span = angdroid_is_wide_text(c, a) ? 2 : 1;
@@ -2209,7 +2213,7 @@ errr Term_addstr(int n, int a, const char *buf)
 	for (i = 0; i < (int)fit.codepoints; ++i) {
 		wchar_t ch = s[i];
 		int span = angdroid_is_wide_text(ch, a) ? 2 : 1;
-		if (ch == ANGDROID_TEXT_CONTINUATION) ch = L'?';
+		ch = angdroid_stream_glyph(ch);
 		Term_queue_char(Term, xpos, Term->scr->cy, a, ch, 0, 0);
 		xpos += span;
 	}
