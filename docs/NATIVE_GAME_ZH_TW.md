@@ -487,6 +487,15 @@ the display-only message path and retains the seven variable pain codes
 as English fallback. `scripts/test-native-utf8.sh` now runs this
 regression along with the prior Unicode tests.
 
+## Damage captions and blow-speed previews (2026-11-04)
+
+The original Angband object detail display now uses Traditional Chinese
+for average thrown damage, average per-turn damage, off-weapon brands/slays
+notice and weapon attack-frequency preview. The original integer/fractional
+damage and blow calculations are untouched, and English-mode messages
+retain the original format strings. Also removed a duplicate include of
+`droid.h` introduced by overlapping item-info work.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

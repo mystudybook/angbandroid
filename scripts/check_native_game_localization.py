@@ -508,6 +508,17 @@ def main():
            "Monster damage average translation missing English fallback")
     expect("test_monster_messages_locale.c" in native_tests,
            "Monster event C99 regression not registered")
+    expect('angdroid_item_info_text("Average thrown damage: "' in object_info
+           and 'angdroid_item_info_text("Average damage/round: "' in object_info,
+           "Average item damage captions not localized")
+    expect('textblock_append(tb, "每回合攻擊次數。' in object_info
+           and 'textblock_append(tb, "blow%s/round.' in object_info,
+           "Blow count must keep Chinese and original English templates")
+    expect('增加 %d 點力量與 %d 點敏捷後，每回合可攻擊 %d.%d 次。' in object_info
+           and 'With +%d STR and +%d DEX you would get %d.%d blows' in object_info,
+           "Item blows/round mechanics must preserve numeric substitutions")
+    expect(object_info.count('#include "droid.h"') == 1,
+           "Duplicate native locale include in object info")
     if errors:
         for item in errors:
             print("FAIL:", item)

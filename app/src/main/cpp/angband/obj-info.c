@@ -40,7 +40,6 @@
 #include "z-textblock.h"
 #include "droid.h"
 #include "zh-tw-object-info.h"
-#include "droid.h"
 #include "zh-tw-item-info.h"
 
 /**
@@ -980,23 +979,36 @@ static bool describe_blows(textblock *tb, const struct object *obj)
 	textblock_append_c(tb, COLOUR_L_GREEN, "%d.%d ",
 			blow_info[0].centiblows / 100, 
 			(blow_info[0].centiblows / 10) % 10);
-	textblock_append(tb, "blow%s/round.\n",
-			(blow_info[0].centiblows > 100) ? "s" : "");
+	if (angdroid_zh_tw_enabled())
+        textblock_append(tb, "每回合攻擊次數。\n");
+    else
+        textblock_append(tb, "blow%s/round.\n",
+            (blow_info[0].centiblows > 100) ? "s" : "");
 
 	/* Then list combinations that give more blows / speed boost */
 	for (i = 1; i < num_entries; i++) {
 		struct blow_info entry = blow_info[i];
 
 		if (entry.centiblows % 10 == 0) {
-			textblock_append(tb, 
-				"With +%d STR and +%d DEX you would get %d.%d blows\n",
-				entry.str_plus, entry.dex_plus, 
-				(entry.centiblows / 100),
-				(entry.centiblows / 10) % 10);
+			if (angdroid_zh_tw_enabled())
+                textblock_append(tb,
+                    "增加 %d 點力量與 %d 點敏捷後，每回合可攻擊 %d.%d 次。\n",
+                    entry.str_plus, entry.dex_plus,
+                    entry.centiblows / 100, (entry.centiblows / 10) % 10);
+            else
+                textblock_append(tb,
+                    "With +%d STR and +%d DEX you would get %d.%d blows\n",
+                    entry.str_plus, entry.dex_plus,
+                    entry.centiblows / 100, (entry.centiblows / 10) % 10);
 		} else {
-			textblock_append(tb, 
-				"With +%d STR and +%d DEX you would attack a bit faster\n",
-				entry.str_plus, entry.dex_plus);
+			if (angdroid_zh_tw_enabled())
+                textblock_append(tb,
+                    "增加 %d 點力量與 %d 點敏捷後，攻擊速度會稍微提升。\n",
+                    entry.str_plus, entry.dex_plus);
+            else
+                textblock_append(tb,
+                    "With +%d STR and +%d DEX you would attack a bit faster\n",
+                    entry.str_plus, entry.dex_plus);
 		}
 	}
 
@@ -1546,12 +1558,12 @@ static bool describe_damage(textblock *tb, const struct object *obj, bool throw)
 
 	/* Mention slays and brands from other items */
 	if (nonweap_slay)
-		textblock_append(tb, "This weapon may benefit from one or more off-weapon brands or slays.\n");
+		textblock_append(tb, "%s", angdroid_item_info_text("This weapon may benefit from one or more off-weapon brands or slays.\n", angdroid_zh_tw_enabled()));
 
 	if (throw) {
-		textblock_append(tb, "Average thrown damage: ");
+		textblock_append(tb, "%s", angdroid_item_info_text("Average thrown damage: ", angdroid_zh_tw_enabled()));
 	} else {
-		textblock_append(tb, "Average damage/round: ");
+		textblock_append(tb, "%s", angdroid_item_info_text("Average damage/round: ", angdroid_zh_tw_enabled()));
 	}
 
 	if (has_brands_or_slays) {

@@ -10,6 +10,9 @@ struct angdroid_item_info_label { const char *en; const char *zh; };
 static inline const char *angdroid_item_info_text(const char *en, int zh_tw)
 {
     static const struct angdroid_item_info_label labels[] = {
+        {"This weapon may benefit from one or more off-weapon brands or slays.\n", "這件武器可能受其他裝備的屬性附魔或對特定怪物的加成影響。\n"},
+        {"Average thrown damage: ", "平均投擲傷害："},
+        {"Average damage/round: ", "每回合平均傷害："},
         {"  No fuel required.", "  不需要燃料。"},
         {"  Cannot be refueled.", "  無法補充燃料。"},
         {"\nYou can read this book.\n", "\n你可以閱讀這本書。\n"},
