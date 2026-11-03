@@ -36,6 +36,7 @@ run_check() {
 
 printf 'Angband zh-TW offline verification\n' >> "$REPORT"
 printf 'Repository: %s\n' "$ROOT" >> "$REPORT"
+run_check "JDK 21 / AGP 8.9 build configuration" python3 "$ROOT/scripts/check_jdk21_build.py"
 run_check "Android string resources" python3 "$ROOT/scripts/check_zh_tw_resources.py"
 run_check "Java Unicode terminal" sh "$ROOT/scripts/test-terminal-unicode.sh"
 run_check "Native C UTF-8 and column-width helpers" sh "$ROOT/scripts/test-native-utf8.sh"
