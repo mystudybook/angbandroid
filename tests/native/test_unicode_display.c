@@ -49,6 +49,22 @@ int main(void)
     angdroid_utf8_clip_columns(too_wide, 3);
     CHECK(strcmp(too_wide, "中") == 0);
 
+    /* Message history horizontal scrolling must never split UTF-8. */
+    CHECK(strcmp(angdroid_utf8_skip_columns("A中文B", 0), "A中文B") == 0);
+    CHECK(strcmp(angdroid_utf8_skip_columns("A中文B", 1), "中文B") == 0);
+    CHECK(strcmp(angdroid_utf8_skip_columns("A中文B", 2), "文B") == 0);
+    CHECK(strcmp(angdroid_utf8_skip_columns("A中文B", 3), "文B") == 0);
+    CHECK(strcmp(angdroid_utf8_skip_columns("A中文B", 5), "B") == 0);
+    CHECK(strcmp(angdroid_utf8_skip_columns("A中文B", 999), "") == 0);
+    CHECK(angdroid_utf8_skip_columns(NULL, 3) == NULL);
+    {
+        const char *mixed_text = "A中文B";
+        const char *match = strstr(mixed_text, "文");
+        CHECK(match != NULL);
+        CHECK(angdroid_utf8_prefix_columns(mixed_text, match) == 3);
+        CHECK(angdroid_utf8_prefix_columns(mixed_text, mixed_text) == 0);
+    }
+
     CHECK(angdroid_utf8_printf_field_bytes("abc", 10) == 10);
     CHECK(angdroid_utf8_printf_field_bytes("中文", 6) == 8);
     CHECK(angdroid_utf8_printf_field_bytes("狗頭人", 10) == 13);

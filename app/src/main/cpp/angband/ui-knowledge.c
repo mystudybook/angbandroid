@@ -66,6 +66,8 @@
 
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "../curses/unicode_display.h"
+#include "zh-tw-ui.h"
 
 /**
  * The first part of this file contains the knowledge menus.  Generic display
@@ -3832,31 +3834,43 @@ void do_cmd_messages(void)
 				msg = format("%s <%dx>", str, count);
 
 			/* Apply horizontal scroll */
-			msg = ((int)strlen(msg) >= q) ? (msg + q) : "";
+			msg = angdroid_utf8_skip_columns(msg, (size_t)q);
 
 			/* Dump the messages, bottom to top */
 			Term_putstr(0, hgt - 3 - j, -1, attr, msg);
 
-			/* Highlight "shower" */
-			if (strlen(shower)) {
+			/* Highlight searched text using terminal columns rather
+			 * than UTF-8 byte offsets. Clip the matching text to whole
+			 * glyphs before drawing at the right screen boundary. */
+			if (shower[0]) {
 				str = msg;
 
-				/* Display matches */
 				while ((str = my_stristr(str, shower)) != NULL) {
-					int len = strlen(shower);
+					size_t match_bytes = strlen(shower);
+					size_t column = angdroid_utf8_prefix_columns(msg, str);
 
-					/* Display the match */
-					Term_putstr(str-msg, hgt - 3 - j, len, COLOUR_YELLOW, str);
+					if (column < (size_t)wid) {
+						char highlighted[sizeof(shower)];
+						memcpy(highlighted, str, match_bytes);
+						highlighted[match_bytes] = '\0';
+						angdroid_utf8_clip_columns(highlighted,
+							(size_t)wid - column);
+						Term_putstr((int)column, hgt - 3 - j, -1,
+							COLOUR_YELLOW, highlighted);
+					}
 
-					/* Advance */
-					str += len;
+					str += match_bytes;
 				}
 			}
 		}
 
 		/* Display header */
-		prt(format("Message recall (%d-%d of %d), offset %d",
-				   i, i + j - 1, n, q), 0, 0);
+		if (angdroid_zh_tw_enabled())
+			prt(format("歷史訊息（%d–%d／%d），捲動 %d 欄",
+				i, i + j - 1, n, q), 0, 0);
+		else
+			prt(format("Message recall (%d-%d of %d), offset %d",
+				i, i + j - 1, n, q), 0, 0);
 
 		/* Display prompt (not very informative) */
 		if (strlen(shower))

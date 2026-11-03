@@ -179,6 +179,19 @@ item grammar handling is addressed separately. All translated printf-style
 message formats are literal strings compatible with NDK format security.
 Standalone C99 tests cover known, unknown and null verb cases.
 
+## Chinese message history scrolling and highlighting (2026-11-03)
+
+Fixed a screen-level issue exposed by newly translated combat messages:
+`ui-knowledge.c` previously advanced message text with `msg + q`,
+where `q` was an offset into UTF-8 bytes. Horizontal scrolling could
+therefore start from the middle of a Chinese character and show corrupted
+text. Scrolling now uses whole Unicode scalars measured in terminal columns,
+and search-result highlights use display-column positions rather than byte
+offsets. Highlights are also clipped to whole UTF-8 glyphs at the right
+edge. The zh-TW message history heading shows scrolling as columns.
+The `test_unicode_display.c` host regression covers CJK boundaries and
+highlight column positions.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

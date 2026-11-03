@@ -94,6 +94,48 @@ static inline void angdroid_utf8_clip_columns(char *text, size_t max_columns)
     text[offset] = '\0';
 }
 
+/* Skip display columns without ever returning a pointer into the middle
+ * of a UTF-8 scalar. If the offset falls inside a wide scalar, skip the
+ * entire scalar so the terminal never starts on a continuation byte.
+ * The caller's horizontal offset is in *columns*, not encoded bytes. */
+static inline const char *angdroid_utf8_skip_columns(
+    const char *text, size_t columns)
+{
+    const char *p = text;
+    size_t used = 0;
+    uint32_t cp;
+    size_t count;
+
+    if (!p) return NULL;
+    while (*p && used < columns) {
+        count = angdroid_utf8_next_scalar(p, &cp);
+        if (!count) break;
+        used += (size_t)angdroid_terminal_columns(cp);
+        p += count;
+    }
+    return p;
+}
+
+/* Width of the prefix [text, end) where end is known to refer to the
+ * same string. Intended for rendering highlighted message matches. */
+static inline size_t angdroid_utf8_prefix_columns(
+    const char *text, const char *end)
+{
+    const char *p = text;
+    size_t columns = 0;
+    uint32_t cp;
+    size_t count;
+
+    if (!p || !end) return 0;
+    while (*p && p < end) {
+        count = angdroid_utf8_next_scalar(p, &cp);
+        if (!count || p + count > end) break;
+        columns += (size_t)angdroid_terminal_columns(cp);
+        p += count;
+    }
+    return columns;
+}
+
 /* printf("%-*s") pads in bytes. Add the difference between actual UTF-8
  * bytes and terminal columns to obtain a field of 'columns' display cells.
  * The caller must first clip text to fit the requested number of columns. */

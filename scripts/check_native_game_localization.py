@@ -118,6 +118,15 @@ def main():
                f"Native monster/item lists are not both using {symbol}")
     expect("test_unicode_display.c" in native_tests,
            "CJK UTF-8 clipping regression is not registered")
+    expect("angdroid_utf8_skip_columns" in display_width
+           and "angdroid_utf8_prefix_columns" in display_width,
+           "Message recall display-column navigation helpers are missing")
+    expect("angdroid_utf8_skip_columns(msg, (size_t)q)" in knowledge_ui,
+           "Message history still slices by UTF-8 byte offset")
+    expect("angdroid_utf8_prefix_columns(msg, str)" in knowledge_ui,
+           "Message history search highlight still uses byte offsets")
+    expect("angdroid_utf8_clip_columns(highlighted" in knowledge_ui,
+           "Message search highlight may cut through a Chinese character")
 
     expect("!rf_has(race->flags, RF_UNIQUE)" in mon,
            "Unique monster names must remain in their original display form")
