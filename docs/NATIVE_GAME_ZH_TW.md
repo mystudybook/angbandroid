@@ -307,6 +307,14 @@ Unique monster names and the `<player>` pseudo-monster are never localized
 by this lookup. This preserves unique titles and normal English plural
 grammar in combat, savefiles, and all existing monster data.
 
+## Additional mid-game and mature dragon monster names (2026-11-03)
+
+Added 130 exact Chinese monster list names. Total curated
+non-unique Angband monster names: 388. This pass includes undead,
+elementals, mature dragons, hydras, hounds, trolls and complex monster
+types. Unique names remain in English, and the list-only translation does
+not alter monster identifiers, pluralization rules or savefiles.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

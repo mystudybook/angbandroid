@@ -13,8 +13,12 @@ static void expect_translated(const char *english, const char *chinese)
 
 int main(void)
 {
-    assert(ANGDROID_ZH_TW_MONSTER_NAMES == 258);
+    assert(ANGDROID_ZH_TW_MONSTER_NAMES == 388);
     expect_translated("kobold", "狗頭人");
+    expect_translated("vampire", "吸血鬼");
+    expect_translated("young blue dragon", "年輕藍龍");
+    expect_translated("mature green dragon", "成年綠龍");
+    expect_translated("will o' the wisp", "鬼火");
     expect_translated("wolf", "狼");
     expect_translated("vampire bat", "吸血蝙蝠");
     expect_translated("Mirkwood spider", "幽暗密林蜘蛛");
@@ -39,6 +43,6 @@ int main(void)
     assert(angdroid_zh_tw_monster_list_name("unknown monster") == NULL);
     assert(angdroid_zh_tw_monster_list_name("Kobold") == NULL);
     assert(angdroid_zh_tw_monster_list_name(NULL) == NULL);
-    puts("PASS: 258 CJK monster list entries, exact matching and English fallback");
+    puts("PASS: 388 CJK monster list entries, exact matching and English fallback");
     return 0;
 }

@@ -101,7 +101,7 @@ def main():
 
     for cfile, header, macro, target, count in (
         (mon, mon_header, "ANGDROID_ZH_TW_MONSTER_NAMES",
-         "angdroid_zh_tw_monster_list_name(race->name)", 258),
+         "angdroid_zh_tw_monster_list_name(race->name)", 388),
         (obj, obj_header, "ANGDROID_ZH_TW_ITEM_KINDS",
          "angdroid_zh_tw_item_kind_name(kind->name)", 326),
     ):
@@ -350,7 +350,7 @@ def main():
             print("FAIL:", item)
         return 1
     print(f"PASS: {checks} native game-localization source safeguards")
-    print("  Monster list entries: 258 | item kind labels: 326")
+    print("  Monster list entries: 388 | item kind labels: 326")
     print("  Death menu labels: 9 | death prompts: 11")
     print("NOTE: Requires Android NDK and on-device zh-TW gameplay validation")
     return 0
