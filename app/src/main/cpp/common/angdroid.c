@@ -23,6 +23,7 @@
 #include "z-file.h"
 #include "ui-output.h"
 #include "curses.h"
+#include "../curses/unicode_layout.h"
 #include "grafmode.h"
 
 #include "angband.h"
@@ -555,10 +556,29 @@ static errr Term_text_android(int x, int y, int n, int a, const wchar_t *cp)
 		case BG_DARK:	bg = COLOUR_SHADE; break;
 	}
 
-	wmove(td->win, y, x);
+	/*
+	 * Each native grid column is now a display column. A CJK leading
+	 * wchar occupies two columns; its second column is a private marker
+	 * in the native screen buffer, not a second Unicode character. Do not
+	 * pass that marker to the Java renderer or it would overwrite the
+	 * trailing cell painted by the leading glyph.
+	 *
+	 * Redraws may begin in the middle of a row, so position each run
+	 * using its actual native column rather than counting code points.
+	 */
+	int i = 0;
 	wattrset(td->win, fg);
 	wbgattrset(td->win, bg);
-	waddnwstr(td->win, n, cp);
+	while (i < n) {
+		int start;
+		while (i < n && cp[i] == ANGDROID_TEXT_CONTINUATION) ++i;
+		start = i;
+		while (i < n && cp[i] != ANGDROID_TEXT_CONTINUATION) ++i;
+		if (i > start) {
+			wmove(td->win, y, x + start);
+			waddnwstr(td->win, i - start, cp + start);
+		}
+	}
 
 	/* Success */
 	return 0;
