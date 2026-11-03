@@ -9,7 +9,7 @@
  * zero-width combining marks or full Unicode grapheme segmentation.
  * Native screen-position changes must be reviewed together with ui-term.c.
  */
-static int angdroid_terminal_columns(uint32_t cp)
+static inline int angdroid_terminal_columns(uint32_t cp)
 {
     return cp >= 0x1100u && (
         cp <= 0x115Fu
