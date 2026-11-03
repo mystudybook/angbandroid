@@ -62,14 +62,14 @@ def main():
         "JDK 21 required": "JavaVersion.current() < JavaVersion.VERSION_21" in settings,
         "Gradle 9 supported JDK max": "JavaVersion.current() > JavaVersion.VERSION_25" in settings,
         "JDK 21 compiler toolchain": "JavaLanguageVersion.of(21)" in app,
-        "Java 17 Android bytecode": "sourceCompatibility JavaVersion.VERSION_17" in app
-            and "targetCompatibility JavaVersion.VERSION_17" in app,
-        "Android namespace": 'namespace "org.rephial.xyangband"' in app,
-        "Android compile SDK 35": bool(re.search(r"\bcompileSdk\s+35\b", app)),
-        "Android applicationId unchanged": 'applicationId "org.rephial.xyangband"' in app,
-        "Target SDK unchanged": bool(re.search(r"\btargetSdk\s+34\b", app)),
-        "Min SDK unchanged": bool(re.search(r"\bminSdkVersion\s+22\b", app)),
-        "NDK unchanged": 'ndkVersion "21.0.6113669"' in app,
+        "Java 17 Android bytecode": "sourceCompatibility = JavaVersion.VERSION_17" in app
+            and "targetCompatibility = JavaVersion.VERSION_17" in app,
+        "Android namespace": 'namespace = "org.rephial.xyangband"' in app,
+        "Android compile SDK 35": bool(re.search(r"\bcompileSdk\s*=\s*35\b", app)),
+        "Android applicationId unchanged": 'applicationId = "org.rephial.xyangband"' in app,
+        "Target SDK unchanged": bool(re.search(r"\btargetSdk\s*=\s*34\b", app)),
+        "Min SDK unchanged": bool(re.search(r"\bminSdk\s*=\s*22\b", app)),
+        "NDK r28c pinned": 'ndkVersion = "28.2.13676358"' in app,
         "Maven Central repositories": top.count("mavenCentral()") == 2
             and "jcenter()" not in top,
         "Gradle 9 provider-based clean task":
@@ -103,6 +103,14 @@ def main():
             "org.jetbrains.kotlin.android" not in app + top
             and "kotlin-android" not in app + top,
         "No mandatory custom local.properties reader": "def local_props(key)" not in app,
+        "Gradle 9 assignment syntax": all(value in app for value in (
+            "namespace = ", "ndkVersion = ", "buildConfig = ",
+            "debugSymbolLevel = ", "version = "
+        )),
+        "Android SDK package preflight included":
+            "scripts/check_android_sdk.py" in read("scripts/verify-zh-tw.sh")
+            or 'check_android_sdk.py' in read("scripts/verify-zh-tw.sh"),
+
         "Build verification logs active Java": "sh ./gradlew --version" in read("scripts/verify-zh-tw.sh"),
         "Optional ABI override in verification": '"-PABI_FILTERS=$ABI_FILTERS"' in read("scripts/verify-zh-tw.sh"),
     }
