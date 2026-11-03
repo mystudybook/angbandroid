@@ -146,6 +146,39 @@ int main(void)
         assert(angdroid_wide_partner_column(6, 1, NULL, attrs) == -1);
         assert(angdroid_wide_partner_column(6, 1, row, NULL) == -1);
     }
-    puts("PASS: native Unicode width, redraw and wide-cell partner tests");
+    {
+        int first, last;
+
+        first = 80; last = -1;  /* Fresh row: no pending changes. */
+        angdroid_union_dirty_range(7, 9, &first, &last);
+        assert(first == 7 && last == 9);
+
+        first = 2; last = 4; /* Previously dirty region before request. */
+        angdroid_union_dirty_range(7, 9, &first, &last);
+        assert(first == 2 && last == 9);
+
+        first = 8; last = 13; /* Previously dirty region after request. */
+        angdroid_union_dirty_range(2, 4, &first, &last);
+        assert(first == 2 && last == 13);
+
+        first = 3; last = 11; /* Request fully within pending region. */
+        angdroid_union_dirty_range(5, 7, &first, &last);
+        assert(first == 3 && last == 11);
+
+        first = 80; last = -1;
+        angdroid_union_dirty_range(9, 4, &first, &last);
+        assert(first == 80 && last == -1);
+
+        angdroid_union_dirty_range(0, 3, NULL, &last);
+        angdroid_union_dirty_range(0, 3, &first, NULL);
+        assert(first == 80 && last == -1);
+
+        /* Global dirty row bounds use the same union operation. */
+        first = 5; last = 7;
+        angdroid_union_dirty_range(2, 3, &first, &last);
+        assert(first == 2 && last == 7);
+    }
+
+    puts("PASS: native Unicode width, redraw, partner and dirty-range union tests");
     return 0;
 }
