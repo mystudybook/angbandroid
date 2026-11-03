@@ -496,8 +496,8 @@ public class TermWindow {
 			}
 			else if (c == 9) {  // recurse to expand that tab
 				//Log.d("Angband","TermWindow.addch - tab expand");
-				int ss = col % 8;
-				if (ss==0) ss=8;
+				// Move to the next eight-column tab stop.
+				int ss = 8 - (col % 8);
 				for (int i=0;i<ss;i++) addch(' ');
 			}
 			else {
