@@ -591,7 +591,7 @@ static errr Term_pict_android(int x, int y, int n,
 	const int *ap, const wchar_t *cp,
 	const int *tap, const wchar_t *tcp)
 {
-	int resu;
+	int resu = 0;
 	int i;
 
 	term_data *td = (term_data*)(Term->data);
@@ -601,6 +601,15 @@ static errr Term_pict_android(int x, int y, int n,
 		int a = ap[i];
 		uint8_t c = (uint8_t)cp[i];
 
+		if (cp[i] == ANGDROID_TEXT_CONTINUATION) continue;
+		/* In graphical/always-pict paths, Unicode text must bypass the
+		 * 8-bit tile index conversion. Only flagged tiles use the byte. */
+		if (!(a & 0x80) && cp[i] > 0x7F) {
+			resu = Term_text_android(x + i, y, 1, a, &cp[i]);
+			if (resu) break;
+			continue;
+		}
+
 		/* Ascii text */
 		if ((c & 0x80) == 0) {
 			int ta = COLOUR_DARK;
@@ -609,12 +618,12 @@ static errr Term_pict_android(int x, int y, int n,
 				case BG_SAME: ta = a & 0x7F; break;
 				case BG_DARK: ta = COLOUR_SHADE; break;
 			}
-			resu = waddtile(td->win, x, y, a, c,
+			resu = waddtile(td->win, x + i, y, a, c,
 				ta, tc);
 		}
 		/* Graphic tile */
 		else {
-			resu = waddtile(td->win, x, y, a, c,
+			resu = waddtile(td->win, x + i, y, a, c,
 				tap[i], (uint8_t)tcp[i]);
 		}
 		if (resu) break;
