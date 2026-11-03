@@ -128,4 +128,18 @@ static inline int angdroid_wide_partner_column(
     return -1;
 }
 
+
+/*
+ * Merge a requested native redraw range with changes already pending in
+ * the same row or global row bounds. Existing markers may use first > last
+ * to indicate that no cells were dirty before the new request.
+ */
+static inline void angdroid_union_dirty_range(
+    int first, int last, int *dirty_first, int *dirty_last)
+{
+    if (!dirty_first || !dirty_last || first > last) return;
+    if (first < *dirty_first) *dirty_first = first;
+    if (last > *dirty_last) *dirty_last = last;
+}
+
 #endif
