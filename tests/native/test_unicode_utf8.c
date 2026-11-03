@@ -6,7 +6,7 @@
 #include <string.h>
 #include <wchar.h>
 
-#include "../../../app/src/main/cpp/curses/unicode_utf8.h"
+#include "../../app/src/main/cpp/curses/unicode_utf8.h"
 
 static void expect_utf8(const wchar_t *input, size_t count,
                         const unsigned char *expected, size_t bytes)
