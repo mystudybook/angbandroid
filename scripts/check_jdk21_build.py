@@ -51,6 +51,16 @@ def main():
         "Legacy transitive R compatibility": "android.nonTransitiveRClass=false" in props,
         "Tracked Gradle defaults": "/gradle.properties" not in ignored,
         "Machine-specific SDK stays private": "/local.properties" in ignored,
+        "Optional debug ABI from Gradle project property":
+            "providers.gradleProperty('ABI_FILTERS').orNull" in app,
+        "Optional legacy ABI from local.properties":
+            "localFile.isFile()" in app
+            and "localProperties.getProperty('ABI_FILTERS')" in app,
+        "Default debug ABI is ARM64": "debugAbiSpec = 'arm64-v8a'" in app,
+        "Valid native ABI filter checked": "supportedAbis.contains(it)" in app,
+        "No mandatory custom local.properties reader": "def local_props(key)" not in app,
+        "Build verification logs active Java": "sh ./gradlew --version" in read("scripts/verify-zh-tw.sh"),
+        "Optional ABI override in verification": '"-PABI_FILTERS=$ABI_FILTERS"' in read("scripts/verify-zh-tw.sh"),
     }
 
     try:
