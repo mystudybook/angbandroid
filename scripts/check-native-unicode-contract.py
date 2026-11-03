@@ -28,6 +28,8 @@ def main():
             'fixed_grid_queue_uses_safe_glyph': "wchar_t glyph = angdroid_fixed_cell_glyph(*s, a);",
             'fixed_grid_invalidates_old_wide_neighbors': "Term_clear_wide_neighbor(Term, x, y);",
             'sanitize_public_terminal_cell': "angdroid_public_grid_glyph(Term->scr->c[y][x])",
+            'sanitize_stream_marker': "c = angdroid_stream_glyph(c);",
+            'sanitize_stream_marker_in_strings': "ch = angdroid_stream_glyph(ch);",
         },
         "app/src/main/cpp/curses/unicode_layout.h": {
             'redraw_helper': "static inline void angdroid_expand_redraw_columns(",
@@ -35,6 +37,7 @@ def main():
             'dirty_range_union_helper': "static inline void angdroid_union_dirty_range(",
             'fixed_grid_glyph_helper': "static inline wchar_t angdroid_fixed_cell_glyph(",
             'public_grid_glyph_helper': "static inline wchar_t angdroid_public_grid_glyph(",
+            'stream_marker_helper': "static inline wchar_t angdroid_stream_glyph(",
             'preserves_large_tile': "previous_attrs[*first] == 255",
         },
         "app/src/main/cpp/common/angdroid.c": {
