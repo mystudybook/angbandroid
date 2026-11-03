@@ -3147,7 +3147,9 @@ public class TermView extends View implements OnGestureListener {
 		int x = c * tw;
 		int y = r * th;
 
-		ch &= 0xFF;
+		// The text path already holds decoded UTF-16 characters. Masking to
+		// one byte corrupts all CJK code points above U+00FF. Graphics tile
+		// indexes are handled separately by drawTile/drawText.
 
 		setBackColor(bcolor);
 
@@ -3159,9 +3161,28 @@ public class TermView extends View implements OnGestureListener {
 
 			String str = ch + "";
 
+			// The bundled bitmap/monospace fonts do not guarantee CJK coverage.
+			// Use Android's system font fallback for East Asian BMP characters.
+			// This is intentionally a one-cell compatibility fallback, not yet
+			// a full double-column terminal layout implementation.
+			boolean eastAsian = (ch >= 0x2E80 && ch <= 0x9FFF)
+				|| (ch >= 0xAC00 && ch <= 0xD7A3)
+				|| (ch >= 0xF900 && ch <= 0xFAFF)
+				|| (ch >= 0xFE10 && ch <= 0xFE6F)
+				|| (ch >= 0xFF01 && ch <= 0xFF60);
+			if (eastAsian) {
+				fore_temp = new Paint(fore);
+				fore_temp.setTypeface(Typeface.DEFAULT_BOLD);
+			}
 			fore_temp.setColor(fcolor);
 
 			float w2 = fore_temp.measureText(str, 0, 1);
+			if (eastAsian && w2 > tw && tw > 0) {
+				// Keep a CJK character visible inside the existing one-cell clip.
+				// True double-column support needs TermWindow and native cursor work.
+				fore_temp.setTextScaleX((float)tw / w2);
+				w2 = fore_temp.measureText(str, 0, 1);
+			}
 			float pad = Math.max((tw - w2) / 2, 0);
 			float h2 = fore_temp.descent() - fore_temp.ascent();
 			float pady = Math.max((th - h2) / 2, 0) + fore_temp.descent();
