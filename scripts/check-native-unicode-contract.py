@@ -24,11 +24,15 @@ def main():
             'redraw_range_is_row_local': "int first = x1;",
             'partner_cell_on_overwrite': "angdroid_wide_partner_column(t->wid, x,",
             'merge_existing_dirty_ranges': "angdroid_union_dirty_range(first, last,",
+            'direct_grid_glyph_policy': "c = angdroid_fixed_cell_glyph(c, a);",
+            'fixed_grid_queue_uses_safe_glyph': "wchar_t glyph = angdroid_fixed_cell_glyph(*s, a);",
+            'fixed_grid_invalidates_old_wide_neighbors': "Term_clear_wide_neighbor(Term, x, y);",
         },
         "app/src/main/cpp/curses/unicode_layout.h": {
             'redraw_helper': "static inline void angdroid_expand_redraw_columns(",
             'wide_partner_helper': "static inline int angdroid_wide_partner_column(",
             'dirty_range_union_helper': "static inline void angdroid_union_dirty_range(",
+            'fixed_grid_glyph_helper': "static inline wchar_t angdroid_fixed_cell_glyph(",
             'preserves_large_tile': "previous_attrs[*first] == 255",
         },
         "app/src/main/cpp/common/angdroid.c": {
