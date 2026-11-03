@@ -159,11 +159,8 @@ static void object_list_format_section(const object_list_t *list,
 		/* Add the left-aligned and padded object name which will align the
 		 * location to the right. */
 		if (tb != NULL) {
-			/*
-			 * Hack - Because object name strings are UTF8, we have to add
-			 * additional padding for any raw bytes that might be consolidated
-			 * into one displayed character.
-			 */
+			/* printf pads UTF-8 byte lengths, but the terminal reserves
+			 * two columns for common CJK glyphs. Convert field width here. */
 			full_width = angdroid_utf8_printf_field_bytes(
 				line_buffer, full_width);
 			line_attr = object_list_entry_line_attribute(&list->entries[entry_index]);
