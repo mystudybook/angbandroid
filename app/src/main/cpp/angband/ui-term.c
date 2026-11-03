@@ -632,17 +632,11 @@ static void Term_queue_char_raw(term *t, int x, int y, int a, wchar_t c, int ta,
  */
 static void Term_clear_wide_neighbor(term *t, int x, int y)
 {
-	wchar_t ch = t->scr->c[y][x];
-	int attr = t->scr->a[y][x];
+	int partner = angdroid_wide_partner_column(t->wid, x,
+		t->scr->c[y], t->scr->a[y]);
 
-	if (ch == ANGDROID_TEXT_CONTINUATION && x > 0 &&
-		angdroid_is_wide_text(t->scr->c[y][x - 1],
-			t->scr->a[y][x - 1])) {
-		Term_queue_char_raw(t, x - 1, y, COLOUR_WHITE, L' ', 0, 0);
-	} else if (angdroid_is_wide_text(ch, attr) &&
-		x + 1 < t->wid &&
-		t->scr->c[y][x + 1] == ANGDROID_TEXT_CONTINUATION) {
-		Term_queue_char_raw(t, x + 1, y, COLOUR_WHITE, L' ', 0, 0);
+	if (partner >= 0) {
+		Term_queue_char_raw(t, partner, y, COLOUR_WHITE, L' ', 0, 0);
 	}
 }
 
