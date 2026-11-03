@@ -2,7 +2,7 @@
 # Run offline localization checks and save a shareable combined log.
 # Requires Python 3, a JDK (javac/java), and a host C compiler (cc).
 # Optional --android also runs a Gradle/NDK debug APK build when the local
-# Android SDK, NDK, Gradle wrapper and local.properties are configured.
+# Android SDK, NDK and Gradle wrapper are installed on the workstation.
 # Neither mode runs emulator/physical-device gameplay acceptance tests.
 set -u
 
@@ -58,16 +58,26 @@ android_debug_build() {
         sh ./gradlew --version || return 1
         if [ -n "${ABI_FILTERS:-}" ]; then
             printf 'Debug native ABIs (environment override): %s\n' "$ABI_FILTERS"
-            sh ./gradlew --no-daemon --warning-mode=all --stacktrace "-PABI_FILTERS=$ABI_FILTERS" :app:assembleDebug
+            sh ./gradlew --no-daemon --warning-mode=summary --stacktrace "-PABI_FILTERS=$ABI_FILTERS" :app:assembleDebug
         else
             printf 'Debug native ABIs: project default arm64-v8a (unless overridden)\n'
-            sh ./gradlew --no-daemon --warning-mode=all --stacktrace :app:assembleDebug
+            sh ./gradlew --no-daemon --warning-mode=summary --stacktrace :app:assembleDebug
         fi
     )
 }
 
 if [ "$RUN_ANDROID" -eq 1 ]; then
-    run_check "Android Gradle/NDK debug APK build" android_debug_build
+    printf '\n===== Android SDK/NDK/CMake preflight =====\n' >> "$REPORT"
+    if python3 "$ROOT/scripts/check_android_sdk.py" >> "$REPORT" 2>&1; then
+        printf 'PASS: Android SDK/NDK/CMake preflight\n' >> "$REPORT"
+        printf 'PASS: Android SDK/NDK/CMake preflight\n'
+        run_check "Android Gradle/NDK debug APK build" android_debug_build
+    else
+        printf 'FAIL: Android SDK/NDK/CMake preflight\n' >> "$REPORT"
+        printf 'FAIL: Android SDK/NDK/CMake preflight\n'
+        printf 'SKIP: Android Gradle/NDK debug APK build (install SDK components first)\n' >> "$REPORT"
+        failed=1
+    fi
 fi
 
 printf '\nResult: %s\n' "$(if [ "$failed" -eq 0 ]; then echo PASS; else echo FAIL; fi)" >> "$REPORT"
