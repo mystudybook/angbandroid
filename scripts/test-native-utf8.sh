@@ -13,3 +13,9 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_unicode_utf8"
 
 "$BUILD_DIR/test_unicode_utf8"
+
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_unicode_width.c" \
+    -o "$BUILD_DIR/test_unicode_width"
+
+"$BUILD_DIR/test_unicode_width"
