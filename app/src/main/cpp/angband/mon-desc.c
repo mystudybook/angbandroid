@@ -20,6 +20,8 @@
 #include "game-input.h"
 #include "mon-desc.h"
 #include "mon-predicate.h"
+#include "droid.h"
+#include "zh-tw-monsters.h"
 
 /**
  * Perform simple English pluralization on a monster name.
@@ -45,6 +47,17 @@ void get_mon_name(char *buf, size_t buflen,
 				  const struct monster_race *race, int num)
 {
 	assert(race != NULL);
+
+	/* Monster-list labels only: keep canonical race names and the English
+	 * grammar in monster_desc() for combat, lore and saved-game data. */
+	if (angdroid_zh_tw_enabled() && !rf_has(race->flags, RF_UNIQUE)) {
+		const char *translated =
+			angdroid_zh_tw_monster_list_name(race->name);
+		if (translated) {
+			strnfmt(buf, buflen, "%3d %s", num, translated);
+			return;
+		}
+	}
 
     /* Unique names don't have a number */
 	if (rf_has(race->flags, RF_UNIQUE)) {
