@@ -72,6 +72,21 @@ def main():
         else:
             print(f"MISSING: {name} (expected {path})")
             missing.append(package)
+            if name.startswith("CMake "):
+                cmake_root = root / "cmake"
+                available = sorted(
+                    entry.name for entry in cmake_root.iterdir()
+                    if entry.is_dir()
+                ) if cmake_root.is_dir() else []
+                if available:
+                    print("Other installed SDK CMake versions: "
+                          + ", ".join(available))
+                print(
+                    f"Project pins CMake {cmake}; SDK package "
+                    f"cmake;{cmake_package} is required. "
+                    "A different installed CMake version does not "
+                    "satisfy this pin."
+                )
 
     if missing:
         print("Install missing packages in Android Studio: "
