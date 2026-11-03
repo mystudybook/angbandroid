@@ -413,6 +413,17 @@ message event types, display colors, and lore-knowledge gates remain
 unchanged. Sentence wrappers, full spellcasting grammar and full live
 combat messages remain separate unfinished work.
 
+## Complete Chinese spell lore sentence wrappers (2026-11-03)
+
+Monster spell-list rendering now uses Chinese conjunctions and punctuation,
+Chinese natural/innate attack and spellcasting introductions, Chinese
+breathing/spellcasting verbs and frequency explanations. It reuses the
+111 exact canonical spell lore translations already in
+`zh-tw-mon-lore-terms.h`. Spell identification, flags, color/damage
+calculations, known-frequency gates, the `ref_race` context and the
+complete English branch remain unchanged. Other live combat and full
+item-effect text are still separate work.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

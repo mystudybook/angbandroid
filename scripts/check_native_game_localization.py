@@ -430,6 +430,17 @@ def main():
                    "Monster lore term set differs from canonical " + symbol)
         expect(symbol + "(" in monster_lore,
                "Monster lore term not wired: " + symbol)
+    expect('if (count && angdroid_zh_tw_enabled())' in monster_lore
+           and 'angdroid_zh_tw_monster_spell(' in monster_lore,
+           "Monster lore spell list did not use Chinese separators and labels")
+    for snippet in ("牠可能", "，也可能", "吐出", "施放法術",
+                    "，且懂得巧妙施法", "，例如", " 次／"):
+        expect(snippet in monster_lore,
+               "Incomplete Chinese spell lore sentence: " + snippet)
+    expect('mon_spell_lore_damage(spell, race, know_hp)' in monster_lore,
+           "Monster spell lore damage source changed")
+    expect('ref_race = old_ref;' in monster_lore,
+           "Monster spell lore reference cleanup lost")
     if errors:
         for item in errors:
             print("FAIL:", item)
