@@ -38,6 +38,7 @@
 #include "z-textblock.h"
 #include "droid.h"
 #include "zh-tw-lore.h"
+#include "zh-tw-ui.h"
 
 /**
  * Monster genders
@@ -1003,6 +1004,100 @@ void lore_append_movement(textblock *tb, const struct monster_race *race,
 	bitflag flags[RF_SIZE];
 
 	assert(tb && race && lore);
+
+    /* Full Traditional Chinese movement paragraph, keeping the same
+     * revealed race flags, floor depth, speed option and movement rules.
+     * No canonical monster race data is modified. */
+    if (angdroid_zh_tw_enabled()) {
+        int adjective_count = 0;
+        textblock_append(tb, "這隻怪物屬於");
+
+        create_mon_flag_mask(flags, RFT_RACE_N, RFT_MAX);
+        rf_inter(flags, race->flags);
+        f = rf_next(flags, FLAG_START);
+        textblock_append_c(tb, COLOUR_L_BLUE, "%s", f ?
+            angdroid_game_ui_text(describe_race_flag(f), true) : "生物");
+
+        create_mon_flag_mask(flags, RFT_RACE_A, RFT_MAX);
+        rf_inter(flags, race->flags);
+        for (f = rf_next(flags, FLAG_START); f;
+             f = rf_next(flags, f + 1)) {
+            if (!adjective_count)
+                textblock_append(tb, "（");
+            else
+                textblock_append(tb, "、");
+            textblock_append_c(tb, COLOUR_L_BLUE, "%s",
+                angdroid_game_ui_text(describe_race_flag(f), true));
+            adjective_count++;
+        }
+        if (adjective_count) textblock_append(tb, "）");
+
+        if (race->level == 0) {
+            textblock_append(tb, "，棲息於城鎮");
+        } else {
+            uint8_t colour = (race->level > player->max_depth) ?
+                COLOUR_RED : COLOUR_L_BLUE;
+            textblock_append(tb, "%s",
+                rf_has(known_flags, RF_FORCE_DEPTH) ?
+                    "，出現於地城深度 " : "，通常出現於地城深度 ");
+            textblock_append_c(tb, colour, "%d", race->level * 50);
+            textblock_append(tb, " 英呎（第 ");
+            textblock_append_c(tb, colour, "%d", race->level);
+            textblock_append(tb, " 層）");
+        }
+
+        textblock_append(tb, "；移動");
+        if (flags_test(known_flags, RF_SIZE, RF_RAND_50, RF_RAND_25,
+                       FLAG_END)) {
+            if (rf_has(known_flags, RF_RAND_50) &&
+                rf_has(known_flags, RF_RAND_25))
+                textblock_append(tb, "極度飄忽，");
+            else if (rf_has(known_flags, RF_RAND_50))
+                textblock_append(tb, "相當飄忽，");
+            else
+                textblock_append(tb, "略顯飄忽，");
+        }
+
+        if (OPT(player, effective_speed)) {
+            int base_tenths = 10 * extract_energy[race->speed] /
+                extract_energy[110];
+            int relative_hundredths = 100 * extract_energy[race->speed] /
+                extract_energy[player->state.speed];
+            uint8_t relative_colour = player->state.speed > race->speed ?
+                COLOUR_L_GREEN : (player->state.speed < race->speed ?
+                    COLOUR_RED : COLOUR_ORANGE);
+            textblock_append(tb, "速度為一般速度的 ");
+            textblock_append_c(tb, COLOUR_L_BLUE, "%d.%d", base_tenths / 10,
+                base_tenths % 10);
+            textblock_append(tb, " 倍");
+            if (player->state.speed == race->speed) {
+                textblock_append(tb, "（與你的速度相同）");
+            } else {
+                textblock_append(tb, "（相當於你目前速度的 ");
+                if (relative_hundredths % 100 == 0)
+                    textblock_append_c(tb, relative_colour, "%d",
+                        relative_hundredths / 100);
+                else if (relative_hundredths % 10 == 0)
+                    textblock_append_c(tb, relative_colour, "%d.%d",
+                        relative_hundredths / 100,
+                        relative_hundredths % 100 / 10);
+                else
+                    textblock_append_c(tb, relative_colour, "%d.%02d",
+                        relative_hundredths / 100,
+                        relative_hundredths % 100);
+                textblock_append(tb, " 倍）");
+            }
+        } else {
+            textblock_append(tb, "速度");
+            textblock_append_c(tb, COLOUR_GREEN, "%s",
+                angdroid_game_ui_text(lore_describe_speed(race->speed), true));
+        }
+
+        if (rf_has(known_flags, RF_NEVER_MOVE))
+            textblock_append(tb, "，但不會主動追逐入侵者");
+        textblock_append(tb, "。  ");
+        return;
+    }
 
 	textblock_append(tb, "This");
 

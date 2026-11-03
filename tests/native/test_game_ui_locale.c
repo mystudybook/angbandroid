@@ -85,6 +85,11 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);
     assert(angdroid_utf8_display_columns("繁體中文") == 8);
+    assert(strcmp(angdroid_game_ui_text("dragon", 1), "龍") == 0);
+    assert(strcmp(angdroid_game_ui_text("natural", 1), "自然") == 0);
+    assert(strcmp(angdroid_game_ui_text("undead", 1), "不死") == 0);
+    assert(strcmp(angdroid_game_ui_text("normal speed", 1), "正常速度") == 0);
+    assert(strcmp(angdroid_game_ui_text("very quickly", 0), "very quickly") == 0);
     assert(strcmp(angdroid_zh_tw_magic_term("cast", 1), "施放") == 0);
     assert(strcmp(angdroid_zh_tw_magic_term("recite", 1), "誦念") == 0);
     assert(strcmp(angdroid_zh_tw_magic_term("chant", 1), "吟唱") == 0);

@@ -370,6 +370,21 @@ def main():
     expect('msg("法力不足，無法%s這項%s。"' in obj_cmd
            and 'msg("You do not have enough mana to %s this %s."' in obj_cmd,
            "Mana warning must preserve Chinese and English literal formats")
+    for english, chinese in (("orc", "獸人"), ("dragon", "龍"),
+                             ("natural", "自然"), ("undead", "不死"),
+                             ("normal speed", "正常速度"),
+                             ("incredibly quickly", "極度迅速")):
+        expect(('"' + english + '"') in game_ui_header
+               and ('"' + chinese + '"') in game_ui_header,
+               "Untranslated monster type or speed label: " + english)
+    expect('if (angdroid_zh_tw_enabled()) {' in monster_lore
+           and 'lore_describe_speed(race->speed)' in monster_lore,
+           "Monster movement paragraph lost its Chinese option")
+    expect('OPT(player, effective_speed)' in monster_lore
+           and 'extract_energy[player->state.speed]' in monster_lore,
+           "Localized movement must preserve relative speed option")
+    expect('rf_has(known_flags, RF_NEVER_MOVE)' in monster_lore,
+           "Localized movement must preserve known immobilization")
     if errors:
         for item in errors:
             print("FAIL:", item)

@@ -350,6 +350,18 @@ remain. This is coverage tracking, not a claim of native APK or device
 testing. `sh scripts/verify-zh-tw.sh` now collects its summary and runs an
 offline JSON regression for the source-complete name catalogs.
 
+## Complete monster movement/speed paragraph (2026-11-03)
+
+The original Angband monster-lore movement paragraph now has a complete
+Traditional Chinese branch for race category traits (orc/troll/giant/
+dragon/demon, natural/evil/undead/nonliving/metal), town/depth location,
+irregular movement, absolute speed and effective-speed multiplier, and
+known stationary monsters. It preserves `RF_FORCE_DEPTH`,
+`RF_RAND_50`/`RF_RAND_25`, `RF_NEVER_MOVE`, the player's
+`effective_speed` display option, existing color choices, and original
+English code as fallback. Unknown race labels remain untranslated rather
+than changing monster flags or stat calculations.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
