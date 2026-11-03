@@ -14,7 +14,7 @@ The `master` branch uses **JDK 21** to run Gradle and compile Android source.
 | compileSdk | **35** | Android SDK Platform 35 required |
 | targetSdk | **34** | Unchanged in this build migration |
 | minSdk | **22** | Unchanged |
-| Android NDK | **21.0.6113669** | Intentionally preserved until native build migration |
+| Android NDK | **28.2.13676358** (r28c) | Pinned to AGP 9's supported default; requires new native build validation |
 | CMake | **3.10.2** | Project-pinned version; install via SDK Manager |
 | Build Tools | **36.0.0** | Default required by AGP 9.0 |
 
@@ -24,7 +24,7 @@ The `master` branch uses **JDK 21** to run Gradle and compile Android source.
 
 1. Install a JDK 21 distribution (Temurin, or any suitable JDK 21). In Android Studio select **Settings / Preferences → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK → JDK 21**.
 2. Use an Android Studio version compatible with **AGP 9.0** (Panda 1 or newer), then open the **repository root** using **Open**, not the `app` subdirectory.
-3. Install Android SDK Platform 35, SDK Build Tools 36.0.0, Android NDK 21.0.6113669, and CMake 3.10.2 in **Tools → SDK Manager**. Enable **Show Package Details** to select specific NDK and CMake versions.
+3. Install Android SDK Platform 35, SDK Build Tools 36.0.0, **Android NDK 28.2.13676358 (r28c)**, and CMake 3.10.2 in **Tools → SDK Manager**. Enable **Show Package Details** to select specific NDK and CMake versions.
 4. **`ABI_FILTERS` is now optional.** Android Studio can create `local.properties` with the SDK path, and the debug build defaults to `arm64-v8a`. You do not need to add a custom `ABI_FILTERS` line just to open or sync the project. An optional `local.properties` looks like:
 
 ```properties
@@ -60,7 +60,7 @@ You can also use **Build → Make Project** or **Run** in Android Studio, select
 - Moved the namespace declaration into `app/build.gradle` and removed the old source-manifest `package` declaration required by AGP 8.
 - Stopped pinning obsolete SDK Build Tools 30.0.3; AGP 9.0 requires Build Tools 36.0.0.
 - Enabled AndroidX and preserved legacy final/transitive `R` reference behavior through tracked `gradle.properties`. AGP 9 requires the additional `android.enableAppCompileTimeRClass=false` compatibility option for old `switch (R.id...)` usage.
-- Preserved existing `applicationId`, `targetSdk`, `minSdk`, and NDK versions to keep behavior changes outside this migration.
+- Preserved existing `applicationId`, `targetSdk` and `minSdk`. Migrated the pinned NDK from 21.0.6113669 to **28.2.13676358** after a real AGP 9 build log showed the NDK was not configured.
 - Removed the mandatory custom `local.properties` ABI field from Gradle Sync; default debug ABI is `arm64-v8a`, with a Gradle project property override and backwards-compatible optional legacy field.
 
 ## Gradle 9-specific migration details
@@ -70,7 +70,28 @@ You can also use **Build → Make Project** or **Run** in Android Studio, select
 
 - AGP 9 introduces a new public DSL and enables built-in Kotlin by default. This project applies only `com.android.application` and has Java sources, so `android.builtInKotlin=false` avoids unnecessary Kotlin compilation. The new DSL remains enabled; do not use legacy `android.applicationVariants` APIs.
 - AGP 9 defaults to non-final application compile-time `R` IDs. The project temporarily sets `android.enableAppCompileTimeRClass=false`, `android.nonFinalResIds=false` and `android.nonTransitiveRClass=false` to avoid breaking existing switch statements. Remove the compatibility flags only after the relevant UI code is modernized.
-- `targetSdk 34`, `minSdk 22`, `compileSdk 35`, NDK 21.0.6113669, CMake 3.10.2, Java language/bytecode level 17 and `applicationId` remain unchanged. A Gradle 9 build is not proof of Google Play submission eligibility.
+- `targetSdk 34`, `minSdk 22`, `compileSdk 35`, CMake 3.10.2, Java source/bytecode level 17 and `applicationId` remain unchanged. NDK is now pinned to r28c. A Gradle 9 build is not proof of Google Play submission eligibility.
+
+## 2026-11-03 first macOS build log
+
+The first uploaded `zh-tw-validation.log` reported **all offline localization tests passing**, and successfully ran JDK 21.0.2 and Gradle 9.1.0. APK configuration then failed with:
+
+```text
+NDK not configured. Download it with SDK manager.
+Preferred NDK version is '28.2.13676358'.
+```
+
+This means no complete Android C/C++ or APK build ran. The build now pins NDK r28c explicitly with modern Gradle 9 `property = value` declarations and checks local SDK packages **before** attempting the Gradle build. Deprecated AGP 9 compatibility flags (`android.nonFinalResIds=false`, `android.builtInKotlin=false`, and `android.enableAppCompileTimeRClass=false`) are left unchanged intentionally, because they are not the error in this log.
+
+For an Android Studio user, select **Tools → SDK Manager → SDK Tools → Show Package Details**, and install NDK 28.2.13676358, CMake 3.10.2, and Build Tools 36.0.0 as needed. API 35 is under SDK Platforms. Or, if Command-line Tools are installed and the path is correct:
+
+```bash
+"$HOME/Library/Android/sdk/cmdline-tools/latest/bin/sdkmanager" --install \
+  "ndk;28.2.13676358" "cmake;3.10.2.4988404" \
+  "build-tools;36.0.0" "platforms;android-35"
+```
+
+Then rerun `sh scripts/verify-zh-tw.sh --android`. The first stage in the Android build now identifies which package is missing and skips Gradle until the missing tools have been installed. This cannot guarantee the APK builds successfully after those packages are present.
 
 ## Diagnosing failures
 
@@ -79,7 +100,7 @@ You can also use **Build → Make Project** or **Run** in Android Studio, select
 - **Missing SDK/NDK/CMake:** install the pinned packages via SDK Manager and accept SDK licenses.
 - **Gradle Sync or dependency errors:** review the first `FAIL` stage and stack trace in `zh-tw-validation.log`, rather than upgrading Gradle/AGP arbitrarily.
 - **`git pull` reports a local `gradle.properties` conflict:** the migration now tracks a non-secret `gradle.properties`. Back up your local untracked file before pulling and reapply any custom options through `~/.gradle/gradle.properties` as needed.
-- **Android native C/C++ compile errors:** the NDK remains old by design; fix those separately from the JDK/Gradle compatibility migration.
+- **Android native C/C++ compile errors:** NDK r28c is a significant toolchain change; treat any warnings or compile errors as a separate native compatibility task. The NDK version change has not yet passed the full Gradle/NDK build.
 
 ## Verification boundary
 
