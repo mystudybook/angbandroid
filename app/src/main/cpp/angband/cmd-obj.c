@@ -311,7 +311,7 @@ void do_cmd_wield(struct command *cmd)
 	 * want to replace */
 	if (tval_is_ring(obj)) {
 		if (cmd_get_item(cmd, "replace", &equip_obj,
-						 /* Prompt */ "Replace which ring? ",
+						 /* Prompt */ angdroid_game_ui_text("Replace which ring? ", angdroid_zh_tw_enabled()),
 						 /* Error  */ "Error in do_cmd_wield(), please report.",
 						 /* Filter */ tval_is_ring,
 						 /* Choice */ USE_EQUIP) != CMD_OK)
@@ -382,15 +382,15 @@ void do_cmd_drop(struct command *cmd)
 
 	/* Get arguments */
 	if (cmd_get_item(cmd, "item", &obj,
-			/* Prompt */ "Drop which item?",
-			/* Error  */ "You have nothing to drop.",
+			/* Prompt */ angdroid_game_ui_text("Drop which item?", angdroid_zh_tw_enabled()),
+			/* Error  */ angdroid_game_ui_text("You have nothing to drop.", angdroid_zh_tw_enabled()),
 			/* Filter */ NULL,
 			/* Choice */ USE_EQUIP | USE_INVEN | USE_QUIVER) != CMD_OK)
 		return;
 
 	/* Cannot remove stickied items */
 	if (object_is_equipped(player->body, obj) && !obj_can_takeoff(obj)) {
-		msg("Hmmm, it seems to be stuck.");
+		msg("%s", angdroid_game_ui_text("Hmmm, it seems to be stuck.", angdroid_zh_tw_enabled()));
 		return;
 	}
 

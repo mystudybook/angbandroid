@@ -200,6 +200,15 @@ staves. The message sound category, underlying entity name and gameplay
 logic remain unchanged. Parameterized messages use literal Chinese and
 English format strings to meet NDK format-security requirements.
 
+## Item selector and target screens (2026-11-03)
+
+Inventory/equipment/quiver/floor selector headings and object examination,
+drop, target cancel and help prompts are translated. The actual `/`, `|`,
+`-` and Esc input keys are unchanged. The item-ignore dialog previously used
+a hard-coded 80-column x coordinate, which could be negative on mobile
+terminals. It is now anchored to the real terminal width and clamped
+on narrow displays. Game data, item IDs and item filters are unchanged.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

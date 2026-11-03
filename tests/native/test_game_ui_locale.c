@@ -46,6 +46,13 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text("Buy", 1), "提高") == 0);
     assert(strcmp(angdroid_game_ui_text("Sell", 1), "降低") == 0);
     assert(strcmp(angdroid_game_ui_text("Your Home", 0), "Your Home") == 0);
+    assert(strcmp(angdroid_game_ui_text("Target Aborted.", 1),
+                  "已取消選擇目標。") == 0);
+    assert(strcmp(angdroid_game_ui_text("Inven:", 1), "背包：") == 0);
+    assert(strcmp(angdroid_game_ui_text("This item only", 1),
+                  "只忽略這件物品") == 0);
+    assert(strcmp(angdroid_game_ui_text("Target Aborted.", 0),
+                  "Target Aborted.") == 0);
     assert(strcmp(angdroid_game_ui_text("You stumble!", 1),
                   "你踉蹌了一下！") == 0);
     assert(strcmp(angdroid_game_ui_text("You have nothing to fire with.", 1),

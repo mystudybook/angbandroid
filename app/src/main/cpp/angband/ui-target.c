@@ -46,6 +46,7 @@
 #include "ui-term.h"
 
 #include "droid.h"
+#include "zh-tw-ui.h"
 
 /*
  * Holds state passed between target_set_interactive_aux() and the handlers
@@ -972,9 +973,9 @@ static ui_event target_set_interactive_aux(int y, int x, int mode)
 void textui_target(void)
 {
 	if (target_set_interactive(TARGET_KILL, -1, -1))
-		msg("Target Selected.");
+		msg("%s", angdroid_game_ui_text("Target Selected.", angdroid_zh_tw_enabled()));
 	else
-		msg("Target Aborted.");
+		msg("%s", angdroid_game_ui_text("Target Aborted.", angdroid_zh_tw_enabled()));
 }
 
 /**
@@ -1242,7 +1243,7 @@ bool target_set_interactive(int mode, int x, int y)
 	help_prompt_loc = hgt - 1;
 	
 	/* Display the help prompt */
-	prt("Press '?' for help.", help_prompt_loc, 0);
+	prt(angdroid_game_ui_text("Press '?' for help.", angdroid_zh_tw_enabled()), help_prompt_loc, 0);
 
 	/* Prepare the target set */
 	struct point_set *targets = target_get_monsters(mode, NULL, true);
@@ -1513,7 +1514,7 @@ bool target_set_interactive(int mode, int x, int y)
 			Term_clear();
 			handle_stuff(player);
 			if (!help)
-				prt("Press '?' for help.", help_prompt_loc, 0);
+				prt(angdroid_game_ui_text("Press '?' for help.", angdroid_zh_tw_enabled()), help_prompt_loc, 0);
 
 		} else {
 			/* Try to extract a direction from the key press */

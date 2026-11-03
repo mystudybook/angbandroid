@@ -50,6 +50,8 @@
 #include "ui-options.h"
 #include "ui-output.h"
 #include "ui-prefs.h"
+#include "droid.h"
+#include "zh-tw-ui.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -352,7 +354,7 @@ static void set_obj_names(bool terse, const struct player *p)
 			if ((i < num_head) || streq(items[i].label, "In quiver"))
 				strnfmt(items[i].o_name, sizeof(items[i].o_name), "%s", "");
 			else
-				strnfmt(items[i].o_name, sizeof(items[i].o_name), "(nothing)");
+				strnfmt(items[i].o_name, sizeof(items[i].o_name), "%s", angdroid_game_ui_text("(nothing)", angdroid_zh_tw_enabled()));
 		} else {
 			if (terse) {
 				object_desc(items[i].o_name,
@@ -774,7 +776,7 @@ static void menu_header(void)
 	/* Viewing inventory */
 	if (player->upkeep->command_wrk == USE_INVEN) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Inven:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Inven:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (i1 <= i2) {
@@ -788,21 +790,21 @@ static void menu_header(void)
 
 		/* Indicate legality of equipment */
 		if (use_equip)
-			my_strcat(out_val, " / for Equip,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Equip,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing equipment */
 	else if (player->upkeep->command_wrk == USE_EQUIP) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Equip:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Equip:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (e1 <= e2) {
@@ -816,21 +818,21 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing quiver */
 	else if (player->upkeep->command_wrk == USE_QUIVER) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Quiver:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Quiver:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (q1 <= q2) {
@@ -843,19 +845,19 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory or equipment */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 		else if (use_equip)
-			my_strcat(out_val, " / for Equip,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Equip,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing throwing */
 	else if (player->upkeep->command_wrk == SHOW_THROWING) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Throwing items:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Throwing items:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (throwing_num) {
@@ -869,21 +871,21 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing floor */
 	else {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Floor:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Floor:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (f1 <= f2) {
@@ -897,13 +899,13 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory or equipment */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 		else if (use_equip)
-			my_strcat(out_val, " / for Equip,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Equip,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Finish the header */
@@ -1592,7 +1594,7 @@ void textui_obj_examine(void)
 	struct object *obj;
 
 	/* Select item */
-	if (!get_item(&obj, "Examine which item?", "You have nothing to examine.",
+	if (!get_item(&obj, angdroid_game_ui_text("Examine which item?", angdroid_zh_tw_enabled()), angdroid_game_ui_text("You have nothing to examine.", angdroid_zh_tw_enabled()),
 			CMD_NULL, NULL, (USE_EQUIP | USE_INVEN | USE_QUIVER | USE_FLOOR | IS_HARMLESS)))
 		return;
 
@@ -1642,9 +1644,9 @@ void textui_cmd_ignore_menu(struct object *obj)
 
 	/* Basic ignore option */
 	if (!(obj->known->notice & OBJ_NOTICE_IGNORE)) {
-		menu_dynamic_add(m, "This item only", IGNORE_THIS_ITEM);
+		menu_dynamic_add(m, angdroid_game_ui_text("This item only", angdroid_zh_tw_enabled()), IGNORE_THIS_ITEM);
 	} else {
-		menu_dynamic_add(m, "Unignore this item", UNIGNORE_THIS_ITEM);
+		menu_dynamic_add(m, angdroid_game_ui_text("Unignore this item", angdroid_zh_tw_enabled()), UNIGNORE_THIS_ITEM);
 	}
 
 	/* Flavour-aware ignore */
@@ -1700,8 +1702,10 @@ void textui_cmd_ignore_menu(struct object *obj)
 	}
 
 	/* Work out display region */
-	r.width = menu_dynamic_longest_entry(m) + 3 + 2; /* +3 for tag, 2 for pad */
-	r.col = 80 - r.width;
+	/* Render correctly on narrow terminals and after Chinese labels. */
+    r.width = (int)MIN(menu_dynamic_longest_entry(m) + 3 + 2,
+        (size_t)MAX(1, Term->wid - 2));
+    r.col = MAX(0, Term->wid - r.width - 1);
 	r.row = 1;
 	r.page_rows = m->count;
 
@@ -1709,7 +1713,7 @@ void textui_cmd_ignore_menu(struct object *obj)
 	menu_layout(m, &r);
 	region_erase_bordered(&r);
 
-	prt("(Enter to select, ESC) Ignore:", 0, 0);
+	prt(angdroid_game_ui_text("(Enter to select, ESC) Ignore:", angdroid_zh_tw_enabled()), 0, 0);
 	selected = menu_dynamic_select(m);
 
 	screen_load();

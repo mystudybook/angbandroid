@@ -60,6 +60,8 @@ def main():
     player_spell = source(CPP / "angband/player-spell.c", errors)
     cave_cmd = source(CPP / "angband/cmd-cave.c", errors)
     player_attack = source(CPP / "angband/player-attack.c", errors)
+    object_ui = source(CPP / "angband/ui-object.c", errors)
+    target_ui = source(CPP / "angband/ui-target.c", errors)
     combat_header = source(CPP / "angband/zh-tw-combat.h", errors)
     store_ui = source(CPP / "angband/ui-store.c", errors)
     knowledge_ui = source(CPP / "angband/ui-knowledge.c", errors)
@@ -260,6 +262,14 @@ def main():
     expect('msg("你沒能正確%s。", action_zh)' in obj_cmd
            and 'msg("You failed to %s properly.", action)' in obj_cmd,
            "Device usage warning must preserve English format fallback")
+    expect('angdroid_game_ui_text("Target Aborted."' in target_ui,
+           "Target abort label missing")
+    expect('r.col = MAX(0, Term->wid - r.width - 1)' in object_ui,
+           "Ignore menu still uses fixed 80-column coordinates")
+    expect('angdroid_game_ui_text("This item only"' in object_ui,
+           "Ignore action not translated")
+    expect('angdroid_game_ui_text("Inven:"' in object_ui,
+           "Inventory chooser header not translated")
     if errors:
         for item in errors:
             print("FAIL:", item)
