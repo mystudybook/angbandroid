@@ -496,6 +496,14 @@ damage and blow calculations are untouched, and English-mode messages
 retain the original format strings. Also removed a duplicate include of
 `droid.h` introduced by overlapping item-info work.
 
+## Digging tool terrain and speed descriptions (2026-11-04)
+
+Digging tool information now names rubble, magma veins, quartz veins and
+granite in Traditional Chinese, including turn counts and failure phrases.
+This preserves original digging calculations and text selection conditions.
+English templates remain available, and translated formats are literal
+strings compatible with the NDK format-security checks.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

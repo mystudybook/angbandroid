@@ -1894,21 +1894,27 @@ static bool describe_digger(textblock *tb, const struct object *obj)
 	for (i = DIGGING_RUBBLE; i < DIGGING_DOORS; i++) {
 		if (i == 0 && deciturns[0] > 0) {
 			if (tval_is_melee_weapon(obj))
-				textblock_append(tb, "Clears ");
+				textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "可以挖掘：" : "Clears ");
 			else
-				textblock_append(tb, "With this item, your current weapon clears ");
+				textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "搭配這件物品，目前武器可挖掘：" : "With this item, your current weapon clears ");
 		}
 
 		if (i == 3 || (i != 0 && deciturns[i] == 0))
-			textblock_append(tb, "and ");
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "以及" : "and ");
 
 		if (deciturns[i] == 0) {
-			textblock_append_c(tb, COLOUR_L_RED, "doesn't affect ");
-			textblock_append(tb, "%s.\n", names[i]);
+			textblock_append_c(tb, COLOUR_L_RED, "%s", angdroid_zh_tw_enabled() ? "無法挖掘 " : "doesn't affect ");
+			if (angdroid_zh_tw_enabled())
+                textblock_append(tb, "%s。\n", angdroid_zh_tw_object_term(names[i], true));
+            else
+                textblock_append(tb, "%s.\n", names[i]);
 			break;
 		}
 
-		textblock_append(tb, "%s in ", names[i]);
+		if (angdroid_zh_tw_enabled())
+            textblock_append(tb, "%s 約需 ", angdroid_zh_tw_object_term(names[i], true));
+        else
+            textblock_append(tb, "%s in ", names[i]);
 
 		if (deciturns[i] == 10) {
 			textblock_append_c(tb, COLOUR_L_GREEN, "1 ");
@@ -1920,8 +1926,11 @@ static bool describe_digger(textblock *tb, const struct object *obj)
 							   COLOUR_RED, "%d ", (deciturns[i]+5)/10);
 		}
 
-		textblock_append(tb, "turn%s%s", deciturns[i] == 10 ? "" : "s",
-				(i == 3) ? ".\n" : ", ");
+		if (angdroid_zh_tw_enabled())
+            textblock_append(tb, "回合%s", i == 3 ? "。\n" : "，");
+        else
+            textblock_append(tb, "turn%s%s", deciturns[i] == 10 ? "" : "s",
+                i == 3 ? ".\n" : ", ");
 	}
 
 	return true;

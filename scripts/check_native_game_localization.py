@@ -519,6 +519,14 @@ def main():
            "Item blows/round mechanics must preserve numeric substitutions")
     expect(object_info.count('#include "droid.h"') == 1,
            "Duplicate native locale include in object info")
+    expect('angdroid_zh_tw_object_term(names[i], true)' in object_info,
+           "Digging terrain labels must use the display-only dictionary")
+    expect('textblock_append(tb, "回合%s"' in object_info
+           and 'textblock_append(tb, "turn%s%s"' in object_info,
+           "Digging times must use separate literal formats")
+    for terrain in ("rubble", "magma veins", "quartz veins", "granite"):
+        expect(('"' + terrain + '"') in object_info_terms,
+               "Missing exact terrain name: " + terrain)
     if errors:
         for item in errors:
             print("FAIL:", item)

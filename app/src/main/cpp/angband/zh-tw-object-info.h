@@ -54,6 +54,10 @@ static inline const char *angdroid_zh_tw_object_term(const char *term, int zh_tw
         {"demons", "惡魔"},
         {"dragons", "巨龍"},
         {"undead", "不死生物"},
+        {"rubble", "碎石"},
+        {"magma veins", "岩漿礦脈"},
+        {"quartz veins", "石英礦脈"},
+        {"granite", "花崗岩"},
     };
     size_t i;
     if (!term || !zh_tw) return term;

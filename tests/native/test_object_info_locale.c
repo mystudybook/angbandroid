@@ -15,6 +15,11 @@ int main(void)
     assert(strcmp(angdroid_zh_tw_object_term("acid", 0), "acid") == 0);
     assert(strcmp(angdroid_zh_tw_object_term("not-mapped", 1), "not-mapped") == 0);
     assert(angdroid_zh_tw_object_term(NULL, 1) == NULL);
+    assert(strcmp(angdroid_zh_tw_object_term("rubble", 1), "碎石") == 0);
+    assert(strcmp(angdroid_zh_tw_object_term("magma veins", 1),
+                  "岩漿礦脈") == 0);
+    assert(strcmp(angdroid_zh_tw_object_term("granite", 0),
+                  "granite") == 0);
     puts("PASS: object info original Angband term labels");
     return 0;
 }
