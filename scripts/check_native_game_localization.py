@@ -545,6 +545,19 @@ def main():
                "Monster pain severity selection changed: " + severity)
     expect("test_monster_pain_locale.c" in native_tests,
            "Monster pain C99 test not registered")
+    mon_util = source(CPP / "angband/mon-util.c", errors)
+    for snippet in ('你擊殺了一個看不見的敵人。',
+                    '你摧毀了 %s。', '你擊敗了 %s。',
+                    '%s 閃爍著改變了形態！'):
+        expect(snippet in mon_util,
+               "Monster death/shapechange translation missing: " + snippet)
+    expect('angdroid_zh_tw_monster_list_name(mon->race->name)' in mon_util
+           and 'monster_is_visible(mon)' in mon_util,
+           "Monster kill name translation must preserve identity visibility")
+    for original in ('You have killed %s.', 'You have destroyed %s.',
+                     'You have slain %s.', 'shimmers and changes!'):
+        expect(original in mon_util,
+               "Monster kill/shapechange English fallback removed: " + original)
     if errors:
         for item in errors:
             print("FAIL:", item)

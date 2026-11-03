@@ -41,6 +41,8 @@
 #include "obj-util.h"
 #include "player-calcs.h"
 #include "player-history.h"
+#include "droid.h"
+#include "zh-tw-monsters.h"
 #include "player-quest.h"
 #include "player-timed.h"
 #include "player-util.h"
@@ -1054,15 +1056,31 @@ static void player_kill_monster(struct monster *mon, struct player *p,
 		/* Make sure to flush any monster messages first */
 		notice_stuff(p);
 
-		if (!monster_is_visible(mon))
-			/* Death by physical attack -- invisible monster */
-			msgt(soundfx, "You have killed %s.", m_name);
-		else if (monster_is_destroyed(mon))
-			/* Death by Physical attack -- non-living monster */
-			msgt(soundfx, "You have destroyed %s.", m_name);
-		else
-			/* Death by Physical attack -- living monster */
-			msgt(soundfx, "You have slain %s.", m_name);
+        /* The notice for invisible monsters must not reveal their
+         * identity. Unique proper names and the original kill sound stay
+         * intact. The canonical English name is never mutated. */
+        if (!monster_is_visible(mon)) {
+            if (angdroid_zh_tw_enabled())
+                msgt(soundfx, "你擊殺了一個看不見的敵人。");
+            else
+                msgt(soundfx, "You have killed %s.", m_name);
+        } else if (monster_is_destroyed(mon)) {
+            if (angdroid_zh_tw_enabled()) {
+                const char *name = monster_is_unique(mon) ? NULL :
+                    angdroid_zh_tw_monster_list_name(mon->race->name);
+                msgt(soundfx, "你摧毀了 %s。", name ? name : m_name);
+            } else {
+                msgt(soundfx, "You have destroyed %s.", m_name);
+            }
+        } else {
+            if (angdroid_zh_tw_enabled()) {
+                const char *name = monster_is_unique(mon) ? NULL :
+                    angdroid_zh_tw_monster_list_name(mon->race->name);
+                msgt(soundfx, "你擊敗了 %s。", name ? name : m_name);
+            } else {
+                msgt(soundfx, "You have slain %s.", m_name);
+            }
+        }
 	}
 
 	/* Player level */
@@ -1648,7 +1666,11 @@ bool monster_change_shape(struct monster *mon)
 	if (monster_is_obvious(mon)) {
 		char m_name[80];
 		monster_desc(m_name, sizeof(m_name), mon, MDESC_STANDARD);
-		msgt(MSG_GENERIC, "%s %s", m_name, "shimmers and changes!");
+		if (angdroid_zh_tw_enabled())
+                msgt(MSG_GENERIC, "%s 閃爍著改變了形態！", m_name);
+            else
+                msgt(MSG_GENERIC, "%s %s", m_name,
+                    "shimmers and changes!");
 		if (player->upkeep->health_who == mon)
 			player->upkeep->redraw |= (PR_HEALTH);
 
@@ -1682,7 +1704,11 @@ bool monster_revert_shape(struct monster *mon)
 		if (monster_is_obvious(mon)) {
 			char m_name[80];
 			monster_desc(m_name, sizeof(m_name), mon, MDESC_STANDARD);
-			msgt(MSG_GENERIC, "%s %s", m_name, "shimmers and changes!");
+			if (angdroid_zh_tw_enabled())
+                msgt(MSG_GENERIC, "%s 閃爍著改變了形態！", m_name);
+            else
+                msgt(MSG_GENERIC, "%s %s", m_name,
+                    "shimmers and changes!");
 			if (player->upkeep->health_who == mon)
 				player->upkeep->redraw |= (PR_HEALTH);
 

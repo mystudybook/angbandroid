@@ -516,6 +516,18 @@ save data and sound types remain unchanged. A source-to-dictionary
 coverage check and C99 host regression test were added. No complete
 Android compile or device validation has been performed yet.
 
+## Direct melee kills and visible shape changes (2026-11-04)
+
+The monster-death path in `mon-util.c` now uses Chinese templates for
+direct physical attacks: invisible kills without identity disclosure,
+destroyed nonliving monsters, and slain living monsters. Where the
+monster is visible and non-unique, the message uses its existing Chinese
+display name; unique proper names remain canonical. The existing
+`MSG_KILL`/`MSG_KILL_UNIQUE`/`MSG_KILL_KING` sound category and
+recorded kill history remain unchanged. Visible shape changes use
+a Chinese sentence. Projectile/spell death `note` fragments and all
+gameplay calculations remain on their original pathway.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
