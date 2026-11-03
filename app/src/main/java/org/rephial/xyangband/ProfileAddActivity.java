@@ -67,11 +67,11 @@ public class ProfileAddActivity extends Activity {
     	EditText editSaveFile = (EditText) findViewById(R.id.editSaveFile);
 		String newSaveFile = editSaveFile.getText().toString();
 
-		String msg = Preferences.getProfiles().validateChange(profile.id,
+		int errorId = Preferences.getProfiles().validateChangeErrorResource(profile.id,
 															  newName,
 															  newSaveFile);
-		if (msg != null) {
-			Preferences.alert(this, getString(R.string.dialog_not_allowed), msg);
+		if (errorId != 0) {
+			Preferences.alert(this, getString(R.string.dialog_not_allowed), getString(errorId));
 			return;
 		}
 
