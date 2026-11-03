@@ -58,6 +58,8 @@ def main():
     context_ui = source(CPP / "angband/ui-context.c", errors)
     game_ui = source(CPP / "angband/ui-game.c", errors)
     obj_cmd = source(CPP / "angband/cmd-obj.c", errors)
+    obj_info = source(CPP / "angband/obj-info.c", errors)
+    item_info_terms = source(CPP / "angband/zh-tw-item-info.h", errors)
     spell_ui = source(CPP / "angband/ui-spell.c", errors)
     magic_terms = source(CPP / "angband/zh-tw-magic.h", errors)
     player_spell = source(CPP / "angband/player-spell.c", errors)
@@ -455,6 +457,23 @@ def main():
            "Monster lore must render a single percent glyph in both languages")
     expect('textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "%%）"' not in monster_lore,
            "Literal percent format escapes must not go through %s")
+    expect('angdroid_item_info_text(' in obj_info
+           and 'object_effect_is_known(obj)' in obj_info
+           and 'if (obj->kind != obj->known->kind)' in obj_info,
+           "Item description localization must preserve known/unidentified gates")
+    expect('angdroid_item_info_text("It can be drunk.' in obj_info,
+           "Unknown item use capability is not translated")
+    expect('使用成功機率：%d.%d%%' in obj_info
+           and 'Your chance of success is %d.%d%%' in obj_info,
+           "Item recharge chance must preserve numeric formats and English fallback")
+    expect('angdroid_item_info_text("Combat info:' in obj_info,
+           "Item combat section not localized")
+    expect('angdroid_item_info_text("It can be drunk.' in item_info_terms
+           or '"這件物品可以飲用。' in item_info_terms,
+           "Missing item info display dictionary")
+    expect('zh-tw-item-info.h' in native_tests or
+           'test_game_ui_locale.c' in native_tests,
+           "Item info standalone regression not registered")
     if errors:
         for item in errors:
             print("FAIL:", item)

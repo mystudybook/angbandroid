@@ -441,6 +441,22 @@ format escapes in both languages. A previous attempt passed `%%）`
 through a `%s` parameter, which would render two percent signs.
 The source checker now guards this regression.
 
+## Object information labels and safety (2026-11-04)
+
+Added an independent `zh-tw-item-info.h` exact-match display dictionary
+for 18 common item-description sentences: unidentified-item warning,
+unrevealed powers, no special powers, possible consumable/equipment uses,
+book readability, combat info, and basic light/fuel/ego descriptions.
+Localized numeric text includes light intensity, effective ranged distance,
+break chance, recharge time, and success chance. Output formatting retains
+English literal fallbacks and sound/gameplay data are untouched.
+The patch does **not** change `object_effect_is_known()`,
+`get_known_flags()`, `get_known_elements()`, `obj->known` gates, or
+parser descriptions. Item effect descriptions returned by `effect_describe()`
+remain English until their grammar can be handled as complete phrases.
+Host tests verify dictionary fallbacks and the static checks protect
+identification gates and formatted success-chance messages.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

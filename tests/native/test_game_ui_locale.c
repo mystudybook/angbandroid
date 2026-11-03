@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../../app/src/main/cpp/angband/zh-tw-ui.h"
+#include "../../app/src/main/cpp/angband/zh-tw-item-info.h"
 #include "../../app/src/main/cpp/angband/zh-tw-combat.h"
 #include "../../app/src/main/cpp/angband/zh-tw-magic.h"
 #include "../../app/src/main/cpp/angband/zh-tw-mon-lore-terms.h"
@@ -11,6 +12,16 @@
 int main(void)
 {
     const char *unknown = "Untranslated data";
+    assert(strcmp(angdroid_item_info_text("It can be drunk.\n", 1),
+                  "這件物品可以飲用。\n") == 0);
+    assert(strcmp(angdroid_item_info_text("Combat info:\n", 1),
+                  "戰鬥資訊：\n") == 0);
+    assert(strcmp(angdroid_item_info_text("\n\nYou do not know what this is.\n", 1),
+                  "\n\n你還不知道這件物品是什麼。\n") == 0);
+    assert(strcmp(angdroid_item_info_text("It can be drunk.\n", 0),
+                  "It can be drunk.\n") == 0);
+    assert(angdroid_item_info_text(unknown, 1) == unknown);
+    assert(angdroid_item_info_text(NULL, 1) == NULL);
     assert(strcmp(angdroid_game_ui_text("New game", 1), "建立新遊戲") == 0);
     assert(strcmp(angdroid_game_ui_text("Point-based", 1), "點數分配") == 0);
     assert(strcmp(angdroid_game_ui_text("['r' to reroll", 1), "[r 重擲") == 0);

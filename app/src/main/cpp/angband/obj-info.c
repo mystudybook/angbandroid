@@ -38,6 +38,8 @@
 #include "player-calcs.h"
 #include "project.h"
 #include "z-textblock.h"
+#include "droid.h"
+#include "zh-tw-item-info.h"
 
 /**
  * Describes the number of blows possible for given stat bonuses
@@ -1764,23 +1766,23 @@ static bool describe_combat(textblock *tb, const struct object *obj)
 
 	if (!weapon && !ammo && !rock) {
 		if (thrown_effect) {
-			textblock_append(tb, "It can be thrown at creatures with damaging effect.\n");
+			textblock_append(tb, "%s", angdroid_item_info_text("It can be thrown at creatures with damaging effect.\n", angdroid_zh_tw_enabled()));
 			return true;
 		} else
 			return false;
 	}
 
-	textblock_append_c(tb, COLOUR_L_WHITE, "Combat info:\n");
+	textblock_append_c(tb, COLOUR_L_WHITE, "%s", angdroid_item_info_text("Combat info:\n", angdroid_zh_tw_enabled()));
 
 	if (heavy)
-		textblock_append_c(tb, COLOUR_L_RED, "You are too weak to use this weapon.\n");
+		textblock_append_c(tb, COLOUR_L_RED, "%s", angdroid_item_info_text("You are too weak to use this weapon.\n", angdroid_zh_tw_enabled()));
 
 	describe_blows(tb, obj);
 
 	if (ammo) {
-		textblock_append(tb, "When fired, hits targets up to ");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "射擊時，最遠可命中 " : "When fired, hits targets up to ");
 		textblock_append_c(tb, COLOUR_L_GREEN, "%d", range);
-		textblock_append(tb, " feet away.\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? " 英呎外的目標。\n" : " feet away.\n");
 	}
 
 	if (weapon || ammo) {
@@ -1792,7 +1794,7 @@ static bool describe_combat(textblock *tb, const struct object *obj)
 
 	if (ammo) {
 		textblock_append_c(tb, COLOUR_L_GREEN, "%d%%", break_chance);
-		textblock_append(tb, " chance of breaking upon contact.\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? " 的機率會在碰撞時損壞。\n" : " chance of breaking upon contact.\n");
 	}
 
 	/* Something has been said */
@@ -1964,18 +1966,21 @@ static bool describe_light(textblock *tb, const struct object *obj,
 		return false;
 
 	if (tval_is_light(obj)) {
-		textblock_append(tb, "Intensity ");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "光照強度：" : "Intensity ");
 		textblock_append_c(tb, COLOUR_L_GREEN, "%d", intensity);
-		textblock_append(tb, " light.");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。" : " light.");
 
 		if (!obj->artifact && !uses_fuel)
-			textblock_append(tb, "  No fuel required.");
+			textblock_append(tb, "%s", angdroid_item_info_text("  No fuel required.", angdroid_zh_tw_enabled()));
 
 		if (!terse) {
 			if (refuel_turns)
-				textblock_append(tb, "  Refills other lanterns up to %d turns of fuel.", refuel_turns);
+				if (angdroid_zh_tw_enabled())
+                    textblock_append(tb, "  可為其他提燈補充最多 %d 回合的燃料。", refuel_turns);
+                else
+                    textblock_append(tb, "  Refills other lanterns up to %d turns of fuel.", refuel_turns);
 			else
-				textblock_append(tb, "  Cannot be refueled.");
+				textblock_append(tb, "%s", angdroid_item_info_text("  Cannot be refueled.", angdroid_zh_tw_enabled()));
 		}
 		textblock_append(tb, "\n");
 	}
@@ -1992,7 +1997,7 @@ static bool describe_book(textblock *tb, const struct object *obj,
 {
 	if (!obj_can_browse(obj)) return false;
 
-	textblock_append(tb, "\nYou can read this book.\n");
+	textblock_append(tb, "%s", angdroid_item_info_text("\nYou can read this book.\n", angdroid_zh_tw_enabled()));
 
 	return true;
 }
@@ -2077,15 +2082,15 @@ static bool describe_effect(textblock *tb, const struct object *obj,
 	/* Effect not known, mouth platitudes */
 	if (!effect && object_effect(obj)) {
 		if (tval_is_edible(obj)) {
-			textblock_append(tb, "It can be eaten.\n");
+			textblock_append(tb, "%s", angdroid_item_info_text("It can be eaten.\n", angdroid_zh_tw_enabled()));
 		} else if (tval_is_potion(obj)) {
-			textblock_append(tb, "It can be drunk.\n");
+			textblock_append(tb, "%s", angdroid_item_info_text("It can be drunk.\n", angdroid_zh_tw_enabled()));
 		} else if (tval_is_scroll(obj)) {
-			textblock_append(tb, "It can be read.\n");
+			textblock_append(tb, "%s", angdroid_item_info_text("It can be read.\n", angdroid_zh_tw_enabled()));
 		} else if (aimed) {
-			textblock_append(tb, "It can be aimed.\n");
+			textblock_append(tb, "%s", angdroid_item_info_text("It can be aimed.\n", angdroid_zh_tw_enabled()));
 		} else {
-			textblock_append(tb, "It can be activated.\n");
+			textblock_append(tb, "%s", angdroid_item_info_text("It can be activated.\n", angdroid_zh_tw_enabled()));
 		}
 
 		return true;
@@ -2130,7 +2135,7 @@ static bool describe_effect(textblock *tb, const struct object *obj,
 		int multiplier = turn_energy(player->state.speed);
 		if (!subjective) multiplier = 10;
 
-		textblock_append(tb, "Takes ");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "需要 " : "Takes ");
 
 		/* Correct for player speed */
 		min_time = (min_time * multiplier) / 10;
@@ -2139,20 +2144,24 @@ static bool describe_effect(textblock *tb, const struct object *obj,
 		textblock_append_c(tb, COLOUR_L_GREEN, "%d", min_time);
 
 		if (min_time != max_time) {
-			textblock_append(tb, " to ");
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? " 到 " : " to ");
 			textblock_append_c(tb, COLOUR_L_GREEN, "%d", max_time);
 		}
 
-		textblock_append(tb, " turns to recharge");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? " 回合充能" : " turns to recharge");
 		if (subjective && player->state.speed != 110)
-			textblock_append(tb, " at your current speed");
+			textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "（依照目前速度）" : " at your current speed");
 
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 	}
 
 	if (failure_chance > 0) {
-		textblock_append(tb, "Your chance of success is %d.%d%%\n", 
-			(1000 - failure_chance) / 10, (1000 - failure_chance) % 10);
+		if (angdroid_zh_tw_enabled())
+            textblock_append(tb, "使用成功機率：%d.%d%%\n",
+                (1000 - failure_chance) / 10, (1000 - failure_chance) % 10);
+        else
+            textblock_append(tb, "Your chance of success is %d.%d%%\n",
+                (1000 - failure_chance) / 10, (1000 - failure_chance) % 10);
 	}
 
 	return true;
@@ -2268,13 +2277,13 @@ static void describe_flavor_text(textblock *tb, const struct object *obj,
 static bool describe_ego(textblock *tb, const struct ego_item *ego)
 {
 	if (kf_has(ego->kind_flags, KF_RAND_HI_RES))
-		textblock_append(tb, "It provides one random higher resistance.  ");
+		textblock_append(tb, "%s", angdroid_item_info_text("It provides one random higher resistance.  ", angdroid_zh_tw_enabled()));
 	else if (kf_has(ego->kind_flags, KF_RAND_SUSTAIN))
-		textblock_append(tb, "It provides one random sustain.  ");
+		textblock_append(tb, "%s", angdroid_item_info_text("It provides one random sustain.  ", angdroid_zh_tw_enabled()));
 	else if (kf_has(ego->kind_flags, KF_RAND_POWER))
-		textblock_append(tb, "It provides one random ability.  ");
+		textblock_append(tb, "%s", angdroid_item_info_text("It provides one random ability.  ", angdroid_zh_tw_enabled()));
 	else if (kf_has(ego->kind_flags, KF_RAND_RES_POWER))
-		textblock_append(tb, "It provides one random ability or base resistance.  ");
+		textblock_append(tb, "%s", angdroid_item_info_text("It provides one random ability or base resistance.  ", angdroid_zh_tw_enabled()));
 	else
 		return false;
 
@@ -2304,7 +2313,7 @@ static textblock *object_info_out(const struct object *obj, int mode)
 
 	/* Unaware objects get simple descriptions */
 	if (obj->kind != obj->known->kind) {
-		textblock_append(tb, "\n\nYou do not know what this is.\n");
+		textblock_append(tb, "%s", angdroid_item_info_text("\n\nYou do not know what this is.\n", angdroid_zh_tw_enabled()));
 		return tb;
 	}
 
@@ -2318,7 +2327,7 @@ static textblock *object_info_out(const struct object *obj, int mode)
 	if (!terse) describe_flavor_text(tb, obj, ego);
 
 	if (!object_fully_known(obj) &&	(obj->known->notice & OBJ_NOTICE_ASSESSED) && !tval_is_useable(obj)) {
-		textblock_append(tb, "You do not know the full extent of this item's powers.\n");
+		textblock_append(tb, "%s", angdroid_item_info_text("You do not know the full extent of this item's powers.\n", angdroid_zh_tw_enabled()));
 		something = true;
 	}
 
@@ -2355,7 +2364,7 @@ static textblock *object_info_out(const struct object *obj, int mode)
 
 	/* Don't append anything in terse (for chararacter dump) */
 	if (!something && !terse)
-		textblock_append(tb, "\n\nThis item does not seem to possess any special abilities.");
+		textblock_append(tb, "%s", angdroid_item_info_text("\n\nThis item does not seem to possess any special abilities.", angdroid_zh_tw_enabled()));
 
 	return tb;
 }
