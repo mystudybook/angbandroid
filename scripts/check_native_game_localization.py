@@ -883,6 +883,36 @@ def main():
            'strcmp(label, "kobo")' in monster_label_test,
            "Monster knowledge renderer must test UTF-8 boundaries and English")
 
+    # Item and rune names already have canonical translators; prevent
+    # CJK glyph splitting or spilling across fixed knowledge columns.
+    knowledge_column = source(CPP / "angband/knowledge-column-text.h", errors)
+    knowledge_column_test = source(
+        ROOT / "tests/native/test_knowledge_column_text.c", errors)
+    expect('"knowledge-column-text.h"' in knowledge_ui and
+           '"menu-text-fit.h"' in knowledge_column and
+           'angdroid_menu_copy_columns(dest, capacity, label, available)' in
+           knowledge_column and
+           'angdroid_knowledge_tried_suffix(' in knowledge_ui and
+           'char o_name[160] = "";' in knowledge_ui,
+           "Knowledge display must preserve item translations and tried suffix")
+    expect('o_name, col, 45, Term->wid' in knowledge_ui and
+           'inscrip, 55, 75, Term->wid' in knowledge_ui and
+           'rune_name(oid), col, 46, Term->wid' in knowledge_ui and
+           'inscrip, 47, Term->wid, Term->wid' in knowledge_ui,
+           "Knowledge item/rune entries must stop before metadata columns")
+    expect(all(x in knowledge_ui for x in (
+           'streq(otherfields, "Ignore  Inscribed          Sym")',
+           'streq(otherfields, "                   Sym  Kills")',
+           'streq(otherfields, "                    Sym")',
+           'streq(otherfields, "Inscribed")',
+           'knowledge_header_field("符號", 76)',
+           'knowledge_header_field("刻字", 46)')),
+           "Knowledge column headings must localize only known literal headers")
+    expect('test_knowledge_column_text.c' in native_tests and
+           'strcmp(out, "治療藥")' in knowledge_column_test and
+           'strcmp(out, "Powe")' in knowledge_column_test,
+           "Knowledge UTF-8 column C99 regression missing")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

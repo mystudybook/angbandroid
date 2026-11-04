@@ -851,3 +851,24 @@ It leaves a one-cell gap at column 65. English labels are also clipped.
 C99 tests cover translation, unique/unknown/English fallbacks, negative and
 one-column limits, narrow capacity and whole-glyph clipping. Actual phone
 screen rendering and complete Android compilation still need acceptance.
+
+## Item/rune knowledge columns and localized metadata headings (2026-11-04)
+
+Known object names already use the curated object-kind translation and are
+not retranslated or modified here. This change clips item and rune labels to
+complete terminal-width UTF-8 scalars before fixed metadata columns, and
+also clips user inscriptions to avoid overlapping the symbol column or the
+terminal edge. The known-item display buffer is zero-initialized and enlarged
+from 80 to 160 bytes; the unknown-flavor "tried" suffix now reads 已試用 in
+zh-TW, with English fallback.
+
+The original four knowledge metadata header layouts now show Chinese fields
+(忽略, 刻字, 符號, 擊殺), only at their existing fixed columns and when the
+zh-TW locale is selected. All English and unrecognized headers retain the
+existing behavior. No savefile fields, object-kind templates, rune data,
+autoinscriptions or key commands have changed.
+
+A new standalone C99 regression exercises CJK widths, truncated columns,
+English text, invalid/empty spans, tiny output buffers and both suffix
+locales. Complete Android NDK/APK and on-device narrow display checks remain
+pending.
