@@ -744,8 +744,15 @@ static bool menu_handle_action(struct menu *m, const ui_event *in)
 	 * filter array or invoke a callback for an invalid selection. */
 	oid = angdroid_menu_action_item_index(
 		m->cursor, count, m->count, m->filter_list);
-	if (oid < 0 || !is_valid_row(m, m->cursor))
+	if (oid < 0 || !is_valid_row(m, m->cursor)) {
+		/* Empty stores must still accept Sell, Help and header taps.
+		 * The caller explicitly opts in; pass -1 as the unselected row. */
+		if (angdroid_menu_allow_empty_input(m->flags,
+			MN_ALLOW_EMPTY_INPUT,
+			in->type == EVT_KBRD || in->type == EVT_MOUSE))
+			return m->row_funcs->row_handler(m, in, -1);
 		return false;
+	}
 
 	return m->row_funcs->row_handler(m, in, oid);
 }
