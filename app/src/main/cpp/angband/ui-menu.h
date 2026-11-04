@@ -403,6 +403,9 @@ void menu_dynamic_add_label_valid(struct menu *m, const char *text, const char l
 size_t menu_dynamic_longest_entry(struct menu *m);
 void menu_dynamic_calc_location(struct menu *m, int mx, int my);
 int menu_dynamic_select(struct menu *m);
+/* Permit one explicit alternate shortcut, mapped to an existing menu tag.
+ * Unrecognized events still cancel; do not treat the focused item as a choice. */
+int menu_dynamic_select_alias(struct menu *m, char alias_key, char target_key);
 void menu_dynamic_free(struct menu *m);
 
 #endif /* INCLUDED_UI_MENU_H */
