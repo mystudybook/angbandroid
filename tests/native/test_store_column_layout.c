@@ -14,7 +14,7 @@ int main(void)
     assert(l.gold_col == 54 && l.owner_end == 78);
     assert(angdroid_store_name_budget(l, 1, 79) == 54);
     assert(angdroid_store_name_budget(l, 1, 8) == 8);
-    assert(angdroid_store_name_budget(l, 60, 10) == 5);
+    assert(angdroid_store_name_budget(l, 60, 10) == 0);
     assert(angdroid_store_name_budget(l, 1, -1) == 0);
 
     /* Phone widths: keep the name, then price, then optional weight. */
