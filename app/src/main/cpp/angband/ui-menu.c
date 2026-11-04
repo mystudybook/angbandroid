@@ -1308,17 +1308,21 @@ void menu_dynamic_calc_location(struct menu *m, int mx, int my)
 	/* Dynamic menus are used by the store's Buy/Sell/Examine popups.
 	 * On small rotated Android surfaces the old border arithmetic made
 	 * r.col negative, or positioned rows below the terminal. */
-	if (angdroid_menu_popup_bounds(
+	if (!angdroid_menu_popup_bounds(
 		Term->wid, Term->hgt, mx, my, menu_dynamic_longest_entry(m),
 		m->count, &popup)) {
-		r.col = popup.col;
-		r.row = popup.row;
-		r.width = popup.width;
-		r.page_rows = popup.page_rows;
+		/* region_calculate() interprets zero width/rows as "fill remaining
+		 * screen". Do not pass an invalid popup through menu_layout():
+		 * explicitly leave its active area empty so menu_select cancels. */
+		m->boundary = r;
+		m->active = r;
+		return;
 	}
+	r.col = popup.col;
+	r.row = popup.row;
+	r.width = popup.width;
+	r.page_rows = popup.page_rows;
 
-	/* A zero-sized terminal or empty menu has no selectable region;
-	 * menu_select() will report ESCAPE rather than reading invalid cells. */
 	menu_layout(m, &r);
 }
 
