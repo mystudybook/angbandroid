@@ -71,6 +71,14 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Scope:** this is host-C and source-level protection. A debug APK/emulator test must still check mouse selection, scrolling, visible labels and shortcut behavior during real gameplay.
 
+## Finite menu navigation across invalid rows (2026-11-04)
+
+- The previous `menu_handle_keypress()` navigation retry loop advanced by `ddy[dir]`. In column menus, horizontal movements have `ddy[dir] == 0`, so moving onto an invalid row could loop forever and freeze the game.
+- Invalid-row navigation now uses a bounded row search with a direction derived from vertical **or horizontal** input, wrapping safely in either direction. It returns no selection when no valid destination exists.
+- `tests/native/test_menu_valid_cursor.c` covers invalid horizontal destinations, both directions, wraparound, extreme cursors and empty/all-invalid menus. The C99 test is wired into `scripts/test-native-utf8.sh`; `tests/test_menu_navigation_source.py` guards the native integration through `scripts/verify-zh-tw.sh`.
+
+**Acceptance gap:** actual gamepad/touch/keyboard movement, resize handling and APK-level input-loop behavior still require emulator/device verification.
+
 ## Regression checks
 
 Run from the repository root:
