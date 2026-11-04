@@ -29,6 +29,7 @@
 #include "menu-hit-test.h"
 #include "menu-compact-layout.h"
 #include "menu-text-fit.h"
+#include "menu-action-guard.h"
 
 #include "droid.h"
 #include "zh-tw-ui.h"
@@ -128,7 +129,8 @@ static bool menu_action_handle(struct menu *m, const ui_event *event, int oid)
 	menu_action *acts = menu_priv(m);
 
 	if (event->type == EVT_SELECT) {
-		if (!(acts->flags & MN_ACT_GRAYED) && acts[oid].action) {
+		if (angdroid_menu_action_can_run(acts[oid].flags,
+			MN_ACT_GRAYED, acts[oid].action != NULL)) {
 			acts[oid].action(acts[oid].name, m->cursor);
 			return true;
 		}
@@ -731,15 +733,21 @@ bool menu_handle_mouse(struct menu *menu, const ui_event *in,
  */
 static bool menu_handle_action(struct menu *m, const ui_event *in)
 {
-	if (m->row_funcs->row_handler) {
-		int oid = m->cursor;
-		if (m->filter_list)
-			oid = m->filter_list[m->cursor];
+	int count = m->filter_list ? m->filter_count : m->count;
+	int oid;
 
-		return m->row_funcs->row_handler(m, in, oid);
-	}
+	if (!m->row_funcs || !m->row_funcs->row_handler)
+		return false;
 
-	return false;
+	/* A filtered/empty menu may have cursor == -1 while an Android
+	 * keyboard or mouse event is still queued. Never index the
+	 * filter array or invoke a callback for an invalid selection. */
+	oid = angdroid_menu_action_item_index(
+		m->cursor, count, m->count, m->filter_list);
+	if (oid < 0 || !is_valid_row(m, m->cursor))
+		return false;
+
+	return m->row_funcs->row_handler(m, in, oid);
 }
 
 

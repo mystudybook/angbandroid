@@ -121,6 +121,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_menu_text_fit"
 "$BUILD_DIR/test_menu_text_fit"
 
+# Verify selected menu action disabled state and filtered cursor bounds.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_action_guard.c" \
+    -o "$BUILD_DIR/test_menu_action_guard"
+"$BUILD_DIR/test_menu_action_guard"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \

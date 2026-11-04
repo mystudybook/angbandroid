@@ -107,6 +107,14 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Android verification still required:** render translated inventory and action menus with 1–12 terminal cells, rotate between landscape/portrait while selecting items, compare ASCII/tiles and Chinese fallback fonts on emulator and a real device.
 
+## Action selection and filtered-cursor safety (2026-11-04)
+
+- Native `menu_action_handle()` checked `acts->flags` (the **first item**) to decide whether the selected action was disabled. This could incorrectly block every action when the first row was gray, or execute a gray action when the first row was enabled. The selection handler now uses `acts[oid].flags` via a small tested guard.
+- `menu_handle_action()` now verifies the visible cursor, filtered index and active row validity before invoking callbacks. A zero-item filter or stale `cursor == -1` during Android input processing can no longer read `filter_list[-1]` in this callback path.
+- Added `tests/native/test_menu_action_guard.c` to the C99 helper test runner and `tests/test_menu_action_guard_source.py` to the combined offline verification. The test covers independent gray state, reordered selections, missing callbacks, empty menus, invalid cursor positions, and invalid mapped indices.
+
+**Remaining Android acceptance:** gray disabled actions in mixed menus, filtered menus during quick screen changes, hardware keyboard Enter, and touch selection; tests above do not represent actual emulator results.
+
 ## Regression checks
 
 Run from the repository root:
