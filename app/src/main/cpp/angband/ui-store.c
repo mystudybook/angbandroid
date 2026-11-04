@@ -923,27 +923,29 @@ static bool store_process_command_key(struct keypress kp)
 /**
  * Select an item from the store's stock, and return the stock index
  */
-static int store_get_stock(struct menu *m, int oid)
+static int store_get_stock(struct menu *m)
 {
+	struct store_context *ctx = menu_priv(m);
 	ui_event e;
+	int selected;
 	int no_act = m->flags & MN_NO_ACTION;
 
-	/* Set a flag to make sure that we get the selection or escape
-	 * without running the menu handler */
+	/* An empty shop has no stock to select; Sell and Help still work. */
+	if (!ctx->list || ctx->store->stock_num <= 0)
+		return -1;
+
+	/* Temporarily select an item without invoking its action. */
 	m->flags |= MN_NO_ACTION;
 	e = menu_select(m, 0, true);
-	if (!no_act) {
+	if (!no_act)
 		m->flags &= ~MN_NO_ACTION;
-	}
 
-	if (e.type == EVT_SELECT) {
-		return m->cursor;
-	} else if (e.type == EVT_ESCAPE) {
+	selected = angdroid_store_selected_index(
+		e.type == EVT_SELECT, m->cursor, ctx->store->stock_num,
+		z_info->store_inven_max);
+	if (selected < 0 || !ctx->list[selected])
 		return -1;
-	}
-
-	/* if we do not have a new selection, just return the original item */
-	return oid;
+	return selected;
 }
 
 /** Enum for context menu entries */
@@ -1026,12 +1028,20 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 	struct store *store = ctx->store;
 	bool home = (store->feat == FEAT_HOME) ? true : false;
 
-	struct menu *m = menu_dynamic_new();
-	struct object *obj = ctx->list[oid];
+	struct menu *m;
+	struct object *obj;
 	menu_iter mod_iter;
 	int selected;
 	char *labels;
 	char header[120];
+
+	/* Check the current stock before allocating and opening a popup. */
+	if (!ctx->list || !angdroid_store_stock_index_valid(
+		oid, store->stock_num, z_info->store_inven_max) ||
+		!ctx->list[oid])
+		return false;
+	obj = ctx->list[oid];
+	m = menu_dynamic_new();
 
 	object_desc(header, sizeof(header), obj,
 		ODESC_PREFIX | ODESC_FULL | ((home) ? 0 : ODESC_STORE), player);
@@ -1105,8 +1115,9 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 			oid, m->top, m->active.row, m->active.page_rows);
 		bool purchased;
 
-		if (oid < 0 || oid >= store->stock_num || !ctx->list[oid] ||
-			popup_row < 0)
+		if (!ctx->list || !angdroid_store_stock_index_valid(
+			oid, store->stock_num, z_info->store_inven_max) ||
+			!ctx->list[oid] || popup_row < 0)
 			return false;
 
 		purchased = context_menu_store_item(ctx, oid, 1, popup_row);
@@ -1140,7 +1151,8 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 					return false;
 
 				action = true;
-			} else if (oid >= 0 && oid < store->stock_num &&
+			} else if (ctx->list && angdroid_store_stock_index_valid(
+				oid, store->stock_num, z_info->store_inven_max) &&
 				ctx->list[oid] &&
 				event->mouse.y == angdroid_store_menu_screen_row(
 					oid, m->top, m->active.row, m->active.page_rows)) {
@@ -1184,7 +1196,7 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 					prt(angdroid_game_ui_text("Get which item? (Esc to cancel, Enter to select)", angdroid_zh_tw_enabled()),
 						0, 0);
 				}
-				oid = store_get_stock(m, oid);
+				oid = store_get_stock(m);
 				prt("", 0, 0);
 				if (oid >= 0) {
 					store_purchase(ctx, oid, false);
@@ -1196,7 +1208,7 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 				msg_flag = false;
 				prt(angdroid_game_ui_text("Examine which item? (ESC to cancel, Enter to select)", angdroid_zh_tw_enabled()),
 					0, 0);
-				oid = store_get_stock(m, oid);
+				oid = store_get_stock(m);
 				prt("", 0, 0);
 				if (oid >= 0) {
 					store_examine(ctx, oid);
