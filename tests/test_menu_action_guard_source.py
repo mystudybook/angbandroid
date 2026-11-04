@@ -37,7 +37,7 @@ if "oid = m->filter_list[m->cursor];" in handler:
 # All generic menu paths must translate visible indices through the same bounds
 # check before invoking row callbacks, including rendering and soft keys.
 sections = {
-    "row validity": ui.split("static bool is_valid_row(struct menu *menu, int cursor)", 1)[1].split(
+    "row validity": ui.split("static bool is_valid_row(struct menu *menu, int cursor)\n{", 1)[1].split(
         "static bool no_valid_row", 1
     )[0],
     "private tags": ui.split("static int get_cursor_key(", 1)[1].split(
