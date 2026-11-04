@@ -5,7 +5,8 @@
 
 /* Terminal cell coordinates for a single store row. Optional columns are
  * -1 when they cannot fit without swallowing the item name.
- * Price takes priority over weight in non-home stores. */
+ * Price takes priority over weight in non-home stores.
+ * Reserve 3 cells for the native item shortcut, 12 for its name, and a gap. */
 typedef struct {
     int width;
     int name_col;
@@ -37,16 +38,16 @@ static inline angdroid_store_column_layout angdroid_store_columns(
     out.name_cols = left;
 
     if (is_home) {
-        if (left >= 27) {
+        if (left >= 30) {
             out.weight_col = out.width - 14;
             out.name_cols = out.weight_col - out.name_col - 1;
         }
     } else {
-        if (left >= 27) {
+        if (left >= 30) {
             out.price_col = out.width - 14;
             out.name_cols = out.price_col - out.name_col - 1;
         }
-        if (left >= 37) {
+        if (left >= 40) {
             out.weight_col = out.width - 24;
             out.name_cols = out.weight_col - out.name_col - 1;
         }
