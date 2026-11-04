@@ -1206,6 +1206,8 @@ static void store_menu_init(struct store_context *ctx, struct store *store, bool
 
 	/* Init the menu structure */
 	menu_init(menu, MN_SKIN_SCROLL, &store_menu);
+	/* A store can have no stock and still support Sell/Help/Exit. */
+	menu->flags |= MN_ALLOW_EMPTY_INPUT;
 	menu_setpriv(menu, 0, ctx);
 
 	/* Calculate the positions of things and draw */
