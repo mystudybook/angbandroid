@@ -614,9 +614,10 @@ def main():
     expect('angdroid_game_ui_text(' in options_ui
            and '"To edit visuals, use the knowledge menu"' in options_ui,
            "Visuals menu header is untranslated")
-    expect('angdroid_utf8_clip_columns(rendered, (size_t)wid)' in menu_ui
+    expect('menu_put_clipped(col, row, wid, color,' in menu_ui
+           and 'angdroid_menu_copy_columns(rendered, sizeof(rendered), text,' in menu_ui
            and 'Term_putstr(col, row, -1, color, rendered)' in menu_ui,
-           "Translated action menus must clip whole UTF-8 glyphs to width")
+           "Translated action menus must clip by rendered terminal columns")
     if errors:
         for item in errors:
             print("FAIL:", item)
