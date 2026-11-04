@@ -69,6 +69,7 @@
 #include "zh-tw-knowledge-groups.h"
 #include "knowledge-monster-label.h"
 #include "knowledge-column-text.h"
+#include "menu-text-fit.h"
 #include "../curses/unicode_display.h"
 
 /**
@@ -996,7 +997,24 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 				soft_kbd_flash("v");
 			}
 
-			prt(format("<dir>%s%s%s, ESC", pvs, pedit, xtra), hgt - 1, 0);
+			if (angdroid_zh_tw_enabled()) {
+				char full_prompt[512];
+				char visible_prompt[512];
+				/* Translate instructions only AFTER the original code
+				 * has decided which keys should be flashed. */
+				strnfmt(full_prompt, sizeof(full_prompt),
+					"方向鍵移動%s%s%s，Esc 返回",
+					angdroid_game_ui_text(pvs, true),
+					angdroid_game_ui_text(pedit, true),
+					angdroid_game_ui_text(xtra, true));
+				angdroid_menu_copy_columns(visible_prompt,
+					sizeof(visible_prompt), full_prompt,
+					wid > 0 ? (size_t)wid : 0);
+				prt(visible_prompt, hgt - 1, 0);
+			} else {
+				prt(format("<dir>%s%s%s, ESC", pvs, pedit, xtra),
+					hgt - 1, 0);
+			}
 		}
 
 		if (do_swap) {
@@ -2486,7 +2504,7 @@ static const char *feat_prompt(int oid)
 {
 	(void)oid;
 
-		soft_kbd_flash("lL");
+		soft_kbd_flash("tT");
 
 		switch (f_uik_lighting) {
 				case LIGHTING_LIT:  return ", 't/T' for lighting (lit)";
@@ -2675,9 +2693,9 @@ static const char *trap_prompt(int oid)
 {
 	(void)oid;
 
-	soft_kbd_flash("l");
+	soft_kbd_flash("tT");
 
-	return ", 'l' to cycle lighting";
+	return ", 't/T' to cycle lighting";
 }
 
 /**

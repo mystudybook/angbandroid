@@ -913,6 +913,46 @@ def main():
            'strcmp(out, "Powe")' in knowledge_column_test,
            "Knowledge UTF-8 column C99 regression missing")
 
+    # Knowledge footer labels must preserve all original keyboard actions.
+    knowledge_footer_text = [
+        ", 'c' to copy", ", 'c', 'p' to paste",
+        ", ENTER to accept", ", 'i' to insert, ENTER to accept",
+        ", 'v' for visuals", ", 'r' to recall",
+        ", 's' to toggle ignore, 'r'ecall, '{'",
+        ", 's' to toggle ignore, 'r'ecall, '{', '}'",
+        ", 'r'ecall, '{'", ", 'r'ecall, '{', '}'",
+        ", 't/T' for lighting (lit)",
+        ", 't/T' for lighting (torch)",
+        ", 't/T' for lighting (LOS)",
+        ", 't/T' for lighting (dark)",
+        ", 't/T' to cycle lighting"
+    ]
+    knowledge_footer_tests = source(
+        ROOT / "tests/native/test_game_ui_locale.c", errors)
+    for label in knowledge_footer_text:
+        expect('{' + '"' + label + '", ' in game_ui_header and
+               'angdroid_game_ui_text("' + label + '", 1)' in
+               knowledge_footer_tests,
+               "Knowledge footer translation/test missing: " + label)
+    expect('if (angdroid_zh_tw_enabled()) {' in knowledge_ui and
+           '"方向鍵移動%s%s%s，Esc 返回"' in knowledge_ui and
+           'angdroid_game_ui_text(pvs, true)' in knowledge_ui and
+           'angdroid_game_ui_text(pedit, true)' in knowledge_ui and
+           'angdroid_game_ui_text(xtra, true)' in knowledge_ui and
+           'angdroid_menu_copy_columns(visible_prompt,' in knowledge_ui and
+           'prt(format("<dir>%s%s%s, ESC", pvs, pedit, xtra)' in knowledge_ui,
+           "Knowledge footer must keep English mode and safely clip Chinese")
+    expect(knowledge_ui.count('soft_kbd_flash("tT");') == 2 and
+           'return ", \'t/T\' to cycle lighting";' in knowledge_ui and
+           'soft_kbd_flash("lL");' not in knowledge_ui and
+           'return ", \'l\' to cycle lighting";' not in knowledge_ui and
+           knowledge_ui.count("if (ch.code == 't')") >= 2 and
+           knowledge_ui.count("} else if (ch.code == 'T')") >= 2,
+           "Feature/trap lighting prompts must match actual t/T commands")
+    expect('if (strstr(pedit, "paste") != NULL)' in knowledge_ui and
+           'if (sel == with_insc) soft_kbd_flash("}");' in knowledge_ui,
+           "Translated footer must not alter soft keyboard command detection")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
