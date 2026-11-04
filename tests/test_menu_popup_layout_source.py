@@ -24,6 +24,10 @@ for fragment in (
     "angdroid_menu_popup_bounds(",
     "Term->wid, Term->hgt, mx, my, menu_dynamic_longest_entry(m)",
     "m->count, &popup",
+    "m->boundary = r;",
+    "m->boundary.width = Term->wid > 0 ? 1 : 0;",
+    "m->boundary.page_rows = Term->hgt > 0 ? 1 : 0;",
+    "m->active = r;",
     "r.col = popup.col;",
     "r.row = popup.row;",
     "r.width = popup.width;",
@@ -47,9 +51,9 @@ if "menu_dynamic_calc_location(m, mx, my);" not in (
 ).read_text(encoding="utf-8"):
     raise SystemExit("FAIL: store popup path no longer invokes the layout")
 
-if "menu_dynamic_select(m, 0, true);" not in menu:
-    # Not a regression indicator; modal operation runs through menu_select
-    if "ui_event e = menu_select(m, 0, true);" not in menu:
-        raise SystemExit("FAIL: modal popup selection path missing")
+if "ui_event e = menu_select(m, 0, true);" not in menu:
+    raise SystemExit("FAIL: modal popup selection path missing")
+if location.index("m->active = r;") > location.index("menu_layout(m, &r);"):
+    raise SystemExit("FAIL: invalid popup is passed through region_calculate")
 
 print("PASS: native dynamic menu placement is bounded and store popups use it")
