@@ -476,7 +476,10 @@ static bool is_valid_row(struct menu *menu, int cursor)
 	if (cursor < 0 || cursor >= count)
 		return false;
 
-	oid = menu->filter_list ? menu->filter_list[cursor] : cursor;
+	oid = angdroid_menu_action_item_index(
+		cursor, count, menu->count, menu->filter_list);
+	if (oid < 0)
+		return false;
 
 	if (menu->row_funcs->valid_row)
 		return menu->row_funcs->valid_row(menu, oid);
@@ -547,8 +550,12 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 		}
 	} else if (menu->row_funcs->get_tag) {
 		for (i = 0; i < n; i++) {
-			int oid = menu->filter_list ? menu->filter_list[i] : i;
-			char c = menu->row_funcs->get_tag(menu, oid);
+			int oid = angdroid_menu_action_item_index(
+				i, n, menu->count, menu->filter_list);
+			char c;
+			if (oid < 0)
+				continue;
+			c = menu->row_funcs->get_tag(menu, oid);
 
 			if ((menu->flags & MN_CASELESS_TAGS) && c)
 				c = toupper((unsigned char) c);
@@ -587,11 +594,14 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 {
 	int flags = menu->flags;
 	char sel = 0;
-	int oid = pos;
+	int count = menu->filter_list ? menu->filter_count : menu->count;
+	int oid = angdroid_menu_action_item_index(
+		pos, count, menu->count, menu->filter_list);
 	menu_row_validity_t row_valid = MN_ROW_VALID;
 
-	if (menu->filter_list)
-		oid = menu->filter_list[oid];
+	/* Never send a stale filtered ID into an iterator callback. */
+	if (oid < 0)
+		return;
 
 	if (menu->row_funcs->valid_row)
 		row_valid = menu->row_funcs->valid_row(menu, oid);
@@ -646,7 +656,8 @@ static void menu_choose_skin(struct menu *menu)
 void menu_refresh(struct menu *menu, bool reset_screen)
 {
 	int count = menu->filter_list ? menu->filter_count : menu->count;
-	int oid = menu->cursor;
+	int oid = angdroid_menu_action_item_index(
+		menu->cursor, count, menu->count, menu->filter_list);
 	region *loc = &menu->active;
 
 	if (loc->width <= 0 || loc->page_rows <= 0)
@@ -657,11 +668,6 @@ void menu_refresh(struct menu *menu, bool reset_screen)
 		screen_load();
 		screen_save();
 	}
-
-	if (oid < 0 || oid >= count)
-		oid = -1;
-	else if (menu->filter_list)
-		oid = menu->filter_list[oid];
 
 	if (menu->title && menu->title_row >= 0)
 		menu_put_clipped(menu->decoration_col, menu->title_row,
@@ -866,10 +872,13 @@ static void keys_to_ui(struct menu *menu)
 
 	for (cursor = first; cursor < end; cursor++) {
 
-		int oid = angdroid_menu_hint_item_index(menu->filter_list, cursor);
+		int oid = angdroid_menu_action_item_index(
+			cursor, n, menu->count, menu->filter_list);
 		menu_row_validity_t row_valid = MN_ROW_VALID;
 		char sel = 0;
 
+		if (oid < 0)
+			continue;
 
 		if (menu->row_funcs->valid_row) {
 			row_valid = menu->row_funcs->valid_row(menu, oid);
