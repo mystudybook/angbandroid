@@ -90,3 +90,9 @@ CC="${CC:-cc}"
     "$ROOT/tests/native/test_menu_key_hints.c" \
     -o "$BUILD_DIR/test_menu_key_hints"
 "$BUILD_DIR/test_menu_key_hints"
+
+# Multi-column menu layout on tiny terminal widths must not divide by zero.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_column_width.c" \
+    -o "$BUILD_DIR/test_menu_column_width"
+"$BUILD_DIR/test_menu_column_width"
