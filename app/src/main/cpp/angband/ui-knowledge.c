@@ -67,7 +67,6 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "../curses/unicode_display.h"
-#include "zh-tw-ui.h"
 
 /**
  * The first part of this file contains the knowledge menus.  Generic display
@@ -792,6 +791,8 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 	bool flag = false;
 	bool redraw = true;
 
+	const char *display_title = angdroid_game_ui_text(title,
+		angdroid_zh_tw_enabled());
 	int browser_rows;
 	int wid, hgt;
 	int i;
@@ -882,7 +883,7 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 			/* Print the title bits */
 			region_erase(&title_area);
 			if (angdroid_zh_tw_enabled())
-                prt(format("知識圖鑑：%s", title), 2, 0);
+                prt(format("知識圖鑑：%s", display_title), 2, 0);
             else
                 prt(format("Knowledge - %s", title), 2, 0);
 			prt(angdroid_zh_tw_enabled() ? "分類" : "Group", 4, 0);
@@ -1112,7 +1113,7 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 
 	/* Prompt */
 	if (!grp_cnt)
-		prt(angdroid_zh_tw_enabled() ? format("尚未發現任何%s。", title)
+		prt(angdroid_zh_tw_enabled() ? format("尚未發現任何%s。", display_title)
             : format("No %s known.", title), 15, 0);
 
 	mem_free(g_names);
@@ -1185,10 +1186,11 @@ static void display_monster(int col, int row, bool cursor, int oid)
 
 	/* Display kills */
 	if (!race->rarity) {
-		put_str(format("%s", "shape"), row, 70);
+		put_str(angdroid_game_ui_text("shape", angdroid_zh_tw_enabled()),
+			row, 70);
 	} else if (rf_has(race->flags, RF_UNIQUE)) {
-		put_str(format("%s", (race->max_num == 0)?  " dead" : "alive"),
-				row, 70);
+		put_str(angdroid_game_ui_text((race->max_num == 0) ? " dead" : "alive",
+			angdroid_zh_tw_enabled()), row, 70);
 	} else {
 		put_str(format("%5d", lore->pkills), row, 70);
 	}
@@ -1731,8 +1733,12 @@ static void do_cmd_knowledge_artifacts(const char *name, int row)
 	a_count = collect_known_artifacts(artifacts, z_info->a_max);
 
 	if (OPT(player, birth_randarts)) {
-		strnfmt(title, sizeof(title), "artifacts (seed %08lx)",
-			(unsigned long)seed_randart);
+		if (angdroid_zh_tw_enabled())
+			strnfmt(title, sizeof(title), "神器（種子 %08lx）",
+				(unsigned long)seed_randart);
+		else
+			strnfmt(title, sizeof(title), "artifacts (seed %08lx)",
+				(unsigned long)seed_randart);
 	} else {
 		strnfmt(title, sizeof(title), "artifacts");
 	}
@@ -1894,7 +1900,8 @@ static void display_object(int col, int row, bool cursor, int oid)
 	/* Show ignore status */
 	if ((aware && kind_is_ignored_aware(kind)) ||
 		(!aware && kind_is_ignored_unaware(kind)))
-		c_put_str(attr, "Yes", row, 46);
+		c_put_str(attr, angdroid_game_ui_text("Yes",
+			angdroid_zh_tw_enabled()), row, 46);
 
 
 	/* Show autoinscription if around */
@@ -2287,7 +2294,7 @@ static void do_cmd_knowledge_runes(const char *name, int row)
 	int rune_max = max_runes();
 	int count = 0;
 	int i;
-	char buf[30];
+	char buf[64];
 
 	runes = mem_zalloc(rune_max * sizeof(int));
 
@@ -2299,9 +2306,13 @@ static void do_cmd_knowledge_runes(const char *name, int row)
 		runes[count++] = i;
 	}
 
-	strnfmt(buf, sizeof(buf), "runes (%d unknown)", rune_max - count);
+	if (angdroid_zh_tw_enabled())
+		strnfmt(buf, sizeof(buf), "符文（%d 個尚未辨識）", rune_max - count);
+	else
+		strnfmt(buf, sizeof(buf), "runes (%d unknown)", rune_max - count);
 
-	display_knowledge(buf, runes, count, rune_var_f, rune_f, "Inscribed");
+	display_knowledge(buf, runes, count, rune_var_f, rune_f,
+		angdroid_game_ui_text("Inscribed", angdroid_zh_tw_enabled()));
 	mem_free(runes);
 }
 
@@ -3648,7 +3659,8 @@ static void reset_main_knowledge_menu(void)
 		menu_find_iter(MN_ITER_ACTIONS));
 	menu_setpriv(&main_knowledge_menu.m, main_knowledge_menu.count,
 		main_knowledge_menu.actions);
-	main_knowledge_menu.m.title = "Display current knowledge";
+	main_knowledge_menu.m.title = angdroid_game_ui_text(
+		"Display current knowledge", angdroid_zh_tw_enabled());
 	main_knowledge_menu.m.selections = all_letters_nohjkl;
 	/*
 	 * These are shortcuts to get the contents of the stores by number;

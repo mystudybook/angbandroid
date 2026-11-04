@@ -757,6 +757,43 @@ def main():
     expect("test_help_browser_locale.c" in native_tests,
            "Native help-browser C99 fallback tests not registered")
 
+    # Knowledge navigation, detail titles and status labels must stay display-only.
+    knowledge_mapping_keys = [
+        "Display object knowledge", "Display rune knowledge",
+        "Display artifact knowledge", "Display ego item knowledge",
+        "Display monster knowledge", "Display feature knowledge",
+        "Display trap knowledge", "Display shapechange effects",
+        "Display hall of fame", "Display character history",
+        "Display equippable comparison", "Display current knowledge",
+        "monsters", "artifacts", "ego items", "known objects",
+        "features", "traps", "Yes", "shape", " dead", "alive", "Inscribed"
+    ]
+    for label in knowledge_mapping_keys:
+        expect('{' + '"' + label + '", ' in game_ui_header,
+               "Missing localized knowledge menu/display key: " + label)
+        expect('angdroid_game_ui_text("' + label + '", 1)' in
+               source(ROOT / "tests/native/test_game_ui_locale.c", errors),
+               "Knowledge C99 translation coverage missing: " + label)
+    expect('angdroid_game_ui_text(title,' in knowledge_ui and
+           'prt(format("知識圖鑑：%s", display_title)' in knowledge_ui and
+           'format("尚未發現任何%s。", display_title)' in knowledge_ui,
+           "Knowledge list captions must use localized display-only titles")
+    expect('main_knowledge_menu.m.title = angdroid_game_ui_text(' in knowledge_ui and
+           'main_knowledge_menu.actions[i].name =' in knowledge_ui and
+           'pre_store_actions[j].action' in knowledge_ui and
+           'post_store_actions[j].action' in knowledge_ui,
+           "Knowledge action labels must not replace callbacks or command IDs")
+    expect('angdroid_game_ui_text("Yes",' in knowledge_ui and
+           'angdroid_game_ui_text("shape",' in knowledge_ui and
+           'angdroid_game_ui_text((race->max_num == 0) ? " dead" : "alive"' in knowledge_ui,
+           "Knowledge monster/object statuses must use locale-aware text")
+    expect('strnfmt(buf, sizeof(buf), "符文（%d 個尚未辨識）"' in knowledge_ui and
+           'strnfmt(buf, sizeof(buf), "runes (%d unknown)"' in knowledge_ui and
+           'char buf[64];' in knowledge_ui and
+           'strnfmt(title, sizeof(title), "神器（種子 %08lx）"' in knowledge_ui and
+           'strnfmt(title, sizeof(title), "artifacts (seed %08lx)"' in knowledge_ui,
+           "Knowledge runes/artifacts must keep literal formats and enough UTF-8 space")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

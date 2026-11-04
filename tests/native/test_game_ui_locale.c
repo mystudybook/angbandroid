@@ -12,6 +12,53 @@
 int main(void)
 {
     const char *unknown = "Untranslated data";
+    /* Knowledge navigation and list status: Chinese only at render time. */
+    assert(strcmp(angdroid_game_ui_text("Display object knowledge", 1), "查看物品知識") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display object knowledge", 0), "Display object knowledge") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display rune knowledge", 1), "查看符文知識") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display rune knowledge", 0), "Display rune knowledge") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display artifact knowledge", 1), "查看神器知識") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display artifact knowledge", 0), "Display artifact knowledge") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display ego item knowledge", 1), "查看特殊詞綴物品") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display ego item knowledge", 0), "Display ego item knowledge") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display monster knowledge", 1), "查看怪物知識") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display monster knowledge", 0), "Display monster knowledge") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display feature knowledge", 1), "查看地形知識") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display feature knowledge", 0), "Display feature knowledge") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display trap knowledge", 1), "查看陷阱知識") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display trap knowledge", 0), "Display trap knowledge") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display shapechange effects", 1), "查看變形效果") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display shapechange effects", 0), "Display shapechange effects") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display hall of fame", 1), "查看名人堂") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display hall of fame", 0), "Display hall of fame") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display character history", 1), "查看角色歷史") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display character history", 0), "Display character history") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display equippable comparison", 1), "比較可裝備物品") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display equippable comparison", 0), "Display equippable comparison") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display current knowledge", 1), "目前的知識圖鑑") == 0);
+    assert(strcmp(angdroid_game_ui_text("Display current knowledge", 0), "Display current knowledge") == 0);
+    assert(strcmp(angdroid_game_ui_text("monsters", 1), "怪物") == 0);
+    assert(strcmp(angdroid_game_ui_text("monsters", 0), "monsters") == 0);
+    assert(strcmp(angdroid_game_ui_text("artifacts", 1), "神器") == 0);
+    assert(strcmp(angdroid_game_ui_text("artifacts", 0), "artifacts") == 0);
+    assert(strcmp(angdroid_game_ui_text("ego items", 1), "特殊詞綴物品") == 0);
+    assert(strcmp(angdroid_game_ui_text("ego items", 0), "ego items") == 0);
+    assert(strcmp(angdroid_game_ui_text("known objects", 1), "已知物品") == 0);
+    assert(strcmp(angdroid_game_ui_text("known objects", 0), "known objects") == 0);
+    assert(strcmp(angdroid_game_ui_text("features", 1), "地形") == 0);
+    assert(strcmp(angdroid_game_ui_text("features", 0), "features") == 0);
+    assert(strcmp(angdroid_game_ui_text("traps", 1), "陷阱") == 0);
+    assert(strcmp(angdroid_game_ui_text("traps", 0), "traps") == 0);
+    assert(strcmp(angdroid_game_ui_text("Yes", 1), "是") == 0);
+    assert(strcmp(angdroid_game_ui_text("Yes", 0), "Yes") == 0);
+    assert(strcmp(angdroid_game_ui_text("shape", 1), "形態") == 0);
+    assert(strcmp(angdroid_game_ui_text("shape", 0), "shape") == 0);
+    assert(strcmp(angdroid_game_ui_text(" dead", 1), " 已擊敗") == 0);
+    assert(strcmp(angdroid_game_ui_text(" dead", 0), " dead") == 0);
+    assert(strcmp(angdroid_game_ui_text("alive", 1), "存活") == 0);
+    assert(strcmp(angdroid_game_ui_text("alive", 0), "alive") == 0);
+    assert(strcmp(angdroid_game_ui_text("Inscribed", 1), "刻字") == 0);
+    assert(strcmp(angdroid_game_ui_text("Inscribed", 0), "Inscribed") == 0);
     assert(strcmp(angdroid_item_info_text("It can be drunk.\n", 1),
                   "這件物品可以飲用。\n") == 0);
     assert(strcmp(angdroid_item_info_text("Combat info:\n", 1),
