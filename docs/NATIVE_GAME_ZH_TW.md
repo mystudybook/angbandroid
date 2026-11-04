@@ -612,6 +612,25 @@ static source check guards the actual `ui-menu.c` integration in
 `sh scripts/verify-zh-tw.sh`. The actual Android soft keyboard and UI
 still require device-level acceptance testing.
 
+## Narrow native multi-column menus: divide-by-zero guard (2026-11-04)
+
+Angband's column-menu drawing and touch hit-testing previously calculated
+`colw = (w - col) / cols` when the available terminal width was smaller than
+the preferred columns. On a tiny phone terminal or a menu with many columns,
+the result could be zero. The touch hit-test would then divide by `colw`,
+which is undefined behavior and may crash.
+
+Both code paths now call the same pure-C width helper, always returning at
+least one column. Host C99 tests cover normal, narrow, zero-space and
+zero-column inputs, while a static integration check ensures drawing and
+hit-testing use the helper. Existing selection order, key mappings and game
+records are unaffected.
+
+This is a crash guard, **not** a complete multi-column layout redesign.
+When there are more menu columns than screen cells, text can remain clipped
+or too dense. A future mobile menu layout pass should reflow/paginate such
+menus and must be verified on Android emulators with narrow terminal sizes.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
