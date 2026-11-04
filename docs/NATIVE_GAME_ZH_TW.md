@@ -712,3 +712,21 @@ verifies that the translation keys match the original game table and that
 formatting and random/level selection wiring remain in place. Random hint
 content is still English. Full Android APK/NDK and emulator tests, especially
 narrow portrait view and long messages, remain pending.
+
+## First 20 Angband random gameplay tips in Traditional Chinese (2026-11-04)
+
+The source `variant_lib/angband/gamedata/hints.txt` has 99 unique `H:` tips.
+This curated first batch translates 20 exact English phrases covering the
+elemental resistances, healing, monster breath, item inscriptions, inspection,
+settings, oil flasks and recall. The untranslated 79 hints retain their source
+English text even when the UI language is zh-TW. The English locale retains
+every original hint and its original ASCII quote wrapper. The zh-TW locale uses
+Chinese quotation marks around translated or fallback tips.
+
+Display lookup happens only when the shopkeeper presents a randomly chosen tip.
+The hint file and parser, hint-selection randomness, command symbols (`{`,
+`!s`, `!d`, `!k`, `!v`, `!*`, `I`, `=`), gameplay rules and savefile data
+are unchanged. Standalone C99 tests verify all 20 entries and English/unknown/
+NULL fallbacks. The source checker validates that all translation keys are in
+the canonical 99-item corpus and checks the branch wiring. Complete Android
+NDK/APK and emulator presentation checks remain outstanding.

@@ -53,6 +53,7 @@
 #include "zh-tw-ui.h"
 #include "zh-tw-store-text.h"
 #include "zh-tw-store-greetings.h"
+#include "zh-tw-store-hints.h"
 #include "zh-tw-class-titles.h"
 #include "store-column-layout.h"
 #include "menu-text-fit.h"
@@ -182,7 +183,10 @@ static void prt_welcome(const struct owner *proprietor)
 
 	if (one_in_(3)) {
 		size_t i = randint0(N_ELEMENTS(comment_hint));
-		msg(comment_hint[i], random_hint());
+		if (angdroid_zh_tw_enabled())
+			msg("「%s」", angdroid_store_hint_text(random_hint(), true));
+		else
+			msg(comment_hint[i], random_hint());
 	} else if (player->lev > 5) {
 		const char *player_name;
 

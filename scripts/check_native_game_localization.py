@@ -702,6 +702,32 @@ def main():
     expect('test_store_greetings_locale.c' in native_tests,
            "C99 test for shopkeeper greetings missing from native suite")
 
+    # Curated hints must match the unmodified 99-entry canonical corpus.
+    hints_data = source(ROOT / "variant_lib/angband/gamedata/hints.txt", errors)
+    hints_header = source(CPP / "angband/zh-tw-store-hints.h", errors)
+    canonical_hints = {
+        line[2:] for line in hints_data.splitlines() if line.startswith("H:")
+    }
+    hint_pairs = re.findall(
+        r'^\s*\{\s*("(?:\\.|[^"\\])*"),\s*("(?:\\.|[^"\\])*")\s*\},?\s*$',
+        hints_header, re.MULTILINE)
+    try:
+        import json
+        parsed_hints = [(json.loads(en), json.loads(zh))
+                        for en, zh in hint_pairs]
+    except (ValueError, TypeError):
+        parsed_hints = []
+    expect(len(canonical_hints) == 99 and len(parsed_hints) == 20 and
+           len({en for en, _ in parsed_hints}) == 20 and
+           all(en in canonical_hints and zh for en, zh in parsed_hints),
+           "First 20 shopkeeper hint translations must match canonical hints.txt")
+    expect('"zh-tw-store-hints.h"' in store_ui and
+           'msg("「%s」", angdroid_store_hint_text(random_hint(), true))' in store_ui and
+           'msg(comment_hint[i], random_hint());' in store_ui,
+           "Shopkeeper hints must translate only Chinese display strings")
+    expect('test_store_hints_locale.c' in native_tests,
+           "Curated shopkeeper hint C99 regression must be registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
