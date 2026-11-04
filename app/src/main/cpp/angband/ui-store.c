@@ -51,6 +51,8 @@
 #include "ui-store.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "store-column-layout.h"
+#include "menu-text-fit.h"
 #include "store-menu-row.h"
 #include "z-debug.h"
 
@@ -99,6 +101,23 @@ enum
 
 	LOC_MAX
 };
+
+/* Store strings may contain wide Traditional Chinese glyphs. Never let
+ * a display-only label overwrite the following stock column. */
+static void store_put_clipped(int attr, const char *text, int row, int col,
+	int columns)
+{
+	char clipped[1024];
+
+	if (!Term || !text || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid || columns <= 0)
+		return;
+	columns = MIN(columns, Term->wid - col);
+	angdroid_menu_copy_columns(clipped, sizeof(clipped), text,
+		(size_t)columns);
+	if (clipped[0])
+		c_put_str(attr, clipped, row, col);
+}
 
 /* State flags */
 #define STORE_GOLD_CHANGE      0x01
@@ -212,28 +231,23 @@ static void store_display_recalc(struct store_context *ctx)
 {
 	int wid, hgt;
 	region loc;
+	angdroid_store_column_layout columns;
 
 	struct menu *m = &ctx->menu;
 	struct store *store = ctx->store;
 
 	Term_get_size(&wid, &hgt);
+	columns = angdroid_store_columns(wid, 1, store->feat == FEAT_HOME);
 
-	/* Clip the width at a max of 104 (enough room for an 80-char item name) */
-	if (wid > 104) wid = 104;
-
-	/* Clip the text_out function at two smaller than the screen width */
-	text_out_wrap = wid - 2;
-
-
-	/* X co-ords first */
-	ctx->scr_places_x[LOC_PRICE] = wid - 14;
-	ctx->scr_places_x[LOC_AU] = wid - 26;
-	ctx->scr_places_x[LOC_OWNER] = wid - 2;
-	ctx->scr_places_x[LOC_WEIGHT] = wid - 14;
-
-	/* Add space for prices */
-	if (store->feat != FEAT_HOME)
-		ctx->scr_places_x[LOC_WEIGHT] -= 10;
+	/* Never underflow the unsigned coordinate arrays on small terminals.
+	 * Optional price/weight columns are hidden when they cannot fit. */
+	text_out_wrap = MAX(1, columns.width - 2);
+	ctx->scr_places_x[LOC_PRICE] =
+		columns.price_col >= 0 ? columns.price_col : 0;
+	ctx->scr_places_x[LOC_WEIGHT] =
+		columns.weight_col >= 0 ? columns.weight_col : 0;
+	ctx->scr_places_x[LOC_AU] = columns.gold_col;
+	ctx->scr_places_x[LOC_OWNER] = columns.owner_end;
 
 	/* Then Y */
 	ctx->scr_places_y[LOC_OWNER] = 1;
@@ -269,59 +283,56 @@ static void store_display_recalc(struct store_context *ctx)
 static void store_display_entry(struct menu *menu, int oid, bool cursor, int row,
 								int col, int width)
 {
+	struct store_context *ctx = menu_priv(menu);
+	struct store *store = ctx->store;
+	angdroid_store_column_layout columns;
 	struct object *obj;
+	int name_width;
 	int32_t x;
 	uint32_t desc = ODESC_PREFIX;
-
 	char o_name[80];
 	char out_val[160];
 	uint8_t colour;
-	int16_t obj_weight;
 
-	struct store_context *ctx = menu_priv(menu);
-	struct store *store = ctx->store;
 	assert(store);
-
-	/* Get the object */
+	if (oid < 0 || oid >= store->stock_num || !ctx->list[oid])
+		return;
 	obj = ctx->list[oid];
+	columns = angdroid_store_columns(Term->wid, 1, store->feat == FEAT_HOME);
+	name_width = angdroid_store_name_budget(columns, col, width);
 
-	/* Describe the object - preserving insriptions in the home */
-	if (store->feat == FEAT_HOME) {
+	/* The name is clipped to its own cell budget, before price/weight.
+	 * The original object and description remain untouched. */
+	if (store->feat == FEAT_HOME)
 		desc |= ODESC_FULL;
-	} else {
+	else
 		desc |= ODESC_FULL | ODESC_STORE;
-	}
 	object_desc(o_name, sizeof(o_name), obj, desc, player);
+	store_put_clipped(obj->kind->base->attr, o_name, row, col, name_width);
 
-	/* Display the object */
-	c_put_str(obj->kind->base->attr, o_name, row, col);
-
-	/* Show weights */
+	/* Weight is optional on portrait layouts. Price takes precedence. */
 	colour = curs_attrs[CURS_KNOWN][(int)cursor];
-	obj_weight = object_weight_one(obj);
-	strnfmt(out_val, sizeof out_val, "%3d.%d lb", obj_weight / 10,
-			obj_weight % 10);
-	c_put_str(colour, out_val, row, ctx->scr_places_x[LOC_WEIGHT]);
+	if (columns.weight_col >= 0 && columns.weight_col < col + width) {
+		int weight = object_weight_one(obj);
+		strnfmt(out_val, sizeof out_val, "%3d.%d lb",
+			weight / 10, weight % 10);
+		store_put_clipped(colour, out_val, row, columns.weight_col,
+			MIN(10, col + width - columns.weight_col));
+	}
 
-	/* Describe an object (fully) in a store */
-	if (store->feat != FEAT_HOME) {
-		/* Extract the "minimum" price */
+	if (columns.price_col >= 0 && columns.price_col < col + width) {
+		/* Extract the minimum price and preserve the unaffordable color. */
 		x = price_item(store, obj, false, 1);
-
-		/* Make sure the player can afford it */
 		if (player->au < x)
 			colour = curs_attrs[CURS_UNKNOWN][(int)cursor];
-
-		/* Actually draw the price */
-		if (tval_can_have_charges(obj) && (obj->number > 1))
+		if (tval_can_have_charges(obj) && obj->number > 1)
 			strnfmt(out_val, sizeof out_val, "%9ld avg", (long)x);
 		else
 			strnfmt(out_val, sizeof out_val, "%9ld    ", (long)x);
-
-		c_put_str(colour, out_val, row, ctx->scr_places_x[LOC_PRICE]);
+		store_put_clipped(colour, out_val, row, columns.price_col,
+			MIN(14, col + width - columns.price_col));
 	}
 }
-
 
 /**
  * Display store (after clearing screen)
