@@ -640,6 +640,13 @@ def main():
     expect("test_target_help_locale.c" in native_tests,
            "Target help C99 fallback test is not registered")
 
+    # Regression for Android Clang -Wformat -Werror=format-security:
+    # text_out() is printf-like and must receive a literal format.
+    expect('text_out(angdroid_store_ui_text(' not in store_ui,
+           "NDK format-security: dynamic store text must be a %s argument")
+    expect(store_ui.count('text_out("%s", angdroid_store_ui_text(') == 18,
+           "All 18 store help fragments must use a literal %s format")
+    
     # Targeted store help translation; keycaps and transactions remain canonical.
     store_text_header = source(CPP / "angband/zh-tw-store-text.h", errors)
     store_help = store_ui.partition("static void store_display_help(")[2].partition(
@@ -652,7 +659,8 @@ def main():
            "Shop/home dictionary must hold 18 unique labels")
     expect('"zh-tw-store-text.h"' in store_ui and
            'bool zh_tw = angdroid_zh_tw_enabled();' in store_help and
-           store_help.count("text_out(angdroid_store_ui_text(") == 18,
+           store_help.count('text_out("%s", angdroid_store_ui_text(') == 18 and
+           'text_out(angdroid_store_ui_text(' not in store_ui,
            "Shop/home instructions must all use locale-aware labels")
     expect(all('text_out_c(COLOUR_L_GREEN, "' + key + '");' in store_help
                for key in ("x", "l", "p", "g", "d", "s", "I", "ESC")),
