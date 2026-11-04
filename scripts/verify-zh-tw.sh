@@ -48,6 +48,7 @@ run_check "Native/Java Unicode protocol wiring" python3 "$ROOT/scripts/check-nat
 run_check "Filtered native menu keyboard hint integration" python3 "$ROOT/tests/test_menu_key_hints_source.py"
 run_check "Visible-page native menu shortcut consistency" python3 "$ROOT/tests/test_menu_visible_tags_source.py"
 run_check "Finite invalid-row menu navigation" python3 "$ROOT/tests/test_menu_navigation_source.py"
+run_check "Inventory and equipment UTF-8 display safety" python3 "$ROOT/tests/test_object_list_text_source.py"
 run_check "Scrolled store popups and empty-stock commands" python3 "$ROOT/tests/test_store_menu_flow_source.py"
 run_check "Selected native menu action state" python3 "$ROOT/tests/test_menu_action_guard_source.py"
 run_check "Native menu CJK column clipping" python3 "$ROOT/tests/test_menu_text_fit_source.py"
