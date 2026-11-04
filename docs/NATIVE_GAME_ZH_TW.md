@@ -766,3 +766,27 @@ labels, unknown and NULL; source-level regression checks guard all seven
 display sites, dynamic literal formatting and the original navigation keys.
 Actual Android NDK/APK compilation and narrow-terminal visual tests are
 still required. This does **not** translate help document body text.
+
+## Knowledge menu navigation and fixed list status labels (2026-11-04)
+
+Added 23 exact, display-only zh-TW labels covering the 11 main
+knowledge actions, the main knowledge title, common category titles
+(monsters, artifacts, ego items, known objects, terrain and traps),
+monster list state (shape, unique alive/dead), known-object ignore
+status ("Yes"), and rune inscription header. The shared action-menu
+renderer already translates display text at draw time, so
+`menu_action.name` and the corresponding action callback are unchanged.
+
+The generic knowledge panel now uses localized list titles for the
+Chinese heading and its empty-list notice, while retaining the English
+title argument. Random artifact seed and unknown rune-count labels
+use separate literal Chinese/English format strings; the rune caption
+buffer is increased from 30 to 64 bytes to contain Chinese text.
+
+The original monster/item/group data, sorting, user-defined inscriptions,
+savefiles, command keys and knowledge flags remain unchanged. The fixed
+column layout for long CJK names and category headers still needs
+a separate phone-sized rendering review. C99 dictionary tests include
+the Chinese and English fallbacks for all 23 added keys, and the source
+audit protects selection/callback isolation. Full Android APK/NDK and
+emulator tests remain outstanding.
