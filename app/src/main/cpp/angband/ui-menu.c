@@ -656,13 +656,15 @@ static void menu_choose_skin(struct menu *menu)
 void menu_refresh(struct menu *menu, bool reset_screen)
 {
 	int count = menu->filter_list ? menu->filter_count : menu->count;
-	int oid = angdroid_menu_action_item_index(
-		menu->cursor, count, menu->count, menu->filter_list);
+	int oid;
 	region *loc = &menu->active;
 
 	if (loc->width <= 0 || loc->page_rows <= 0)
 		return;
 
+	/* No filtered entry may be read while Android's resized surface is inactive. */
+	oid = angdroid_menu_action_item_index(
+		menu->cursor, count, menu->count, menu->filter_list);
 	menu_choose_skin(menu);
 	if (reset_screen) {
 		screen_load();
