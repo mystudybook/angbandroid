@@ -483,6 +483,22 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {" dead", " 已擊敗"},
         {"alive", "存活"},
         {"Inscribed", "刻字"},
+        /* Knowledge browser footer, display-only shortcut descriptions. */
+        {", 'c' to copy", "，c 複製"},
+        {", 'c', 'p' to paste", "，c 複製／p 貼上"},
+        {", ENTER to accept", "，Enter 確認"},
+        {", 'i' to insert, ENTER to accept", "，i 插入／Enter 確認"},
+        {", 'v' for visuals", "，v 外觀設定"},
+        {", 'r' to recall", "，r 查看詳情"},
+        {", 's' to toggle ignore, 'r'ecall, '{'", "，s 切換忽略／r 詳情／{ 刻字"},
+        {", 's' to toggle ignore, 'r'ecall, '{', '}'", "，s 切換忽略／r 詳情／{ 刻字／} 清除刻字"},
+        {", 'r'ecall, '{'", "，r 詳情／{ 刻字"},
+        {", 'r'ecall, '{', '}'", "，r 詳情／{ 刻字／} 清除刻字"},
+        {", 't/T' for lighting (lit)", "，t/T 光照（明亮）"},
+        {", 't/T' for lighting (torch)", "，t/T 光照（火把）"},
+        {", 't/T' for lighting (LOS)", "，t/T 光照（視線）"},
+        {", 't/T' for lighting (dark)", "，t/T 光照（黑暗）"},
+        {", 't/T' to cycle lighting", "，t/T 切換光照"},
     };
     size_t i;
     if (!zh_tw || !en) return en;

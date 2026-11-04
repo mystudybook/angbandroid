@@ -872,3 +872,19 @@ A new standalone C99 regression exercises CJK widths, truncated columns,
 English text, invalid/empty spans, tiny output buffers and both suffix
 locales. Complete Android NDK/APK and on-device narrow display checks remain
 pending.
+
+## Knowledge footer shortcuts and terrain/trap lighting keys (2026-11-04)
+
+Added 15 Traditional Chinese display-only mappings for the knowledge
+browser footer: copy/paste, visual selection, inspecting details, ignore,
+inscription, and the four light states. Chinese footer text is clipped
+using UTF-8 terminal-cell widths to fit the current screen; the English
+footer and all `pedit` selection logic are unchanged. A C99 regression
+adds 15 Chinese and 15 English exact-label assertions.
+
+Previously the feature and trap soft keyboard flashed `l/L`, and the
+trap screen even said to press `l`, but actual light cycling in both
+screens is implemented by `t/T`. The flash hints and trap footer now
+show `t/T`; the gameplay key handlers themselves are unchanged.
+Actual Android terminal dimensions, user interaction and full Gradle/NDK
+validation still require testing.

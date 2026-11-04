@@ -12,6 +12,37 @@
 int main(void)
 {
     const char *unknown = "Untranslated data";
+    /* Knowledge footer shortcuts keep their original command letters. */
+    assert(strcmp(angdroid_game_ui_text(", 'c' to copy", 1), "，c 複製") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'c' to copy", 0), ", 'c' to copy") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'c', 'p' to paste", 1), "，c 複製／p 貼上") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'c', 'p' to paste", 0), ", 'c', 'p' to paste") == 0);
+    assert(strcmp(angdroid_game_ui_text(", ENTER to accept", 1), "，Enter 確認") == 0);
+    assert(strcmp(angdroid_game_ui_text(", ENTER to accept", 0), ", ENTER to accept") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'i' to insert, ENTER to accept", 1), "，i 插入／Enter 確認") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'i' to insert, ENTER to accept", 0), ", 'i' to insert, ENTER to accept") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'v' for visuals", 1), "，v 外觀設定") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'v' for visuals", 0), ", 'v' for visuals") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'r' to recall", 1), "，r 查看詳情") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'r' to recall", 0), ", 'r' to recall") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 's' to toggle ignore, 'r'ecall, '{'", 1), "，s 切換忽略／r 詳情／{ 刻字") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 's' to toggle ignore, 'r'ecall, '{'", 0), ", 's' to toggle ignore, 'r'ecall, '{'") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 's' to toggle ignore, 'r'ecall, '{', '}'", 1), "，s 切換忽略／r 詳情／{ 刻字／} 清除刻字") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 's' to toggle ignore, 'r'ecall, '{', '}'", 0), ", 's' to toggle ignore, 'r'ecall, '{', '}'") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'r'ecall, '{'", 1), "，r 詳情／{ 刻字") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'r'ecall, '{'", 0), ", 'r'ecall, '{'") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'r'ecall, '{', '}'", 1), "，r 詳情／{ 刻字／} 清除刻字") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 'r'ecall, '{', '}'", 0), ", 'r'ecall, '{', '}'") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 't/T' for lighting (lit)", 1), "，t/T 光照（明亮）") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 't/T' for lighting (lit)", 0), ", 't/T' for lighting (lit)") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 't/T' for lighting (torch)", 1), "，t/T 光照（火把）") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 't/T' for lighting (torch)", 0), ", 't/T' for lighting (torch)") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 't/T' for lighting (LOS)", 1), "，t/T 光照（視線）") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 't/T' for lighting (LOS)", 0), ", 't/T' for lighting (LOS)") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 't/T' for lighting (dark)", 1), "，t/T 光照（黑暗）") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 't/T' for lighting (dark)", 0), ", 't/T' for lighting (dark)") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 't/T' to cycle lighting", 1), "，t/T 切換光照") == 0);
+    assert(strcmp(angdroid_game_ui_text(", 't/T' to cycle lighting", 0), ", 't/T' to cycle lighting") == 0);
     /* Symbol inspection prompts preserve game key codes and English fallback. */
     assert(strcmp(angdroid_game_ui_text("Enter character to be identified, or control+[ANU]: ", 1), "輸入要查詢的符號，或按 Ctrl+A/U/N：") == 0);
     assert(strcmp(angdroid_game_ui_text("Enter character to be identified, or control+[ANU]: ", 0), "Enter character to be identified, or control+[ANU]: ") == 0);
