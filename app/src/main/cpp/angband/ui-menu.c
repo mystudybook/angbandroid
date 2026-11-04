@@ -23,6 +23,7 @@
 #include "ui-input.h"
 #include "ui-menu.h"
 #include "menu-key-hints.h"
+#include "menu-column-width.h"
 
 #include "droid.h"
 #include "zh-tw-ui.h"
@@ -370,12 +371,10 @@ static int columns_get_cursor(int row, int col, int n, int top, region *loc)
 	int w, h, cursor;
         int rows_per_page = loc->page_rows;
         int cols = (n + rows_per_page - 1) / rows_per_page;
-	int colw = 23;
+	int colw;
 
 	Term_get_size(&w, &h);
-
-	if ((colw * cols) > (w - col))
-		colw = (w - col) / cols;
+	colw = angdroid_menu_fit_column_width(23, w, col, cols);
 
 	cursor = (row - loc->row) + rows_per_page * ((col - loc->col) / colw);
 	if (cursor < 0) cursor = 0;	/* assert: This should never happen */
@@ -393,12 +392,10 @@ static void display_columns(struct menu *menu, int cursor, int *top, region *loc
 	int row = loc->row;
 	int rows_per_page = loc->page_rows;
 	int cols = (n + rows_per_page - 1) / rows_per_page;
-	int colw = 23;
+	int colw;
 
 	Term_get_size(&w, &h);
-
-	if ((colw * cols) > (w - col))
-		colw = (w - col) / cols;
+	colw = angdroid_menu_fit_column_width(23, w, col, cols);
 
 	for (c = 0; c < cols; c++) {
 		for (r = 0; r < rows_per_page; r++) {
