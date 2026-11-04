@@ -91,6 +91,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_knowledge_column_text"
 "$BUILD_DIR/test_knowledge_column_text"
 
+# Native rune detail names/grammar are presentation-only; guard NDK fmt.
+"$CC" -std=c99 -Wall -Wextra -Werror -Wformat -Werror=format-security -pedantic \
+    "$ROOT/tests/native/test_rune_lore_locale.c" \
+    -o "$BUILD_DIR/test_rune_lore_locale"
+"$BUILD_DIR/test_rune_lore_locale"
+
 # Target selection help only localizes descriptive fragments, not key bindings.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_target_help_locale.c" \

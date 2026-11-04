@@ -67,6 +67,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-knowledge-groups.h"
+#include "zh-tw-rune-lore.h"
 #include "knowledge-monster-label.h"
 #include "knowledge-column-text.h"
 #include "menu-text-fit.h"
@@ -2257,11 +2258,15 @@ static void display_rune(int col, int row, bool cursor, int oid )
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 	const char *inscrip = quark_str(rune_note(oid));
 
-	/* Preserve canonical rune grammar, but clip before inscription at 47. */
+	/* Translate only display text, keeping rune_name(oid) canonical. */
 	if (Term && col >= 0 && col < Term->wid) {
 		char clipped[256];
+		char localized[256];
+		const char *display_name = angdroid_zh_tw_rune_title(
+			rune_name(oid), angdroid_zh_tw_enabled(),
+			localized, sizeof(localized));
 		angdroid_knowledge_clip_label(clipped, sizeof(clipped),
-			rune_name(oid), col, 46, Term->wid);
+			display_name, col, 46, Term->wid);
 		c_prt(attr, clipped, row, col);
 	}
 	if (inscrip && Term && 47 < Term->wid) {
@@ -2287,12 +2292,18 @@ static int rune_var(int oid)
 static void rune_lore(int oid)
 {
 	textblock *tb = textblock_new();
-	char *title = string_make(rune_name(oid));
+	char localized_title[256];
+	char localized_detail[512];
+	char *title = string_make(angdroid_zh_tw_rune_title(
+		rune_name(oid), angdroid_zh_tw_enabled(),
+		localized_title, sizeof(localized_title)));
 
 	my_strcap(title);
 	textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
 	textblock_append(tb, "\n");
-	textblock_append(tb, "%s", rune_desc(oid));
+	textblock_append(tb, "%s", angdroid_zh_tw_rune_description(
+		rune_desc(oid), angdroid_zh_tw_enabled(),
+		localized_detail, sizeof(localized_detail)));
 	textblock_append(tb, "\n");
 	textui_textblock_show(tb, SCREEN_REGION, NULL);
 	textblock_free(tb);

@@ -919,3 +919,20 @@ zh-TW/English conditional, preserving both original translations,
 colored output and game behavior. The static localization audit requires
 all three cases to remain bracketed. Re-run the full native build to
 confirm no further compiler issues remain.
+
+## Rune knowledge: display-only title and effect descriptions (2026-11-04)
+
+The rune knowledge browser now translates the three combat rune titles and
+descriptions, known attribute/element/brand/slay/flag rune names, and five
+effect-description sentence patterns through `zh-tw-rune-lore.h`. Each
+dynamic term is looked up against the existing curated object-term table.
+This mapping is **not exhaustive**: unknown terms and curse descriptions
+still use their original English to avoid incorrect guesses. English locale
+keeps the original `rune_name()` and `rune_desc()` exactly.
+
+Only the `ui-knowledge.c` display call sites are changed: the rune array,
+identification, actions, learning, inscriptions and saved game data are not
+modified. Both title and description use bounded `snprintf` with literal
+format strings and fall back on truncation. Host C99 regression covers
+known and unknown examples, buffer limits, and English fallback;
+full Android NDK/APK and device testing remain necessary.

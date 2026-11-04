@@ -973,6 +973,29 @@ def main():
            monster_lore_special.count("\n\t\telse\n") == 3,
            "Monster lore zh-TW choice must use unambiguous outer braces")
 
+    # Rune display translations must not mutate canonical rune mechanics.
+    rune_lore_header = source(CPP / "angband/zh-tw-rune-lore.h", errors)
+    rune_lore_tests = source(ROOT / "tests/native/test_rune_lore_locale.c", errors)
+    expect('"zh-tw-rune-lore.h"' in knowledge_ui and
+           'display_name = angdroid_zh_tw_rune_title(' in knowledge_ui and
+           'rune_name(oid), angdroid_zh_tw_enabled()' in knowledge_ui and
+           'textblock_append(tb, "%s", angdroid_zh_tw_rune_description(' in knowledge_ui and
+           'rune_desc(oid), angdroid_zh_tw_enabled()' in knowledge_ui,
+           "Rune knowledge must use display-only translated name and lore")
+    expect('angdroid_zh_tw_object_term(term, 1)' in rune_lore_header and
+           'return strcmp(mapped, term) == 0 ? NULL : mapped;' in
+           rune_lore_header and
+           'return english;' in rune_lore_header and
+           'snprintf(out, capacity, "%s抗性", mapped)' in rune_lore_header and
+           'snprintf(out, capacity, "剋制%s", mapped)' in rune_lore_header,
+           "Rune names must preserve unknown English properties and safe formats")
+    expect('test_rune_lore_locale.c' in native_tests and
+           'title("resist fire", "火焰抗性")' in rune_lore_tests and
+           'detail("Object gives the player a magical bonus to strength."' in
+           rune_lore_tests and
+           'title("mysterious curse", "mysterious curse")' in rune_lore_tests,
+           "Rune locale test must exercise examples and unknown fallbacks")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
