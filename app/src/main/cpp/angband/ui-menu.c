@@ -24,6 +24,7 @@
 #include "ui-menu.h"
 #include "menu-key-hints.h"
 #include "menu-visible-tags.h"
+#include "menu-valid-cursor.h"
 #include "menu-column-width.h"
 
 #include "droid.h"
@@ -477,6 +478,12 @@ static bool no_valid_row(struct menu *menu, int count)
 	return true;
 }
 
+/* Adapt the menu's validity callback to bounded navigation. */
+static int menu_navigation_is_valid(void *context, int row)
+{
+	return is_valid_row((struct menu *)context, row);
+}
+
 /* 
  * Return a new position in the menu based on the key
  * pressed and the flags and various handler functions.
@@ -744,18 +751,19 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 			*out = menu->skin->process_dir(menu, dir);
 
 			if (out->type == EVT_MOVE) {
-				while (!is_valid_row(menu, menu->cursor)) {
-					/* Loop around */
-					if (menu->cursor > count - 1)
-						menu->cursor = 0;
-					else if (menu->cursor < 0)
-						menu->cursor = count - 1;
-					else
-						menu->cursor += ddy[dir];
-				}
-			
-				assert(menu->cursor >= 0);
-				assert(menu->cursor < count);
+				/* For horizontal column moves ddy[dir] is zero. A
+				 * disabled destination must never trap the input loop. */
+				int direction = ddy[dir] ? ddy[dir] : ddx[dir];
+				int next = angdroid_menu_find_valid_cursor(menu->cursor,
+					count, direction, menu, menu_navigation_is_valid);
+
+				if (next >= 0)
+					menu->cursor = next;
+				else
+					out->type = EVT_NONE;
+
+				assert(out->type != EVT_MOVE ||
+					(menu->cursor >= 0 && menu->cursor < count));
 			}
 		}
 	}
