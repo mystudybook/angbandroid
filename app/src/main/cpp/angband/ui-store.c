@@ -54,6 +54,7 @@
 #include "store-column-layout.h"
 #include "menu-text-fit.h"
 #include "store-menu-row.h"
+#include "store-stock-guard.h"
 #include "z-debug.h"
 
 
@@ -298,7 +299,9 @@ static void store_display_entry(struct menu *menu, int oid, bool cursor, int row
 	uint8_t colour;
 
 	assert(store);
-	if (oid < 0 || oid >= store->stock_num || !ctx->list[oid])
+	if (!ctx->list || !angdroid_store_stock_index_valid(
+		oid, store->stock_num, z_info->store_inven_max) ||
+		!ctx->list[oid])
 		return;
 	obj = ctx->list[oid];
 	columns = angdroid_store_columns(Term->wid, 1, store->feat == FEAT_HOME);
@@ -535,6 +538,9 @@ static bool store_sell(struct store_context *ctx)
 	const char *prompt = OPT(player, birth_no_selling) ? "Give which item? " : "Sell which item? ";
 
 	assert(store);
+	/* Knowledge-only store views must not submit sale or stash commands. */
+	if (ctx->inspect_only)
+		return false;
 
 	/* Clear all current messages */
 	msg_flag = false;
@@ -630,8 +636,7 @@ static bool store_sell(struct store_context *ctx)
 static bool store_purchase(struct store_context *ctx, int item, bool single)
 {
 	struct store *store = ctx->store;
-
-	struct object *obj = ctx->list[item];
+	struct object *obj;
 	struct object *dummy = NULL;
 
 	char o_name[80];
@@ -639,6 +644,16 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 	int amt, num;
 
 	int32_t price;
+
+	/* A cancelled or stale stock choice must not be dereferenced.
+	 * The displayed stock count and backing list capacity can differ. */
+	if (ctx->inspect_only || !ctx->list ||
+		!angdroid_store_stock_index_valid(item, store->stock_num,
+			z_info->store_inven_max))
+		return false;
+	obj = ctx->list[item];
+	if (!obj)
+		return false;
 
 	/* Clear all current messages */
 	msg_flag = false;
@@ -755,8 +770,12 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 		screen_load();
 
-		/* Negative response, so give up */
-		if (!response) return false;
+		/* The temporary stack exists even if the player rejects the
+		 * final price. Release it before returning from cancellation. */
+		if (!response) {
+			object_delete(NULL, NULL, &dummy);
+			return false;
+		}
 
 		cmdq_push(CMD_BUY);
 		cmd_set_arg_item(cmdq_peek(), "item", obj);
@@ -789,10 +808,14 @@ static void store_examine(struct store_context *ctx, int item)
 	region area = { 0, 0, 0, 0 };
 	uint32_t odesc_flags = ODESC_PREFIX | ODESC_FULL;
 
-	if (item < 0) return;
+	if (!ctx->list || !angdroid_store_stock_index_valid(
+		item, ctx->store->stock_num, z_info->store_inven_max))
+		return;
 
 	/* Get the actual object */
 	obj = ctx->list[item];
+	if (!obj)
+		return;
 
 	/* Items in the home get less description */
 	if (ctx->store->feat == FEAT_HOME) {
