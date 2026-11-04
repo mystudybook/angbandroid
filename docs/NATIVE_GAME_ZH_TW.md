@@ -936,3 +936,22 @@ modified. Both title and description use bounded `snprintf` with literal
 format strings and fall back on truncation. Host C99 regression covers
 known and unknown examples, buffer limits, and English fallback;
 full Android NDK/APK and device testing remain necessary.
+
+## Complete original Angband terrain/trap knowledge labels (2026-11-04)
+
+The terrain and trap **knowledge browser** now translates all 25 canonical
+terrain names, 24 existing terrain descriptions (the unknown-grid entry has
+no source description), all 40 trap short labels and all 36 distinct
+trap long descriptions in `terrain.txt` and `trap.txt`.
+Terrain lore is keyed by stable feature names rather than assuming how the
+parser joins multiple `desc:` lines. The source data and traps' gameplay
+messages, effects, saving throws, model IDs and sort order are untouched.
+
+Both knowledge row displays now clip complete UTF-8 scalars to the available
+terminal columns before the fixed symbol column at 65; detail titles and
+descriptions use exact language-controlled lookup. Unknown strings and
+English locale retain original text. Static checks compare all display
+keys directly against the canonical source files; a standalone C99
+regression checks every translation and English fallback. This does **not**
+localize trap activation messages or all other Angband/variant content,
+nor does it establish full Android device acceptance.

@@ -996,6 +996,69 @@ def main():
            'title("mysterious curse", "mysterious curse")' in rune_lore_tests,
            "Rune locale test must exercise examples and unknown fallbacks")
 
+    # Canonical terrain and trap names/descriptions remain in gamedata;
+    # only the knowledge browser display layer may localize these strings.
+    terrain_file = source(ROOT / "variant_lib/angband/gamedata/terrain.txt", errors)
+    trap_file = source(ROOT / "variant_lib/angband/gamedata/trap.txt", errors)
+    terrain_trap_header = source(CPP / "angband/zh-tw-terrain-trap.h", errors)
+    terrain_trap_test = source(ROOT / "tests/native/test_terrain_trap_locale.c", errors)
+    import json
+    canonical_terrain = {
+        line[5:] for line in terrain_file.splitlines() if line.startswith("name:")
+    }
+    canonical_trap = {
+        line.split(":", 2)[2] for line in trap_file.splitlines()
+        if line.startswith("name:") and line.count(":") >= 2
+    }
+    canonical_trap_lore = {
+        line[5:] for line in trap_file.splitlines() if line.startswith("desc:")
+    }
+    def terrain_table_pairs(name):
+        block = terrain_trap_header.partition(
+            "static const struct angdroid_terrain_trap_pair " + name + "[] = {"
+        )[2].partition("};")[0]
+        raw = re.findall(
+            r'^\s*\{\s*("(?:\\.|[^"\\])*"),\s*("(?:\\.|[^"\\])*")\s*\},?\s*
+            print("FAIL:", item)
+        return 1
+    print(f"PASS: {checks} native game-localization source safeguards")
+    print("  Monster list entries: 522 | item kind labels: 326")
+    print("  Death menu labels: 9 | death prompts: 11")
+    print("NOTE: Requires Android NDK and on-device zh-TW gameplay validation")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+,
+            block, re.MULTILINE)
+        try:
+            return [(json.loads(en), json.loads(zh)) for en, zh in raw]
+        except ValueError:
+            return []
+    for table, expected in (
+        ("terrain_names", canonical_terrain),
+        ("terrain_lore", canonical_terrain - {"unknown grid"}),
+        ("trap_names", canonical_trap),
+        ("trap_lore", canonical_trap_lore)):
+        pairs = terrain_table_pairs(table)
+        expect(len(pairs) == len(expected) and
+               {en for en, _ in pairs} == expected and
+               len({en for en, _ in pairs}) == len(pairs) and
+               all(zh.strip() for _, zh in pairs),
+               "Terrain/trap table must match all canonical source records: " + table)
+    expect('"zh-tw-terrain-trap.h"' in knowledge_ui and
+           'angdroid_terrain_name(feat->name, angdroid_zh_tw_enabled())' in knowledge_ui and
+           'angdroid_terrain_lore(' in knowledge_ui and
+           'angdroid_trap_name(trap->desc, angdroid_zh_tw_enabled())' in knowledge_ui and
+           'angdroid_trap_lore(' in knowledge_ui and
+           'col, 64, Term->wid' in knowledge_ui,
+           "Knowledge terrain/traps must be translated only when displaying")
+    expect('test_terrain_trap_locale.c' in native_tests and
+           'angdroid_trap_name("fire trap", 1)' in terrain_trap_test and
+           'angdroid_terrain_name("General Store", 1)' in terrain_trap_test,
+           "Terrain/trap bilingual C99 regression not registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
