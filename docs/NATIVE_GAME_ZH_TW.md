@@ -906,3 +906,16 @@ The existing C99 translation test additionally verifies safe use through
 a literal `snprintf("%s", ...)` format. Full Android build success and
 other warnings cannot be concluded from the provided failed log;
 re-run `sh scripts/verify-zh-tw.sh --android` after fetching this commit.
+
+## Clang ambiguous monster lore conditionals (2026-11-04)
+
+The same user-supplied `assembleDebug` compile log also contains three
+`-Wdangling-else` warnings in `mon-lore.c` for the UN-AWARE,
+MULTIPLY and REGENERATE monster traits. These were warning-only in the
+reported build, not one of the 18 store format failures.
+
+Explicit outer braces now separate each `rf_has()` gate from the
+zh-TW/English conditional, preserving both original translations,
+colored output and game behavior. The static localization audit requires
+all three cases to remain bracketed. Re-run the full native build to
+confirm no further compiler issues remain.

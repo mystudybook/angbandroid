@@ -1551,16 +1551,29 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
     else strnfmt(start, sizeof(start), "%s is ", initial_pronoun);
 	lore_append_clause(tb, current_flags, COLOUR_WHITE, start, "and", ".  ");
 
-	/* Describe special things */
-	if (rf_has(known_flags, RF_UNAWARE))
-		if (angdroid_zh_tw_enabled()) textblock_append(tb, "牠會偽裝成其他東西。  ");
-        else textblock_append(tb, "%s disguises itself as something else.  ", initial_pronoun);
-	if (rf_has(known_flags, RF_MULTIPLY))
-		if (angdroid_zh_tw_enabled()) textblock_append_c(tb, COLOUR_ORANGE, "牠能快速繁殖。  ");
-        else textblock_append_c(tb, COLOUR_ORANGE, "%s breeds explosively.  ", initial_pronoun);
-	if (rf_has(known_flags, RF_REGENERATE))
-		if (angdroid_zh_tw_enabled()) textblock_append(tb, "牠的再生速度很快。  ");
-        else textblock_append(tb, "%s regenerates quickly.  ", initial_pronoun);
+	/* Describe special things. Keep the outer flag check distinct from
+	 * the locale choice to avoid ambiguous dangling-else binding. */
+	if (rf_has(known_flags, RF_UNAWARE)) {
+		if (angdroid_zh_tw_enabled())
+			textblock_append(tb, "牠會偽裝成其他東西。  ");
+		else
+			textblock_append(tb, "%s disguises itself as something else.  ",
+				initial_pronoun);
+	}
+	if (rf_has(known_flags, RF_MULTIPLY)) {
+		if (angdroid_zh_tw_enabled())
+			textblock_append_c(tb, COLOUR_ORANGE, "牠能快速繁殖。  ");
+		else
+			textblock_append_c(tb, COLOUR_ORANGE,
+				"%s breeds explosively.  ", initial_pronoun);
+	}
+	if (rf_has(known_flags, RF_REGENERATE)) {
+		if (angdroid_zh_tw_enabled())
+			textblock_append(tb, "牠的再生速度很快。  ");
+		else
+			textblock_append(tb, "%s regenerates quickly.  ",
+				initial_pronoun);
+	}
 
 	/* Describe light */
 	if (race->light > 1) {

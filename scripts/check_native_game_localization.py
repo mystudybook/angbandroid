@@ -961,6 +961,18 @@ def main():
            'if (sel == with_insc) soft_kbd_flash("}");' in knowledge_ui,
            "Translated footer must not alter soft keyboard command detection")
 
+    # Android NDK flagged three monster-lore dangling else warnings.
+    # Guard the outer visibility/ability flags from ambiguous locale else.
+    monster_lore_special = monster_lore.partition(
+        "/* Describe special things. Keep the outer flag check distinct")[2].partition(
+        "/* Describe light */")[0]
+    expect(all(('if (rf_has(known_flags, RF_' + flag + ')) {') in
+               monster_lore_special for flag in
+               ("UNAWARE", "MULTIPLY", "REGENERATE")) and
+           monster_lore_special.count("if (angdroid_zh_tw_enabled())") == 3 and
+           monster_lore_special.count("\n\t\telse\n") == 3,
+           "Monster lore zh-TW choice must use unambiguous outer braces")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
