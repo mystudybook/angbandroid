@@ -955,3 +955,11 @@ keys directly against the canonical source files; a standalone C99
 regression checks every translation and English fallback. This does **not**
 localize trap activation messages or all other Angband/variant content,
 nor does it establish full Android device acceptance.
+
+## Knowledge artifact title correction (2026-11-05)
+
+The normal (non-random) artifacts knowledge screen previously used the
+English-only heading `artifacts` even in zh-TW. It now selects `神器`
+for zh-TW and preserves `artifacts` in English. The existing random-artifact
+seed heading and its format specifier are unchanged. A static source check
+covers both branches; full Android UI testing remains pending.

@@ -1806,7 +1806,8 @@ static void do_cmd_knowledge_artifacts(const char *name, int row)
 			strnfmt(title, sizeof(title), "artifacts (seed %08lx)",
 				(unsigned long)seed_randart);
 	} else {
-		strnfmt(title, sizeof(title), "artifacts");
+		strnfmt(title, sizeof(title), "%s",
+			angdroid_zh_tw_enabled() ? "神器" : "artifacts");
 	}
 	display_knowledge(title, artifacts, a_count, obj_f, art_f, NULL);
 	mem_free(artifacts);

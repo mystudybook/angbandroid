@@ -1059,6 +1059,12 @@ if __name__ == "__main__":
            'angdroid_terrain_name("General Store", 1)' in terrain_trap_test,
            "Terrain/trap bilingual C99 regression not registered")
 
+    knowledge_source = source(CPP / "angband/ui-knowledge.c", errors)
+    expect('angdroid_zh_tw_enabled() ? "神器" : "artifacts"' in knowledge_source and
+           'strnfmt(title, sizeof(title), "神器（種子 %08lx）"' in knowledge_source and
+           'strnfmt(title, sizeof(title), "artifacts (seed %08lx)"' in knowledge_source,
+           "Known artifacts title must be localized for both randart and normal modes")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
