@@ -1315,6 +1315,10 @@ void menu_dynamic_calc_location(struct menu *m, int mx, int my)
 		 * screen". Do not pass an invalid popup through menu_layout():
 		 * explicitly leave its active area empty so menu_select cancels. */
 		m->boundary = r;
+		/* Avoid asking a bordered-popup caller to erase the entire
+		 * terminal: a zero-sized region means "all remaining space". */
+		m->boundary.width = Term->wid > 0 ? 1 : 0;
+		m->boundary.page_rows = Term->hgt > 0 ? 1 : 0;
 		m->active = r;
 		return;
 	}
