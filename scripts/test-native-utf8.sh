@@ -91,6 +91,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_menu_key_hints"
 "$BUILD_DIR/test_menu_key_hints"
 
+# Scrolling relative-tag input and Android keyboard hints must use the visible page.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_visible_tags.c" \
+    -o "$BUILD_DIR/test_menu_visible_tags"
+"$BUILD_DIR/test_menu_visible_tags"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \
