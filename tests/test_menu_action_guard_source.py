@@ -61,5 +61,10 @@ for label in ("row validity", "private tags", "row rendering", "keyboard hints")
         raise SystemExit(f"FAIL: {label} does not reject invalid mapped indices")
 if "menu->browse_hook && oid >= 0" not in sections["screen refresh"]:
     raise SystemExit("FAIL: browse hook must not receive a stale source row")
+refresh = sections["screen refresh"]
+if refresh.index("if (loc->width <= 0 || loc->page_rows <= 0)") > refresh.index(
+    "oid = angdroid_menu_action_item_index("
+):
+    raise SystemExit("FAIL: inactive resized surface reads the filtered list")
 
 print("PASS: selected menu actions and all generic filtered row callbacks are bounded")
