@@ -640,6 +640,36 @@ def main():
     expect("test_target_help_locale.c" in native_tests,
            "Target help C99 fallback test is not registered")
 
+    # Targeted store help translation; keycaps and transactions remain canonical.
+    store_text_header = source(CPP / "angband/zh-tw-store-text.h", errors)
+    store_help = store_ui.partition("static void store_display_help(")[2].partition(
+        "static void store_redraw(")[0]
+    store_labels = re.findall(
+        r'\{\s*"([^"]+)",\s*"([^"]+)"\s*\}',
+        store_text_header)
+    expect(len(store_labels) == 18 and
+           len({en for en, _ in store_labels}) == 18,
+           "Shop/home dictionary must hold 18 unique labels")
+    expect('"zh-tw-store-text.h"' in store_ui and
+           'bool zh_tw = angdroid_zh_tw_enabled();' in store_help and
+           store_help.count("text_out(angdroid_store_ui_text(") == 18,
+           "Shop/home instructions must all use locale-aware labels")
+    expect(all('text_out_c(COLOUR_L_GREEN, "' + key + '");' in store_help
+               for key in ("x", "l", "p", "g", "d", "s", "I", "ESC")),
+           "Shop/home help must preserve every color-coded shortcut")
+    expect(store_ui.count('format("價格：%ld", (long)price)') == 2 and
+           store_ui.count('format("Price: %ld", (long)price)') == 2 and
+           'format("購買 %s？%s [Esc/N 取消，其他鍵確認]"' in store_ui and
+           'format("Buy %s?%s %s"' in store_ui and
+           'format("%s %s？[Esc/N 取消，其他鍵確認]"' in store_ui and
+           'format("%s %s? [ESC, any other key to accept]"' in store_ui,
+           "Shop prompts must preserve literal format strings and English fallback")
+    expect("menu_dynamic_select_alias(m, 'g', 'p')" in store_ui and
+           'cmdq_push(CMD_BUY)' in store_ui and 'cmdq_push(CMD_SELL)' in store_ui,
+           "Store command dispatch changed")
+    expect('test_store_text_locale.c' in native_tests,
+           "Shop C99 translation regression is not registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
