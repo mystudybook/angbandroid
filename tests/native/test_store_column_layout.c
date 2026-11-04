@@ -60,6 +60,42 @@ int main(void)
     assert(angdroid_store_safe_row(8, 2) == 1);
     assert(angdroid_store_safe_row(4, 10) == 4);
 
+    /* Property-style sweep across realistic phone and desktop widths. */
+    {
+        int screen;
+        for (screen = 0; screen <= 160; ++screen) {
+            int home;
+            for (home = 0; home <= 1; ++home) {
+                int first_col;
+                for (first_col = 0; first_col <= 10; ++first_col) {
+                    int first_detail;
+                    l = angdroid_store_columns(screen, first_col, home);
+                    assert(l.width >= 0 && l.width <= 104);
+                    assert(l.width <= screen);
+                    assert(l.gold_col >= 0 && l.gold_col <= l.width);
+                    assert(l.owner_end >= 0 && l.owner_end <= l.width);
+                    assert(l.name_cols >= 0);
+                    assert(l.price_col == -1 ||
+                        (l.price_col >= 0 && l.price_col + 14 <= l.width));
+                    assert(l.weight_col == -1 ||
+                        (l.weight_col >= 0 && l.weight_col + 10 <= l.width));
+                    assert(home ? l.price_col == -1 : 1);
+                    assert(l.weight_col < 0 || l.price_col < 0 ||
+                        l.weight_col + 10 <= l.price_col);
+
+                    first_detail = l.weight_col >= 0 ?
+                        l.weight_col : l.price_col;
+                    if (l.name_cols > 0 && first_detail >= 0)
+                        assert(l.name_col + l.name_cols + 1 ==
+                            first_detail);
+                    if (first_col < l.width)
+                        assert(angdroid_store_name_budget(l, first_col,
+                            l.width) == l.name_cols);
+                }
+            }
+        }
+    }
+
     puts("PASS: store price and weight layout never overlaps names or wraps");
     return 0;
 }
