@@ -822,6 +822,45 @@ def main():
         "query.code != 'r'", "query.code == ESCAPE")),
         "Symbol query game commands must remain unchanged")
 
+    # All knowledge group categories must match canonical source keys.
+    knowledge_group_header = source(CPP / "angband/zh-tw-knowledge-groups.h", errors)
+    monster_groups_data = source(ROOT / "variant_lib/angband/gamedata/ui_knowledge.txt", errors)
+    knowledge_group_tests = source(ROOT / "tests/native/test_knowledge_groups_locale.c", errors)
+    category_source = set(re.findall(
+        r'^monster-category:(.+)$', monster_groups_data, re.MULTILINE))
+    group_order_block = knowledge_ui.partition(
+        "static const grouper object_text_order[] =")[2].partition("};")[0]
+    item_categories = set(re.findall(
+        r'\{\s*TV_\w+,\s*"([^"]+)"\s*\}', group_order_block))
+    category_source.add("***Unclassified***")
+    category_source.update(item_categories)
+    for name in ("rune_group_text", "feature_group_text", "trap_group_text"):
+        group_block = knowledge_ui.partition(
+            "static const char *" + name + "[] =")[2].partition("};")[0]
+        category_source.update(re.findall(r'"([^"]+)"', group_block))
+    group_pairs = re.findall(
+        r'^\s*\{\s*"([^"]+)",\s*"([^"]+)"\s*\},?\s*$',
+        knowledge_group_header, re.MULTILINE)
+    expect(len(category_source) == 97 and len(group_pairs) == 97 and
+           len({en for en, _ in group_pairs}) == 97 and
+           {en for en, _ in group_pairs} == category_source and
+           all(zh for _, zh in group_pairs),
+           "Knowledge group display translations must cover 97 canonical labels")
+    expect('"zh-tw-knowledge-groups.h"' in knowledge_ui and
+           'g_names[i] = angdroid_knowledge_group_text(' in knowledge_ui and
+           'g_funcs.name(g_list[i]), angdroid_zh_tw_enabled());' in knowledge_ui and
+           'len = angdroid_utf8_display_columns(g_names[i]);' in knowledge_ui and
+           'g_name_len = len > 20 ? 20 : (int)len;' in knowledge_ui,
+           "Knowledge groups must use the display-only translation and cell widths")
+    expect("menu_put_clipped(col, row, width, color, items[oid]);" in menu_ui and
+           'menu_init(&group_menu, MN_SKIN_SCROLL, menu_find_iter(MN_ITER_STRINGS));' in knowledge_ui,
+           "Knowledge menu text must still clip to the group column width")
+    expect('test_knowledge_groups_locale.c' in native_tests and
+           'angdroid_utf8_display_columns("龍類") == 4' in knowledge_group_tests and
+           all(('angdroid_knowledge_group_text("' + en + '", 1)') in
+               knowledge_group_tests for en in category_source),
+           "Native C99 group-name regression must cover all Chinese categories")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

@@ -66,6 +66,7 @@
 
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-knowledge-groups.h"
 #include "../curses/unicode_display.h"
 
 /**
@@ -829,10 +830,15 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 	g_names = mem_zalloc(grp_cnt * sizeof(char*));
 
 	for (i = 0; i < grp_cnt; i++) {
-		int len;
-		g_names[i] = g_funcs.name(g_list[i]);
-		len = strlen(g_names[i]);
-		if (len > g_name_len) g_name_len = len;
+		size_t len;
+		/* The source category name remains the parser/sort identity.
+		 * Only the menu label is localized. CJK is two terminal columns
+		 * per Han character, not strlen() UTF-8 bytes. */
+		g_names[i] = angdroid_knowledge_group_text(
+			g_funcs.name(g_list[i]), angdroid_zh_tw_enabled());
+		len = angdroid_utf8_display_columns(g_names[i]);
+		if (len > (size_t)g_name_len)
+			g_name_len = len > 20 ? 20 : (int)len;
 	}
 
 	/* Reasonable max group name len */
