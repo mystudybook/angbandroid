@@ -97,6 +97,16 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 - `tests/native/test_menu_compact_layout.c` checks wide/small/tiny layouts, decoration positions, rotation-sized boundaries and column-to-scroll fallback. `tests/test_menu_compact_layout_source.py` checks native wiring.
 - Actual Android orientation changes, subwindows, translated labels, mouse coordinates, and release APK behavior still require emulator or physical-device acceptance.
 
+## Narrow terminal cells and CJK menu text (2026-11-04)
+
+- `Term_putstr(n)` in the Angband native terminal counts decoded codepoints, not terminal columns, while Chinese characters often occupy **two cells**. The string-row callback previously sent the available column width as `n`, so mixed Chinese/English text could extend beyond its allotted menu region.
+- The shared native `menu_put_clipped()` painter now copies complete UTF-8 scalars into a bounded temporary buffer and clips action strings, generic string rows, title/header/prompt by **rendered terminal column width** before calling `Term_putstr(..., -1, ...)`.
+- Malformed UTF-8 source bytes are replaced with `?` in that display-only buffer; no underlying game records, localization keys, or saved data are modified.
+- Very narrow selectable menu rows (1 or 2 columns) now truncate the display of their shortcut prefix rather than subtracting three cells and passing a negative width to a callback. Positive remaining widths are guaranteed before drawing row text.
+- `tests/native/test_menu_text_fit.c` covers mixed CJK/ASCII boundaries, Chinese word clipping, fixed destination capacity, malformed bytes, and 1–2 cell prefixes. `tests/test_menu_text_fit_source.py` guards all the native render paths. Both are included in the offline verification scripts.
+
+**Android verification still required:** render translated inventory and action menus with 1–12 terminal cells, rotate between landscape/portrait while selecting items, compare ASCII/tiles and Chinese fallback fonts on emulator and a real device.
+
 ## Regression checks
 
 Run from the repository root:
