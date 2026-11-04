@@ -30,6 +30,7 @@
 #include "menu-compact-layout.h"
 #include "menu-text-fit.h"
 #include "menu-action-guard.h"
+#include "menu-dynamic-choice.h"
 
 #include "droid.h"
 #include "zh-tw-ui.h"
@@ -1218,7 +1219,7 @@ static void dynamic_display(struct menu *m, int oid, bool cursor,
 		assert(entry);
 	}
 
-	Term_putstr(col, row, width, color, entry->text);
+	menu_put_clipped(col, row, width, color, entry->text);
 }
 
 static const menu_iter dynamic_iter = {
@@ -1328,21 +1329,47 @@ void menu_dynamic_calc_location(struct menu *m, int mx, int my)
 	menu_layout(m, &r);
 }
 
-int menu_dynamic_select(struct menu *m)
+int menu_dynamic_select_alias(struct menu *m, char alias_key, char target_key)
 {
 	ui_event e = menu_select(m, 0, true);
 	struct menu_entry *entry;
-	int cursor = m->cursor;
+	int alias_row = -1;
+	int selected;
+	int cursor;
 
-	if (e.type == EVT_ESCAPE)
+	/* Some callers expose an alternate keyboard shortcut as a switch
+	 * event. Explicitly resolve that key to its intended tagged row;
+	 * the currently focused row is NOT necessarily the requested action. */
+	if (e.type == EVT_KBRD && alias_key && target_key &&
+		e.key.code == alias_key && m->switch_keys &&
+		strchr(m->switch_keys, alias_key)) {
+		struct keypress target = e.key;
+
+		target.code = (unsigned char)target_key;
+		alias_row = get_cursor_key(m, m->top, target);
+	}
+
+	cursor = angdroid_menu_dynamic_choice_index(
+		e.type == EVT_SELECT, alias_row >= 0, m->cursor, alias_row,
+		m->count);
+	if (cursor < 0 || !is_valid_row(m, cursor))
 		return -1;
 
-	for (entry = menu_priv(m); cursor; cursor--) {
+	/* The dynamic row iterator is a linked list; only traverse after
+	 * validating its list index and event type. */
+	selected = cursor;
+	entry = menu_priv(m);
+	while (selected-- > 0) {
+		if (!entry)
+			return -1;
 		entry = entry->next;
-		assert(entry);
-	}	
+	}
+	return entry ? entry->value : -1;
+}
 
-	return entry->value;
+int menu_dynamic_select(struct menu *m)
+{
+	return menu_dynamic_select_alias(m, 0, 0);
 }
 
 void menu_dynamic_free(struct menu *m)
