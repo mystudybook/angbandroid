@@ -405,7 +405,7 @@ int main(void)
         assert(angdroid_knowledge_group_text(unknown, 0) == unknown);
     }
     assert(angdroid_utf8_display_columns("龍類") == 4);
-    assert(angdroid_utf8_display_columns("類人族（精靈、矮人）") == 22);
+    assert(angdroid_utf8_display_columns("類人族（精靈、矮人）") == 20);
     assert(angdroid_utf8_display_columns("Dragons") == 7);
     puts("PASS: 97 zh-TW knowledge group labels, English fallback, CJK columns");
     return 0;
