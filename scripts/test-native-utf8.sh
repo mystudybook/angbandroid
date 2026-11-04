@@ -97,6 +97,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_rune_lore_locale"
 "$BUILD_DIR/test_rune_lore_locale"
 
+# All terrain and trap knowledge names/lore: source-matched display-only locale.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_terrain_trap_locale.c" \
+    -o "$BUILD_DIR/test_terrain_trap_locale"
+"$BUILD_DIR/test_terrain_trap_locale"
+
 # Target selection help only localizes descriptive fragments, not key bindings.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_target_help_locale.c" \

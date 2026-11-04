@@ -68,6 +68,7 @@
 #include "zh-tw-ui.h"
 #include "zh-tw-knowledge-groups.h"
 #include "zh-tw-rune-lore.h"
+#include "zh-tw-terrain-trap.h"
 #include "knowledge-monster-label.h"
 #include "knowledge-column-text.h"
 #include "menu-text-fit.h"
@@ -2441,7 +2442,14 @@ static void display_feature(int col, int row, bool cursor, int oid )
 	struct feature *feat = &f_info[oid];
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 
-	c_prt(attr, feat->name, row, col);
+	/* Translate display name only; keep original feature IDs and sort. */
+	if (Term && col >= 0 && col < Term->wid) {
+		char clipped[256];
+		angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+			angdroid_terrain_name(feat->name, angdroid_zh_tw_enabled()),
+			col, 64, Term->wid);
+		c_prt(attr, clipped, row, col);
+	}
 
 	if (tile_height == 1) {
 		/* Display symbols */
@@ -2499,13 +2507,15 @@ static void feat_lore(int oid)
 
 	if (feat->desc) {
 		textblock *tb = textblock_new();
-		char *title = string_make(feat->name);
+		char *title = string_make(angdroid_terrain_name(
+			feat->name, angdroid_zh_tw_enabled()));
 
 		my_strcap(title);
 		textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
 		string_free(title);
 		textblock_append(tb, "\n");
-		textblock_append(tb, "%s", feat->desc);
+		textblock_append(tb, "%s", angdroid_terrain_lore(
+			feat->name, feat->desc, angdroid_zh_tw_enabled()));
 		textblock_append(tb, "\n");
 		textui_textblock_show(tb, SCREEN_REGION, NULL);
 		textblock_free(tb);
@@ -2607,7 +2617,14 @@ static void display_trap(int col, int row, bool cursor, int oid )
 	struct trap_kind *trap = &trap_info[oid];
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 
-	c_prt(attr, trap->desc, row, col);
+	/* Trap's short description is display-only and may be CJK wide. */
+	if (Term && col >= 0 && col < Term->wid) {
+		char clipped[256];
+		angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+			angdroid_trap_name(trap->desc, angdroid_zh_tw_enabled()),
+			col, 64, Term->wid);
+		c_prt(attr, clipped, row, col);
+	}
 
 	if (tile_height == 1) {
 		/* Display symbols */
@@ -2687,13 +2704,15 @@ static void trap_lore(int oid)
 
 	if (trap->text) {
 		textblock *tb = textblock_new();
-		char *title = string_make(trap->desc);
+		char *title = string_make(angdroid_trap_name(
+			trap->desc, angdroid_zh_tw_enabled()));
 
 		my_strcap(title);
 		textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
 		string_free(title);
 		textblock_append(tb, "\n");
-		textblock_append(tb, "%s", trap->text);
+		textblock_append(tb, "%s", angdroid_trap_lore(
+			trap->text, angdroid_zh_tw_enabled()));
 		textblock_append(tb, "\n");
 		textui_textblock_show(tb, SCREEN_REGION, NULL);
 		textblock_free(tb);
