@@ -618,6 +618,28 @@ def main():
            and 'angdroid_menu_copy_columns(rendered, sizeof(rendered), text,' in menu_ui
            and 'Term_putstr(col, row, -1, color, rendered)' in menu_ui,
            "Translated action menus must clip by rendered terminal columns")
+    # Target selection helper localizes labels while preserving color-coded keys.
+    help_source = source(CPP / "angband/zh-tw-target-help.h", errors)
+    help_part = target_ui.partition("void target_display_help(")[2].partition(
+        "static bool is_running_keymap(")[0]
+    help_pairs = re.findall(
+        r'\{\s*"([^"]+)",\s*"([^"]+)"\s*\}',
+        help_source)
+    expect(len(help_pairs) == 16 and
+           len({en for en, _ in help_pairs}) == 16,
+           "Target help must have 16 unique translation fragments")
+    expect('"zh-tw-target-help.h"' in target_ui and
+           'bool zh_tw = angdroid_zh_tw_enabled();' in help_part and
+           help_part.count("text_out(angdroid_target_help_text(") == 18,
+           "Target help text outputs must all use the selected locale")
+    expect('text_out_c(COLOUR_L_GREEN, "%s", label);' in help_part and
+           all('text_out_c(COLOUR_L_GREEN, "' + k + '");' in help_part
+               for k in ("<dir>", "<click>", "g", "p", "q", "r",
+                         "m", "+", "-", "o", "t", ">", "<", "x")),
+           "Localized target help must preserve colored command keycaps")
+    expect("test_target_help_locale.c" in native_tests,
+           "Target help C99 fallback test is not registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
