@@ -1337,6 +1337,7 @@ int menu_dynamic_select_alias(struct menu *m, char alias_key, char target_key)
 	int alias_row = -1;
 	int selected;
 	int cursor;
+	int visible_count = m->filter_list ? m->filter_count : m->count;
 
 	/* Some callers expose an alternate keyboard shortcut as a switch
 	 * event. Explicitly resolve that key to its intended tagged row;
@@ -1352,13 +1353,16 @@ int menu_dynamic_select_alias(struct menu *m, char alias_key, char target_key)
 
 	cursor = angdroid_menu_dynamic_choice_index(
 		e.type == EVT_SELECT, alias_row >= 0, m->cursor, alias_row,
-		m->count);
-	if (cursor < 0 || !is_valid_row(m, cursor))
+		visible_count);
+
+	/* The chosen cursor is an index into visible rows; the dynamic
+	 * linked list stores the unfiltered original entries. Check both
+	 * bounds before asking the validity callback or traversing entries. */
+	selected = angdroid_menu_dynamic_original_index(cursor,
+		visible_count, m->count, m->filter_list);
+	if (selected < 0 || !is_valid_row(m, cursor))
 		return -1;
 
-	/* The dynamic row iterator is a linked list; only traverse after
-	 * validating its list index and event type. */
-	selected = cursor;
 	entry = menu_priv(m);
 	while (selected-- > 0) {
 		if (!entry)
