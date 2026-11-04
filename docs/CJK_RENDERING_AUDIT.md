@@ -124,6 +124,16 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Android verification still required:** empty shop `s` (sell), `?` (help), header context clicks; scrolling stock pages; tapping an existing item, cancelling its popup, then purchasing one item; device rotation while inside a shop.
 
+## Native inventory/equipment item text clipping (2026-11-04)
+
+- `ui-object.c:show_obj()` previously shortened the **original** `items[obj_num].o_name` buffer to a byte index whenever the available item name width was small. That permanently damaged the displayed name for the current inventory list and could terminate UTF-8 in the middle of a Traditional Chinese character.
+- The inventory, equipment, floor and quiver paths now copy each label and object name into temporary UTF-8 buffers, clipping by terminal **display columns** without mutating the cached source strings. The displayed label/equipment prefix and object name share the same bounded row budget.
+- `set_obj_names()` measures columns instead of encoded bytes. Both the regular inventory pane and the interactive item menu compute a nonnegative name budget even if the terminal is too narrow for its optional extra columns. Interactive row rendering uses its actual allocated region width.
+- `tests/native/test_object_list_text.c` checks Chinese item names, equipment prefixes, narrow widths, no source mutation and signed-width corner cases. `tests/test_object_list_text_source.py` checks the native source call paths. Both are wired into the root verification command.
+- The item structures and game savefile format are unchanged. Detailed device-level testing of weight/failure/price fields and source locale is still needed.
+
+**Android acceptance pending:** inspect inventory/equipment/quiver/floor in portrait and landscape; rotate while selecting items; verify a longer name reappears after the menu widens; confirm labels and adjacent numeric fields do not overlap at tiny terminal sizes.
+
 ## Regression checks
 
 Run from the repository root:
