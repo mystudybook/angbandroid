@@ -12,7 +12,8 @@ static inline int angdroid_object_list_name_offset(
     int terminal_width, int start_col, int reserved_cols, size_t desired)
 {
     int64_t available = (int64_t)terminal_width - 1 - start_col - reserved_cols;
-    if (available <= 0 || desired == 0) return 0;
+    if (terminal_width <= 0 || start_col < 0 || reserved_cols < 0 ||
+        available <= 0 || desired == 0) return 0;
     if (available > INT_MAX) available = INT_MAX;
     return desired < (size_t)available ? (int)desired : (int)available;
 }
