@@ -91,6 +91,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_greetings_locale"
 "$BUILD_DIR/test_store_greetings_locale"
 
+# Curated canonical Angband shopkeeper hints (English fallback preserved).
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_store_hints_locale.c" \
+    -o "$BUILD_DIR/test_store_hints_locale"
+"$BUILD_DIR/test_store_hints_locale"
+
 # Object information property and brand/slay labels.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_object_info_locale.c" -o "$BUILD_DIR/test_object_info_locale"
 "$BUILD_DIR/test_object_info_locale"
