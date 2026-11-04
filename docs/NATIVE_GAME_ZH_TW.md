@@ -749,3 +749,20 @@ This completes only the 99 canonical *hint messages*, not the rest of the
 Angband engine, other variants, or Android rendering acceptance. Build the
 full Android APK/NDK and inspect rendering at narrow viewport sizes before
 calling this release-ready.
+
+## Native help file browser chrome (2026-11-04)
+
+The native Angband in-game help browser (`ui-help.c`) now shows Traditional
+Chinese display-only captions for seven navigation prompts: select a letter,
+escape, advance a page, highlight matching text, find, go to line and go to
+file. Its dynamically formatted file caption, missing-file error and line
+range banner also use separate literal zh-TW / original English formats.
+The exact `?`, `!`, `&`, `/`, `#`, `%`, ESC and arrow/page navigation,
+file names, RST parsing and English help-body content remain unchanged.
+
+The dictionary uses an English fallback for unknown labels and other
+locales. A standalone C99 test covers 7 Chinese labels, 7 original English
+labels, unknown and NULL; source-level regression checks guard all seven
+display sites, dynamic literal formatting and the original navigation keys.
+Actual Android NDK/APK compilation and narrow-terminal visual tests are
+still required. This does **not** translate help document body text.

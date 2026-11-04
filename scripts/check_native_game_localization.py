@@ -729,6 +729,34 @@ def main():
     expect('test_store_hints_locale.c' in native_tests,
            "Curated shopkeeper hint C99 regression must be registered")
 
+    # Native built-in help-browser labels are display-only; shortcut dispatch is canonical.
+    help_browser = source(CPP / "angband/ui-help.c", errors)
+    help_header = source(CPP / "angband/zh-tw-help-browser.h", errors)
+    help_labels = re.findall(
+        r'^\s*\{\s*"([^"]+)",\s*"([^"]+)"\s*\},?\s*$',
+        help_header, re.MULTILINE)
+    expect(len(help_labels) == 7 and len({en for en, _ in help_labels}) == 7,
+           "Native help-browser UI must translate 7 distinct labels")
+    expect('"zh-tw-help-browser.h"' in help_browser and
+           'bool zh_tw = angdroid_zh_tw_enabled();' in help_browser and
+           help_browser.count("prt(angdroid_help_browser_text(") == 7,
+           "Native help browser labels must be displayed through the locale lookup")
+    expect('strnfmt(caption, sizeof(caption), "說明檔案「%s」", name);' in help_browser and
+           'strnfmt(caption, sizeof(caption), "Help file \'%s\'", name);' in help_browser and
+           'msg("無法開啟「%s」。", name);' in help_browser and
+           'msg("Cannot open \'%s\'.", name);' in help_browser and
+           'format("[%s，%s，行 %d-%d/%d]"' in help_browser and
+           'format("[%s, %s, Line %d-%d/%d]"' in help_browser,
+           "Native help dynamic captions require literal printf formats and fallback")
+    expect(all(x in help_browser for x in (
+            "if (ch.code == '?') break;", "if (ch.code == '!')",
+            "if (ch.code == '&')", "if (ch.code == '/')",
+            "if (ch.code == '#')", "if (ch.code == '%')",
+            "if (ch.code == ESCAPE) break;")),
+           "Native help key command protocol changed")
+    expect("test_help_browser_locale.c" in native_tests,
+           "Native help-browser C99 fallback tests not registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
