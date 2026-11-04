@@ -23,6 +23,7 @@
 #include "ui-input.h"
 #include "ui-menu.h"
 #include "menu-key-hints.h"
+#include "menu-visible-tags.h"
 #include "menu-column-width.h"
 
 #include "droid.h"
@@ -230,10 +231,7 @@ static void display_scrolling(struct menu *menu, int cursor, int *top, region *l
 
 static char scroll_get_tag(struct menu *menu, int pos)
 {
-	if (menu->selections)
-		return menu->selections[pos - menu->top];
-
-	return 0;
+	return angdroid_menu_tag_at(menu->selections, pos - menu->top);
 }
 
 static ui_event scroll_process_direction(struct menu *m, int dir)
@@ -323,10 +321,7 @@ static void object_skin_display(struct menu *menu, int cursor, int *top, region 
 
 static char object_skin_get_tag(struct menu *menu, int pos)
 {
-	if (menu->selections)
-		return menu->selections[pos - menu->top];
-
-	return 0;
+	return angdroid_menu_tag_at(menu->selections, pos - menu->top);
 }
 
 static ui_event object_skin_process_direction(struct menu *m, int dir)
@@ -415,10 +410,7 @@ static void display_columns(struct menu *menu, int cursor, int *top, region *loc
 
 static char column_get_tag(struct menu *menu, int pos)
 {
-	if (menu->selections)
-		return menu->selections[pos];
-
-	return 0;
+	return angdroid_menu_tag_at(menu->selections, pos);
 }
 
 static ui_event column_process_direction(struct menu *m, int dir)
@@ -504,17 +496,23 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 	if (menu->flags & MN_NO_TAGS) {
 		return -1;
 	} else if (menu->flags & MN_REL_TAGS) {
-		for (i = 0; i < n; i++) {
+		/* Scroll/object tags belong to visible rows; a column menu
+		 * shows all its rows. Both need the same indices as drawing. */
+		int paged = (menu->skin != &menu_skin_column);
+		int first = angdroid_menu_visible_tag_first(n, top, paged);
+		int end = angdroid_menu_visible_tag_end(
+				n, top, menu->active.page_rows, paged);
+		for (i = first; i < end; i++) {
 			char c = menu->skin->get_tag(menu, i);
 
 			if ((menu->flags & MN_CASELESS_TAGS) && c)
 				c = toupper((unsigned char) c);
 
 			if (c && c == (char)key.code)
-				return i + menu->top;
+				return i;
 		}
 	} else if (!(menu->flags & MN_PVT_TAGS) && menu->selections) {
-		for (i = 0; menu->selections[i]; i++) {
+		for (i = 0; i < n && menu->selections[i]; i++) {
 			char c = menu->selections[i];
 
 			if (menu->flags & MN_CASELESS_TAGS)
@@ -581,7 +579,7 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 		if (flags & MN_REL_TAGS)
 			sel = menu->skin->get_tag(menu, pos);
 		else if (menu->selections && !(flags & MN_PVT_TAGS))
-			sel = menu->selections[pos];
+			sel = angdroid_menu_tag_at(menu->selections, pos);
 		else if (menu->row_funcs->get_tag)
 			sel = menu->row_funcs->get_tag(menu, oid);
 	}
@@ -785,10 +783,19 @@ static void keys_to_ui(struct menu *menu)
 	size_t current = 0;
 	char temp[256] = "";
 	int n = menu->filter_list ? menu->filter_count : menu->count;
+	int first = 0;
+	int end = n;
 
-	//plog_fmt("count: %d", menu->count);
+	/* Relative tags are regenerated for the current page. Sending tags
+	 * from offscreen rows makes the Android keyboard offer wrong keys. */
+	if (menu->flags & MN_REL_TAGS) {
+		int paged = (menu->skin != &menu_skin_column);
+		first = angdroid_menu_visible_tag_first(n, menu->top, paged);
+		end = angdroid_menu_visible_tag_end(
+				n, menu->top, menu->active.page_rows, paged);
+	}
 
-	for (cursor = 0; cursor < n; cursor++) {
+	for (cursor = first; cursor < end; cursor++) {
 
 		int oid = angdroid_menu_hint_item_index(menu->filter_list, cursor);
 		menu_row_validity_t row_valid = MN_ROW_VALID;
@@ -807,9 +814,8 @@ static void keys_to_ui(struct menu *menu)
 			if (menu->flags & MN_REL_TAGS) {
 				sel = menu->skin->get_tag(menu, cursor);
 			}
-			else if (menu->selections && !(menu->flags & MN_PVT_TAGS)
-				&& cursor < strlen(menu->selections)) {
-				sel = menu->selections[cursor];
+			else if (menu->selections && !(menu->flags & MN_PVT_TAGS)) {
+				sel = angdroid_menu_tag_at(menu->selections, cursor);
 			}
 			else if (menu->row_funcs->get_tag) {
 				sel = menu->row_funcs->get_tag(menu, oid);
