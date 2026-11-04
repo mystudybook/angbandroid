@@ -51,6 +51,7 @@
 #include "ui-store.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-store-text.h"
 #include "store-column-layout.h"
 #include "menu-text-fit.h"
 #include "store-menu-row.h"
@@ -406,6 +407,7 @@ static void store_display_help(struct store_context *ctx)
 	struct store *store = ctx->store;
 	int help_loc = ctx->scr_places_y[LOC_HELP_PROMPT];
 	bool is_home = (store->feat == FEAT_HOME) ? true : false;
+	bool zh_tw = angdroid_zh_tw_enabled();
 
 	/* Clear */
 	clear_from(ctx->scr_places_y[LOC_HELP_CLEAR]);
@@ -420,44 +422,44 @@ static void store_display_help(struct store_context *ctx)
 	else
 		text_out_c(COLOUR_L_GREEN, "l");
 
-	text_out(" examines");
+	text_out(angdroid_store_ui_text(" examines", zh_tw));
 	if (!ctx->inspect_only) {
-		text_out(" and ");
+		text_out(angdroid_store_ui_text(" and ", zh_tw));
 		text_out_c(COLOUR_L_GREEN, "p");
-		text_out(" (or ");
+		text_out(angdroid_store_ui_text(" (or ", zh_tw));
 		text_out_c(COLOUR_L_GREEN, "g");
-		text_out(")");
+		text_out(angdroid_store_ui_text(")", zh_tw));
 
-		if (is_home) text_out(" picks up");
-		else text_out(" purchases");
+		if (is_home) text_out(angdroid_store_ui_text(" picks up", zh_tw));
+		else text_out(angdroid_store_ui_text(" purchases", zh_tw));
 	}
-	text_out(" an item. ");
+	text_out(angdroid_store_ui_text(" an item. ", zh_tw));
 
 	if (!ctx->inspect_only) {
 		if (OPT(player, birth_no_selling) && !is_home) {
 			text_out_c(COLOUR_L_GREEN, "d");
-			text_out(" (or ");
+			text_out(angdroid_store_ui_text(" (or ", zh_tw));
 			text_out_c(COLOUR_L_GREEN, "s");
-			text_out(")");
-			text_out(" gives an item to the store in return for its identification. Some wands and staves will also be recharged. ");
+			text_out(angdroid_store_ui_text(")", zh_tw));
+			text_out(angdroid_store_ui_text(" gives an item to the store in return for its identification. Some wands and staves will also be recharged. ", zh_tw));
 		} else {
 			text_out_c(COLOUR_L_GREEN, "d");
-			text_out(" (or ");
+			text_out(angdroid_store_ui_text(" (or ", zh_tw));
 			text_out_c(COLOUR_L_GREEN, "s");
-			text_out(")");
-			if (is_home) text_out(" drops");
-			else text_out(" sells");
-			text_out(" an item from your inventory. ");
+			text_out(angdroid_store_ui_text(")", zh_tw));
+			if (is_home) text_out(angdroid_store_ui_text(" drops", zh_tw));
+			else text_out(angdroid_store_ui_text(" sells", zh_tw));
+			text_out(angdroid_store_ui_text(" an item from your inventory. ", zh_tw));
 		}
 	}
 	text_out_c(COLOUR_L_GREEN, "I");
-	text_out(" inspects an item from your inventory. ");
+	text_out(angdroid_store_ui_text(" inspects an item from your inventory. ", zh_tw));
 
 	text_out_c(COLOUR_L_GREEN, "ESC");
 	if (!ctx->inspect_only)
-		text_out(" exits the building.");
+		text_out(angdroid_store_ui_text(" exits the building.", zh_tw));
 	else
-		text_out(" exits this screen.");
+		text_out(angdroid_store_ui_text(" exits this screen.", zh_tw));
 
 	text_out_indent = 0;
 }
@@ -489,7 +491,9 @@ static void store_redraw(struct store_context *ctx)
 	if (ctx->flags & STORE_GOLD_CHANGE) {
 		int gold_col = layout.gold_col;
 		store_put_clipped(COLOUR_WHITE,
-			format("Gold Remaining: %9ld", (long)player->au),
+			angdroid_zh_tw_enabled() ?
+				format("剩餘金幣：%9ld", (long)player->au) :
+				format("Gold Remaining: %9ld", (long)player->au),
 			ctx->scr_places_y[LOC_AU], gold_col,
 			layout.width - gold_col);
 		ctx->flags &= ~STORE_GOLD_CHANGE;
@@ -534,8 +538,11 @@ static bool store_sell(struct store_context *ctx)
 
 	item_tester tester = NULL;
 
-	const char *reject = "You have nothing that I want. ";
-	const char *prompt = OPT(player, birth_no_selling) ? "Give which item? " : "Sell which item? ";
+	const char *reject = angdroid_store_ui_text("You have nothing that I want. ",
+		angdroid_zh_tw_enabled());
+	const char *prompt = angdroid_store_ui_text(
+		OPT(player, birth_no_selling) ? "Give which item? " : "Sell which item? ",
+		angdroid_zh_tw_enabled());
 
 	assert(store);
 	/* Knowledge-only store views must not submit sale or stash commands. */
@@ -547,7 +554,8 @@ static bool store_sell(struct store_context *ctx)
 	prt("", 0, 0);
 
 	if (store->feat == FEAT_HOME) {
-		prompt = "Drop which item? ";
+		prompt = angdroid_store_ui_text("Drop which item? ",
+			angdroid_zh_tw_enabled());
 	} else {
 		tester = store_will_buy_tester;
 		get_mode |= SHOW_PRICES;
@@ -601,11 +609,16 @@ static bool store_sell(struct store_context *ctx)
 
 		/* Show price */
 		if (!OPT(player, birth_no_selling))
-			prt(format("Price: %ld", (long)price), 1, 0);
+			prt(angdroid_zh_tw_enabled() ?
+				format("價格：%ld", (long)price) :
+				format("Price: %ld", (long)price), 1, 0);
 
 		/* Confirm sale */
-		if (!store_get_check(format("%s %s? [ESC, any other key to accept]",
-				OPT(player, birth_no_selling) ? "Give" : "Sell", o_name))) {
+		if (!store_get_check(angdroid_zh_tw_enabled() ?
+				format("%s %s？[Esc/N 取消，其他鍵確認]",
+					OPT(player, birth_no_selling) ? "交出" : "出售", o_name) :
+				format("%s %s? [ESC, any other key to accept]",
+					OPT(player, birth_no_selling) ? "Give" : "Sell", o_name))) {
 			screen_load();
 			return false;
 		}
@@ -760,10 +773,15 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		screen_save();
 
 		/* Show price */
-		prt(format("Price: %ld", (long)price), 1, 0);
+		prt(angdroid_zh_tw_enabled() ?
+				format("價格：%ld", (long)price) :
+				format("Price: %ld", (long)price), 1, 0);
 
 		/* Confirm purchase */
-		response = store_get_check(format("Buy %s?%s %s",
+		response = store_get_check(angdroid_zh_tw_enabled() ?
+				format("購買 %s？%s [Esc/N 取消，其他鍵確認]",
+					o_name, obj_can_use ? "" : "（無法使用）") :
+				format("Buy %s?%s %s",
 					o_name,
 					obj_can_use ? "" : " (Can't use!)",
 					"[ESC, any other key to accept]"));
@@ -1058,7 +1076,9 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt(format("(Enter to select, ESC) Command for %s:", header), 0, 0);
+	prt(angdroid_zh_tw_enabled() ?
+		format("Enter 選取／Esc 返回：%s", header) :
+		format("(Enter to select, ESC) Command for %s:", header), 0, 0);
 	selected = menu_dynamic_select_alias(m, 'g', 'p');
 
 	menu_dynamic_free(m);

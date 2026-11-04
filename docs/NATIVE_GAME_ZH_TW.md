@@ -672,3 +672,25 @@ unknown fragments and null input, and the static source checker guards all
 three-row targeting-help height; very narrow Android viewports still need
 visual review for wrapping and CJK clipping, and no Android APK/emulator test
 has been performed for this batch.
+
+## Native shop and home help and transaction prompts (2026-11-04)
+
+The shop/home help now uses **14** distinct Traditional Chinese instruction
+fragments across **18** text-output positions. It covers inspecting items,
+purchasing, retrieving and stashing at home, selling, no-selling identification
+and leaving both standard and inspection-only shop views. The original
+highlighted `x/l/p/g/d/s/I/Esc` shortcuts and the `g`-to-`p` alias remain
+unchanged; none of the input or transaction logic is translated.
+
+Four selection and rejection prompts use an exact-match fallback dictionary.
+Remaining gold, both buy/sell price captions, give/sell confirmation, purchase
+confirmation including the cannot-use warning, and item-specific context-menu
+header use Chinese or English **literal** format strings. The Chinese text
+correctly notes that both Esc and N cancel the transaction; the existing
+confirmation handler and command queue are unchanged. Store keeper greetings
+and full dynamic item descriptions have not been translated.
+
+Standalone C99 and static source checks cover the 18 dictionary entries,
+every help output site, colored shortcuts, literal format safety and English
+fallback. Android APK/NDK and emulator acceptance, especially narrow
+layout behavior and store/home transactions, remain outstanding.

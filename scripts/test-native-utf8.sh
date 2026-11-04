@@ -79,6 +79,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_target_help_locale"
 "$BUILD_DIR/test_target_help_locale"
 
+# Shop/home localized help and purchase/sale prompt text.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_store_text_locale.c" \
+    -o "$BUILD_DIR/test_store_text_locale"
+"$BUILD_DIR/test_store_text_locale"
+
 # Object information property and brand/slay labels.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_object_info_locale.c" -o "$BUILD_DIR/test_object_info_locale"
 "$BUILD_DIR/test_object_info_locale"
