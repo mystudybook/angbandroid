@@ -101,6 +101,12 @@ int main(void)
                   "新的移動延遲：") == 0);
     assert(strcmp(angdroid_game_ui_text("Command: Sidebar Mode", 0),
                   "Command: Sidebar Mode") == 0);
+    assert(strcmp(angdroid_game_ui_text("Create a keymap", 1),
+                  "建立快捷鍵設定") == 0);
+    assert(strcmp(angdroid_game_ui_text("Save monster attr/chars", 1),
+                  "儲存怪物外觀設定") == 0);
+    assert(strcmp(angdroid_game_ui_text("Create a keymap", 0),
+                  "Create a keymap") == 0);
     assert(strcmp(angdroid_game_ui_text("New game", 0), "New game") == 0);
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);

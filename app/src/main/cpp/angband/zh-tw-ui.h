@@ -441,6 +441,19 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"New movement delay: ", "新的移動延遲："},
         {"Command: Load a user pref file", "操作：載入使用者設定檔"},
         {"Ego item ignore menu", "特殊詞綴物品忽略設定"},
+        {"Load a user pref file", "載入使用者設定檔"},
+        {"Save keymaps to file", "儲存快捷鍵設定檔"},
+        {"Query a keymap", "查看快捷鍵設定"},
+        {"Create a keymap", "建立快捷鍵設定"},
+        {"Remove a keymap", "刪除快捷鍵設定"},
+        {"Save monster attr/chars", "儲存怪物外觀設定"},
+        {"Save object attr/chars", "儲存物品外觀設定"},
+        {"Save feature attr/chars", "儲存地形外觀設定"},
+        {"Save flavor attr/chars", "儲存物品種類外觀設定"},
+        {"Reset visuals", "重設外觀設定"},
+        {"Dump colors", "匯出顏色設定"},
+        {"Modify colors", "修改顏色"},
+        {"To edit visuals, use the knowledge menu", "若要修改外觀，請使用知識圖鑑選單"},
     };
     size_t i;
     if (!zh_tw || !en) return en;

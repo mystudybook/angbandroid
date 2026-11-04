@@ -869,7 +869,9 @@ static void do_cmd_visuals(const char *title, int row)
 		visual_menu->title = title;
 		visual_menu->selections = lower_case;
 		visual_menu->browse_hook = visuals_browse_hook;
-		visual_menu->header = "To edit visuals, use the knowledge menu";
+		visual_menu->header = angdroid_game_ui_text(
+                "To edit visuals, use the knowledge menu",
+                angdroid_zh_tw_enabled());
 	}
 
 	menu_layout(visual_menu, &SCREEN_REGION);

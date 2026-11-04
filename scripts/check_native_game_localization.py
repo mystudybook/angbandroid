@@ -607,6 +607,13 @@ def main():
            "Native options translation must use a literal printf format")
     expect(not re.search(r"\bmsg\(angdroid_game_ui_text\(", options_ui),
            "Unsafe dynamic message format in native options")
+    expect('angdroid_game_ui_text(act->name, angdroid_zh_tw_enabled())' in menu_ui,
+           "Native action menu needs display-only Chinese labels")
+    expect('acts[oid].action(acts[oid].name, m->cursor)' in menu_ui,
+           "Native action callback must retain original command label")
+    expect('angdroid_game_ui_text(' in options_ui
+           and '"To edit visuals, use the knowledge menu"' in options_ui,
+           "Visuals menu header is untranslated")
     if errors:
         for item in errors:
             print("FAIL:", item)

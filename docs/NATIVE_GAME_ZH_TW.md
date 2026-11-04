@@ -571,6 +571,19 @@ The localized visuals-reset notification must use `msg("%s", translated)`,
 not `msg(translated)`, because `msg` is printf-style and Android NDK builds
 use `-Werror=format-security`. Added a source checker to prevent this regression.
 
+## Display-only native action menu labels (2026-11-04)
+
+Previously, the settings screens had translated prompts, but the actions
+inside the keymap, color and visuals menus remained in English. The shared
+native action-menu renderer now translates only the *displayed* label
+through the existing exact-match lookup, including 13 new settings-related
+labels. Menu items' original `name` and callback arguments remain
+English, preserving file export behavior, action selection and saved
+preferences. This does not localize the internal names of option keys.
+
+Regression tests cover selected translated labels, English fallback and
+the source-level safeguard that callbacks still receive the English name.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

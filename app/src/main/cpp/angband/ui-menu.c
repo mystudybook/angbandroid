@@ -24,6 +24,7 @@
 #include "ui-menu.h"
 
 #include "droid.h"
+#include "zh-tw-ui.h"
 #include "../curses/unicode_display.h"
 
 /**
@@ -64,7 +65,8 @@ static void display_action_aux(menu_action *act, uint8_t color,
 	Term_erase(col, row, wid);
 
 	if (act->name)
-		Term_putstr(col, row, wid, color, act->name);
+		Term_putstr(col, row, wid, color,
+            angdroid_game_ui_text(act->name, angdroid_zh_tw_enabled()));
 }
 
 /* ------------------------------------------------------------------------
