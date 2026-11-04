@@ -22,6 +22,8 @@
 #include "ui-input.h"
 #include "ui-output.h"
 #include "ui-term.h"
+#include "droid.h"
+#include "zh-tw-help-browser.h"
 
 /**
  * Make a string lower case.
@@ -64,6 +66,7 @@ bool show_file(const char *name, const char *what, int line, int mode)
 
 	/* Case sensitive search */
 	bool case_sensitive = false;
+	bool zh_tw = angdroid_zh_tw_enabled();
 
 	/* Current help file */
 	ang_file *fff = NULL;
@@ -138,7 +141,10 @@ bool show_file(const char *name, const char *what, int line, int mode)
 
 	/* Look in "help" */
 	if (!fff) {
-		strnfmt(caption, sizeof(caption), "Help file '%s'", name);
+		if (zh_tw)
+			strnfmt(caption, sizeof(caption), "說明檔案「%s」", name);
+		else
+			strnfmt(caption, sizeof(caption), "Help file '%s'", name);
 
 		path_build(path, sizeof(path), ANGBAND_DIR_HELP, name);
 		fff = file_open(path, MODE_READ, FTYPE_TEXT);
@@ -147,7 +153,10 @@ bool show_file(const char *name, const char *what, int line, int mode)
 	/* Oops */
 	if (!fff) {
 		/* Message */
-		msg("Cannot open '%s'.", name);
+		if (zh_tw)
+			msg("無法開啟「%s」。", name);
+		else
+			msg("Cannot open '%s'.", name);
 		event_signal(EVENT_MESSAGE_FLUSH);
 
 		/* Oops */
@@ -329,20 +338,23 @@ bool show_file(const char *name, const char *what, int line, int mode)
 
 
 		/* Show a general "title" */
-		prt(format("[%s, %s, Line %d-%d/%d]", buildid,
-		           caption, line, line + hgt - 4, size), 0, 0);
+		prt(zh_tw ?
+			format("[%s，%s，行 %d-%d/%d]", buildid,
+				caption, line, line + hgt - 4, size) :
+			format("[%s, %s, Line %d-%d/%d]", buildid,
+				caption, line, line + hgt - 4, size), 0, 0);
 
 
 		/* Prompt */
 		if (menu) {
 			/* Menu screen */
-			prt("[Press a Letter, or ESC to exit.]", hgt - 1, 0);
+			prt(angdroid_help_browser_text("[Press a Letter, or ESC to exit.]", zh_tw), hgt - 1, 0);
 		} else if (size <= hgt - 4) {
 			/* Small files */
-			prt("[Press ESC to exit.]", hgt - 1, 0);
+			prt(angdroid_help_browser_text("[Press ESC to exit.]", zh_tw), hgt - 1, 0);
 		} else {
 			/* Large files */
-			prt("[Press Space to advance, or ESC to exit.]", hgt - 1, 0);
+			prt(angdroid_help_browser_text("[Press Space to advance, or ESC to exit.]", zh_tw), hgt - 1, 0);
 		}
 
 		/* Get a keypress */
@@ -358,7 +370,7 @@ bool show_file(const char *name, const char *what, int line, int mode)
 		/* Try showing */
 		if (ch.code == '&') {
 			/* Get "shower" */
-			prt("Show: ", hgt - 1, 0);
+			prt(angdroid_help_browser_text("Show: ", zh_tw), hgt - 1, 0);
 			(void)askfor_aux(shower, sizeof(shower), NULL);
 
 			/* Make the "shower" lowercase */
@@ -368,7 +380,7 @@ bool show_file(const char *name, const char *what, int line, int mode)
 		/* Try finding */
 		if (ch.code == '/') {
 			/* Get "finder" */
-			prt("Find: ", hgt - 1, 0);
+			prt(angdroid_help_browser_text("Find: ", zh_tw), hgt - 1, 0);
 			if (askfor_aux(finder, sizeof(finder), NULL)) {
 				/* Find it */
 				find = finder;
@@ -387,7 +399,7 @@ bool show_file(const char *name, const char *what, int line, int mode)
 		if (ch.code == '#') {
 			char tmp[80] = "0";
 
-			prt("Goto Line: ", hgt - 1, 0);
+			prt(angdroid_help_browser_text("Goto Line: ", zh_tw), hgt - 1, 0);
 			if (askfor_aux(tmp, sizeof(tmp), NULL))
 				line = atoi(tmp);
 		}
@@ -402,7 +414,7 @@ bool show_file(const char *name, const char *what, int line, int mode)
 				my_strcpy(ftmp, "index.txt", sizeof(ftmp));
 			}
 
-			prt("Goto File: ", hgt - 1, 0);
+			prt(angdroid_help_browser_text("Goto File: ", zh_tw), hgt - 1, 0);
 			if (askfor_aux(ftmp, sizeof(ftmp), NULL)) {
 				if (!show_file(ftmp, NULL, 0, mode))
 					ch.code = ESCAPE;

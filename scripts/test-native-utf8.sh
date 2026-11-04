@@ -97,6 +97,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_hints_locale"
 "$BUILD_DIR/test_store_hints_locale"
 
+# Native help-browser menu captions and prompt labels.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_help_browser_locale.c" \
+    -o "$BUILD_DIR/test_help_browser_locale"
+"$BUILD_DIR/test_help_browser_locale"
+
 # Object information property and brand/slay labels.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_object_info_locale.c" -o "$BUILD_DIR/test_object_info_locale"
 "$BUILD_DIR/test_object_info_locale"
