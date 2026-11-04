@@ -1,6 +1,6 @@
 # Angband Android — Traditional Chinese terminal rendering status
 
-Last source review: 2026-11-03. All changes so far were committed directly to `master`.
+Last source review: 2026-11-04. Changes are tracked on `master` through direct commits and merged pull requests.
 This is a **working implementation, not an Android release sign-off**.
 
 ## Implemented
@@ -61,6 +61,15 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 - Twelve native fixed-grid test assertions and four public-marker tests were added, along with source-level contract checks. Regular text-stream APIs `Term_addch()` and `Term_addstr()` also sanitize literal U+FDD0 input before it reaches the native grid; four additional stream-marker regression assertions cover this rule.
 
 **Trade-off:** Chinese text sent through a *fixed-position per-cell map API* is intentionally replaced with `?` rather than widened. Use `Term_addstr()`/`Term_addch()` for regular two-column user-facing text. This distinction is necessary until the native map grid and textual UI coordinate schemes can be separated more comprehensively.
+
+## Native menu page-relative shortcut safety (2026-11-04)
+
+- Scroll and object menu skins now interpret **relative selection tags against the visible page**. Once the list scrolls, the displayed `a` shortcut selects the first visible row rather than an unrelated item from the first page.
+- Both native key selection and Android soft-keyboard hints use the same visible row range. Multi-column menus retain all displayed rows instead of being truncated to one column's row count; filtered menus still translate visible indices into their underlying item IDs for validation.
+- Skin tag lookup checks negative/out-of-range offsets and short tag strings, rather than indexing before or beyond the `selections` array. The nonrelative selection scan also stops at the menu's row count.
+- `tests/native/test_menu_visible_tags.c` exercises page changes, a partial last page, column menus, filtered rows, negative and extreme offsets. `tests/test_menu_visible_tags_source.py` checks that native selection, display and soft-keyboard hint paths call the same helpers. The C test is included in `scripts/test-native-utf8.sh` and the source guard in `scripts/verify-zh-tw.sh`.
+
+**Scope:** this is host-C and source-level protection. A debug APK/emulator test must still check mouse selection, scrolling, visible labels and shortcut behavior during real gameplay.
 
 ## Regression checks
 
