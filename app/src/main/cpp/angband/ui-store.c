@@ -51,6 +51,7 @@
 #include "ui-store.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "store-menu-row.h"
 #include "z-debug.h"
 
 
@@ -1043,9 +1044,17 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 	struct store *store = ctx->store;
 	
 	if (event->type == EVT_SELECT) {
-		/* Hack -- there's no mouse event coordinates to use for */
-		/* menu_store_item, so fake one as if mouse clicked on letter */
-		bool purchased = context_menu_store_item(ctx, oid, 1, m->active.row + oid);
+		/* Stock IDs are absolute, but menu positions are relative to the
+		 * visible page. Never put a popup outside the current list. */
+		int popup_row = angdroid_store_menu_screen_row(
+			oid, m->top, m->active.row, m->active.page_rows);
+		bool purchased;
+
+		if (oid < 0 || oid >= store->stock_num || !ctx->list[oid] ||
+			popup_row < 0)
+			return false;
+
+		purchased = context_menu_store_item(ctx, oid, 1, popup_row);
 		ctx->flags |= (STORE_FRAME_CHANGE | STORE_GOLD_CHANGE);
 
 		/* Let the game handle any core commands (equipping, etc) */
@@ -1076,8 +1085,11 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 					return false;
 
 				action = true;
-			} else if ((oid >= 0) && (event->mouse.y == m->active.row + oid)) {
-				/* if press is on a list item, so store item context */
+			} else if (oid >= 0 && oid < store->stock_num &&
+				ctx->list[oid] &&
+				event->mouse.y == angdroid_store_menu_screen_row(
+					oid, m->top, m->active.row, m->active.page_rows)) {
+				/* Tap is on the selected stock row in the visible page. */
 				context_menu_store_item(ctx, oid, event->mouse.x,
 										event->mouse.y);
 				action = true;
