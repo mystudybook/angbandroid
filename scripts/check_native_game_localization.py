@@ -670,6 +670,38 @@ def main():
     expect('test_store_text_locale.c' in native_tests,
            "Shop C99 translation regression is not registered")
 
+    # Canonical English shopkeeper greeting templates, placeholders and locale.
+    welcome_header = source(CPP / "angband/zh-tw-store-greetings.h", errors)
+    welcome_block = store_ui.partition("static const char *comment_welcome[] =")[2].partition("};")[0]
+    original_greetings = re.findall(
+        r'^\s*"((?:\\.|[^"\\])*)",?\s*$', welcome_block, re.MULTILINE)
+    localized_greetings = re.findall(
+        r'^\s*\{\s*"((?:\\.|[^"\\])*)",\s*"((?:\\.|[^"\\])*)"\s*\},?\s*$',
+        welcome_header, re.MULTILINE)
+    expect(len(original_greetings) == 10 and
+           original_greetings[0] == "" and
+           len(localized_greetings) == 9 and
+           len({en for en, _ in localized_greetings}) == 9 and
+           set(original_greetings[1:]) == {en for en, _ in localized_greetings},
+           "Chinese shopkeeper greeting dictionary must match all source formats")
+    expect(all(en.count("%s") == zh.count("%s") and
+               "%" not in en.replace("%s", "") and
+               "%" not in zh.replace("%s", "")
+               for en, zh in localized_greetings),
+           "Translated shopkeeper greetings must preserve %s argument counts")
+    expect('"zh-tw-store-greetings.h"' in store_ui and
+           '"zh-tw-class-titles.h"' in store_ui and
+           'angdroid_store_greeting_format(comment_welcome[i],' in store_ui and
+           'angdroid_zh_tw_class_title(' in store_ui and
+           'angdroid_zh_tw_enabled() ? "貴賓" : "valued customer"' in store_ui,
+           "Shopkeeper greeting language selection and class title are not wired")
+    expect('msg(comment_hint[i], random_hint());' in store_ui and
+           'i = MIN(i, N_ELEMENTS(comment_welcome) - 1);' in store_ui and
+           'for (j = 0; j < (int)sizeof(short_name) - 1 &&' in store_ui,
+           "Shopkeeper hint selection, bounds or owner-name protection changed")
+    expect('test_store_greetings_locale.c' in native_tests,
+           "C99 test for shopkeeper greetings missing from native suite")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

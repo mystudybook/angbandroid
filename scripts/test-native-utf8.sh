@@ -85,6 +85,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_text_locale"
 "$BUILD_DIR/test_store_text_locale"
 
+# Shopkeeper greetings preserve %s formatting and English fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_store_greetings_locale.c" \
+    -o "$BUILD_DIR/test_store_greetings_locale"
+"$BUILD_DIR/test_store_greetings_locale"
+
 # Object information property and brand/slay labels.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_object_info_locale.c" -o "$BUILD_DIR/test_object_info_locale"
 "$BUILD_DIR/test_object_info_locale"
