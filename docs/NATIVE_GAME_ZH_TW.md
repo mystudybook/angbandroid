@@ -595,6 +595,23 @@ Rendering now operates on a private temporary copy; the original
 continue to use original English command labels. New source and C99
 regression checks guard CJK width clipping and English fallback.
 
+## Filtered menu shortcut hints and bounded keyboard buffer (2026-11-04)
+
+The native `ui-menu.c` soft-keyboard hint list previously used
+`filter_list[0]` for every visible item while collecting selectable shortcut
+keys. When an Angband menu applies a row filter, the keyboard could show a
+shortcut from the wrong underlying item. It now resolves each visible index
+through the filter before checking validity and finding its shortcut;
+relative-row tags continue to use visible positions.
+
+The hint buffer also used an unchecked `temp[current++]` write. Large menus
+now append keys only while there is room for the final NUL byte. The original
+menu selection and key dispatch behavior are unchanged. A strict host C99
+regression verifies filter mappings and capacity handling; an additional
+static source check guards the actual `ui-menu.c` integration in
+`sh scripts/verify-zh-tw.sh`. The actual Android soft keyboard and UI
+still require device-level acceptance testing.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:
