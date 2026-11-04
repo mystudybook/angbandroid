@@ -1018,19 +1018,7 @@ def main():
             "static const struct angdroid_terrain_trap_pair " + name + "[] = {"
         )[2].partition("};")[0]
         raw = re.findall(
-            r'^\s*\{\s*("(?:\\.|[^"\\])*"),\s*("(?:\\.|[^"\\])*")\s*\},?\s*
-            print("FAIL:", item)
-        return 1
-    print(f"PASS: {checks} native game-localization source safeguards")
-    print("  Monster list entries: 522 | item kind labels: 326")
-    print("  Death menu labels: 9 | death prompts: 11")
-    print("NOTE: Requires Android NDK and on-device zh-TW gameplay validation")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
-,
+            r'^\s*\{\s*("(?:\\.|[^"\\])*"),\s*("(?:\\.|[^"\\])*")\s*\},?\s*$',
             block, re.MULTILINE)
         try:
             return [(json.loads(en), json.loads(zh)) for en, zh in raw]
