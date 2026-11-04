@@ -34,7 +34,7 @@ if "menu_put_clipped(col, row, width, color, items[oid]);" not in string:
 if "Term_putstr(col, row, width, color" in string:
     raise SystemExit("FAIL: unsafe direct string menu painter remains")
 
-row = source.split("static void display_menu_row(struct menu *menu, int pos, int top,\n", 1)
+row = source.split("static void display_menu_row(struct menu *menu, int pos, int top,\n")
 if len(row) < 3:
     raise SystemExit("FAIL: menu row definition not found")
 row_def = row[-1].split("\n}", 1)[0]
