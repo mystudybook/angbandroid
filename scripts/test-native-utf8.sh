@@ -97,6 +97,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_menu_visible_tags"
 "$BUILD_DIR/test_menu_visible_tags"
 
+# Horizontal movement across invalid menu rows must terminate.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_valid_cursor.c" \
+    -o "$BUILD_DIR/test_menu_valid_cursor"
+"$BUILD_DIR/test_menu_valid_cursor"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \
