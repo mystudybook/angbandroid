@@ -146,6 +146,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_column_layout"
 "$BUILD_DIR/test_store_column_layout"
 
+# A cancelled purchase cannot select a stale or out-of-range stock item.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_store_stock_guard.c" \
+    -o "$BUILD_DIR/test_store_stock_guard"
+"$BUILD_DIR/test_store_stock_guard"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \
