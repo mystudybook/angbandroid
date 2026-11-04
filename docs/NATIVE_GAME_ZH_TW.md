@@ -565,6 +565,12 @@ localized Chinese labels do not truncate mid-string. New C99 dictionary
 assertions and source safety checks cover English fallback and literal
 printf-format handling. Full Android compilation is not yet verified.
 
+## NDK format-security follow-up (2026-11-04)
+
+The localized visuals-reset notification must use `msg("%s", translated)`,
+not `msg(translated)`, because `msg` is printf-style and Android NDK builds
+use `-Werror=format-security`. Added a source checker to prevent this regression.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

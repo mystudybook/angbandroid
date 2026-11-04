@@ -829,7 +829,7 @@ static void visuals_reset(const char *title, int row)
 
 	/* Message */
 	prt("", 0, 0);
-	msg(angdroid_game_ui_text("Visual attr/char tables reset.", angdroid_zh_tw_enabled()));
+	msg("%s", angdroid_game_ui_text("Visual attr/char tables reset.", angdroid_zh_tw_enabled()));
 	event_signal(EVENT_MESSAGE_FLUSH);
 }
 

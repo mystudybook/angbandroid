@@ -615,6 +615,10 @@ if __name__ == "__main__":
            "Health warning must preserve escaped percent format string")
     expect('zh_names[SIDEBAR_MODE % SIDEBAR_MAX]' in options_ui,
            "Sidebar mode names are not translated at display time")
+    expect('msg("%s", angdroid_game_ui_text("Visual attr/char tables reset."' in options_ui,
+           "Native options translation must use a literal printf format")
+    expect(not re.search(r"\bmsg\(angdroid_game_ui_text\(", options_ui),
+           "Unsafe dynamic message format in native options")
     if errors:
         for item in errors:
             print("FAIL:", item)
