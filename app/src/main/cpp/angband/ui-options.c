@@ -92,16 +92,19 @@ static void dump_pref_file(void (*dump)(ang_file *), const char *title, int row)
 		return;
 
 	/* Try to save */
-	if (prefs_save(buf, dump, title))
-		if (angdroid_zh_tw_enabled())
-            msg("已儲存 %s。", strstr(title, " ") + 1);
-        else
-            msg("Saved %s.", strstr(title, " ") + 1);
-	else
-		if (angdroid_zh_tw_enabled())
-            msg("儲存 %s 失敗。", strstr(title, " ") + 1);
-        else
-            msg("Failed to save %s.", strstr(title, " ") + 1);
+	if (prefs_save(buf, dump, title)) {
+		if (angdroid_zh_tw_enabled()) {
+			msg("已儲存 %s。", strstr(title, " ") + 1);
+		} else {
+			msg("Saved %s.", strstr(title, " ") + 1);
+		}
+	} else {
+		if (angdroid_zh_tw_enabled()) {
+			msg("儲存 %s 失敗。", strstr(title, " ") + 1);
+		} else {
+			msg("Failed to save %s.", strstr(title, " ") + 1);
+		}
+	}
 
 	event_signal(EVENT_MESSAGE_FLUSH);
 
