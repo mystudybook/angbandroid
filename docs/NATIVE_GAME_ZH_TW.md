@@ -716,17 +716,36 @@ narrow portrait view and long messages, remain pending.
 ## First 20 Angband random gameplay tips in Traditional Chinese (2026-11-04)
 
 The source `variant_lib/angband/gamedata/hints.txt` has 99 unique `H:` tips.
-This curated first batch translates 20 exact English phrases covering the
+The full table now translates all 99 original English phrases covering the
 elemental resistances, healing, monster breath, item inscriptions, inspection,
-settings, oil flasks and recall. The untranslated 79 hints retain their source
-English text even when the UI language is zh-TW. The English locale retains
+settings, oil flasks and recall. The source corpus is fully covered in Traditional Chinese. The English locale retains
 every original hint and its original ASCII quote wrapper. The zh-TW locale uses
 Chinese quotation marks around translated or fallback tips.
 
 Display lookup happens only when the shopkeeper presents a randomly chosen tip.
 The hint file and parser, hint-selection randomness, command symbols (`{`,
 `!s`, `!d`, `!k`, `!v`, `!*`, `I`, `=`), gameplay rules and savefile data
-are unchanged. Standalone C99 tests verify all 20 entries and English/unknown/
-NULL fallbacks. The source checker validates that all translation keys are in
-the canonical 99-item corpus and checks the branch wiring. Complete Android
+are unchanged. Standalone C99 tests verify all 99 entries and English/unknown/
+NULL fallbacks. The source checker requires an exact 99/99 key set matching
+the canonical hint corpus and checks the branch wiring. Complete Android
 NDK/APK and emulator presentation checks remain outstanding.
+
+## Completion of all 99 Angband hints (2026-11-04)
+
+Added the remaining **79** Traditional Chinese translations to the display-only
+shopkeeper hint dictionary. All **99** unique canonical `H:` hints are now
+covered, including source lines with trailing ASCII spaces (exact-match lookup
+keys must retain them). The source hints file, parser, hint selection,
+gameplay mechanics and savefile formats remain unchanged.
+
+The standalone C99 test now exercises every hint in Chinese and English
+(**198** explicit bilingual assertions), plus unknown/NULL fallbacks. The
+Python source audit rejects missing, additional, duplicate or untranslated
+English keys. Existing `I`, `S`, `m`, `p`, `=`, `{`, `!s`,
+`!d`, `!k`, `!v`, `!*`, and `@v0` key/inscription spellings are
+preserved where used. Original English remains available as a locale fallback.
+
+This completes only the 99 canonical *hint messages*, not the rest of the
+Angband engine, other variants, or Android rendering acceptance. Build the
+full Android APK/NDK and inspect rendering at narrow viewport sizes before
+calling this release-ready.
