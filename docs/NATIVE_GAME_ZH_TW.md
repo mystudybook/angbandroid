@@ -888,3 +888,21 @@ screens is implemented by `t/T`. The flash hints and trap footer now
 show `t/T`; the gameplay key handlers themselves are unchanged.
 Actual Android terminal dimensions, user interaction and full Gradle/NDK
 validation still require testing.
+
+## Android NDK store-help format-string build failure (2026-11-04)
+
+A real `assembleDebug` build from the macOS Android NDK 28.2.13676358
+failed in `ui-store.c` with **18 errors** from Clang
+`-Werror=format-security`. All 18 failures passed a translated runtime
+string directly as the first argument to printf-style `text_out()`.
+The correct call form is now `text_out("%s",
+angdroid_store_ui_text("...", zh_tw))` at each of the original 18 help
+fragments, keeping their English/zh-TW lookup, colored shortcut keycaps,
+and game behavior unchanged. Compiler security checks are not disabled.
+
+The Python source audit now rejects either the unsecure call pattern or
+an incomplete replacement and requires all 18 literal-format calls.
+The existing C99 translation test additionally verifies safe use through
+a literal `snprintf("%s", ...)` format. Full Android build success and
+other warnings cannot be concluded from the provided failed log;
+re-run `sh scripts/verify-zh-tw.sh --android` after fetching this commit.

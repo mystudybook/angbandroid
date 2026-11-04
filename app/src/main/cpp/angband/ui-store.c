@@ -432,44 +432,44 @@ static void store_display_help(struct store_context *ctx)
 	else
 		text_out_c(COLOUR_L_GREEN, "l");
 
-	text_out(angdroid_store_ui_text(" examines", zh_tw));
+	text_out("%s", angdroid_store_ui_text(" examines", zh_tw));
 	if (!ctx->inspect_only) {
-		text_out(angdroid_store_ui_text(" and ", zh_tw));
+		text_out("%s", angdroid_store_ui_text(" and ", zh_tw));
 		text_out_c(COLOUR_L_GREEN, "p");
-		text_out(angdroid_store_ui_text(" (or ", zh_tw));
+		text_out("%s", angdroid_store_ui_text(" (or ", zh_tw));
 		text_out_c(COLOUR_L_GREEN, "g");
-		text_out(angdroid_store_ui_text(")", zh_tw));
+		text_out("%s", angdroid_store_ui_text(")", zh_tw));
 
-		if (is_home) text_out(angdroid_store_ui_text(" picks up", zh_tw));
-		else text_out(angdroid_store_ui_text(" purchases", zh_tw));
+		if (is_home) text_out("%s", angdroid_store_ui_text(" picks up", zh_tw));
+		else text_out("%s", angdroid_store_ui_text(" purchases", zh_tw));
 	}
-	text_out(angdroid_store_ui_text(" an item. ", zh_tw));
+	text_out("%s", angdroid_store_ui_text(" an item. ", zh_tw));
 
 	if (!ctx->inspect_only) {
 		if (OPT(player, birth_no_selling) && !is_home) {
 			text_out_c(COLOUR_L_GREEN, "d");
-			text_out(angdroid_store_ui_text(" (or ", zh_tw));
+			text_out("%s", angdroid_store_ui_text(" (or ", zh_tw));
 			text_out_c(COLOUR_L_GREEN, "s");
-			text_out(angdroid_store_ui_text(")", zh_tw));
-			text_out(angdroid_store_ui_text(" gives an item to the store in return for its identification. Some wands and staves will also be recharged. ", zh_tw));
+			text_out("%s", angdroid_store_ui_text(")", zh_tw));
+			text_out("%s", angdroid_store_ui_text(" gives an item to the store in return for its identification. Some wands and staves will also be recharged. ", zh_tw));
 		} else {
 			text_out_c(COLOUR_L_GREEN, "d");
-			text_out(angdroid_store_ui_text(" (or ", zh_tw));
+			text_out("%s", angdroid_store_ui_text(" (or ", zh_tw));
 			text_out_c(COLOUR_L_GREEN, "s");
-			text_out(angdroid_store_ui_text(")", zh_tw));
-			if (is_home) text_out(angdroid_store_ui_text(" drops", zh_tw));
-			else text_out(angdroid_store_ui_text(" sells", zh_tw));
-			text_out(angdroid_store_ui_text(" an item from your inventory. ", zh_tw));
+			text_out("%s", angdroid_store_ui_text(")", zh_tw));
+			if (is_home) text_out("%s", angdroid_store_ui_text(" drops", zh_tw));
+			else text_out("%s", angdroid_store_ui_text(" sells", zh_tw));
+			text_out("%s", angdroid_store_ui_text(" an item from your inventory. ", zh_tw));
 		}
 	}
 	text_out_c(COLOUR_L_GREEN, "I");
-	text_out(angdroid_store_ui_text(" inspects an item from your inventory. ", zh_tw));
+	text_out("%s", angdroid_store_ui_text(" inspects an item from your inventory. ", zh_tw));
 
 	text_out_c(COLOUR_L_GREEN, "ESC");
 	if (!ctx->inspect_only)
-		text_out(angdroid_store_ui_text(" exits the building.", zh_tw));
+		text_out("%s", angdroid_store_ui_text(" exits the building.", zh_tw));
 	else
-		text_out(angdroid_store_ui_text(" exits this screen.", zh_tw));
+		text_out("%s", angdroid_store_ui_text(" exits this screen.", zh_tw));
 
 	text_out_indent = 0;
 }

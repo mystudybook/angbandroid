@@ -33,6 +33,17 @@ int main(void)
         assert(angdroid_store_ui_text(unknown, 1) == unknown);
         assert(angdroid_store_ui_text(NULL, 1) == NULL);
     }
+    /* Test how callers pass translated fragments as DATA, not format strings.
+     * A Chinese dictionary entry must never be interpreted as a format. */
+    {
+        char output[200];
+        const char *translated = angdroid_store_ui_text(" examines", 1);
+        int n = snprintf(output, sizeof output, "%s", translated);
+        assert(n > 0 && strcmp(output, " 檢視") == 0);
+        n = snprintf(output, sizeof output, "%s",
+                     angdroid_store_ui_text(" gives an item to the store in return for its identification. Some wands and staves will also be recharged. ", 1));
+        assert(n > 0 && strstr(output, "鑑定") != NULL);
+    }
     puts("PASS: 18 store strings, English fallback and unknown entries");
     return 0;
 }
