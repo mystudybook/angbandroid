@@ -73,6 +73,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_game_ui_locale"
 "$BUILD_DIR/test_game_ui_locale"
 
+# Knowledge categories are display-only and must measure UTF-8 glyph cells.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_knowledge_groups_locale.c" \
+    -o "$BUILD_DIR/test_knowledge_groups_locale"
+"$BUILD_DIR/test_knowledge_groups_locale"
+
 # Target selection help only localizes descriptive fragments, not key bindings.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_target_help_locale.c" \

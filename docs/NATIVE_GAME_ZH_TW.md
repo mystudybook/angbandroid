@@ -806,3 +806,30 @@ call now casts its input to unsigned char, avoiding undefined behavior on
 negative signed bytes. C99 tests cover the five Chinese/English label pairs;
 source checks guard all Ctrl+A/U/N and monster recall key paths. Full Android
 NDK/APK and actual handset validation still require execution.
+
+## Knowledge category names and UTF-8 display column widths (2026-11-04)
+
+The original Angband knowledge browser now translates **97 distinct
+canonical group labels** covering 47 monster categories plus the unclassified
+group, 32 object/weapon/armor categories, seven rune categories, eight terrain
+categories and four trap categories; overlapping "Other" is counted once.
+Labels are translated only in the scrollable string-menu display
+(`g_names[i]`): the monster `ui_knowledge.txt` parser, `TV_*` item IDs,
+category numeric group IDs, sorting and savefiles retain their original
+English values. Unknown categories and the English locale still display the
+original label.
+
+Previously `g_name_len` used `strlen()` which measures UTF-8 **bytes**:
+a five-character Traditional Chinese name could be incorrectly treated as
+15 terminal columns. The menu now uses the existing
+`angdroid_utf8_display_columns()` helper and retains the 20-column cap.
+The existing `MN_ITER_STRINGS` renderer clips full UTF-8 glyphs to its
+column width, preventing a wide glyph from crossing into the next column.
+The screen layout for extremely narrow terminals still requires emulator
+verification and is **not** claimed fixed.
+
+A C99 regression test now checks all 97 exact Chinese mappings and all 97
+English fallback strings plus unknown/NULL values and terminal-cell-width
+examples. The source audit derives the canonical names from unmodified
+`ui_knowledge.txt` and `ui-knowledge.c` to detect missing or duplicated
+translations. No Android APK/NDK build or phone presentation test is implied.
