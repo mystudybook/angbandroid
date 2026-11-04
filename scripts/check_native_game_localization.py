@@ -580,19 +580,7 @@ def main():
     expect('test_spell_names_locale.c' in native_tests,
            "Spell-name C99 test missing from native tests")
     title_keys = {en for en, _ in re.findall(
-        r'^\s*\{\s*"([^"]+)",\s*"([^"]+)"\s*\},\s*        for item in errors:
-            print("FAIL:", item)
-        return 1
-    print(f"PASS: {checks} native game-localization source safeguards")
-    print("  Monster list entries: 522 | item kind labels: 326")
-    print("  Death menu labels: 9 | death prompts: 11")
-    print("NOTE: Requires Android NDK and on-device zh-TW gameplay validation")
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())
-,
+        r'^\s*\{\s*"([^"]+)",\s*"([^"]+)"\s*\},\s*$',
         class_titles, re.MULTILINE)}
     canonical_titles = {line.partition(":")[2]
                         for line in class_titles_data.splitlines()
