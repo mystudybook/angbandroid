@@ -623,7 +623,7 @@ def main():
     help_part = target_ui.partition("void target_display_help(")[2].partition(
         "static bool is_running_keymap(")[0]
     help_pairs = re.findall(
-        r'\\{\\s*("(?:\\\\.|[^"\\\\])*"),\\s*("(?:\\\\.|[^"\\\\])*")\\s*\\}',
+        r'\{\s*"([^"]+)",\s*"([^"]+)"\s*\}',
         help_source)
     expect(len(help_pairs) == 16 and
            len({en for en, _ in help_pairs}) == 16,
