@@ -833,3 +833,21 @@ English fallback strings plus unknown/NULL values and terminal-cell-width
 examples. The source audit derives the canonical names from unmodified
 `ui_knowledge.txt` and `ui-knowledge.c` to detect missing or duplicated
 translations. No Android APK/NDK build or phone presentation test is implied.
+
+## Monster names in the knowledge-list rows (2026-11-04)
+
+The monster knowledge list now reuses the curated 522-name zh-TW monster
+display dictionary already used by the live monster list and lore titles.
+This applies only to **non-unique** monsters when zh-TW is enabled: uniques,
+unmapped monster names, and English locale retain their canonical names.
+The in-game `monster_race.name` and `monster_race.plural` records, grouping,
+sorting, lore, commands and savefile format are not modified.
+
+Previously the row directly rendered `race->name` without a display-cell
+clip. Now a standalone `knowledge-monster-label.h` helper maps the name
+and copies complete UTF-8 scalars into a bounded label, with at most
+`min(65 - col, Term->wid - col)` display columns before the symbol at 66.
+It leaves a one-cell gap at column 65. English labels are also clipped.
+C99 tests cover translation, unique/unknown/English fallbacks, negative and
+one-column limits, narrow capacity and whole-glyph clipping. Actual phone
+screen rendering and complete Android compilation still need acceptance.
