@@ -159,6 +159,13 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_menu_dynamic_choice"
 "$BUILD_DIR/test_menu_dynamic_choice"
 
+# Dynamic store popups stay inside the terminal during rotation and on
+# very narrow portrait displays, with scrolling for long menus.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_popup_layout.c" \
+    -o "$BUILD_DIR/test_menu_popup_layout"
+"$BUILD_DIR/test_menu_popup_layout"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \

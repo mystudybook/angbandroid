@@ -163,6 +163,16 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Pending Android acceptance:** open a store item popup with Examine focused, press `g` and verify it starts Buy instead of Examine; repeat with Buy one focused, then cancel at the price confirmation; verify Escape and right-click cancellation; check Chinese Buy/Examine labels at narrow widths.
 
+## Dynamic menu popups on rotated and tiny Android terminals (2026-11-04)
+
+- `ui-menu.c:menu_dynamic_calc_location()` previously used the fixed offsets `terminal_width - popup_width - 1` and `terminal_height - page_rows - 1`. For a terminal only 1–2 cells wide, the popup column could become negative. A menu taller than the screen could also be placed beyond the lower edge.
+- The new `menu-popup-layout.h` computes a **bounded** popup width and visible row count from actual terminal cells. It preserves one-cell margins when possible; on extremely small surfaces, it drops the margins rather than making the popup unreachable.
+- The popup origin is clamped even when the mouse anchor is negative, offscreen, or `INT_MAX`. Oversized menus use the existing scrolling skin; empty menus and zero-sized terminals have no selectable region, and `menu_select()` cancels safely.
+- `tests/native/test_menu_popup_layout.c` includes boundary cases and a 400,000+ invocation sweep covering terminal widths/heights, menu lengths and extreme mouse coordinates. `tests/test_menu_popup_layout_source.py` checks native integration. Both are part of the combined offline verification.
+- These changes only adjust display placement; store transactions, inventory indexes and savefile data are unchanged.
+
+**Pending Android acceptance:** Open store popups near the right and bottom edges, rotate with a popup visible, try a terminal shorter than the action list, and verify touch selection, shortcuts and ESC.
+
 ## Regression checks
 
 Run from the repository root:

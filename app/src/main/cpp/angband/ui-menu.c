@@ -28,6 +28,7 @@
 #include "menu-column-width.h"
 #include "menu-hit-test.h"
 #include "menu-compact-layout.h"
+#include "menu-popup-layout.h"
 #include "menu-text-fit.h"
 #include "menu-action-guard.h"
 #include "menu-dynamic-choice.h"
@@ -1301,30 +1302,30 @@ size_t menu_dynamic_longest_entry(struct menu *m)
 
 void menu_dynamic_calc_location(struct menu *m, int mx, int my)
 {
-	region r;
+	region r = {0, 0, 0, 0};
+	angdroid_menu_popup_box popup;
 
-	/* work out display region */
-	/* Reserve room for the selector tag and padding, but never place a
-	 * CJK menu outside the terminal when text is unusually long. */
-	r.width = (int)MIN(menu_dynamic_longest_entry(m) + 3 + 2,
-		(size_t)MAX(1, Term->wid - 2));
-	if (mx > Term->wid - r.width - 1) {
-		r.col = Term->wid - r.width - 1;
-	} else {
-		r.col = mx + 1;
+	/* Dynamic menus are used by the store's Buy/Sell/Examine popups.
+	 * On small rotated Android surfaces the old border arithmetic made
+	 * r.col negative, or positioned rows below the terminal. */
+	if (!angdroid_menu_popup_bounds(
+		Term->wid, Term->hgt, mx, my, menu_dynamic_longest_entry(m),
+		m->count, &popup)) {
+		/* region_calculate() interprets zero width/rows as "fill remaining
+		 * screen". Do not pass an invalid popup through menu_layout():
+		 * explicitly leave its active area empty so menu_select cancels. */
+		m->boundary = r;
+		/* Avoid asking a bordered-popup caller to erase the entire
+		 * terminal: a zero-sized region means "all remaining space". */
+		m->boundary.width = Term->wid > 0 ? 1 : 0;
+		m->boundary.page_rows = Term->hgt > 0 ? 1 : 0;
+		m->active = r;
+		return;
 	}
-	r.page_rows = m->count;
-	if (my > Term->hgt - r.page_rows - 1) {
-		if (my - r.page_rows - 1 <= 0) {
-			/* menu has too many items, so put in upper right corner */
-			r.row = 1;
-			r.col = Term->wid - r.width - 1;
-		} else {
-			r.row = Term->hgt - r.page_rows - 1;
-		}
-	} else {
-		r.row = my + 1;
-	}
+	r.col = popup.col;
+	r.row = popup.row;
+	r.width = popup.width;
+	r.page_rows = popup.page_rows;
 
 	menu_layout(m, &r);
 }
