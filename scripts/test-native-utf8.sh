@@ -127,6 +127,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_menu_action_guard"
 "$BUILD_DIR/test_menu_action_guard"
 
+# Stock context menus must track scrolling and work when the shop is empty.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_store_menu_flow.c" \
+    -o "$BUILD_DIR/test_store_menu_flow"
+"$BUILD_DIR/test_store_menu_flow"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \
