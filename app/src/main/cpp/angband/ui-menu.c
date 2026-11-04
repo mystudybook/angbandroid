@@ -26,6 +26,7 @@
 #include "menu-visible-tags.h"
 #include "menu-valid-cursor.h"
 #include "menu-column-width.h"
+#include "menu-hit-test.h"
 
 #include "droid.h"
 #include "zh-tw-ui.h"
@@ -185,10 +186,8 @@ static const menu_iter menu_iter_strings =
  */
 static int scrolling_get_cursor(int row, int col, int n, int top, region *loc)
 {
-	int cursor = row - loc->row + top;
-	if (cursor >= n) cursor = n - 1;
-
-	return cursor;
+	return angdroid_menu_scrolling_hit(
+		row, loc->row, loc->page_rows, top, n);
 }
 
 
@@ -275,10 +274,8 @@ static const menu_skin menu_skin_scroll =
  */
 static int object_skin_get_cursor(int row, int col, int n, int top, region *loc)
 {
-	int cursor = row - loc->row + top;
-	if (cursor >= n) cursor = n - 1;
-
-	return cursor;
+	return angdroid_menu_scrolling_hit(
+		row, loc->row, loc->page_rows, top, n);
 }
 
 
@@ -364,19 +361,23 @@ static const menu_skin menu_skin_object =
 
 static int columns_get_cursor(int row, int col, int n, int top, region *loc)
 {
-	int w, h, cursor;
-        int rows_per_page = loc->page_rows;
-        int cols = (n + rows_per_page - 1) / rows_per_page;
+	int w, h;
+	int rows_per_page = loc->page_rows;
+	int cols;
 	int colw;
 
+	/* A resize can temporarily yield a zero-height region. Never divide
+	 * by zero or turn a blank touch into a selection. */
+	if (rows_per_page <= 0 || n <= 0)
+		return -1;
+	cols = 1 + (n - 1) / rows_per_page;
+
 	Term_get_size(&w, &h);
-	colw = angdroid_menu_fit_column_width(23, w, col, cols);
+	colw = angdroid_menu_fit_column_width(23, w, loc->col, cols);
 
-	cursor = (row - loc->row) + rows_per_page * ((col - loc->col) / colw);
-	if (cursor < 0) cursor = 0;	/* assert: This should never happen */
-	if (cursor >= n) cursor = n - 1;
-
-	return cursor;
+	return angdroid_menu_columns_hit(
+		row, col, loc->row, loc->col,
+		rows_per_page, loc->width, colw, n);
 }
 
 static void display_columns(struct menu *menu, int cursor, int *top, region *loc)
@@ -387,8 +388,12 @@ static void display_columns(struct menu *menu, int cursor, int *top, region *loc
 	int col = loc->col;
 	int row = loc->row;
 	int rows_per_page = loc->page_rows;
-	int cols = (n + rows_per_page - 1) / rows_per_page;
+	int cols;
 	int colw;
+
+	if (rows_per_page <= 0 || n <= 0)
+		return;
+	cols = 1 + (n - 1) / rows_per_page;
 
 	Term_get_size(&w, &h);
 	colw = angdroid_menu_fit_column_width(23, w, col, cols);
