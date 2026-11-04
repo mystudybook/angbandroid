@@ -134,6 +134,16 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Android acceptance pending:** inspect inventory/equipment/quiver/floor in portrait and landscape; rotate while selecting items; verify a longer name reappears after the menu widens; confirm labels and adjacent numeric fields do not overlap at tiny terminal sizes.
 
+## Shop/Home narrow terminal columns and resized screens (2026-11-04)
+
+- `ui-store.c` previously wrote price, weight, gold and owner positions as `screen_width - 14/-24/-26` into **unsigned** coordinate arrays. On portrait terminals narrower than the reserved columns these calculations could wrap into enormous coordinates, and the store's full UTF-8 object descriptions could overwrite price/weight cells.
+- New `store-column-layout.h` makes price and weight **optional display-only columns**. Regular shops reserve three shortcut cells, twelve actual item-name cells, and a gap; the price column appears at 31 total terminal cells and weight at 41 cells; Home shows weight if it fits. All coordinates are nonnegative, and stock names are copied at UTF-8 scalar boundaries and clipped in **terminal display cells**.
+- Shop owner and right-aligned store-summary labels are only placed together when they fit without overlap. The header, localized labels, gold balance and help prompt use bounded text painters. For extremely narrow views, price/weight are temporarily hidden rather than drawing over item names. Purchase and sell calculations remain unchanged.
+- The store menu now registers a resize callback to recalculate all display columns and redraw the shop frame on terminal rotation. Footer/help Y locations are clamped when a transiently tiny Android terminal would otherwise underflow.
+- `tests/native/test_store_column_layout.c` covers widths 0–105, both Home/shop layouts, 31/41-cell visibility transitions, clipped row budgets, large integer inputs, small heights, and a 3,542-case geometry sweep. `tests/test_store_column_layout_source.py` guards all integration paths; both are wired into the combined offline verification.
+
+**Pending acceptance:** build an Android debug APK, view Home and a regular shop at 20/30/31/40/41/80 terminal cells, verify name/price/weight visibility and long Traditional Chinese item names, rotate while shopping, and complete buy/sell/cancel interactions on an emulator or device.
+
 ## Regression checks
 
 Run from the repository root:

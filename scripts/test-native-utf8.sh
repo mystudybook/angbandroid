@@ -139,6 +139,13 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_object_list_text"
 "$BUILD_DIR/test_object_list_text"
 
+# Store columns must remain safe when a phone's terminal is narrower than
+# the optional price/weight/gold fields.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_store_column_layout.c" \
+    -o "$BUILD_DIR/test_store_column_layout"
+"$BUILD_DIR/test_store_column_layout"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \

@@ -51,6 +51,8 @@
 #include "ui-store.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "store-column-layout.h"
+#include "menu-text-fit.h"
 #include "store-menu-row.h"
 #include "z-debug.h"
 
@@ -99,6 +101,23 @@ enum
 
 	LOC_MAX
 };
+
+/* Store strings may contain wide Traditional Chinese glyphs. Never let
+ * a display-only label overwrite the following stock column. */
+static void store_put_clipped(int attr, const char *text, int row, int col,
+	int columns)
+{
+	char clipped[1024];
+
+	if (!Term || !text || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid || columns <= 0)
+		return;
+	columns = MIN(columns, Term->wid - col);
+	angdroid_menu_copy_columns(clipped, sizeof(clipped), text,
+		(size_t)columns);
+	if (clipped[0])
+		c_put_str(attr, clipped, row, col);
+}
 
 /* State flags */
 #define STORE_GOLD_CHANGE      0x01
@@ -211,57 +230,55 @@ static void prt_welcome(const struct owner *proprietor)
 static void store_display_recalc(struct store_context *ctx)
 {
 	int wid, hgt;
+	int content_height;
+	bool show_help;
 	region loc;
+	angdroid_store_column_layout columns;
 
 	struct menu *m = &ctx->menu;
 	struct store *store = ctx->store;
 
 	Term_get_size(&wid, &hgt);
+	columns = angdroid_store_columns(wid, 1, store->feat == FEAT_HOME);
 
-	/* Clip the width at a max of 104 (enough room for an 80-char item name) */
-	if (wid > 104) wid = 104;
+	/* Never underflow the unsigned coordinate arrays on small terminals.
+	 * Optional price/weight columns are hidden when they cannot fit. */
+	text_out_wrap = MAX(1, columns.width - 2);
+	ctx->scr_places_x[LOC_PRICE] =
+		columns.price_col >= 0 ? columns.price_col : 0;
+	ctx->scr_places_x[LOC_WEIGHT] =
+		columns.weight_col >= 0 ? columns.weight_col : 0;
+	ctx->scr_places_x[LOC_AU] = columns.gold_col;
+	ctx->scr_places_x[LOC_OWNER] = columns.owner_end;
 
-	/* Clip the text_out function at two smaller than the screen width */
-	text_out_wrap = wid - 2;
-
-
-	/* X co-ords first */
-	ctx->scr_places_x[LOC_PRICE] = wid - 14;
-	ctx->scr_places_x[LOC_AU] = wid - 26;
-	ctx->scr_places_x[LOC_OWNER] = wid - 2;
-	ctx->scr_places_x[LOC_WEIGHT] = wid - 14;
-
-	/* Add space for prices */
-	if (store->feat != FEAT_HOME)
-		ctx->scr_places_x[LOC_WEIGHT] -= 10;
-
-	/* Then Y */
-	ctx->scr_places_y[LOC_OWNER] = 1;
-	ctx->scr_places_y[LOC_HEADER] = 3;
-
-	/* If we are displaying help, make the height smaller */
-	if (ctx->flags & (STORE_SHOW_HELP))
-		hgt -= 3;
-
-	ctx->scr_places_y[LOC_MORE] = hgt - 3;
-	ctx->scr_places_y[LOC_AU] = hgt - 1;
+	/* Optional help needs at least a few rows for the item list.
+	 * Keep all terminal Y coordinates valid during Android rotation. */
+	show_help = (ctx->flags & STORE_SHOW_HELP) && hgt >= 10;
+	content_height = show_help ? hgt - 3 : hgt;
+	ctx->scr_places_y[LOC_OWNER] = angdroid_store_safe_row(1, hgt);
+	ctx->scr_places_y[LOC_HEADER] = angdroid_store_safe_row(3, hgt);
+	ctx->scr_places_y[LOC_MORE] =
+		angdroid_store_safe_row(content_height - 3, hgt);
+	ctx->scr_places_y[LOC_AU] =
+		angdroid_store_safe_row(content_height - 1, hgt);
 
 	loc = m->boundary;
-
-	/* If we're displaying the help, then put it with a line of padding */
-	if (ctx->flags & (STORE_SHOW_HELP)) {
-		ctx->scr_places_y[LOC_HELP_CLEAR] = hgt - 1;
-		ctx->scr_places_y[LOC_HELP_PROMPT] = hgt;
+	if (show_help) {
+		ctx->scr_places_y[LOC_HELP_CLEAR] =
+			angdroid_store_safe_row(content_height - 1, hgt);
+		ctx->scr_places_y[LOC_HELP_PROMPT] =
+			angdroid_store_safe_row(content_height, hgt);
 		loc.page_rows = -5;
 	} else {
-		ctx->scr_places_y[LOC_HELP_CLEAR] = hgt - 2;
-		ctx->scr_places_y[LOC_HELP_PROMPT] = hgt - 1;
+		ctx->scr_places_y[LOC_HELP_CLEAR] =
+			angdroid_store_safe_row(hgt - 2, hgt);
+		ctx->scr_places_y[LOC_HELP_PROMPT] =
+			angdroid_store_safe_row(hgt - 1, hgt);
 		loc.page_rows = -2;
 	}
 
 	menu_layout(m, &loc);
 }
-
 
 /**
  * Redisplay a single store entry
@@ -269,59 +286,56 @@ static void store_display_recalc(struct store_context *ctx)
 static void store_display_entry(struct menu *menu, int oid, bool cursor, int row,
 								int col, int width)
 {
+	struct store_context *ctx = menu_priv(menu);
+	struct store *store = ctx->store;
+	angdroid_store_column_layout columns;
 	struct object *obj;
+	int name_width;
 	int32_t x;
 	uint32_t desc = ODESC_PREFIX;
-
 	char o_name[80];
 	char out_val[160];
 	uint8_t colour;
-	int16_t obj_weight;
 
-	struct store_context *ctx = menu_priv(menu);
-	struct store *store = ctx->store;
 	assert(store);
-
-	/* Get the object */
+	if (oid < 0 || oid >= store->stock_num || !ctx->list[oid])
+		return;
 	obj = ctx->list[oid];
+	columns = angdroid_store_columns(Term->wid, 1, store->feat == FEAT_HOME);
+	name_width = angdroid_store_name_budget(columns, col, width);
 
-	/* Describe the object - preserving insriptions in the home */
-	if (store->feat == FEAT_HOME) {
+	/* The name is clipped to its own cell budget, before price/weight.
+	 * The original object and description remain untouched. */
+	if (store->feat == FEAT_HOME)
 		desc |= ODESC_FULL;
-	} else {
+	else
 		desc |= ODESC_FULL | ODESC_STORE;
-	}
 	object_desc(o_name, sizeof(o_name), obj, desc, player);
+	store_put_clipped(obj->kind->base->attr, o_name, row, col, name_width);
 
-	/* Display the object */
-	c_put_str(obj->kind->base->attr, o_name, row, col);
-
-	/* Show weights */
+	/* Weight is optional on portrait layouts. Price takes precedence. */
 	colour = curs_attrs[CURS_KNOWN][(int)cursor];
-	obj_weight = object_weight_one(obj);
-	strnfmt(out_val, sizeof out_val, "%3d.%d lb", obj_weight / 10,
-			obj_weight % 10);
-	c_put_str(colour, out_val, row, ctx->scr_places_x[LOC_WEIGHT]);
+	if (columns.weight_col >= 0 && columns.weight_col < col + width) {
+		int weight = object_weight_one(obj);
+		strnfmt(out_val, sizeof out_val, "%3d.%d lb",
+			weight / 10, weight % 10);
+		store_put_clipped(colour, out_val, row, columns.weight_col,
+			MIN(10, col + width - columns.weight_col));
+	}
 
-	/* Describe an object (fully) in a store */
-	if (store->feat != FEAT_HOME) {
-		/* Extract the "minimum" price */
+	if (columns.price_col >= 0 && columns.price_col < col + width) {
+		/* Extract the minimum price and preserve the unaffordable color. */
 		x = price_item(store, obj, false, 1);
-
-		/* Make sure the player can afford it */
 		if (player->au < x)
 			colour = curs_attrs[CURS_UNKNOWN][(int)cursor];
-
-		/* Actually draw the price */
-		if (tval_can_have_charges(obj) && (obj->number > 1))
+		if (tval_can_have_charges(obj) && obj->number > 1)
 			strnfmt(out_val, sizeof out_val, "%9ld avg", (long)x);
 		else
 			strnfmt(out_val, sizeof out_val, "%9ld    ", (long)x);
-
-		c_put_str(colour, out_val, row, ctx->scr_places_x[LOC_PRICE]);
+		store_put_clipped(colour, out_val, row, columns.price_col,
+			MIN(14, col + width - columns.price_col));
 	}
 }
-
 
 /**
  * Display store (after clearing screen)
@@ -331,47 +345,55 @@ static void store_display_frame(struct store_context *ctx)
 	char buf[80];
 	struct store *store = ctx->store;
 	struct owner *proprietor = store->owner;
+	bool home = store->feat == FEAT_HOME;
+	angdroid_store_column_layout layout =
+		angdroid_store_columns(Term->wid, 1, home);
+	int header_row = ctx->scr_places_y[LOC_HEADER];
+	int owner_row = ctx->scr_places_y[LOC_OWNER];
 
-	/* Clear screen */
 	Term_clear();
 
-	/* The "Home" is special */
-	if (store->feat == FEAT_HOME) {
-		/* Put the owner name */
-		put_str(angdroid_game_ui_text("Your Home", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_OWNER], 1);
-
-		/* Label the object descriptions */
-		put_str(angdroid_game_ui_text("Home Inventory", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER], 1);
-
-		/* Show weight header */
-		put_str(angdroid_game_ui_text("Weight", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER],
-				ctx->scr_places_x[LOC_WEIGHT] + 2);
+	if (home) {
+		store_put_clipped(COLOUR_WHITE,
+			angdroid_game_ui_text("Your Home", angdroid_zh_tw_enabled()),
+			owner_row, 1, MAX(0, layout.width - 2));
+		store_put_clipped(COLOUR_WHITE,
+			angdroid_game_ui_text("Home Inventory", angdroid_zh_tw_enabled()),
+			header_row, 1, layout.name_cols);
 	} else {
-		/* Normal stores */
 		const char *store_name = f_info[store->feat].name;
 		const char *owner_name = proprietor->name;
+		size_t owner_cols = angdroid_utf8_display_columns(owner_name);
+		size_t summary_cols;
 
-		/* Put the owner name */
-		put_str(owner_name, ctx->scr_places_y[LOC_OWNER], 1);
+		store_put_clipped(COLOUR_WHITE, owner_name, owner_row, 1,
+			MAX(0, layout.width - 2));
 
-		/* Show the max price in the store (above prices) */
+		/* The right-aligned summary must never overlap the owner's name.
+		 * On portrait layouts, showing only the owner is preferable. */
 		strnfmt(buf, sizeof(buf), "%s (%ld)", store_name,
-				(long)proprietor->max_cost);
-		prt(buf, ctx->scr_places_y[LOC_OWNER],
-			ctx->scr_places_x[LOC_OWNER] - strlen(buf));
+			(long)proprietor->max_cost);
+		summary_cols = angdroid_utf8_display_columns(buf);
+		if (summary_cols + owner_cols + 4 <= (size_t)layout.width) {
+			int summary_col = layout.width - 2 - (int)summary_cols;
+			store_put_clipped(COLOUR_WHITE, buf, owner_row, summary_col,
+				(int)summary_cols);
+		}
 
-		/* Label the object descriptions */
-		put_str(angdroid_game_ui_text("Store Inventory", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER], 1);
-
-		/* Showing weight label */
-		put_str(angdroid_game_ui_text("Weight", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER],
-				ctx->scr_places_x[LOC_WEIGHT] + 2);
-
-		/* Label the asking price (in stores) */
-		put_str(angdroid_game_ui_text("Price", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER], ctx->scr_places_x[LOC_PRICE] + 4);
+		store_put_clipped(COLOUR_WHITE,
+			angdroid_game_ui_text("Store Inventory", angdroid_zh_tw_enabled()),
+			header_row, 1, layout.name_cols);
 	}
-}
 
+	if (layout.weight_col >= 0)
+		store_put_clipped(COLOUR_WHITE,
+			angdroid_game_ui_text("Weight", angdroid_zh_tw_enabled()),
+			header_row, layout.weight_col + 2, 8);
+	if (layout.price_col >= 0)
+		store_put_clipped(COLOUR_WHITE,
+			angdroid_game_ui_text("Price", angdroid_zh_tw_enabled()),
+			header_row, layout.price_col + 4, 10);
+}
 
 /**
  * Display help.
@@ -443,21 +465,31 @@ static void store_display_help(struct store_context *ctx)
  */
 static void store_redraw(struct store_context *ctx)
 {
-	if (ctx->flags & (STORE_FRAME_CHANGE)) {
+	angdroid_store_column_layout layout =
+		angdroid_store_columns(Term->wid, 1,
+			ctx->store->feat == FEAT_HOME);
+	if (ctx->flags & STORE_FRAME_CHANGE) {
 		store_display_frame(ctx);
 
-		if (ctx->flags & STORE_SHOW_HELP)
+		if ((ctx->flags & STORE_SHOW_HELP) && Term->hgt >= 10)
 			store_display_help(ctx);
 		else
-			prt(angdroid_game_ui_text("Press '?' for help.", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HELP_PROMPT], 1);
+			store_put_clipped(COLOUR_WHITE,
+				angdroid_game_ui_text("Press '?' for help.",
+					angdroid_zh_tw_enabled()),
+				ctx->scr_places_y[LOC_HELP_PROMPT], 1,
+				MAX(0, layout.width - 1));
 
-		ctx->flags &= ~(STORE_FRAME_CHANGE);
+		ctx->flags &= ~STORE_FRAME_CHANGE;
 	}
 
-	if (ctx->flags & (STORE_GOLD_CHANGE)) {
-		prt(format("Gold Remaining: %9ld", (long)player->au),
-				ctx->scr_places_y[LOC_AU], ctx->scr_places_x[LOC_AU]);
-		ctx->flags &= ~(STORE_GOLD_CHANGE);
+	if (ctx->flags & STORE_GOLD_CHANGE) {
+		int gold_col = layout.gold_col;
+		store_put_clipped(COLOUR_WHITE,
+			format("Gold Remaining: %9ld", (long)player->au),
+			ctx->scr_places_y[LOC_AU], gold_col,
+			layout.width - gold_col);
+		ctx->flags &= ~STORE_GOLD_CHANGE;
 	}
 }
 
@@ -1192,6 +1224,17 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 	return false;
 }
 
+/* Recalculate price/weight columns and redraw the frame when the
+ * terminal changes size. Otherwise layout changes only move the item list. */
+static void store_menu_resize(struct menu *m)
+{
+	struct store_context *ctx = menu_priv(m);
+
+	store_display_recalc(ctx);
+	ctx->flags |= STORE_FRAME_CHANGE | STORE_GOLD_CHANGE;
+	store_redraw(ctx);
+}
+
 static region store_menu_region = { 1, 4, -1, -2 };
 static const menu_iter store_menu =
 {
@@ -1199,7 +1242,7 @@ static const menu_iter store_menu =
 	NULL,
 	store_display_entry,
 	store_menu_handle,
-	NULL
+	store_menu_resize
 };
 
 /**
