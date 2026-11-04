@@ -987,3 +987,16 @@ missing terrain/trap table coverage, and malformed canonical C table-pair
 regular expressions. Its own negative cases verify that a duplicated footer
 and an unterminated string would be rejected. This extra safeguard only
 checks Python audit structure; it is not an Android NDK/APK or gameplay test.
+
+## Main knowledge menu labels (2026-11-05)
+
+The eight knowledge actions, three follow-up actions, and store entries
+now display Traditional Chinese labels in the zh-TW native game. The mapping
+in `zh-tw-ui.h` already existed but the menu was still copying English strings.
+Store labels reuse the terrain/shop name dictionary only for presentation.
+Their command numbers `1`–`9`, list positions and callbacks are unchanged.
+English labels preserve the original possessive/plural syntax, and oversized
+custom labels fall back to the original English format instead of being
+displayed with broken UTF-8. An independent C99 regression exercises all 11
+fixed labels, selected shop names, English fallback, missing names, and tiny
+buffers. Android APK/NDK and emulator verification are still required.

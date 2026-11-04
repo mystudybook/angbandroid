@@ -69,6 +69,7 @@
 #include "zh-tw-knowledge-groups.h"
 #include "zh-tw-rune-lore.h"
 #include "zh-tw-terrain-trap.h"
+#include "zh-tw-knowledge-menu.h"
 #include "knowledge-monster-label.h"
 #include "knowledge-column-text.h"
 #include "menu-text-fit.h"
@@ -3739,7 +3740,8 @@ static void reset_main_knowledge_menu(void)
 	for (j = 0; j < (int) N_ELEMENTS(pre_store_actions)
 			&& i < main_knowledge_menu.count; ++j, ++i) {
 		main_knowledge_menu.labels[i] =
-			string_make(pre_store_actions[j].label);
+			string_make(angdroid_game_ui_text(
+                pre_store_actions[j].label, angdroid_zh_tw_enabled()));
 		main_knowledge_menu.actions[i].name =
 			main_knowledge_menu.labels[i];
 		main_knowledge_menu.actions[i].action =
@@ -3747,14 +3749,20 @@ static void reset_main_knowledge_menu(void)
 	}
 	for (j = 0; j < scount && i < main_knowledge_menu.count; ++j, ++i) {
 		const char *name = f_info[stores[j].feat].name;
+		const char *shortcut = (j < 9) ? shortcuts[j] : "";
+		char localized[256];
+		const char *label = angdroid_knowledge_store_label(localized,
+			sizeof(localized), name, j + 1, shortcut,
+			angdroid_zh_tw_enabled());
 
-		main_knowledge_menu.labels[i] =
-			string_make((name) ?
-				format("Display %s'%s contents%s",
-				name, (suffix(name, "s")) ? "" : "s",
-				(j < 9) ? shortcuts[j] : "") :
-				format("Display store %d's contents%s",
-				j + 1, (j < 9) ? shortcuts[j] : ""));
+		/* Preserve the original format if an unusual custom store name
+		 * does not fit in the bounded translation buffer. */
+		if (!label) {
+			label = name ? format("Display %s'%s contents%s",
+				name, suffix(name, "s") ? "" : "s", shortcut) :
+				format("Display store %d's contents%s", j + 1, shortcut);
+		}
+		main_knowledge_menu.labels[i] = string_make(label);
 		main_knowledge_menu.actions[i].name =
 			main_knowledge_menu.labels[i];
 		main_knowledge_menu.actions[i].action =
@@ -3763,7 +3771,8 @@ static void reset_main_knowledge_menu(void)
 	for (j = 0; j < (int) N_ELEMENTS(pre_store_actions)
 			&& i < main_knowledge_menu.count; ++j, ++i) {
 		main_knowledge_menu.labels[i] =
-			string_make(post_store_actions[j].label);
+			string_make(angdroid_game_ui_text(
+                post_store_actions[j].label, angdroid_zh_tw_enabled()));
 		main_knowledge_menu.actions[i].name =
 			main_knowledge_menu.labels[i];
 		main_knowledge_menu.actions[i].action =

@@ -103,6 +103,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_terrain_trap_locale"
 "$BUILD_DIR/test_terrain_trap_locale"
 
+# Knowledge action names and store labels: verify locale and exact shortcuts.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_knowledge_store_menu_locale.c" \
+    -o "$BUILD_DIR/test_knowledge_store_menu_locale"
+"$BUILD_DIR/test_knowledge_store_menu_locale"
+
 # Target selection help only localizes descriptive fragments, not key bindings.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_target_help_locale.c" \
