@@ -694,3 +694,21 @@ Standalone C99 and static source checks cover the 18 dictionary entries,
 every help output site, colored shortcuts, literal format safety and English
 fallback. Android APK/NDK and emulator acceptance, especially narrow
 layout behavior and store/home transactions, remain outstanding.
+
+## Shopkeeper welcome messages and class salutations (2026-11-04)
+
+All nine nonempty Angband shopkeeper greeting templates now have display-only
+Traditional Chinese equivalents. Exact-match source strings and the original
+`%s` argument count/order are preserved, with English fallback and the original
+empty entry unchanged. Random selection, shopkeeper identity, player level,
+greeting timing and transaction rules are untouched. The existing class-title
+dictionary localizes titles in greetings, while the generic `valued customer`
+salutation becomes `貴賓`; custom player names remain intact. Fixed-size
+shopkeeper name copying is bounded to avoid overrunning the 20-byte buffer.
+
+A strict host-C99 test checks each greeting, all `%s` conversions, empty,
+unknown and null inputs and English fallback. The Python static source audit
+verifies that the translation keys match the original game table and that
+formatting and random/level selection wiring remain in place. Random hint
+content is still English. Full Android APK/NDK and emulator tests, especially
+narrow portrait view and long messages, remain pending.

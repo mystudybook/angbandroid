@@ -52,6 +52,8 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-store-text.h"
+#include "zh-tw-store-greetings.h"
+#include "zh-tw-class-titles.h"
 #include "store-column-layout.h"
 #include "menu-text-fit.h"
 #include "store-menu-row.h"
@@ -171,7 +173,8 @@ static void prt_welcome(const struct owner *proprietor)
 		return;
 
 	/* Get the first name of the store owner (stop before the first space) */
-	for (j = 0; owner_name[j] && owner_name[j] != ' '; j++)
+	for (j = 0; j < (int)sizeof(short_name) - 1 &&
+		owner_name[j] && owner_name[j] != ' '; j++)
 		short_name[j] = owner_name[j];
 
 	/* Truncate the name */
@@ -189,14 +192,17 @@ static void prt_welcome(const struct owner *proprietor)
 
 		/* Get a title for the character */
 		if ((i % 2) && randint0(2))
-			player_name = player->class->title[(player->lev - 1) / 5];
+			player_name = angdroid_zh_tw_class_title(
+				player->class->title[(player->lev - 1) / 5],
+				angdroid_zh_tw_enabled());
 		else if (randint0(2))
 			player_name = player->full_name;
 		else
-			player_name = "valued customer";
+			player_name = angdroid_zh_tw_enabled() ? "貴賓" : "valued customer";
 
 		/* Balthazar says "Welcome" */
-		prt(format(comment_welcome[i], short_name, player_name), 0, 0);
+		prt(format(angdroid_store_greeting_format(comment_welcome[i],
+			angdroid_zh_tw_enabled()), short_name, player_name), 0, 0);
 	}
 }
 
