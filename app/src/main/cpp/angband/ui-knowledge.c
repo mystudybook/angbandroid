@@ -4346,10 +4346,16 @@ static void lookup_symbol(char sym, char *buf, size_t max)
 	}
 
 	/* No matches */
-        if (isprint(sym)) {
-			strnfmt(buf, max, "%c - Unknown Symbol.", sym);
+        if (isprint((unsigned char)sym)) {
+			if (angdroid_zh_tw_enabled())
+				strnfmt(buf, max, "%c - 未知符號。", sym);
+			else
+				strnfmt(buf, max, "%c - Unknown Symbol.", sym);
         } else {
-			strnfmt(buf, max, "? - Unknown Symbol.");
+			if (angdroid_zh_tw_enabled())
+				strnfmt(buf, max, "? - 未知符號。");
+			else
+				strnfmt(buf, max, "? - Unknown Symbol.");
         }
 	
 	return;
@@ -4384,19 +4390,24 @@ void do_cmd_query_symbol(void)
 	uint16_t *who;
 
 	/* Get a character, or abort */
-	if (!get_com("Enter character to be identified, or control+[ANU]: ", &sym))
+	if (!get_com(angdroid_game_ui_text(
+		"Enter character to be identified, or control+[ANU]: ",
+		angdroid_zh_tw_enabled()), &sym))
 		return;
 
 	/* Describe */
 	if (sym == KTRL('A')) {
 		all = true;
-		my_strcpy(buf, "Full monster list.", sizeof(buf));
+		my_strcpy(buf, angdroid_game_ui_text("Full monster list.",
+			angdroid_zh_tw_enabled()), sizeof(buf));
 	} else if (sym == KTRL('U')) {
 		all = uniq = true;
-		my_strcpy(buf, "Unique monster list.", sizeof(buf));
+		my_strcpy(buf, angdroid_game_ui_text("Unique monster list.",
+			angdroid_zh_tw_enabled()), sizeof(buf));
 	} else if (sym == KTRL('N')) {
 		all = norm = true;
-		my_strcpy(buf, "Non-unique monster list.", sizeof(buf));
+		my_strcpy(buf, angdroid_game_ui_text("Non-unique monster list.",
+			angdroid_zh_tw_enabled()), sizeof(buf));
 	} else {
 		lookup_symbol(sym, buf, sizeof(buf));
 	}
@@ -4477,7 +4488,8 @@ void do_cmd_query_symbol(void)
 		tb = textblock_new();
 		lore_title(tb, race);
 
-		textblock_append(tb, " [(r)ecall, ESC]");
+		textblock_append(tb, "%s", angdroid_game_ui_text(
+			" [(r)ecall, ESC]", angdroid_zh_tw_enabled()));
 		textui_textblock_place(tb, SCREEN_REGION, NULL);
 		textblock_free(tb);
 

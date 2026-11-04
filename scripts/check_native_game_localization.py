@@ -795,6 +795,33 @@ def main():
            'strnfmt(title, sizeof(title), "artifacts (seed %08lx)"' in knowledge_ui,
            "Knowledge runes/artifacts must keep literal formats and enough UTF-8 space")
 
+    # Symbol identification: display-only translated text, original keymap.
+    symbol_translation_keys = [
+        "Enter character to be identified, or control+[ANU]: ",
+        "Full monster list.", "Unique monster list.",
+        "Non-unique monster list.", " [(r)ecall, ESC]"
+    ]
+    for label in symbol_translation_keys:
+        expect('{"' + label + '", ' in game_ui_header,
+               "Missing zh-TW symbol-inspection text: " + label)
+    expect('if (!get_com(angdroid_game_ui_text(' in knowledge_ui and
+           'my_strcpy(buf, angdroid_game_ui_text("Full monster list."' in knowledge_ui and
+           'my_strcpy(buf, angdroid_game_ui_text("Unique monster list."' in knowledge_ui and
+           'my_strcpy(buf, angdroid_game_ui_text("Non-unique monster list."' in knowledge_ui and
+           'textblock_append(tb, "%s", angdroid_game_ui_text(' in knowledge_ui,
+           "Symbol query prompts must use Chinese display-only mappings")
+    expect('strnfmt(buf, max, "%c - 未知符號。", sym)' in knowledge_ui and
+           'strnfmt(buf, max, "%c - Unknown Symbol.", sym)' in knowledge_ui and
+           'strnfmt(buf, max, "? - 未知符號。")' in knowledge_ui and
+           'strnfmt(buf, max, "? - Unknown Symbol.")' in knowledge_ui,
+           "Symbol lookup needs safe literal formats in both languages")
+    expect(all(x in knowledge_ui for x in (
+        "if (sym == KTRL('A'))", "sym == KTRL('U')",
+        "sym == KTRL('N')", "query.code == 'k'",
+        "query.code == 'y' || query.code == 'p'",
+        "query.code != 'r'", "query.code == ESCAPE")),
+        "Symbol query game commands must remain unchanged")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
