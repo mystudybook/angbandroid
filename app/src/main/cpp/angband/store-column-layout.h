@@ -72,4 +72,12 @@ static inline int angdroid_store_name_budget(
     return end > row_col ? (int)(end - row_col) : 0;
 }
 
+/* Footer/header coordinates must also stay nonnegative on tiny surfaces.
+ * A zero-height screen cannot draw; callers check current term height. */
+static inline int angdroid_store_safe_row(int row, int height)
+{
+    if (height <= 0 || row < 0) return 0;
+    return row >= height ? height - 1 : row;
+}
+
 #endif
