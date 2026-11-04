@@ -33,7 +33,7 @@ int main(void)
     cells = angdroid_knowledge_monster_copy(label, sizeof(label),
         "kobold", 1, 1, 4);
     assert(cells == 4 && strcmp(label, "kobo") == 0);
-    cells = angdroid_knowledge_monster_copy(label, 4,
+    cells = angdroid_knowledge_monster_copy(label, 3,
         "ancient red dragon", 0, 1, 20);
     assert(cells == 0 && label[0] == '\0'); /* no partial UTF-8 */
     cells = angdroid_knowledge_monster_copy(NULL, 0,
