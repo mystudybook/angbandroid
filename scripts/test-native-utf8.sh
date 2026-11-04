@@ -115,6 +115,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_menu_compact_layout"
 "$BUILD_DIR/test_menu_compact_layout"
 
+# Chinese menu labels must clip by terminal cells, not decoded codepoints.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_text_fit.c" \
+    -o "$BUILD_DIR/test_menu_text_fit"
+"$BUILD_DIR/test_menu_text_fit"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \
