@@ -342,47 +342,55 @@ static void store_display_frame(struct store_context *ctx)
 	char buf[80];
 	struct store *store = ctx->store;
 	struct owner *proprietor = store->owner;
+	bool home = store->feat == FEAT_HOME;
+	angdroid_store_column_layout layout =
+		angdroid_store_columns(Term->wid, 1, home);
+	int header_row = ctx->scr_places_y[LOC_HEADER];
+	int owner_row = ctx->scr_places_y[LOC_OWNER];
 
-	/* Clear screen */
 	Term_clear();
 
-	/* The "Home" is special */
-	if (store->feat == FEAT_HOME) {
-		/* Put the owner name */
-		put_str(angdroid_game_ui_text("Your Home", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_OWNER], 1);
-
-		/* Label the object descriptions */
-		put_str(angdroid_game_ui_text("Home Inventory", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER], 1);
-
-		/* Show weight header */
-		put_str(angdroid_game_ui_text("Weight", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER],
-				ctx->scr_places_x[LOC_WEIGHT] + 2);
+	if (home) {
+		store_put_clipped(COLOUR_WHITE,
+			angdroid_game_ui_text("Your Home", angdroid_zh_tw_enabled()),
+			owner_row, 1, MAX(0, layout.width - 2));
+		store_put_clipped(COLOUR_WHITE,
+			angdroid_game_ui_text("Home Inventory", angdroid_zh_tw_enabled()),
+			header_row, 1, layout.name_cols);
 	} else {
-		/* Normal stores */
 		const char *store_name = f_info[store->feat].name;
 		const char *owner_name = proprietor->name;
+		size_t owner_cols = angdroid_utf8_display_columns(owner_name);
+		size_t summary_cols;
 
-		/* Put the owner name */
-		put_str(owner_name, ctx->scr_places_y[LOC_OWNER], 1);
+		store_put_clipped(COLOUR_WHITE, owner_name, owner_row, 1,
+			MAX(0, layout.width - 2));
 
-		/* Show the max price in the store (above prices) */
+		/* The right-aligned summary must never overlap the owner's name.
+		 * On portrait layouts, showing only the owner is preferable. */
 		strnfmt(buf, sizeof(buf), "%s (%ld)", store_name,
-				(long)proprietor->max_cost);
-		prt(buf, ctx->scr_places_y[LOC_OWNER],
-			ctx->scr_places_x[LOC_OWNER] - strlen(buf));
+			(long)proprietor->max_cost);
+		summary_cols = angdroid_utf8_display_columns(buf);
+		if (summary_cols + owner_cols + 4 <= (size_t)layout.width) {
+			int summary_col = layout.width - 2 - (int)summary_cols;
+			store_put_clipped(COLOUR_WHITE, buf, owner_row, summary_col,
+				(int)summary_cols);
+		}
 
-		/* Label the object descriptions */
-		put_str(angdroid_game_ui_text("Store Inventory", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER], 1);
-
-		/* Showing weight label */
-		put_str(angdroid_game_ui_text("Weight", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER],
-				ctx->scr_places_x[LOC_WEIGHT] + 2);
-
-		/* Label the asking price (in stores) */
-		put_str(angdroid_game_ui_text("Price", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HEADER], ctx->scr_places_x[LOC_PRICE] + 4);
+		store_put_clipped(COLOUR_WHITE,
+			angdroid_game_ui_text("Store Inventory", angdroid_zh_tw_enabled()),
+			header_row, 1, layout.name_cols);
 	}
-}
 
+	if (layout.weight_col >= 0)
+		store_put_clipped(COLOUR_WHITE,
+			angdroid_game_ui_text("Weight", angdroid_zh_tw_enabled()),
+			header_row, layout.weight_col + 2, 8);
+	if (layout.price_col >= 0)
+		store_put_clipped(COLOUR_WHITE,
+			angdroid_game_ui_text("Price", angdroid_zh_tw_enabled()),
+			header_row, layout.price_col + 4, 10);
+}
 
 /**
  * Display help.
@@ -454,21 +462,31 @@ static void store_display_help(struct store_context *ctx)
  */
 static void store_redraw(struct store_context *ctx)
 {
-	if (ctx->flags & (STORE_FRAME_CHANGE)) {
+	angdroid_store_column_layout layout =
+		angdroid_store_columns(Term->wid, 1,
+			ctx->store->feat == FEAT_HOME);
+	if (ctx->flags & STORE_FRAME_CHANGE) {
 		store_display_frame(ctx);
 
 		if (ctx->flags & STORE_SHOW_HELP)
 			store_display_help(ctx);
 		else
-			prt(angdroid_game_ui_text("Press '?' for help.", angdroid_zh_tw_enabled()), ctx->scr_places_y[LOC_HELP_PROMPT], 1);
+			store_put_clipped(COLOUR_WHITE,
+				angdroid_game_ui_text("Press '?' for help.",
+					angdroid_zh_tw_enabled()),
+				ctx->scr_places_y[LOC_HELP_PROMPT], 1,
+				MAX(0, layout.width - 1));
 
-		ctx->flags &= ~(STORE_FRAME_CHANGE);
+		ctx->flags &= ~STORE_FRAME_CHANGE;
 	}
 
-	if (ctx->flags & (STORE_GOLD_CHANGE)) {
-		prt(format("Gold Remaining: %9ld", (long)player->au),
-				ctx->scr_places_y[LOC_AU], ctx->scr_places_x[LOC_AU]);
-		ctx->flags &= ~(STORE_GOLD_CHANGE);
+	if (ctx->flags & STORE_GOLD_CHANGE) {
+		int gold_col = layout.gold_col;
+		store_put_clipped(COLOUR_WHITE,
+			format("Gold Remaining: %9ld", (long)player->au),
+			ctx->scr_places_y[LOC_AU], gold_col,
+			layout.width - gold_col);
+		ctx->flags &= ~STORE_GOLD_CHANGE;
 	}
 }
 
