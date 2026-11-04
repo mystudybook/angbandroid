@@ -976,3 +976,14 @@ been restored without dropping its table-coverage, count, Chinese/English,
 APK/NDK regression and artifact-title checks. The verifier still needs to
 be executed as part of the full Android validation before claiming an APK
 passes; a source-level repair alone does not validate the complete build.
+
+
+## Native checker integrity regression (2026-11-05)
+
+The offline verification runner now executes a separate Python AST integrity
+test **before** loading `check_native_game_localization.py`. It detects
+truncated syntax, a duplicated `__main__` footer, missing table parser,
+missing terrain/trap table coverage, and malformed canonical C table-pair
+regular expressions. Its own negative cases verify that a duplicated footer
+and an unterminated string would be rejected. This extra safeguard only
+checks Python audit structure; it is not an Android NDK/APK or gameplay test.

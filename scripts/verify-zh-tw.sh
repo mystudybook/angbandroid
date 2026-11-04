@@ -59,6 +59,7 @@ run_check "Native menu CJK column clipping" python3 "$ROOT/tests/test_menu_text_
 run_check "Compact menu layout on Android rotation" python3 "$ROOT/tests/test_menu_compact_layout_source.py"
 run_check "Native blank-cell touch safety" python3 "$ROOT/tests/test_menu_hit_test_source.py"
 run_check "Narrow native menu column safety" python3 "$ROOT/tests/test_menu_column_width_source.py"
+run_check "Native checker Python syntax and parser integrity" python3 "$ROOT/tests/test_zh_tw_checker_integrity.py"
 run_check "Native Angband game zh-TW text isolation" python3 "$ROOT/scripts/check_native_game_localization.py"
 run_check "Canonical translation coverage audit" python3 "$ROOT/scripts/audit-zh-tw-coverage.py"
 run_check "Coverage audit JSON regression" python3 "$ROOT/tests/test_localization_coverage.py"
