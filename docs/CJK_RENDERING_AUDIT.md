@@ -144,6 +144,16 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Pending acceptance:** build an Android debug APK, view Home and a regular shop at 20/30/31/40/41/80 terminal cells, verify name/price/weight visibility and long Traditional Chinese item names, rotate while shopping, and complete buy/sell/cancel interactions on an emulator or device.
 
+## Store purchase cancellation and invalid stock indices (2026-11-04)
+
+- `store_purchase()` allocates a temporary stack with `object_new()` before the final confirmation prompt. On ESC/No, the original code returned immediately without releasing that stack. The rejection branch now invokes `object_delete(NULL, NULL, &dummy)` before returning; the existing successful-purchase and cannot-carry cleanup paths are preserved.
+- Nested `store_get_stock()` no longer falls back to an original focused item when the menu returns an event other than `EVT_SELECT`. ESC, an unexpected event or a zero-stock shop returns `-1` instead. Actual selection must be within both the current store stock count **and** the allocated backing array capacity, and its object pointer must be non-null.
+- Purchase, examination, item context popups, direct menu selection and touch selection validate the stock index before dereferencing it. `inspect_only` shop views explicitly reject purchase and sale commands even if an unexpected input event reaches those handlers.
+- The C99 helper regression `tests/native/test_store_stock_guard.c` covers explicit SELECT, cancellation, zero stock, negative and stale cursors, capacity bounds and large indices. `tests/test_store_stock_guard_source.py` guards the real purchase cancellation cleanup, popup entry checks, read-only mode and keyboard dispatch. Both are wired into the root offline verification command.
+- No purchase pricing, sale calculation, inventory ownership data or savefile structure is changed. Full game execution, Android screenshots, emulator input and heap profiling are still needed to verify end-to-end behavior and observe memory use.
+
+**Pending Android acceptance:** repeatedly cancel a purchase after the price is displayed and monitor memory usage; buy one item, empty the store, invoke Help and Sell, then attempt buying or examining from an empty/stale list; rotate while item-selection is open; enter and leave read-only store knowledge.
+
 ## Regression checks
 
 Run from the repository root:

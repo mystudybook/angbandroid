@@ -39,7 +39,7 @@ for fragment in (
     "popup_row < 0",
     "context_menu_store_item(ctx, oid, 1, popup_row)",
     "event->mouse.y == angdroid_store_menu_screen_row(",
-    "oid >= 0 && oid < store->stock_num",
+    "angdroid_store_stock_index_valid(",
 ):
     if fragment not in handler:
         raise SystemExit(f"FAIL: offscreen store popup or unsafe stock cursor: {fragment}")
