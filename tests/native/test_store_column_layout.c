@@ -22,24 +22,27 @@ int main(void)
     assert(l.price_col == -1 && l.weight_col == -1);
     assert(l.name_cols == 19 && l.gold_col == 0);
     assert(angdroid_store_name_budget(l, 1, 19) == 19);
-    l = angdroid_store_columns(27, 1, 0);
-    assert(l.price_col == -1 && l.weight_col == -1);
     l = angdroid_store_columns(28, 1, 0);
-    assert(l.price_col == 14 && l.weight_col == -1);
-    assert(l.name_cols == 12);
-    l = angdroid_store_columns(37, 1, 0);
-    assert(l.price_col == 23 && l.weight_col == -1);
-    l = angdroid_store_columns(38, 1, 0);
-    assert(l.price_col == 24 && l.weight_col == 14);
-    assert(l.name_cols == 12);
-    assert(angdroid_store_name_budget(l, 1, 37) == 12);
+    assert(l.price_col == -1 && l.weight_col == -1);
+    l = angdroid_store_columns(30, 1, 0);
+    assert(l.price_col == -1 && l.weight_col == -1);
+    l = angdroid_store_columns(31, 1, 0);
+    assert(l.price_col == 17 && l.weight_col == -1);
+    assert(l.name_cols == 15); /* 3 shortcut + 12 item-name cells */
+    assert(angdroid_store_name_budget(l, 4, 27) == 12);
+    l = angdroid_store_columns(40, 1, 0);
+    assert(l.price_col == 26 && l.weight_col == -1);
+    l = angdroid_store_columns(41, 1, 0);
+    assert(l.price_col == 27 && l.weight_col == 17);
+    assert(l.name_cols == 15);
+    assert(angdroid_store_name_budget(l, 4, 37) == 12);
 
-    /* Home has no price column and can show weight earlier. */
-    l = angdroid_store_columns(28, 1, 1);
-    assert(l.price_col == -1 && l.weight_col == 14);
-    assert(l.name_cols == 12);
-    l = angdroid_store_columns(27, 1, 1);
-    assert(l.weight_col == -1);
+    /* Home has no price column and adds weight only after the tag/name. */
+    l = angdroid_store_columns(30, 1, 1);
+    assert(l.price_col == -1 && l.weight_col == -1);
+    l = angdroid_store_columns(31, 1, 1);
+    assert(l.price_col == -1 && l.weight_col == 17);
+    assert(l.name_cols == 15);
 
     /* No negative coordinates or subtraction wrapping on tiny terminals. */
     l = angdroid_store_columns(1, 1, 0);
