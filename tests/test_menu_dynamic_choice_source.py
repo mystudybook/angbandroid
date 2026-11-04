@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Guard dynamic popups so g means Buy and cancel cannot select Examine."""
+"""Guard dynamic menus so shortcuts and filtered choices select correct actions."""
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,13 +30,19 @@ for token in (
     "alias_row = get_cursor_key(m, m->top, target)",
     "angdroid_menu_dynamic_choice_index(",
     "e.type == EVT_SELECT",
-    "cursor < 0 || !is_valid_row(m, cursor)",
+    "angdroid_menu_dynamic_original_index(cursor,",
+    "visible_count, m->count, m->filter_list)",
+    "if (selected < 0 || !is_valid_row(m, cursor))",
     "return menu_dynamic_select_alias(m, 0, 0);",
 ):
     if token not in selected:
         raise SystemExit(f"FAIL: dynamic selection ambiguous event handling: {token}")
-if "if (e.type == EVT_ESCAPE)" in selected and "return -1" not in selected:
-    raise SystemExit("FAIL: selection no longer safely cancels")
+if selected.index("angdroid_menu_dynamic_original_index(cursor,") > selected.index(
+    "is_valid_row(m, cursor)"
+):
+    raise SystemExit("FAIL: filtered menu validity checked before index bounds")
+if "selected = cursor;" in selected:
+    raise SystemExit("FAIL: visible cursor used as original entry index")
 
 context = store.split("static bool context_menu_store_item(", 1)[1].split(
     "\n/**\n * Handle store menu input", 1
@@ -53,4 +59,4 @@ for token in (
 if "handle_g_context_store_item" in store:
     raise SystemExit("FAIL: unsafe row-handler based key replacement remains")
 
-print("PASS: dynamic menus validate SELECT and g aliases Buy; Chinese text clipped")
+print("PASS: dynamic menus map filtered choices and g aliases Buy; Chinese text clipped")
