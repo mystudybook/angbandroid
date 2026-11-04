@@ -93,6 +93,14 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text(" untried", 1), " 未使用") == 0);
     assert(strcmp(angdroid_game_ui_text("You cannot browse that.", 0),
                   "You cannot browse that.") == 0);
+    assert(strcmp(angdroid_game_ui_text("Command: Sidebar Mode", 1),
+                  "操作：側邊欄模式") == 0);
+    assert(strcmp(angdroid_game_ui_text("The '=' key is reserved.", 1),
+                  "等號（=）已保留供系統使用。") == 0);
+    assert(strcmp(angdroid_game_ui_text("New movement delay: ", 1),
+                  "新的移動延遲：") == 0);
+    assert(strcmp(angdroid_game_ui_text("Command: Sidebar Mode", 0),
+                  "Command: Sidebar Mode") == 0);
     assert(strcmp(angdroid_game_ui_text("New game", 0), "New game") == 0);
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);

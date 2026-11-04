@@ -425,6 +425,22 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         { "slept", "睡眠" },
         { "held", "束縛" },
         { "slowed", "減速" },
+        {"The '=' key is reserved.", "等號（=）已保留供系統使用。"},
+        {"  Press '=' when finished.", "  完成後請按 =。"},
+        {"  Use 'CTRL-u' to reset.", "  按 Ctrl+U 可以重設。"},
+        {"To use in other sessions, save the keymaps to a file.  Press a key to continue.", "若要在其他遊戲使用，請將鍵位設定存成檔案。按任意鍵繼續。"},
+        {"Visual attr/char tables reset.", "視覺屬性與字元設定已重設。"},
+        {"Command: Modify colors", "操作：調整顏色"},
+        {"Command: Base Delay Factor", "操作：基本延遲設定"},
+        {"New base delay factor (0-255): ", "新的基本延遲（0–255）："},
+        {"Command: Sidebar Mode", "操作：側邊欄模式"},
+        {"ESC: go back, other: cycle", "Esc 返回，其他按鍵切換模式"},
+        {"Command: Hitpoint Warning", "操作：生命值警告"},
+        {"New hitpoint warning (0-9): ", "新的生命值警告值（0–9）："},
+        {"Command: Movement Delay Factor", "操作：移動延遲設定"},
+        {"New movement delay: ", "新的移動延遲："},
+        {"Command: Load a user pref file", "操作：載入使用者設定檔"},
+        {"Ego item ignore menu", "特殊詞綴物品忽略設定"},
     };
     size_t i;
     if (!zh_tw || !en) return en;

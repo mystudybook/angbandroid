@@ -552,6 +552,19 @@ longer multibyte Chinese titles are not truncated inside a UTF-8 character;
 screen-column clipping still happens in the existing rendering layer.
 A C99 regression and canonical set-coverage check are registered.
 
+## Native settings and keymap screens (2026-11-04)
+
+The original Angband settings screens now have Traditional Chinese labels for
+color editing, keymap creation, sidebar placement, base/movement delay,
+hitpoint warning threshold, preference save/load and ignore menu headings.
+Dynamic values and file names are only formatted into display strings using
+separate literal Chinese/English templates. The sidebar retains its original
+internal option values and user input keys; only the displayed labels change.
+The custom option save-label buffer was widened from 40 to 128 bytes so
+localized Chinese labels do not truncate mid-string. New C99 dictionary
+assertions and source safety checks cover English fallback and literal
+printf-format handling. Full Android compilation is not yet verified.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

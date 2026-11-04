@@ -54,7 +54,8 @@ static bool get_pref_path(const char *what, int row, char *buf, size_t max)
 	if (row > 0) {
 		prt("", row - 1, 0);
 	}
-	prt(format("%s to a pref file", what), row, 0);
+	prt((angdroid_zh_tw_enabled() ? format("將%s儲存至設定檔", what)
+        : format("%s to a pref file", what)), row, 0);
 	prt("", row + 1, 0);
 	prt(angdroid_game_ui_text("File: ", angdroid_zh_tw_enabled()), row + 2, 0);
 	prt("", row + 3, 0);
@@ -69,7 +70,8 @@ static bool get_pref_path(const char *what, int row, char *buf, size_t max)
 		ok = askfor_aux(ftmp, sizeof ftmp, NULL);
 	
 	else
-		ok = get_check(format("Confirm writing to %s? ", ftmp));
+		ok = get_check((angdroid_zh_tw_enabled() ? format("確定寫入 %s 嗎？ ", ftmp)
+        : format("Confirm writing to %s? ", ftmp)));
 
 	screen_load();
 
@@ -91,9 +93,15 @@ static void dump_pref_file(void (*dump)(ang_file *), const char *title, int row)
 
 	/* Try to save */
 	if (prefs_save(buf, dump, title))
-		msg("Saved %s.", strstr(title, " ") + 1);
+		if (angdroid_zh_tw_enabled())
+            msg("已儲存 %s。", strstr(title, " ") + 1);
+        else
+            msg("Saved %s.", strstr(title, " ") + 1);
 	else
-		msg("Failed to save %s.", strstr(title, " ") + 1);
+		if (angdroid_zh_tw_enabled())
+            msg("儲存 %s 失敗。", strstr(title, " ") + 1);
+        else
+            msg("Failed to save %s.", strstr(title, " ") + 1);
 
 	event_signal(EVENT_MESSAGE_FLUSH);
 
@@ -243,13 +251,17 @@ static bool use_option_context_menu(struct menu *m, const ui_event *in,
 	char *labels = string_make(lower_case);
 	struct menu *cm = menu_dynamic_new();
 	bool refresh = false;
-	char save_label[40];
+	char save_label[128];
 	int selected;
 	char dummy;
 
 	cm->selections = labels;
-	strnfmt(save_label, sizeof(save_label), "Save as default %s options",
-		option_type_name(page));
+	if (angdroid_zh_tw_enabled())
+        strnfmt(save_label, sizeof(save_label), "將%s選項設為預設值",
+            option_type_name(page));
+    else
+        strnfmt(save_label, sizeof(save_label), "Save as default %s options",
+            option_type_name(page));
 	menu_dynamic_add_label(cm, save_label, 's', ACT_CTX_OPT_SAVE, labels);
 	if (m->flags == MN_DBL_TAP) {
 		menu_dynamic_add_label(cm, angdroid_game_ui_text("Restore from saved defaults", angdroid_zh_tw_enabled()), 'r',
@@ -639,7 +651,7 @@ static void ui_keymap_create(const char *title, int row)
 
 	c = keymap_get_trigger();
 	if (c.code == '=') {
-		c_prt(COLOUR_L_RED, "The '=' key is reserved.", 16, 2);
+		c_prt(COLOUR_L_RED, angdroid_game_ui_text("The '=' key is reserved.", angdroid_zh_tw_enabled()), 16, 2);
 		prt(angdroid_game_ui_text("Press any key to continue.", angdroid_zh_tw_enabled()), 18, 0);
 		inkey();
 		return;
@@ -654,10 +666,11 @@ static void ui_keymap_create(const char *title, int row)
 		if (n == KEYMAP_ACTION_MAX) color = COLOUR_L_RED;
 
 		keypress_to_text(tmp, sizeof(tmp), keymap_buffer, false);
-		c_prt(color, format("Action: %s", tmp), 15, 0);
+		c_prt(color, (angdroid_zh_tw_enabled() ? format("動作：%s", tmp)
+        : format("Action: %s", tmp)), 15, 0);
 
-		c_prt(COLOUR_L_BLUE, "  Press '=' when finished.", 17, 0);
-		c_prt(COLOUR_L_BLUE, "  Use 'CTRL-u' to reset.", 18, 0);
+		c_prt(COLOUR_L_BLUE, angdroid_game_ui_text("  Press '=' when finished.", angdroid_zh_tw_enabled()), 17, 0);
+		c_prt(COLOUR_L_BLUE, angdroid_game_ui_text("  Use 'CTRL-u' to reset.", angdroid_zh_tw_enabled()), 18, 0);
 		c_prt(COLOUR_L_BLUE, format("(Maximum keymap length is %d keys.)",
 									KEYMAP_ACTION_MAX), 19, 0);
 
@@ -703,7 +716,7 @@ static void ui_keymap_create(const char *title, int row)
 
 	if (c.code && get_check(angdroid_game_ui_text("Keep this keymap? ", angdroid_zh_tw_enabled()))) {
 		keymap_add(mode, c, keymap_buffer, true);
-		prt("To use in other sessions, save the keymaps to a file.  Press a key to continue.", 17, 0);
+		prt(angdroid_game_ui_text("To use in other sessions, save the keymaps to a file.  Press a key to continue.", angdroid_zh_tw_enabled()), 17, 0);
 		inkey();
 	}
 }
@@ -813,7 +826,7 @@ static void visuals_reset(const char *title, int row)
 
 	/* Message */
 	prt("", 0, 0);
-	msg("Visual attr/char tables reset.");
+	msg(angdroid_game_ui_text("Visual attr/char tables reset.", angdroid_zh_tw_enabled()));
 	event_signal(EVENT_MESSAGE_FLUSH);
 }
 
@@ -892,7 +905,7 @@ static void colors_modify(const char *title, int row)
 	static uint8_t a = 0;
 
 	/* Prompt */
-	prt("Command: Modify colors", 8, 0);
+	prt(angdroid_game_ui_text("Command: Modify colors", angdroid_zh_tw_enabled()), 8, 0);
 
 	/* Hack -- query until done */
 	while (1) {
@@ -1077,9 +1090,10 @@ static void do_cmd_delay(const char *name, int unused)
 
 	/* Prompt */
 	prt("", 19, 0);
-	prt("Command: Base Delay Factor", 20, 0);
-	prt("New base delay factor (0-255): ", 21, 0);
-	prt(format("Current base delay factor: %d msec", msec), 22, 0);
+	prt(angdroid_game_ui_text("Command: Base Delay Factor", angdroid_zh_tw_enabled()), 20, 0);
+	prt(angdroid_game_ui_text("New base delay factor (0-255): ", angdroid_zh_tw_enabled()), 21, 0);
+	prt((angdroid_zh_tw_enabled() ? format("目前基本延遲：%d 毫秒", msec)
+        : format("Current base delay factor: %d msec", msec)), 22, 0);
 	prt("", 23, 0);
 
 	/* Ask for a numeric value */
@@ -1098,6 +1112,7 @@ static void do_cmd_sidebar_mode(const char *name, int unused)
 {
 	char tmp[20] = "";	
 	const char *names[SIDEBAR_MAX] = {"Left", "Top", "None"};
+    const char *zh_names[SIDEBAR_MAX] = {"左側", "上方", "不顯示"};
 	struct keypress cx = KEYPRESS_NULL;
 
 	screen_save();
@@ -1105,13 +1120,16 @@ static void do_cmd_sidebar_mode(const char *name, int unused)
 	while (true) {	
 
 		// Get the name
-		my_strcpy(tmp, names[SIDEBAR_MODE % SIDEBAR_MAX], sizeof(tmp));
+		my_strcpy(tmp, angdroid_zh_tw_enabled()
+            ? zh_names[SIDEBAR_MODE % SIDEBAR_MAX]
+            : names[SIDEBAR_MODE % SIDEBAR_MAX], sizeof(tmp));
 
 		/* Prompt */
 		prt("", 19, 0);
-		prt("Command: Sidebar Mode", 20, 0);
-		prt(format("Current mode: %s", tmp), 21, 0);
-		prt("ESC: go back, other: cycle", 22, 0);
+		prt(angdroid_game_ui_text("Command: Sidebar Mode", angdroid_zh_tw_enabled()), 20, 0);
+		prt((angdroid_zh_tw_enabled() ? format("目前模式：%s", tmp)
+        : format("Current mode: %s", tmp)), 21, 0);
+		prt(angdroid_game_ui_text("ESC: go back, other: cycle", angdroid_zh_tw_enabled()), 22, 0);
 		prt("", 23, 0);
 
 		/* Get a command */
@@ -1143,10 +1161,13 @@ static void do_cmd_hp_warn(const char *name, int unused)
 
 	/* Prompt */
 	prt("", 19, 0);
-	prt("Command: Hitpoint Warning", 20, 0);
-	prt("New hitpoint warning (0-9): ", 21, 0);
-	prt(format("Current hitpoint warning: %d (%d%%)",
-		player->opts.hitpoint_warn, player->opts.hitpoint_warn * 10),
+	prt(angdroid_game_ui_text("Command: Hitpoint Warning", angdroid_zh_tw_enabled()), 20, 0);
+	prt(angdroid_game_ui_text("New hitpoint warning (0-9): ", angdroid_zh_tw_enabled()), 21, 0);
+	prt((angdroid_zh_tw_enabled()
+        ? format("目前生命值警告：%d（%d%%）",
+            player->opts.hitpoint_warn, player->opts.hitpoint_warn * 10)
+        : format("Current hitpoint warning: %d (%d%%)",
+            player->opts.hitpoint_warn, player->opts.hitpoint_warn * 10)),
 		22, 0);
 	prt("", 23, 0);
 
@@ -1182,10 +1203,13 @@ static void do_cmd_lazymove_delay(const char *name, int unused)
 
 	/* Prompt */
 	prt("", 19, 0);
-	prt("Command: Movement Delay Factor", 20, 0);
-	prt("New movement delay: ", 21, 0);
-	prt(format("Current movement delay: %d (%d msec)",
-		player->opts.lazymove_delay, player->opts.lazymove_delay * 10),
+	prt(angdroid_game_ui_text("Command: Movement Delay Factor", angdroid_zh_tw_enabled()), 20, 0);
+	prt(angdroid_game_ui_text("New movement delay: ", angdroid_zh_tw_enabled()), 21, 0);
+	prt((angdroid_zh_tw_enabled()
+        ? format("目前移動延遲：%d（%d 毫秒）",
+            player->opts.lazymove_delay, player->opts.lazymove_delay * 10)
+        : format("Current movement delay: %d (%d msec)",
+            player->opts.lazymove_delay, player->opts.lazymove_delay * 10)),
 		22, 0);
 	prt("", 23, 0);
 
@@ -1222,7 +1246,7 @@ static void do_cmd_pref_file_hack(long row)
 	if (row > 0) {
 		prt("", row - 1, 0);
 	}
-	prt("Command: Load a user pref file", row, 0);
+	prt(angdroid_game_ui_text("Command: Load a user pref file", angdroid_zh_tw_enabled()), row, 0);
 	prt("", row + 1, 0);
 	prt(angdroid_game_ui_text("File: ", angdroid_zh_tw_enabled()), row + 2, 0);
 	prt("", row + 3, 0);
@@ -1234,7 +1258,8 @@ static void do_cmd_pref_file_hack(long row)
 	if(!arg_force_name)
 		ok = askfor_aux(ftmp, sizeof ftmp, NULL);
 	else
-		ok = get_check(format("Confirm loading %s? ", ftmp));
+		ok = get_check((angdroid_zh_tw_enabled() ? format("確定載入 %s 嗎？ ", ftmp)
+        : format("Confirm loading %s? ", ftmp)));
 	
 	/* Ask for a file (or cancel) */
 	if(ok) {
@@ -1242,11 +1267,17 @@ static void do_cmd_pref_file_hack(long row)
 		if (process_pref_file(ftmp, false, true) == false) {
 			/* Mention failure */
 			prt("", 0, 0);
-			msg("Failed to load '%s'!", ftmp);
+			if (angdroid_zh_tw_enabled())
+                msg("無法載入「%s」！", ftmp);
+            else
+                msg("Failed to load '%s'!", ftmp);
 		} else {
 			/* Mention success */
 			prt("", 0, 0);
-			msg("Loaded '%s'.", ftmp);
+			if (angdroid_zh_tw_enabled())
+                msg("已載入「%s」。", ftmp);
+            else
+                msg("Loaded '%s'.", ftmp);
 		}
 	}
 
@@ -1467,7 +1498,7 @@ static void ego_menu(const char *unused, int also_unused)
 	clear_from(0);
 
 	/* Help text */
-	prt("Ego item ignore menu", 0, 0);
+	prt(angdroid_game_ui_text("Ego item ignore menu", angdroid_zh_tw_enabled()), 0, 0);
 
 	/* Output to the screen */
 	text_out_hook = text_out_to_screen;
@@ -1868,7 +1899,8 @@ static bool sval_menu(int tval, const char *desc)
 	clear_from(0);
 
 	/* Help text */
-	prt(format("Ignore the following %s:", desc), 0, 0);
+	prt((angdroid_zh_tw_enabled() ? format("忽略下列 %s：", desc)
+        : format("Ignore the following %s:", desc)), 0, 0);
 
 	/* Run menu */
 	menu = menu_new(MN_SKIN_COLUMNS, &ignore_sval_menu);

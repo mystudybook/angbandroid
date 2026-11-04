@@ -69,6 +69,7 @@ def main():
     player_spell = source(CPP / "angband/player-spell.c", errors)
     cave_cmd = source(CPP / "angband/cmd-cave.c", errors)
     player_attack = source(CPP / "angband/player-attack.c", errors)
+    options_ui = source(CPP / "angband/ui-options.c", errors)
     object_info = source(CPP / "angband/obj-info.c", errors)
     object_info_terms = source(CPP / "angband/zh-tw-object-info.h", errors)
     object_ui = source(CPP / "angband/ui-object.c", errors)
@@ -604,6 +605,16 @@ if __name__ == "__main__":
            "Character sheet title buffer must hold multibyte Chinese text")
     expect('test_class_titles_locale.c' in native_tests,
            "Class progression title regression not registered")
+    expect('angdroid_game_ui_text("Command: Sidebar Mode"' in options_ui,
+           "Sidebar option screen title not localized")
+    expect('strnfmt(save_label, sizeof(save_label), "將%s選項設為預設值"' in options_ui
+           and '"Save as default %s options"' in options_ui,
+           "Localized option saving must retain original literal format string")
+    expect('format("目前生命值警告：%d（%d%%）"' in options_ui
+           and 'format("Current hitpoint warning: %d (%d%%)"' in options_ui,
+           "Health warning must preserve escaped percent format string")
+    expect('zh_names[SIDEBAR_MODE % SIDEBAR_MAX]' in options_ui,
+           "Sidebar mode names are not translated at display time")
     if errors:
         for item in errors:
             print("FAIL:", item)
