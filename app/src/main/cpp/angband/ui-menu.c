@@ -22,6 +22,7 @@
 #include "ui-event.h"
 #include "ui-input.h"
 #include "ui-menu.h"
+#include "menu-key-hints.h"
 
 #include "droid.h"
 #include "zh-tw-ui.h"
@@ -783,24 +784,19 @@ static void keys_to_ui(struct menu *menu)
 		my_strcat(buf, used, sizeof(buf));
 	}
 
-	int cursor, current;
-	char temp[256];
+	int cursor;
+	size_t current = 0;
+	char temp[256] = "";
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 
 	//plog_fmt("count: %d", menu->count);
 
-	for (cursor = 0, current = 0; cursor < n; cursor++) {
+	for (cursor = 0; cursor < n; cursor++) {
 
-		int oid = 0;
+		int oid = angdroid_menu_hint_item_index(menu->filter_list, cursor);
 		menu_row_validity_t row_valid = MN_ROW_VALID;
 		char sel = 0;
 
-		if (menu->filter_list) {
-			oid = menu->filter_list[oid];
-		}
-		else {
-			oid = cursor;
-		}
 
 		if (menu->row_funcs->valid_row) {
 			row_valid = menu->row_funcs->valid_row(menu, oid);
@@ -824,7 +820,8 @@ static void keys_to_ui(struct menu *menu)
 		}
 
 		if (sel != 0) {
-			temp[current++] = sel;
+			current = angdroid_menu_hint_append(temp, current,
+					sizeof(temp), sel);
 		}
 	}
 	temp[current] = '\0';
