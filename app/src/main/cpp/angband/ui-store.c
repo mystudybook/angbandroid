@@ -230,6 +230,8 @@ static void prt_welcome(const struct owner *proprietor)
 static void store_display_recalc(struct store_context *ctx)
 {
 	int wid, hgt;
+	int content_height;
+	bool show_help;
 	region loc;
 	angdroid_store_column_layout columns;
 
@@ -249,33 +251,34 @@ static void store_display_recalc(struct store_context *ctx)
 	ctx->scr_places_x[LOC_AU] = columns.gold_col;
 	ctx->scr_places_x[LOC_OWNER] = columns.owner_end;
 
-	/* Then Y */
-	ctx->scr_places_y[LOC_OWNER] = 1;
-	ctx->scr_places_y[LOC_HEADER] = 3;
-
-	/* If we are displaying help, make the height smaller */
-	if (ctx->flags & (STORE_SHOW_HELP))
-		hgt -= 3;
-
-	ctx->scr_places_y[LOC_MORE] = hgt - 3;
-	ctx->scr_places_y[LOC_AU] = hgt - 1;
+	/* Optional help needs at least a few rows for the item list.
+	 * Keep all terminal Y coordinates valid during Android rotation. */
+	show_help = (ctx->flags & STORE_SHOW_HELP) && hgt >= 10;
+	content_height = show_help ? hgt - 3 : hgt;
+	ctx->scr_places_y[LOC_OWNER] = angdroid_store_safe_row(1, hgt);
+	ctx->scr_places_y[LOC_HEADER] = angdroid_store_safe_row(3, hgt);
+	ctx->scr_places_y[LOC_MORE] =
+		angdroid_store_safe_row(content_height - 3, hgt);
+	ctx->scr_places_y[LOC_AU] =
+		angdroid_store_safe_row(content_height - 1, hgt);
 
 	loc = m->boundary;
-
-	/* If we're displaying the help, then put it with a line of padding */
-	if (ctx->flags & (STORE_SHOW_HELP)) {
-		ctx->scr_places_y[LOC_HELP_CLEAR] = hgt - 1;
-		ctx->scr_places_y[LOC_HELP_PROMPT] = hgt;
+	if (show_help) {
+		ctx->scr_places_y[LOC_HELP_CLEAR] =
+			angdroid_store_safe_row(content_height - 1, hgt);
+		ctx->scr_places_y[LOC_HELP_PROMPT] =
+			angdroid_store_safe_row(content_height, hgt);
 		loc.page_rows = -5;
 	} else {
-		ctx->scr_places_y[LOC_HELP_CLEAR] = hgt - 2;
-		ctx->scr_places_y[LOC_HELP_PROMPT] = hgt - 1;
+		ctx->scr_places_y[LOC_HELP_CLEAR] =
+			angdroid_store_safe_row(hgt - 2, hgt);
+		ctx->scr_places_y[LOC_HELP_PROMPT] =
+			angdroid_store_safe_row(hgt - 1, hgt);
 		loc.page_rows = -2;
 	}
 
 	menu_layout(m, &loc);
 }
-
 
 /**
  * Redisplay a single store entry
@@ -468,7 +471,7 @@ static void store_redraw(struct store_context *ctx)
 	if (ctx->flags & STORE_FRAME_CHANGE) {
 		store_display_frame(ctx);
 
-		if (ctx->flags & STORE_SHOW_HELP)
+		if ((ctx->flags & STORE_SHOW_HELP) && Term->hgt >= 10)
 			store_display_help(ctx);
 		else
 			store_put_clipped(COLOUR_WHITE,
@@ -1221,6 +1224,17 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 	return false;
 }
 
+/* Recalculate price/weight columns and redraw the frame when the
+ * terminal changes size. Otherwise layout changes only move the item list. */
+static void store_menu_resize(struct menu *m)
+{
+	struct store_context *ctx = menu_priv(m);
+
+	store_display_recalc(ctx);
+	ctx->flags |= STORE_FRAME_CHANGE | STORE_GOLD_CHANGE;
+	store_redraw(ctx);
+}
+
 static region store_menu_region = { 1, 4, -1, -2 };
 static const menu_iter store_menu =
 {
@@ -1228,7 +1242,7 @@ static const menu_iter store_menu =
 	NULL,
 	store_display_entry,
 	store_menu_handle,
-	NULL
+	store_menu_resize
 };
 
 /**
