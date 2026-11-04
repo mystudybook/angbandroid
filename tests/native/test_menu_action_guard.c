@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 
 #include "../../app/src/main/cpp/angband/menu-action-guard.h"
@@ -36,6 +37,20 @@ int main(void)
         assert(angdroid_menu_action_item_index(1, 2, 4, bad) == -1);
     }
 
-    puts("PASS: selected action state and empty filtered menu callback safety");
+    /* Generic render, browse, valid_row and soft-keyboard paths use the
+     * same mapping; these ids must never reach user-provided callbacks. */
+    {
+        const int stale[] = { INT_MIN, INT_MAX, 2, 0 };
+        assert(angdroid_menu_action_item_index(0, 4, 4, stale) == -1);
+        assert(angdroid_menu_action_item_index(1, 4, 4, stale) == -1);
+        assert(angdroid_menu_action_item_index(2, 4, 4, stale) == 2);
+        assert(angdroid_menu_action_item_index(3, 4, 4, stale) == 0);
+        assert(angdroid_menu_action_item_index(INT_MAX, 4, 4, stale) == -1);
+        assert(angdroid_menu_action_item_index(INT_MIN, 4, 4, stale) == -1);
+        assert(angdroid_menu_action_item_index(0, INT_MIN, 4, stale) == -1);
+        assert(angdroid_menu_action_item_index(0, 4, INT_MIN, stale) == -1);
+    }
+
+    puts("PASS: selected action state and filtered menu callback index bounds");
     return 0;
 }
