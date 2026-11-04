@@ -50,6 +50,7 @@ run_check "Visible-page native menu shortcut consistency" python3 "$ROOT/tests/t
 run_check "Finite invalid-row menu navigation" python3 "$ROOT/tests/test_menu_navigation_source.py"
 run_check "Inventory and equipment UTF-8 display safety" python3 "$ROOT/tests/test_object_list_text_source.py"
 run_check "Store columns on narrow/rotated terminals" python3 "$ROOT/tests/test_store_column_layout_source.py"
+run_check "Store purchase cancel and stock-index safety" python3 "$ROOT/tests/test_store_stock_guard_source.py"
 run_check "Scrolled store popups and empty-stock commands" python3 "$ROOT/tests/test_store_menu_flow_source.py"
 run_check "Selected native menu action state" python3 "$ROOT/tests/test_menu_action_guard_source.py"
 run_check "Native menu CJK column clipping" python3 "$ROOT/tests/test_menu_text_fit_source.py"
