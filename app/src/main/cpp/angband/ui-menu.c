@@ -28,6 +28,7 @@
 #include "menu-column-width.h"
 #include "menu-hit-test.h"
 #include "menu-compact-layout.h"
+#include "menu-text-fit.h"
 
 #include "droid.h"
 #include "zh-tw-ui.h"
@@ -60,6 +61,21 @@ static bool is_valid_row(struct menu *menu, int cursor);
 static bool no_valid_row(struct menu *menu, int count);
 
 
+/* Native Term_putstr(n) limits codepoints, not screen columns. Menu text
+ * must be clipped to the row's physical cell width before rendering. */
+static void menu_put_clipped(int col, int row, int width, uint8_t color,
+	const char *text)
+{
+	char rendered[1024];
+
+	if (width <= 0 || !text)
+		return;
+	angdroid_menu_copy_columns(rendered, sizeof(rendered), text,
+		(size_t)width);
+	if (rendered[0])
+		Term_putstr(col, row, -1, color, rendered);
+}
+
 /**
  * Display an event, with possible preference overrides
  */
@@ -68,19 +84,12 @@ static void display_action_aux(menu_action *act, uint8_t color,
 {
 	/* TODO: add preference support */
 	/* TODO: wizard mode should show more data */
+	if (wid <= 0)
+		return;
 	Term_erase(col, row, wid);
-
-	if (act->name) {
-        /* Action titles are display-only. UTF-8 byte length differs
-         * from rendered columns, so clip before passing to curses. */
-        char rendered[256];
-        my_strcpy(rendered,
-            angdroid_game_ui_text(act->name, angdroid_zh_tw_enabled()),
-            sizeof(rendered));
-        if (wid >= 0)
-            angdroid_utf8_clip_columns(rendered, (size_t)wid);
-        Term_putstr(col, row, -1, color, rendered);
-    }
+	if (act->name)
+		menu_put_clipped(col, row, wid, color,
+			angdroid_game_ui_text(act->name, angdroid_zh_tw_enabled()));
 }
 
 /* ------------------------------------------------------------------------
@@ -156,7 +165,7 @@ static void display_string(struct menu *m, int oid, bool cursor,
 {
 	const char **items = menu_priv(m);
 	uint8_t color = curs_attrs[CURS_KNOWN][0 != cursor];
-	Term_putstr(col, row, width, color, items[oid]);
+	menu_put_clipped(col, row, width, color, items[oid]);
 }
 
 static bool handle_string(struct menu *m, const ui_event *event, int oid)
@@ -595,15 +604,19 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 			sel = menu->row_funcs->get_tag(menu, oid);
 	}
 
-	if (sel) {
+	/* A one- or two-cell terminal cannot fit the full "a) " prefix.
+	 * Show only its visible part; never pass a negative remaining width. */
+	if (sel && width > 0) {
+		int prefix = angdroid_menu_tag_columns(width);
 		menu_row_style_t style = menu_row_style_for_validity(row_valid);
 		uint8_t color = curs_attrs[style][0 != (cursor)];
-		Term_putstr(col, row, 3, color, format("%c) ", sel));
-		col += 3;
-		width -= 3;
+		Term_putstr(col, row, prefix, color, format("%c) ", sel));
+		col += prefix;
+		width -= prefix;
 	}
 
-	menu->row_funcs->display_row(menu, oid, cursor, row, col, width);
+	if (width > 0)
+		menu->row_funcs->display_row(menu, oid, cursor, row, col, width);
 }
 
 /* Keep the requested column skin in landscape, but use a scrollable list
@@ -647,16 +660,16 @@ void menu_refresh(struct menu *menu, bool reset_screen)
 		oid = menu->filter_list[oid];
 
 	if (menu->title && menu->title_row >= 0)
-		Term_putstr(menu->decoration_col, menu->title_row,
-				loc->width, COLOUR_WHITE, menu->title);
+		menu_put_clipped(menu->decoration_col, menu->title_row,
+			loc->width, COLOUR_WHITE, menu->title);
 
 	if (menu->header && menu->header_row >= 0)
-		Term_putstr(loc->col, menu->header_row, loc->width,
-				COLOUR_WHITE, menu->header);
+		menu_put_clipped(loc->col, menu->header_row, loc->width,
+			COLOUR_WHITE, menu->header);
 
 	if (menu->prompt && menu->prompt_row >= 0)
-		Term_putstr(menu->decoration_col, menu->prompt_row,
-				loc->width, COLOUR_WHITE, menu->prompt);
+		menu_put_clipped(menu->decoration_col, menu->prompt_row,
+			loc->width, COLOUR_WHITE, menu->prompt);
 
 	if (menu->browse_hook && oid >= 0)
 		menu->browse_hook(oid, menu->menu_data, loc);
