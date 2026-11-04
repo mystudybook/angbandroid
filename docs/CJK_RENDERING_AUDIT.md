@@ -173,6 +173,15 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Pending Android acceptance:** Open store popups near the right and bottom edges, rotate with a popup visible, try a terminal shorter than the action list, and verify touch selection, shortcuts and ESC.
 
+## Dynamic menu filtered selections (2026-11-04)
+
+- The generic dynamic popup receives its cursor from **visible rows**, which may be a filtered or reordered subset. Previously, `menu_dynamic_select_alias()` traversed the backing linked list using that visible index, so selecting visible row 0 in a reordered filter could return the wrong underlying action.
+- `menu-dynamic-choice.h` now maps and bounds-checks the visible selection against `filter_list` and the original menu count before any linked-list traversal or row-validity callback. The ordinary unfiltered store context menu and the explicit `g` → Buy shortcut retain their behavior.
+- `tests/native/test_menu_dynamic_choice.c` now covers reordered filters, empty/invalid filtered positions, bad underlying indices and alias cancellations. `tests/test_menu_dynamic_choice_source.py` checks the native mapping order. Existing combined verification executes both.
+- This is a UI selection-index fix. Purchase/sale calculations and savefile data are unchanged.
+
+**Pending Android acceptance:** open an item popup, use its keyboard tags and the `g` shortcut, cancel and reopen; where a filtered dynamic menu is used, verify the displayed row matches the chosen action.
+
 ## Regression checks
 
 Run from the repository root:
