@@ -790,3 +790,19 @@ a separate phone-sized rendering review. C99 dictionary tests include
 the Chinese and English fallbacks for all 23 added keys, and the source
 audit protects selection/callback isolation. Full Android APK/NDK and
 emulator tests remain outstanding.
+
+## Symbol identification and monster recall prompts (2026-11-04)
+
+Translated five display-only labels in the `ui-knowledge.c` symbol
+lookup flow: the initial symbol/Ctrl+A/U/N prompt, the three monster
+list modes and the `r`/Esc recall overlay. Unknown symbols now display
+`未知符號` through paired literal Chinese and English format strings,
+including nonprintable unknown symbols.
+
+No commands, keybinding controls, matching logic, sorting, monster-data
+records or savefiles are changed. The `r` help fragment is appended with a
+literal `"%s"` format to satisfy NDK format-security rules. The isprint()
+call now casts its input to unsigned char, avoiding undefined behavior on
+negative signed bytes. C99 tests cover the five Chinese/English label pairs;
+source checks guard all Ctrl+A/U/N and monster recall key paths. Full Android
+NDK/APK and actual handset validation still require execution.

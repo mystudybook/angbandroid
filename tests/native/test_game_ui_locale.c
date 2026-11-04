@@ -12,6 +12,17 @@
 int main(void)
 {
     const char *unknown = "Untranslated data";
+    /* Symbol inspection prompts preserve game key codes and English fallback. */
+    assert(strcmp(angdroid_game_ui_text("Enter character to be identified, or control+[ANU]: ", 1), "輸入要查詢的符號，或按 Ctrl+A/U/N：") == 0);
+    assert(strcmp(angdroid_game_ui_text("Enter character to be identified, or control+[ANU]: ", 0), "Enter character to be identified, or control+[ANU]: ") == 0);
+    assert(strcmp(angdroid_game_ui_text("Full monster list.", 1), "完整怪物清單。") == 0);
+    assert(strcmp(angdroid_game_ui_text("Full monster list.", 0), "Full monster list.") == 0);
+    assert(strcmp(angdroid_game_ui_text("Unique monster list.", 1), "特殊怪物清單。") == 0);
+    assert(strcmp(angdroid_game_ui_text("Unique monster list.", 0), "Unique monster list.") == 0);
+    assert(strcmp(angdroid_game_ui_text("Non-unique monster list.", 1), "一般怪物清單。") == 0);
+    assert(strcmp(angdroid_game_ui_text("Non-unique monster list.", 0), "Non-unique monster list.") == 0);
+    assert(strcmp(angdroid_game_ui_text(" [(r)ecall, ESC]", 1), " [r 查看詳情，Esc 返回]") == 0);
+    assert(strcmp(angdroid_game_ui_text(" [(r)ecall, ESC]", 0), " [(r)ecall, ESC]") == 0);
     /* Knowledge navigation and list status: Chinese only at render time. */
     assert(strcmp(angdroid_game_ui_text("Display object knowledge", 1), "查看物品知識") == 0);
     assert(strcmp(angdroid_game_ui_text("Display object knowledge", 0), "Display object knowledge") == 0);

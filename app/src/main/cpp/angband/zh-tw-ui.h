@@ -454,6 +454,11 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"Dump colors", "匯出顏色設定"},
         {"Modify colors", "修改顏色"},
         {"To edit visuals, use the knowledge menu", "若要修改外觀，請使用知識圖鑑選單"},
+        {"Enter character to be identified, or control+[ANU]: ", "輸入要查詢的符號，或按 Ctrl+A/U/N："},
+        {"Full monster list.", "完整怪物清單。"},
+        {"Unique monster list.", "特殊怪物清單。"},
+        {"Non-unique monster list.", "一般怪物清單。"},
+        {" [(r)ecall, ESC]", " [r 查看詳情，Esc 返回]"},
         /* Knowledge menu: render-only labels, not action names or parser IDs. */
         {"Display object knowledge", "查看物品知識"},
         {"Display rune knowledge", "查看符文知識"},
