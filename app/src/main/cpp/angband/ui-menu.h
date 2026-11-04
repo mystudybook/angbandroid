@@ -260,13 +260,18 @@ struct menu
 	int count;               /* number of rows in underlying data set */
 	void *menu_data;         /* the data used to access rows. */
 
-	const menu_skin *skin;      /* menu display style functions */
+	const menu_skin *skin;      /* current display style, may be compact */
+	const menu_skin *preferred_skin; /* originally requested display style */
 	const menu_iter *row_funcs; /* menu skin functions */
 
 	/* State variables */
 	int cursor;             /* Currently selected row */
 	int top;                /* Position in list for partial display */
 	region active;          /* Subregion actually active for selection */
+	int decoration_col;    /* bounded title/prompt origin */
+	int title_row;         /* -1 if no room for title */
+	int header_row;        /* -1 if no room for header */
+	int prompt_row;        /* -1 if no room for prompt */
 	int cursor_x_offset;    /* Adjustment to the default position of the cursor on a line. */
 };
 

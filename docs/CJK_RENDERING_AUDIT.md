@@ -88,6 +88,15 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Limit:** These tests validate terminal-cell hit-test math and native source wiring; they do not validate Android pixel-to-cell conversion, device rotation lifecycle, or actual screenshots.
 
+## Native menu compact layout and rotation behavior (2026-11-04)
+
+- Native `menu_calc_size()` now clamps active menu bounds to the current terminal size and reserves real space for titles, headers and prompts. On extremely small surfaces, decorations are omitted rather than allowing negative widths or overlaying the only selectable row.
+- The original skin is retained so multi-column menus can become single-column scrolling menus when each requested column cannot fit a minimum readable width (12 terminal cells). Resizing back to landscape restores the preferred multi-column skin and clears a stale scroll offset. Filter changes also reevaluate the current skin.
+- Both multi-column painting and touch hit-testing now compute `colw` from the active region width rather than the full terminal, preventing a title indentation or bounded menu region from generating mismatched tap targets.
+- The native input loop returns an escape event if a transitional resize has zero drawable rows/columns. The menu refresh and title/header/prompt rendering avoid invalid terminal geometry.
+- `tests/native/test_menu_compact_layout.c` checks wide/small/tiny layouts, decoration positions, rotation-sized boundaries and column-to-scroll fallback. `tests/test_menu_compact_layout_source.py` checks native wiring.
+- Actual Android orientation changes, subwindows, translated labels, mouse coordinates, and release APK behavior still require emulator or physical-device acceptance.
+
 ## Regression checks
 
 Run from the repository root:

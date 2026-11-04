@@ -12,10 +12,9 @@ start = source.index("static int columns_get_cursor(")
 end = source.index("static char column_get_tag(", start)
 section = source[start:end]
 
-hit_width = "angdroid_menu_fit_column_width(23, w, loc->col, cols)"
-draw_width = "angdroid_menu_fit_column_width(23, w, col, cols)"
-if section.count(hit_width) != 1 or section.count(draw_width) != 1:
-    raise SystemExit("FAIL: menu hit-testing and drawing must share safe column width")
+expression = "angdroid_menu_fit_column_width(23, loc->width, 0, cols)"
+if section.count(expression) != 2:
+    raise SystemExit("FAIL: menu hit-testing and drawing must use the same active width")
 if "colw = (w - col) / cols;" in section:
     raise SystemExit("FAIL: unsafe native column width division remains")
 if section.count("if (rows_per_page <= 0 || n <= 0)") != 2:
