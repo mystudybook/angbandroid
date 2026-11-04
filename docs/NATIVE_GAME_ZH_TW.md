@@ -963,3 +963,16 @@ English-only heading `artifacts` even in zh-TW. It now selects `神器`
 for zh-TW and preserves `artifacts` in English. The existing random-artifact
 seed heading and its format specifier are unchanged. A static source check
 covers both branches; full Android UI testing remains pending.
+
+
+## Source-audit corruption repair (2026-11-05)
+
+After the terrain/trap localization changes, the Python source safeguard
+`scripts/check_native_game_localization.py` was accidentally corrupted: its
+regular expression for the four canonical terrain/trap tables was truncated
+and a duplicate `if __name__ == "__main__"` footer was inserted inside the
+parser, leaving the script syntactically invalid. The parser block has now
+been restored without dropping its table-coverage, count, Chinese/English,
+APK/NDK regression and artifact-title checks. The verifier still needs to
+be executed as part of the full Android validation before claiming an APK
+passes; a source-level repair alone does not validate the complete build.
