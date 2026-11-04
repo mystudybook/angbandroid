@@ -109,6 +109,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_menu_hit_test"
 "$BUILD_DIR/test_menu_hit_test"
 
+# Screen rotation and narrow terminals must preserve at least one menu row.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_compact_layout.c" \
+    -o "$BUILD_DIR/test_menu_compact_layout"
+"$BUILD_DIR/test_menu_compact_layout"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \
