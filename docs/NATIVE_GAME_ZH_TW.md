@@ -730,3 +730,25 @@ are unchanged. Standalone C99 tests verify all 20 entries and English/unknown/
 NULL fallbacks. The source checker validates that all translation keys are in
 the canonical 99-item corpus and checks the branch wiring. Complete Android
 NDK/APK and emulator presentation checks remain outstanding.
+
+## Complete Angband shopkeeper gameplay hint catalog (2026-11-04)
+
+This change extends the display-only source-matched translations from **20/99**
+to **99/99** hints in original `variant_lib/angband/gamedata/hints.txt`.
+The remaining 79 tips now cover tactics, statuses, teleportation, inventory
+elemental protection, dungeon survival, food, stealth, quivers and class actions.
+The canonical `H:` source strings (including intentional trailing spaces),
+game-data parser, key commands and random hint selection are unchanged.
+
+The existing zh-TW shopkeeper renderer keeps Chinese quotation marks and uses
+this complete table; English mode continues using the exact original strings
+and quotation marks. Unknown source strings still fall back to English.
+Tests now assert all 99 Chinese translations and 99 English fallbacks, plus
+NULL/unknown values. The Python audit fails on duplicate keys, missing
+entries, unexpected keys or empty translations.
+
+**Scope:** 100% of the source hints is not 100% of overall Angband translation.
+There are other game texts, monster/item descriptions and independent variants
+still awaiting localization. C99 tests are registered but full project
+verification, Android NDK/APK compilation and device presentation remain to
+be executed in a configured build environment.

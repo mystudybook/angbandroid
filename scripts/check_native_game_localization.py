@@ -717,10 +717,11 @@ def main():
                         for en, zh in hint_pairs]
     except (ValueError, TypeError):
         parsed_hints = []
-    expect(len(canonical_hints) == 99 and len(parsed_hints) == 20 and
-           len({en for en, _ in parsed_hints}) == 20 and
-           all(en in canonical_hints and zh for en, zh in parsed_hints),
-           "First 20 shopkeeper hint translations must match canonical hints.txt")
+    expect(len(canonical_hints) == 99 and len(parsed_hints) == 99 and
+           len({en for en, _ in parsed_hints}) == 99 and
+           {en for en, _ in parsed_hints} == canonical_hints and
+           all(en in canonical_hints and zh.strip() for en, zh in parsed_hints),
+           "All 99 canonical shopkeeper hints require distinct zh-TW translations")
     expect('"zh-tw-store-hints.h"' in store_ui and
            'msg("「%s」", angdroid_store_hint_text(random_hint(), true))' in store_ui and
            'msg(comment_hint[i], random_hint());' in store_ui,
