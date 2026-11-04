@@ -82,14 +82,12 @@ static inline const char *angdroid_terrain_lore(
         { "lava", "一池閃耀火光的滾燙熔岩；踏入其中非常危險！" },
         { "pile of passable rubble", "會遮擋視線，阻擋投射物、魔法箭及射線，也會縮小範圍法術的影響半徑。可挖掘或用魔法清除，玩家與怪物仍可穿過。" },
     };
-    if (!original || !zh_tw) return original;
-    /* Never invent a description for unknown features. */
-    if (!terrain_name) return original;
-    return angdroid_terrain_trap_lookup(terrain_name, zh_tw, terrain_lore,
-                                       sizeof terrain_lore / sizeof terrain_lore[0]) == terrain_name ?
-                                       original :
-                                       angdroid_terrain_trap_lookup(terrain_name, zh_tw, terrain_lore,
-                                         sizeof terrain_lore / sizeof terrain_lore[0]);
+    const char *translated;
+    if (!original || !zh_tw || !terrain_name) return original;
+    /* An unrecognized feature name keeps the original descriptive text. */
+    translated = angdroid_terrain_trap_lookup(terrain_name, zh_tw,
+        terrain_lore, sizeof terrain_lore / sizeof terrain_lore[0]);
+    return translated == terrain_name ? original : translated;
 }
 
 static inline const char *angdroid_trap_name(const char *en, int zh_tw)
