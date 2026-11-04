@@ -115,6 +115,15 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Remaining Android acceptance:** gray disabled actions in mixed menus, filtered menus during quick screen changes, hardware keyboard Enter, and touch selection; tests above do not represent actual emulator results.
 
+## Store menu scrolling and stock-free commands (2026-11-04)
+
+- Store `EVT_SELECT` and touch handlers previously treated stock item IDs as screen row offsets. After scrolling to `top > 0`, an item context popup could be placed far below the visible list or could fail to open on its selected row. `store-menu-row.h` converts absolute item indices into bounded visible terminal rows, and handlers now reject stale indices/empty entries.
+- The selected-row safety change in PR #9 also blocked **all command handlers** when a store had no stock, inadvertently preventing Sell, Help, and tapping the store header. This is now an **explicit store-only opt-in**, `MN_ALLOW_EMPTY_INPUT`: keyboard and mouse events may reach the store handler with `oid = -1`; selection events still require a valid item.
+- `tests/native/test_store_menu_flow.c` covers scrolled popup positions, unused rows, integer bounds, empty-menu opt-in and filtered item selection. `tests/test_store_menu_flow_source.py` checks the native dispatch and store integration. Both tests are included in the combined verification runner.
+- This change does not touch in-game inventory/save data structures or currency transactions; the handlers still execute the existing purchase/sell functions.
+
+**Android verification still required:** empty shop `s` (sell), `?` (help), header context clicks; scrolling stock pages; tapping an existing item, cancelling its popup, then purchasing one item; device rotation while inside a shop.
+
 ## Regression checks
 
 Run from the repository root:

@@ -198,7 +198,11 @@ enum
 	MN_NO_ACTION = 0x20,
 
 	/* Tags can be selected via an inscription */
-	MN_INSCRIP_TAGS = 0x40
+	MN_INSCRIP_TAGS = 0x40,
+
+	/* Allow keyboard and header-click commands without a selected row.
+	 * Store menus opt in; selection events still require valid items. */
+	MN_ALLOW_EMPTY_INPUT = 0x80
 };
 
 
