@@ -27,6 +27,7 @@
 #include "menu-valid-cursor.h"
 #include "menu-column-width.h"
 #include "menu-hit-test.h"
+#include "menu-compact-layout.h"
 
 #include "droid.h"
 #include "zh-tw-ui.h"
@@ -361,7 +362,6 @@ static const menu_skin menu_skin_object =
 
 static int columns_get_cursor(int row, int col, int n, int top, region *loc)
 {
-	int w, h;
 	int rows_per_page = loc->page_rows;
 	int cols;
 	int colw;
@@ -372,8 +372,9 @@ static int columns_get_cursor(int row, int col, int n, int top, region *loc)
 		return -1;
 	cols = 1 + (n - 1) / rows_per_page;
 
-	Term_get_size(&w, &h);
-	colw = angdroid_menu_fit_column_width(23, w, loc->col, cols);
+	/* Hit-testing must use the same bounded ACTIVE region as rendering,
+	 * not a different width derived from the full terminal. */
+	colw = angdroid_menu_fit_column_width(23, loc->width, 0, cols);
 
 	return angdroid_menu_columns_hit(
 		row, col, loc->row, loc->col,
@@ -383,7 +384,6 @@ static int columns_get_cursor(int row, int col, int n, int top, region *loc)
 static void display_columns(struct menu *menu, int cursor, int *top, region *loc)
 {
 	int c, r;
-	int w, h;
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 	int col = loc->col;
 	int row = loc->row;
@@ -395,8 +395,7 @@ static void display_columns(struct menu *menu, int cursor, int *top, region *loc
 		return;
 	cols = 1 + (n - 1) / rows_per_page;
 
-	Term_get_size(&w, &h);
-	colw = angdroid_menu_fit_column_width(23, w, col, cols);
+	colw = angdroid_menu_fit_column_width(23, loc->width, 0, cols);
 
 	for (c = 0; c < cols; c++) {
 		for (r = 0; r < rows_per_page; r++) {
@@ -607,29 +606,56 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 	menu->row_funcs->display_row(menu, oid, cursor, row, col, width);
 }
 
+/* Keep the requested column skin in landscape, but use a scrollable list
+ * on narrow terminals. Recompute after filtering as well as after rotation. */
+static void menu_choose_skin(struct menu *menu)
+{
+	int n = menu->filter_list ? menu->filter_count : menu->count;
+	const menu_skin *previous = menu->skin;
+
+	if (!menu->preferred_skin)
+		return;
+	menu->skin = menu->preferred_skin;
+	if (menu->preferred_skin == &menu_skin_column &&
+		angdroid_menu_use_compact_columns(n, menu->active.page_rows,
+			menu->active.width, 12))
+		menu->skin = &menu_skin_scroll;
+
+	/* Column menus display from the first row, unlike paged scroll menus. */
+	if (menu->skin == &menu_skin_column && previous != &menu_skin_column)
+		menu->top = 0;
+}
+
 void menu_refresh(struct menu *menu, bool reset_screen)
 {
+	int count = menu->filter_list ? menu->filter_count : menu->count;
 	int oid = menu->cursor;
 	region *loc = &menu->active;
 
+	if (loc->width <= 0 || loc->page_rows <= 0)
+		return;
+
+	menu_choose_skin(menu);
 	if (reset_screen) {
 		screen_load();
 		screen_save();
 	}
 
-	if (menu->filter_list && menu->cursor >= 0)
+	if (oid < 0 || oid >= count)
+		oid = -1;
+	else if (menu->filter_list)
 		oid = menu->filter_list[oid];
 
-	if (menu->title)
-		Term_putstr(menu->boundary.col, menu->boundary.row,
+	if (menu->title && menu->title_row >= 0)
+		Term_putstr(menu->decoration_col, menu->title_row,
 				loc->width, COLOUR_WHITE, menu->title);
 
-	if (menu->header)
-		Term_putstr(loc->col, loc->row - 1, loc->width,
+	if (menu->header && menu->header_row >= 0)
+		Term_putstr(loc->col, menu->header_row, loc->width,
 				COLOUR_WHITE, menu->header);
 
-	if (menu->prompt)
-		Term_putstr(menu->boundary.col, loc->row + loc->page_rows,
+	if (menu->prompt && menu->prompt_row >= 0)
+		Term_putstr(menu->decoration_col, menu->prompt_row,
 				loc->width, COLOUR_WHITE, menu->prompt);
 
 	if (menu->browse_hook && oid >= 0)
@@ -871,7 +897,12 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 	ui_event in = EVENT_EMPTY;
 	bool no_act = (menu->flags & MN_NO_ACTION) ? true : false;
 
-	assert(menu->active.width != 0 && menu->active.page_rows != 0);
+	/* A zero-sized Android surface during rotation is not a valid menu.
+	 * Exit cleanly rather than calling layout arithmetic with zero rows. */
+	if (menu->active.width <= 0 || menu->active.page_rows <= 0) {
+		in.type = EVT_ESCAPE;
+		return in;
+	}
 
 	notify |= (EVT_SELECT | EVT_ESCAPE | EVT_SWITCH);
 	if (popup)
@@ -912,7 +943,12 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 
 			menu_handle_keypress(menu, &in, &out);
 		} else if (in.type == EVT_RESIZE) {
-			menu_calc_size(menu);
+			if (!menu_calc_size(menu)) {
+				if (popup)
+					screen_load();
+				in.type = EVT_ESCAPE;
+				return in;
+			}
 			if (menu->row_funcs->resize)
 				menu->row_funcs->resize(menu);
 		}
@@ -1018,31 +1054,36 @@ void menu_ensure_cursor_valid(struct menu *m)
 
 static bool menu_calc_size(struct menu *menu)
 {
-	/* Calculate term-relative positions */
-	menu->active = region_calculate(menu->boundary);
+	region outer = region_calculate(menu->boundary);
+	angdroid_menu_compact_layout bounded;
+	int terminal_width, terminal_height;
 
-	if (menu->title) {
-		menu->active.row += 2;
-		menu->active.page_rows -= 2;
-		menu->active.col += 4;
+	Term_get_size(&terminal_width, &terminal_height);
+	if (!angdroid_menu_compute_layout(terminal_width, terminal_height,
+		outer.col, outer.row, outer.width, outer.page_rows,
+		menu->title != NULL, menu->header != NULL, menu->prompt != NULL,
+		&bounded)) {
+		menu->active = outer;
+		menu->active.width = 0;
+		menu->active.page_rows = 0;
+		menu->title_row = -1;
+		menu->header_row = -1;
+		menu->prompt_row = -1;
+		return false;
 	}
 
-	if (menu->header) {
-		menu->active.row++;
-		menu->active.page_rows--;
-	}
+	menu->active = outer;
+	menu->active.col = bounded.col;
+	menu->active.row = bounded.row;
+	menu->active.width = bounded.width;
+	menu->active.page_rows = bounded.page_rows;
+	menu->decoration_col = outer.col;
+	menu->title_row = bounded.title_row;
+	menu->header_row = bounded.header_row;
+	menu->prompt_row = bounded.prompt_row;
+	menu_choose_skin(menu);
 
-	if (menu->prompt) {
-		if (menu->active.page_rows > 1) {
-			menu->active.page_rows--;
-		} else {
-			int offset = strlen(menu->prompt) + 2;
-			menu->active.col += offset;
-			menu->active.width -= offset;
-		}
-	}
-
-	return (menu->active.width > 0 && menu->active.page_rows > 0);
+	return true;
 }
 
 bool menu_layout(struct menu *m, const region *loc)
@@ -1076,6 +1117,10 @@ void menu_init(struct menu *menu, skin_id id, const menu_iter *iter)
 	/* Menu-specific initialisation */
 	menu->row_funcs = iter;
 	menu->skin = skin;
+	menu->preferred_skin = skin;
+	menu->title_row = -1;
+	menu->header_row = -1;
+	menu->prompt_row = -1;
 	menu->cursor = 0;
 	menu->cursor_x_offset = 0;
 }
