@@ -182,6 +182,12 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Pending Android acceptance:** open an item popup, use its keyboard tags and the `g` shortcut, cancel and reopen; where a filtered dynamic menu is used, verify the displayed row matches the chosen action.
 
+## Generic filtered menu callback safety (2026-11-04)
+
+- The generic menu previously bounded visible cursor positions but sent `filter_list` values straight into validity, private-tag, row-rendering, browse and Android soft-keyboard callbacks. A stale or malformed original index could access outside a menu's backing entries **before any selection**.
+- These paths now share `angdroid_menu_action_item_index()`, rejecting invalid visible and source indices before calling an iterator or browse hook. Invalid rows cannot be selected or advertised as soft keys; valid filtered and unfiltered rows keep their existing behavior.
+- `tests/native/test_menu_action_guard.c` includes `INT_MIN`, `INT_MAX`, reordered and invalid source indices; `tests/test_menu_action_guard_source.py` and `tests/test_menu_key_hints_source.py` assert source integration. The host C99 regression passed with address and undefined-behavior sanitizers against the exact GitHub test and helper blobs. Full Android build and actual malformed-filter UI acceptance have not been run.
+
 ## Regression checks
 
 Run from the repository root:

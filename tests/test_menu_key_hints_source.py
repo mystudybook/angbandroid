@@ -13,7 +13,8 @@ function = source.split("static void keys_to_ui(struct menu *menu)", 1)[1].split
 )[0]
 
 checks = {
-    "filter item indexes": "angdroid_menu_hint_item_index(menu->filter_list, cursor)",
+    "filter item indexes": "angdroid_menu_action_item_index(",
+    "reject stale filter entries": "if (oid < 0)",
     "bounded hint append": "angdroid_menu_hint_append(temp, current,",
     "hint buffer size": "sizeof(temp), sel)",
     "preserve visible row tags": "menu->skin->get_tag(menu, cursor)",
