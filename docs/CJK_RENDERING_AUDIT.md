@@ -79,6 +79,15 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Acceptance gap:** actual gamepad/touch/keyboard movement, resize handling and APK-level input-loop behavior still require emulator/device verification.
 
+## Blank-cell touch hit-testing in native menus (2026-11-04)
+
+- The scroll/object and multi-column native menu skins formerly clamped clicks beyond the final item to `n - 1`. Tapping an empty row of a short menu, or an unpopulated cell in the last column, could unexpectedly select the last item.
+- New `menu-hit-test.h` helpers reject empty cells with `-1` without changing keyboard navigation. Their coordinate math uses 64-bit intermediates to avoid overflowing when checking offsets, and invalid/zero-height layouts return no hit.
+- `tests/native/test_menu_hit_test.c` covers partial columns, blank scroll rows, paging, row-count changes (rotation simulation), and extreme coordinates. `tests/test_menu_hit_test_source.py` checks that actual native selection paths call the helpers.
+- `tests/test_menu_column_width_source.py` now asserts the updated cursor mapping and the zero-row guard.
+
+**Limit:** These tests validate terminal-cell hit-test math and native source wiring; they do not validate Android pixel-to-cell conversion, device rotation lifecycle, or actual screenshots.
+
 ## Regression checks
 
 Run from the repository root:

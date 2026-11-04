@@ -12,11 +12,16 @@ start = source.index("static int columns_get_cursor(")
 end = source.index("static char column_get_tag(", start)
 section = source[start:end]
 
-expression = "angdroid_menu_fit_column_width(23, w, col, cols)"
-if section.count(expression) != 2:
+hit_width = "angdroid_menu_fit_column_width(23, w, loc->col, cols)"
+draw_width = "angdroid_menu_fit_column_width(23, w, col, cols)"
+if section.count(hit_width) != 1 or section.count(draw_width) != 1:
     raise SystemExit("FAIL: menu hit-testing and drawing must share safe column width")
 if "colw = (w - col) / cols;" in section:
     raise SystemExit("FAIL: unsafe native column width division remains")
-if "((col - loc->col) / colw)" not in section:
-    raise SystemExit("FAIL: missing native menu cursor mapping")
-print("PASS: native menu column width is safe in both code paths")
+if section.count("if (rows_per_page <= 0 || n <= 0)") != 2:
+    raise SystemExit("FAIL: zero-height menu layout is not guarded")
+if "return angdroid_menu_columns_hit(" not in section:
+    raise SystemExit("FAIL: multi-column touch mapping bypasses checked hit-test")
+if "((col - loc->col) / colw)" in section:
+    raise SystemExit("FAIL: unsafe native cursor mapping remains")
+print("PASS: native menu column width and touch mapping are guarded")
