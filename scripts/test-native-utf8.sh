@@ -103,6 +103,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_menu_valid_cursor"
 "$BUILD_DIR/test_menu_valid_cursor"
 
+# Blank-cell taps must not select the last menu item.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_hit_test.c" \
+    -o "$BUILD_DIR/test_menu_hit_test"
+"$BUILD_DIR/test_menu_hit_test"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \
