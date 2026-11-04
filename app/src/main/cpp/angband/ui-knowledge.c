@@ -68,6 +68,7 @@
 #include "zh-tw-ui.h"
 #include "zh-tw-knowledge-groups.h"
 #include "knowledge-monster-label.h"
+#include "knowledge-column-text.h"
 #include "../curses/unicode_display.h"
 
 /**
@@ -721,6 +722,16 @@ static void display_group_member(struct menu *menu, int oid,
 	}
 }
 
+/* Draw fixed metadata headers only where terminal columns allow. */
+static void knowledge_header_field(const char *label, int col)
+{
+    char clipped[48];
+    if (!Term || col < 0 || col >= Term->wid) return;
+    angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+        label, col, Term->wid, Term->wid);
+    if (clipped[0]) Term_putstr(col, 4, -1, COLOUR_WHITE, clipped);
+}
+
 static const char *recall_prompt(int oid)
 {
 	(void)oid;
@@ -896,8 +907,26 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 			prt(angdroid_zh_tw_enabled() ? "分類" : "Group", 4, 0);
 			prt(angdroid_zh_tw_enabled() ? "名稱" : "Name", 4, g_name_len + 3);
 
-			if (otherfields)
-				prt(otherfields, 4, 46);
+			if (otherfields) {
+				if (angdroid_zh_tw_enabled() &&
+					streq(otherfields, "Ignore  Inscribed          Sym")) {
+					knowledge_header_field("忽略", 46);
+					knowledge_header_field("刻字", 55);
+					knowledge_header_field("符號", 76);
+				} else if (angdroid_zh_tw_enabled() &&
+					streq(otherfields, "                   Sym  Kills")) {
+					knowledge_header_field("符號", 65);
+					knowledge_header_field("擊殺", 70);
+				} else if (angdroid_zh_tw_enabled() &&
+					streq(otherfields, "                    Sym")) {
+					knowledge_header_field("符號", 66);
+				} else if (angdroid_zh_tw_enabled() &&
+					streq(otherfields, "Inscribed")) {
+					knowledge_header_field("刻字", 46);
+				} else {
+					prt(otherfields, 4, 46);
+				}
+			}
 
 
 			/* Print dividers: horizontal and vertical */
@@ -1893,7 +1922,7 @@ static void display_object(int col, int row, bool cursor, int oid)
 	struct object_kind *kind = &k_info[oid];
 	const char *inscrip = get_autoinscription(kind, kind->aware);
 
-	char o_name[80];
+	char o_name[160] = "";
 
 	/* Choose a color */
 	bool aware = (!kind->flavor || kind->aware);
@@ -1909,10 +1938,16 @@ static void display_object(int col, int row, bool cursor, int oid)
 
 	/* If the type is "tried", display that */
 	if (kind->tried && !aware)
-		my_strcat(o_name, " {tried}", sizeof(o_name));
+		my_strcat(o_name, angdroid_knowledge_tried_suffix(
+			angdroid_zh_tw_enabled()), sizeof(o_name));
 
-	/* Display the name */
-	c_prt(attr, o_name, row, col);
+	/* Column 45 separates the item name from Ignore at 46. */
+	if (Term && col >= 0 && col < Term->wid) {
+		char clipped[256];
+		angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+			o_name, col, 45, Term->wid);
+		c_prt(attr, clipped, row, col);
+	}
 
 	/* Show ignore status */
 	if ((aware && kind_is_ignored_aware(kind)) ||
@@ -1921,9 +1956,14 @@ static void display_object(int col, int row, bool cursor, int oid)
 			angdroid_zh_tw_enabled()), row, 46);
 
 
-	/* Show autoinscription if around */
-	if (inscrip)
-		c_put_str(COLOUR_YELLOW, inscrip, row, 55);
+	/* User inscriptions must not overlap the symbol at column 76. */
+	if (inscrip && Term && 55 < Term->wid) {
+		char clipped[256];
+		angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+			inscrip, 55, 75, Term->wid);
+		if (clipped[0])
+			c_put_str(COLOUR_YELLOW, clipped, row, 55);
+	}
 
 	if (tile_height == 1) {
 		big_pad(76, row, a, c);
@@ -2199,11 +2239,20 @@ static void display_rune(int col, int row, bool cursor, int oid )
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 	const char *inscrip = quark_str(rune_note(oid));
 
-	c_prt(attr, rune_name(oid), row, col);
-
-	/* Show autoinscription if around */
-	if (inscrip)
-		c_put_str(COLOUR_YELLOW, inscrip, row, 47);
+	/* Preserve canonical rune grammar, but clip before inscription at 47. */
+	if (Term && col >= 0 && col < Term->wid) {
+		char clipped[256];
+		angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+			rune_name(oid), col, 46, Term->wid);
+		c_prt(attr, clipped, row, col);
+	}
+	if (inscrip && Term && 47 < Term->wid) {
+		char clipped[256];
+		angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+			inscrip, 47, Term->wid, Term->wid);
+		if (clipped[0])
+			c_put_str(COLOUR_YELLOW, clipped, row, 47);
+	}
 }
 
 
