@@ -655,3 +655,20 @@ Next safe steps are to translate more verifiable non-unique monster names and it
 
 - Angband 4.2.4 monster names: https://github.com/angband/angband/blob/4.2.4/lib/gamedata/monster.txt
 - Angband 4.2.4 item kind names: https://github.com/angband/angband/blob/4.2.4/lib/gamedata/object.txt
+
+## Target selection help in Traditional Chinese (2026-11-04)
+
+The native targeting help overlay now translates all 16 distinct English
+instruction fragments into concise Traditional Chinese. All 18 visible
+text-output sites use a locale-aware display-only lookup. The highlighted
+command keys (<dir>, <click>, g, p, q, r, m, +, -, o, t, the current ignore
+shortcut, >, <, and x) remain in the source's original order and retain their
+original input dispatch, colors, and keymap lookup. English mode and unknown
+fragments fall back to the exact source text.
+
+A strict host-C99 test covers all 16 translations, English fallback,
+unknown fragments and null input, and the static source checker guards all
+18 call sites and the original keycap drawing. The overlay retains Angband's
+three-row targeting-help height; very narrow Android viewports still need
+visual review for wrapping and CJK clipping, and no Android APK/emulator test
+has been performed for this batch.

@@ -73,6 +73,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_game_ui_locale"
 "$BUILD_DIR/test_game_ui_locale"
 
+# Target selection help only localizes descriptive fragments, not key bindings.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_target_help_locale.c" \
+    -o "$BUILD_DIR/test_target_help_locale"
+"$BUILD_DIR/test_target_help_locale"
+
 # Object information property and brand/slay labels.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_object_info_locale.c" -o "$BUILD_DIR/test_object_info_locale"
 "$BUILD_DIR/test_object_info_locale"

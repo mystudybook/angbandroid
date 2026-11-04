@@ -47,6 +47,7 @@
 
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-target-help.h"
 
 /*
  * Holds state passed between target_set_interactive_aux() and the handlers
@@ -124,6 +125,7 @@ void target_display_help(bool monster, bool object, bool free)
 {
 	/* Determine help location */
 	int wid, hgt, help_loc;
+	bool zh_tw = angdroid_zh_tw_enabled();
 	Term_get_size(&wid, &hgt);
 	help_loc = hgt - HELP_HEIGHT;
 	
@@ -137,34 +139,34 @@ void target_display_help(bool monster, bool object, bool free)
 
 	/* Display help */
 	text_out_c(COLOUR_L_GREEN, "<dir>");
-	text_out(" and ");
+	text_out(angdroid_target_help_text(" and ", zh_tw));
 	text_out_c(COLOUR_L_GREEN, "<click>");
-	text_out(" look around. '");
+	text_out(angdroid_target_help_text(" look around. '", zh_tw));
 	text_out_c(COLOUR_L_GREEN, "g");
-	text_out("' moves to selection. '");
+	text_out(angdroid_target_help_text("' moves to selection. '", zh_tw));
 	text_out_c(COLOUR_L_GREEN, "p");
-	text_out("' selects player. '");
+	text_out(angdroid_target_help_text("' selects player. '", zh_tw));
 	text_out_c(COLOUR_L_GREEN, "q");
-	text_out("' exits. '");
+	text_out(angdroid_target_help_text("' exits. '", zh_tw));
 	text_out_c(COLOUR_L_GREEN, "r");
-	text_out("' displays details. '");
+	text_out(angdroid_target_help_text("' displays details. '", zh_tw));
 
 	if (free) {
 		text_out_c(COLOUR_L_GREEN, "m");
-		text_out("' restricts to interesting places.");
+		text_out(angdroid_target_help_text("' restricts to interesting places.", zh_tw));
 	} else {
 		text_out_c(COLOUR_L_GREEN, "+");
-		text_out("' and '");
+		text_out(angdroid_target_help_text("' and '", zh_tw));
 		text_out_c(COLOUR_L_GREEN, "-");
-		text_out("' cycle through places. '");
+		text_out(angdroid_target_help_text("' cycle through places. '", zh_tw));
 		text_out_c(COLOUR_L_GREEN, "o");
-		text_out("' allows free selection.");
+		text_out(angdroid_target_help_text("' allows free selection.", zh_tw));
 	}
 	
 	if (monster || free) {
-		text_out(" '");
+		text_out(angdroid_target_help_text(" '", zh_tw));
 		text_out_c(COLOUR_L_GREEN, "t");
-		text_out("' targets selection.");
+		text_out(angdroid_target_help_text("' targets selection.", zh_tw));
 	}
 
 	if (object) {
@@ -181,18 +183,18 @@ void target_display_help(bool monster, bool object, bool free)
 			label[0] = key;
 			label[1] = '\0';
 		}
-		text_out(" '");
+		text_out(angdroid_target_help_text(" '", zh_tw));
 		text_out_c(COLOUR_L_GREEN, "%s", label);
-		text_out("' ignores selection.");
+		text_out(angdroid_target_help_text("' ignores selection.", zh_tw));
 	}
 
-	text_out(" '");
+	text_out(angdroid_target_help_text(" '", zh_tw));
 	text_out_c(COLOUR_L_GREEN, ">");
-	text_out("', '");
+	text_out(angdroid_target_help_text("', '", zh_tw));
 	text_out_c(COLOUR_L_GREEN, "<");
-	text_out("', and '");
+	text_out(angdroid_target_help_text("', and '", zh_tw));
 	text_out_c(COLOUR_L_GREEN, "x");
-	text_out("' select nearest stairs or unexplored area.");
+	text_out(angdroid_target_help_text("' select nearest stairs or unexplored area.", zh_tw));
 
 	/* Reset */
 	text_out_indent = 0;
