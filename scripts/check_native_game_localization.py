@@ -758,6 +758,7 @@ def main():
            "Native help-browser C99 fallback tests not registered")
 
     # Knowledge navigation, detail titles and status labels must stay display-only.
+    knowledge_locale_tests = source(ROOT / "tests/native/test_game_ui_locale.c", errors)
     knowledge_mapping_keys = [
         "Display object knowledge", "Display rune knowledge",
         "Display artifact knowledge", "Display ego item knowledge",
@@ -772,7 +773,7 @@ def main():
         expect('{' + '"' + label + '", ' in game_ui_header,
                "Missing localized knowledge menu/display key: " + label)
         expect('angdroid_game_ui_text("' + label + '", 1)' in
-               source(ROOT / "tests/native/test_game_ui_locale.c", errors),
+               knowledge_locale_tests,
                "Knowledge C99 translation coverage missing: " + label)
     expect('angdroid_game_ui_text(title,' in knowledge_ui and
            'prt(format("知識圖鑑：%s", display_title)' in knowledge_ui and
