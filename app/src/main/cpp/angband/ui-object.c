@@ -52,6 +52,7 @@
 #include "ui-prefs.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "object-list-text.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -139,42 +140,41 @@ wchar_t object_char(const struct object *obj)
  * Mode flags are documented in object.h
  */
 static void show_obj(int obj_num, int row, int col, bool cursor,
-					 olist_detail_t mode)
+					 olist_detail_t mode, int row_width)
 {
 	int attr;
 	int label_attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
 	int ex_offset_ctr;
 	char buf[80];
+	char label[sizeof(items[obj_num].label)];
+	char equip_label[sizeof(items[obj_num].equip_label)];
+	char name[sizeof(items[obj_num].o_name)];
 	struct object *obj = items[obj_num].object;
 	bool show_label = mode & (OLIST_WINDOW | OLIST_DEATH) ? true : false;
-	int label_size = show_label ? strlen(items[obj_num].label) : 0;
-	int equip_label_size = strlen(items[obj_num].equip_label);
+	size_t available = angdroid_object_list_cell_budget(ex_offset, row_width);
+	size_t label_size, equip_label_size;
 
 	/* Clear the line */
 	prt("", row + obj_num, MAX(col - 1, 0));
 
 	/* If we have no label then we won't display anything */
-	if (!strlen(items[obj_num].label)) return;
+	if (!items[obj_num].label[0]) return;
 
-	/* Print the label */
-	if (show_label)
-		c_put_str(label_attr, items[obj_num].label, row + obj_num, col);
+	/* Display text from local buffers; never truncate the saved item name.
+	 * Width and position are physical terminal cells, not UTF-8 bytes. */
+	label_size = angdroid_menu_copy_columns(label, sizeof(label),
+		show_label ? items[obj_num].label : "", available);
+	equip_label_size = angdroid_menu_copy_columns(equip_label,
+		sizeof(equip_label), items[obj_num].equip_label,
+		available - label_size);
+	angdroid_menu_copy_columns(name, sizeof(name), items[obj_num].o_name,
+		available - label_size - equip_label_size);
 
-	/* Print the equipment label */
-	c_put_str(label_attr, items[obj_num].equip_label, row + obj_num,
-			  col + label_size);
-
-	/* Limit object name */
-	if (label_size + equip_label_size + strlen(items[obj_num].o_name) >
-		(size_t)ex_offset) {
-		int truncate = ex_offset - label_size - equip_label_size;
-
-		if (truncate < 0) truncate = 0;
-		if ((size_t)truncate > sizeof(items[obj_num].o_name) - 1)
-			truncate = sizeof(items[obj_num].o_name) - 1;
-
-		items[obj_num].o_name[truncate] = '\0';
-	}
+	if (label[0])
+		c_put_str(label_attr, label, row + obj_num, col);
+	if (equip_label[0])
+		c_put_str(label_attr, equip_label, row + obj_num,
+			col + (int)label_size);
 
 	/* Item kind determines the color of the output */
 	if (obj) {
@@ -190,8 +190,9 @@ static void show_obj(int obj_num, int row, int col, bool cursor,
 	}
 
 	/* Object name */
-	c_put_str(attr, items[obj_num].o_name, row + obj_num,
-			  col + label_size + equip_label_size);
+	if (name[0])
+		c_put_str(attr, name, row + obj_num,
+			col + (int)(label_size + equip_label_size));
 
 	/* If we don't have an object, we can skip the rest of the output */
 	if (!obj) return;
@@ -370,8 +371,9 @@ static void set_obj_names(bool terse, const struct player *p)
 
 		/* Max length of label + object name */
 		max_len = MAX(max_len,
-					  strlen(items[i].label) + strlen(items[i].equip_label) +
-					  strlen(items[i].o_name));
+					  angdroid_utf8_display_columns(items[i].label) +
+					  angdroid_utf8_display_columns(items[i].equip_label) +
+					  angdroid_utf8_display_columns(items[i].o_name));
 	}
 }
 
@@ -424,11 +426,12 @@ static void show_obj_list(olist_detail_t mode)
 	}
 
 	/* Column offset of the first extra field */
-	ex_offset = MIN(max_len, (size_t)(Term->wid - 1 - ex_width - col));
+	ex_offset = angdroid_object_list_name_offset(
+		Term->wid, col, ex_width, max_len);
 
 	/* Output the list */
 	for (i = 0; i < num_obj; i++)
-		show_obj(i, row, col, false, mode);
+		show_obj(i, row, col, false, mode, Term->wid - col);
 
 	/* For the inventory: print the quiver count */
 	if (mode & OLIST_QUIVER) {
@@ -943,7 +946,7 @@ static void get_item_display(struct menu *menu, int oid, bool cursor, int row,
 					  int col, int width)
 {
 	/* Print it */
-	show_obj(oid, row - oid, col, cursor, olist_mode);
+	show_obj(oid, row - oid, col, cursor, olist_mode, width);
 }
 
 /**
@@ -1125,12 +1128,14 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	area.col = MIN(Term->wid - 1 - (int) max_len - ex_width, prompt_size - 2);
 	if (area.col <= 3)
 		area.col = 0;
-	ex_offset = MIN(max_len, (size_t)(Term->wid - 1 - ex_width - area.col));
-	while (strlen(header) < max_len + ex_width + ex_offset_ctr) {
+	ex_offset = angdroid_object_list_name_offset(
+		Term->wid, area.col, ex_width, max_len);
+	while (angdroid_utf8_display_columns(header) <
+		max_len + ex_width + ex_offset_ctr) {
 		my_strcat(header, " ", sizeof(header));
 		if (strlen(header) > sizeof(header) - 2) break;
 	}
-	area.width = MAX(max_len, strlen(header));
+	area.width = (int)MAX(max_len, angdroid_utf8_display_columns(header));
 
 	for (row = area.row; row < area.row + area.page_rows; row++)
 		prt("", row, MAX(0, area.col - 1));
