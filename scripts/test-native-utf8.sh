@@ -84,3 +84,9 @@ CC="${CC:-cc}"
 # Original Angband class progression titles; game records unchanged.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_class_titles_locale.c" -o "$BUILD_DIR/test_class_titles_locale"
 "$BUILD_DIR/test_class_titles_locale"
+
+# Filtered menu soft-keyboard hints must use visible-row indexes and remain bounded.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_key_hints.c" \
+    -o "$BUILD_DIR/test_menu_key_hints"
+"$BUILD_DIR/test_menu_key_hints"
