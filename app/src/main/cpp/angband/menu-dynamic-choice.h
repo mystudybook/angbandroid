@@ -12,4 +12,19 @@ static inline int angdroid_menu_dynamic_choice_index(
     return index >= 0 && index < count ? index : -1;
 }
 
+/* A filtered popup displays visible positions, but linked-list traversal
+ * needs the original entry index. Reject stale or invalid filter entries. */
+static inline int angdroid_menu_dynamic_original_index(
+    int visible_index, int visible_count, int original_count,
+    const int *filter_list)
+{
+    int index;
+
+    if (visible_index < 0 || visible_count <= 0 ||
+        original_count <= 0 || visible_index >= visible_count)
+        return -1;
+    index = filter_list ? filter_list[visible_index] : visible_index;
+    return index >= 0 && index < original_count ? index : -1;
+}
+
 #endif
