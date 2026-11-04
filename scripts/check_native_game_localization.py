@@ -1053,6 +1053,25 @@ def main():
            'strnfmt(title, sizeof(title), "artifacts (seed %08lx)"' in knowledge_source,
            "Known artifacts title must be localized for both randart and normal modes")
 
+    # Fixed action names and store entries in the main knowledge menu are
+    # translated for presentation without touching shop indices or digit keys.
+    knowledge_menu_header = source(CPP / "angband/zh-tw-knowledge-menu.h", errors)
+    knowledge_menu_test = source(ROOT / "tests/native/test_knowledge_store_menu_locale.c", errors)
+    expect('"zh-tw-knowledge-menu.h"' in knowledge_ui and
+           'pre_store_actions[j].label, angdroid_zh_tw_enabled()' in knowledge_ui and
+           'post_store_actions[j].label, angdroid_zh_tw_enabled()' in knowledge_ui and
+           'angdroid_knowledge_store_label(localized,' in knowledge_ui and
+           'main_knowledge_menu.m.cmd_keys = main_knowledge_menu.storekeys;' in knowledge_ui and
+           'handle_store_shortcuts' in knowledge_ui,
+           "Knowledge menu labels must be translated without altering store keys")
+    expect('angdroid_terrain_name(name, 1)' in knowledge_menu_header and
+           "name[n - 1] == 's'" in knowledge_menu_header and
+           'return NULL;' in knowledge_menu_header and
+           'test_knowledge_store_menu_locale.c' in native_tests and
+           'store("Weapon Smiths", 3, " (3)", 0,' in knowledge_menu_test and
+           'store(NULL, 10, "", 1,' in knowledge_menu_test,
+           "Knowledge store label test must cover both locales and unknown names")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
