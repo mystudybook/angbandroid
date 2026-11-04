@@ -861,6 +861,28 @@ def main():
                knowledge_group_tests for en in category_source),
            "Native C99 group-name regression must cover all Chinese categories")
 
+    # Monster knowledge rows reuse the 522-name curated translation and cell clip.
+    monster_label_header = source(CPP / "angband/knowledge-monster-label.h", errors)
+    monster_label_test = source(ROOT / "tests/native/test_knowledge_monster_label.c", errors)
+    expect('"knowledge-monster-label.h"' in knowledge_ui and
+           'angdroid_knowledge_monster_copy(name_label, sizeof(name_label),' in knowledge_ui and
+           'race->name, rf_has(race->flags, RF_UNIQUE),' in knowledge_ui and
+           'int columns = MIN(65 - col, Term->wid - col);' in knowledge_ui and
+           'if (name_label[0])' in knowledge_ui and
+           'c_put_str(attr, name_label, row, col);' in knowledge_ui,
+           "Monster knowledge names must be localized and clipped before symbol")
+    expect('"zh-tw-monsters.h"' in monster_label_header and
+           '"menu-text-fit.h"' in monster_label_header and
+           'if (!english || !zh_tw || is_unique) return english;' in monster_label_header and
+           'return translated ? translated : english;' in monster_label_header and
+           'angdroid_menu_copy_columns(dest, capacity, label,' in monster_label_header,
+           "Monster knowledge must preserve unique/English names and UTF-8 glyphs")
+    expect('test_knowledge_monster_label.c' in native_tests and
+           'strcmp(label, "遠古紅")' in monster_label_test and
+           'strcmp(label, "遠古")' in monster_label_test and
+           'strcmp(label, "kobo")' in monster_label_test,
+           "Monster knowledge renderer must test UTF-8 boundaries and English")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

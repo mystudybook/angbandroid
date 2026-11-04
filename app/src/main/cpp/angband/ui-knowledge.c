@@ -67,6 +67,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-knowledge-groups.h"
+#include "knowledge-monster-label.h"
 #include "../curses/unicode_display.h"
 
 /**
@@ -1184,8 +1185,18 @@ static void display_monster(int col, int row, bool cursor, int oid)
 			 rf_has(race->flags, RF_UNIQUE))
 		a = COLOUR_VIOLET;
 
-	/* Display the name */
-	c_prt(attr, race->name, row, col);
+	/* Localize non-unique names without altering monster_race data.
+	 * Clip complete UTF-8 glyphs before the fixed symbol column at 66.
+	 * The right edge of the name stays at column 64 (one-cell gap). */
+	if (Term && col >= 0 && col < Term->wid && col < 65) {
+		char name_label[256];
+		int columns = MIN(65 - col, Term->wid - col);
+		angdroid_knowledge_monster_copy(name_label, sizeof(name_label),
+			race->name, rf_has(race->flags, RF_UNIQUE),
+			angdroid_zh_tw_enabled(), columns);
+		if (name_label[0])
+			c_put_str(attr, name_label, row, col);
+	}
 
 	/* Display symbol */
 	big_pad(66, row, a, c);

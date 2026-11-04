@@ -79,6 +79,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_knowledge_groups_locale"
 "$BUILD_DIR/test_knowledge_groups_locale"
 
+# Monster knowledge labels reuse canonical non-unique names and clip CJK glyphs.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_knowledge_monster_label.c" \
+    -o "$BUILD_DIR/test_knowledge_monster_label"
+"$BUILD_DIR/test_knowledge_monster_label"
+
 # Target selection help only localizes descriptive fragments, not key bindings.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_target_help_locale.c" \
