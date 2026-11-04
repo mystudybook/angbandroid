@@ -584,6 +584,17 @@ preferences. This does not localize the internal names of option keys.
 Regression tests cover selected translated labels, English fallback and
 the source-level safeguard that callbacks still receive the English name.
 
+## Narrow native action-menu column clipping (2026-11-04)
+
+The native action-menu renderer now clips translated labels by *terminal
+display columns* before calling `Term_putstr()`. Its previous width-limited
+call could count input characters differently from rendered CJK cell width,
+causing Chinese menu text to run into adjacent content on narrow phones.
+Rendering now operates on a private temporary copy; the original
+`menu_action.name` is never mutated, so callbacks and save/load behavior
+continue to use original English command labels. New source and C99
+regression checks guard CJK width clipping and English fallback.
+
 ## Validation and remaining tasks
 
 Run on a machine with Python 3, JDK 21 and a host C compiler:

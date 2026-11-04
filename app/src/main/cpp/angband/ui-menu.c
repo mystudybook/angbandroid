@@ -64,9 +64,17 @@ static void display_action_aux(menu_action *act, uint8_t color,
 	/* TODO: wizard mode should show more data */
 	Term_erase(col, row, wid);
 
-	if (act->name)
-		Term_putstr(col, row, wid, color,
-            angdroid_game_ui_text(act->name, angdroid_zh_tw_enabled()));
+	if (act->name) {
+        /* Action titles are display-only. UTF-8 byte length differs
+         * from rendered columns, so clip before passing to curses. */
+        char rendered[256];
+        my_strcpy(rendered,
+            angdroid_game_ui_text(act->name, angdroid_zh_tw_enabled()),
+            sizeof(rendered));
+        if (wid >= 0)
+            angdroid_utf8_clip_columns(rendered, (size_t)wid);
+        Term_putstr(col, row, -1, color, rendered);
+    }
 }
 
 /* ------------------------------------------------------------------------

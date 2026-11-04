@@ -111,6 +111,13 @@ int main(void)
     assert(strcmp(angdroid_game_ui_text(unknown, 1), unknown) == 0);
     assert(angdroid_game_ui_text(NULL, 1) == NULL);
     assert(angdroid_utf8_display_columns("繁體中文") == 8);
+    {
+        char menu_title[256];
+        strcpy(menu_title, angdroid_game_ui_text("Create a keymap", 1));
+        angdroid_utf8_clip_columns(menu_title, 7);
+        assert(strcmp(menu_title, "建立快") == 0);
+        assert(angdroid_utf8_display_columns(menu_title) == 6);
+    }
     assert(strcmp(angdroid_zh_tw_blow_method("claw", 1), "爪擊") == 0);
     assert(strcmp(angdroid_zh_tw_blow_effect("reduce strength", 1),
                   "降低力量") == 0);
