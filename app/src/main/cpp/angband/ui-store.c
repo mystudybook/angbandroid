@@ -1008,20 +1008,6 @@ static int context_menu_store(struct store_context *ctx, const int oid, int mx, 
 	return true;
 }
 
-/* Make 'g' a synonym of 'p' for an item's context menu in the store. */
-static bool handle_g_context_store_item(struct menu *menu,
-		const ui_event *event, int oid)
-{
-	if (event->type == EVT_KBRD && event->key.code == 'g') {
-		ui_event mod_event, out_event;
-
-		mod_event = *event;
-		mod_event.key.code = 'p';
-		return menu_handle_keypress(menu, &mod_event, &out_event);
-	}
-	return false;
-}
-
 /* pick the context menu options appropiate for an item available in a store */
 static bool context_menu_store_item(struct store_context *ctx, const int oid, int mx, int my)
 {
@@ -1030,7 +1016,6 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 
 	struct menu *m;
 	struct object *obj;
-	menu_iter mod_iter;
 	int selected;
 	char *labels;
 	char header[120];
@@ -1061,14 +1046,8 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 				angdroid_game_ui_text(home ? "Take one" : "Buy one", angdroid_zh_tw_enabled()),
 				'o', ACT_BUY_ONE, labels);
 		}
-		/*
-		 * This a bit of a hack so 'g' acts like 'p' (as it does when
-		 * there isn't a selected item). Has to be done after all the
-		 * labels have been added to avoid assertion failures.
-		 */
-		mod_iter = *m->row_funcs;
-		mod_iter.row_handler = handle_g_context_store_item;
-		m->row_funcs = &mod_iter;
+		/* The generic dynamic selection helper resolves 'g' to the 'p'
+		 * tag, rather than choosing whatever row the cursor was on. */
 		m->switch_keys = "g";
 	}
 
@@ -1080,7 +1059,7 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 	region_erase_bordered(&m->boundary);
 
 	prt(format("(Enter to select, ESC) Command for %s:", header), 0, 0);
-	selected = menu_dynamic_select(m);
+	selected = menu_dynamic_select_alias(m, 'g', 'p');
 
 	menu_dynamic_free(m);
 	string_free(labels);

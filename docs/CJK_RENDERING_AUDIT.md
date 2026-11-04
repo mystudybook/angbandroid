@@ -154,6 +154,15 @@ A local JDK compilation of the corresponding Java classes/tests passed **14 widt
 
 **Pending Android acceptance:** repeatedly cancel a purchase after the price is displayed and monitor memory usage; buy one item, empty the store, invoke Help and Sell, then attempt buying or examining from an empty/stale list; rotate while item-selection is open; enter and leave read-only store knowledge.
 
+## Dynamic context menus: g-to-Buy and cancelled choices (2026-11-04)
+
+- Store item popups historically declared `g` as a switch key and installed a temporary row-handler that attempted to synthesize a `p` keypress. However, `menu_dynamic_select()` returned the **currently focused** item's value for any non-Escape return event, including this `g` keyboard event. Thus a Buy shortcut could accidentally execute Examine (or Buy one) depending on cursor position.
+- Dynamic menus now only return an item value for a true `EVT_SELECT` event or for an explicitly declared alias that resolves to a **valid tagged row**. The shop item popup uses `menu_dynamic_select_alias(m, 'g', 'p')`, which selects the tagged `p` (Buy/Take) row independent of the cursor. Unrecognized key events, Escape and missing target tags return cancellation (`-1`).
+- The old store-specific temporary row-handler hack is removed. The generic `dynamic_display()` also uses the existing bounded UTF-8 terminal-column painter, so Traditional Chinese popup labels cannot extend beyond the available menu width.
+- Added `tests/native/test_menu_dynamic_choice.c` for selected and aliased rows, read-only menus, empty menus, cancelled events and invalid cursors, plus `tests/test_menu_dynamic_choice_source.py` to verify native dispatch. Both are included in the offline verification suite. Item identities, buy/sell transaction logic and savefiles remain unchanged.
+
+**Pending Android acceptance:** open a store item popup with Examine focused, press `g` and verify it starts Buy instead of Examine; repeat with Buy one focused, then cancel at the price confirmation; verify Escape and right-click cancellation; check Chinese Buy/Examine labels at narrow widths.
+
 ## Regression checks
 
 Run from the repository root:

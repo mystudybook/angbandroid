@@ -152,6 +152,13 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_stock_guard"
 "$BUILD_DIR/test_store_stock_guard"
 
+# Dynamic popup keys such as shop g must choose a tagged action, never
+# accidentally execute whichever entry currently has focus.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_dynamic_choice.c" \
+    -o "$BUILD_DIR/test_menu_dynamic_choice"
+"$BUILD_DIR/test_menu_dynamic_choice"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \
