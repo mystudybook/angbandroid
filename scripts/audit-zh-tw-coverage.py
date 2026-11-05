@@ -43,6 +43,26 @@ def names(filename: str) -> set[str]:
     }
 
 
+def described_names(filename: str) -> set[str]:
+    """Canonical names whose record contains at least one desc: line."""
+    described: set[str] = set()
+    current = None
+    has_desc = False
+    for line in (GAMEDATA / filename).read_text(
+        encoding="utf-8"
+    ).splitlines():
+        if line.startswith("name:"):
+            if current is not None and has_desc:
+                described.add(current)
+            current = line[5:]
+            has_desc = False
+        elif current is not None and line.startswith("desc:"):
+            has_desc = True
+    if current is not None and has_desc:
+        described.add(current)
+    return described
+
+
 def monsters() -> tuple[set[str], set[str]]:
     records = []
     name = None
@@ -69,6 +89,8 @@ def inspect() -> dict:
     item_translations = entries(CPP / "zh-tw-items.h")
     ego_translations = entries(CPP / "zh-tw-ego-names.h")
     artifact_translations = entries(CPP / "zh-tw-artifact-names.h")
+    artifact_lore_translations = entries(CPP / "zh-tw-artifact-lore.h")
+    ego_lore_translations = entries(CPP / "zh-tw-ego-lore.h")
     flavor_translations = entries(CPP / "zh-tw-flavor-names.h")
     monster_translations = entries(CPP / "zh-tw-monsters.h")
     unique_monster_translations = entries(CPP / "zh-tw-unique-monsters.h")
@@ -141,6 +163,12 @@ def inspect() -> dict:
             ),
             "artifact_display_names": coverage(
                 names("artifact.txt"), artifact_translations
+            ),
+            "artifact_flavor_descriptions": coverage(
+                described_names("artifact.txt"), artifact_lore_translations
+            ),
+            "ego_flavor_descriptions": coverage(
+                described_names("ego_item.txt"), ego_lore_translations
             ),
             "unidentified_flavor_labels": coverage(
                 {
@@ -221,6 +249,8 @@ def main() -> int:
             ("unique_monster_display_names", "Unique monster display names"),
             ("ego_item_suffix_names", "Ego item suffix names"),
             ("artifact_display_names", "Artifact display names"),
+            ("artifact_flavor_descriptions", "Artifact flavor descriptions"),
+            ("ego_flavor_descriptions", "Ego flavor descriptions"),
             ("unidentified_flavor_labels", "Unidentified flavor labels"),
             ("monster_flavor_descriptions", "Monster flavor descriptions"),
             ("activation_effect_descriptions", "Activation effect descriptions"),
