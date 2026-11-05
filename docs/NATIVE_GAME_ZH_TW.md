@@ -1026,3 +1026,17 @@ are now localized only on the shape knowledge display. Their canonical
 ability indices, flags and gameplay effects are unchanged. Unknown future
 flag descriptions retain English, including original punctuation. The
 existing C99 shape regression now tests the seven pairs in both locales.
+
+
+## Character history and Hall of Fame UI (2026-11-05)
+
+The native player-history screen now shows Traditional Chinese headers,
+loss markers and paging hints. The on-disk exported history stays English,
+including its fixed-width header and `(LOST)` marker, to preserve original
+file compatibility. The high-score display now localizes heading, score
+attributes, rank, depth, date/gold/turn labels and death location. Race and
+class names are translated using exhaustive source-matched display dictionaries
+(11 `p_race.txt` races, 9 `class.txt` classes); unknown IDs and death
+explanations remain unchanged. UTF-8 score rows are clipped by terminal
+columns, not arbitrary byte length. Source and independent C99 checks are
+registered; on-device visual validation of small terminals is still required.

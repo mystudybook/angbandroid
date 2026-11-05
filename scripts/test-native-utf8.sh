@@ -115,6 +115,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_shape_lore_locale"
 "$BUILD_DIR/test_shape_lore_locale"
 
+# Native history and Hall of Fame: record labels, original data keys and fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_history_score_locale.c" \
+    -o "$BUILD_DIR/test_history_score_locale"
+"$BUILD_DIR/test_history_score_locale"
+
 # Target selection help only localizes descriptive fragments, not key bindings.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_target_help_locale.c" \

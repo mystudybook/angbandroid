@@ -23,6 +23,20 @@
 #include "ui-output.h"
 #include "ui-score.h"
 #include "ui-term.h"
+#include "droid.h"
+#include "zh-tw-records.h"
+#include "menu-text-fit.h"
+
+/* Score lines can exceed the available columns, particularly in zh-TW.
+ * Clip complete UTF-8 glyphs and leave high-score records untouched. */
+static void score_print_row(uint8_t attr, const char *line, int row, int col)
+{
+	char clipped[160];
+	size_t available = (Term && col >= 0 && col < Term->wid) ?
+		(size_t)(Term->wid - col) : 0;
+	angdroid_menu_copy_columns(clipped, sizeof(clipped), line, available);
+	if (clipped[0]) c_put_str(attr, clipped, row, col);
+}
 
 /**
  * Display a page of scores
@@ -66,7 +80,15 @@ static void display_score_page(const struct high_score scores[], int start,
 			/* loop */;
 
 		/* Dump some info */
-		strnfmt(out_val, sizeof(out_val),
+		if (angdroid_zh_tw_enabled())
+			strnfmt(out_val, sizeof(out_val),
+				"%3d.%9s  %s，%s %s，等級 %d",
+				start + 1, score->pts, score->who,
+				angdroid_record_race(r ? r->name : "<none>", true),
+				angdroid_record_class(c ? c->name : "<none>", true),
+				clev);
+		else
+			strnfmt(out_val, sizeof(out_val),
 				"%3d.%9s  %s the %s %s, level %d",
 				start + 1, score->pts, score->who,
 				r ? r->name : "<none>", c ? c->name : "<none>",
@@ -74,26 +96,38 @@ static void display_score_page(const struct high_score scores[], int start,
 
 		/* Append a "maximum level" */
 		if (mlev > clev)
-			my_strcat(out_val, format(" (Max %d)", mlev), sizeof(out_val));
+			my_strcat(out_val, angdroid_zh_tw_enabled() ?
+				format("（最高 %d）", mlev) : format(" (Max %d)", mlev),
+				sizeof(out_val));
 
 		/* Dump the first line */
-		c_put_str(attr, out_val, n * 4 + 2, 0);
+		score_print_row(attr, out_val, n * 4 + 2, 0);
 
 
 		/* Died where? */
-		if (!cdun)
-			strnfmt(out_val, sizeof(out_val), "Killed by %s in the town",
+		if (!cdun) {
+			if (angdroid_zh_tw_enabled())
+				strnfmt(out_val, sizeof(out_val), "城鎮中死亡：%s", score->how);
+			else
+				strnfmt(out_val, sizeof(out_val), "Killed by %s in the town",
 					score->how);
-		else
-			strnfmt(out_val, sizeof(out_val),
+		} else {
+			if (angdroid_zh_tw_enabled())
+				strnfmt(out_val, sizeof(out_val),
+					"地城第 %d 層死亡：%s", cdun, score->how);
+			else
+				strnfmt(out_val, sizeof(out_val),
 					"Killed by %s on dungeon level %d", score->how, cdun);
+		}
 
 		/* Append a "maximum level" */
 		if (mdun > cdun)
-			my_strcat(out_val, format(" (Max %d)", mdun), sizeof(out_val));
+			my_strcat(out_val, angdroid_zh_tw_enabled() ?
+				format("（最深 %d）", mdun) : format(" (Max %d)", mdun),
+				sizeof(out_val));
 
 		/* Dump the info */
-		c_put_str(attr, out_val, n * 4 + 3, 15);
+		score_print_row(attr, out_val, n * 4 + 3, 15);
 
 
 		/* Clean up standard encoded form of "when" */
@@ -104,10 +138,15 @@ static void display_score_page(const struct high_score scores[], int start,
 		}
 
 		/* And still another line of info */
-		strnfmt(out_val, sizeof(out_val),
+		if (angdroid_zh_tw_enabled())
+			strnfmt(out_val, sizeof(out_val),
+				"（玩家 %s、日期 %s、金幣 %s、回合 %s）",
+				user, when, gold, aged);
+		else
+			strnfmt(out_val, sizeof(out_val),
 				"(User %s, Date %s, Gold %s, Turn %s).",
 				user, when, gold, aged);
-		c_put_str(attr, out_val, n * 4 + 4, 15);
+		score_print_row(attr, out_val, n * 4 + 4, 15);
 	}
 }
 
@@ -144,19 +183,30 @@ static void display_scores_aux(const struct high_score scores[], int from,
 
 		/* Title */
 		if (k > 0) {
-			put_str(format("%s Hall of Fame (from position %d)",
-				VERSION_NAME, k + 1), 0, 21);
+			if (angdroid_zh_tw_enabled())
+				put_str(format("%s 名人堂（從第 %d 名開始）",
+					VERSION_NAME, k + 1), 0, 21);
+			else
+				put_str(format("%s Hall of Fame (from position %d)",
+					VERSION_NAME, k + 1), 0, 21);
 		} else {
-			put_str(format("%s Hall of Fame", VERSION_NAME), 0, 30);
+			if (angdroid_zh_tw_enabled())
+				put_str(format("%s 名人堂", VERSION_NAME), 0, 30);
+			else
+				put_str(format("%s Hall of Fame", VERSION_NAME), 0, 30);
 		}
 
 		display_score_page(scores, k, count, highlight);
 
 		/* Wait for response; prompt centered on 80 character line */
 		if (allow_scrolling) {
-			prt("[Press ESC to exit, up for prior page, any other key for next page.]", 23, 6);
+			prt(angdroid_record_ui_text(
+				"[Press ESC to exit, up for prior page, any other key for next page.]",
+				angdroid_zh_tw_enabled()), 23, 6);
 		} else {
-			prt("[Press ESC to exit, any other key to page forward till done.]", 23, 9);
+			prt(angdroid_record_ui_text(
+				"[Press ESC to exit, any other key to page forward till done.]",
+				angdroid_zh_tw_enabled()), 23, 9);
 		}
 		ch = inkey();
 		prt("", 23, 0);
