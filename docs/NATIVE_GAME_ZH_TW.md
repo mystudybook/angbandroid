@@ -1120,3 +1120,21 @@ renderer** from `effects-info.c`, compiles them with strict C99 and
 Pukel-man/bat/warg/vampire/werewolf descriptions, runtime dice changes,
 unknown subtype fallback, and entirely unknown effect stacks. This test
 runs in `scripts/verify-zh-tw.sh` without an Android SDK.
+
+## Runtime timed-condition messages (2026-11-05)
+
+Core Angband timed status notifications are now translated in Traditional
+Chinese at the moment they are passed to `print_custom_message()`. The
+initial batch covers all **67** nonempty canonical notifications from the
+first **19** `player_timed.txt` status groups (FAST, SLOW, BLIND, PARALYZED,
+CONFUSED, AFRAID, IMAGE, POISONED, CUT, STUN, FOOD, PROTEVIL, INVULN, HERO,
+SHERO, SHIELD, BLESSED, SINVIS, SINFRA), plus "You resist the effect!".
+These include entering, recovery and worsening/improving messages for
+poison, fear, confusion, blindness, hunger, bleeding and stun. Timed grade
+names and IDs are **not** translated; those values are consumed by original
+game state comparisons. The 68-key presentation dictionary is only called
+at five `player_set_timed()` notification sites and one resistance message.
+English fallback, unknown source messages and tagged placeholders remain
+unchanged. Native C99 strict-format tests validate every original message
+and fallback; source audit matches the canonical data keys and enforces
+presentation-only wiring. Full Android gameplay acceptance remains required.

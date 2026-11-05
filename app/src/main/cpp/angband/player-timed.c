@@ -32,6 +32,8 @@
 #include "player-timed.h"
 #include "player-util.h"
 #include "project.h"
+#include "droid.h"
+#include "zh-tw-timed-messages.h"
 
 int PY_FOOD_MAX;
 int PY_FOOD_FULL;
@@ -838,26 +840,31 @@ bool player_set_timed(struct player *p, int idx, int v, bool notify,
 
 	/* Always mention going up a grade, otherwise on request */
 	if (new_grade->grade > current_grade->grade) {
-		print_custom_message(weapon, new_grade->up_msg,
+		print_custom_message(weapon,
+			angdroid_timed_message(new_grade->up_msg, angdroid_zh_tw_enabled()),
 			effect->msgt, p);
 		notify = true;
 	} else if ((new_grade->grade < current_grade->grade) &&
 			(new_grade->down_msg)) {
-		print_custom_message(weapon, new_grade->down_msg,
+		print_custom_message(weapon,
+			angdroid_timed_message(new_grade->down_msg, angdroid_zh_tw_enabled()),
 			effect->msgt, p);
 		notify = true;
 	} else if (notify) {
 		if (v == 0) {
 			/* Finishing */
-			print_custom_message(weapon, effect->on_end,
+			print_custom_message(weapon,
+			angdroid_timed_message(effect->on_end, angdroid_zh_tw_enabled()),
 				MSG_RECOVER, p);
 		} else if (p->timed[idx] > v && effect->on_decrease) {
 			/* Decrementing */
-			print_custom_message(weapon, effect->on_decrease,
+			print_custom_message(weapon,
+			angdroid_timed_message(effect->on_decrease, angdroid_zh_tw_enabled()),
 				effect->msgt, p);
 		} else if (v > p->timed[idx] && effect->on_increase) {
 			/* Incrementing */
-			print_custom_message(weapon, effect->on_increase,
+			print_custom_message(weapon,
+			angdroid_timed_message(effect->on_increase, angdroid_zh_tw_enabled()),
 				effect->msgt, p);
 		}
 	}
@@ -947,7 +954,8 @@ bool player_inc_check(struct player *p, int idx, bool lore)
 				}
 				if (player_of_has(p, f->idx)) {
 					if (mon) {
-						msg("You resist the effect!");
+						msg("%s", angdroid_timed_message(
+							"You resist the effect!", angdroid_zh_tw_enabled()));
 					}
 					return false;
 				}
