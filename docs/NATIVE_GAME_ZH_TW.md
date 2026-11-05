@@ -1323,7 +1323,8 @@ unchanged. Source checker assertions guard all bilingual branches.
 - Item origins: **22/22** visible origin enum values have Chinese display
   paths, including map depth, store, treasure vault, and monster drops.
   Ordinary monsters reuse translated display names; unique proper names,
-  origin enums, source monsters, and original export data are unchanged.
+  origin enums and source monster data are unchanged. Textual exports may
+  include localized descriptions and require a separate compatibility review.
 - The canonical coverage audit now reports these four groups individually,
   and `tests/test_activation_effects_coverage.py` checks that new upstream
   descriptions must have a Chinese mapping. A host C99 header smoke test
