@@ -1415,3 +1415,24 @@ canonical translation dictionary is still 326 entries.
   coverage audit assert 79/79 exact source keys. A local Android APK rebuild
   and actual equipment/shops gameplay inspection remain necessary.
 
+## All 138 artifact display names (2026-11-05)
+
+- Original Angband `artifact.txt` has 138 distinct canonical artifact names.
+  `zh-tw-artifact-names.h` contains an exact display-only Traditional Chinese
+  mapping for all 138, including Sting, Andúril, the One Ring and names
+  beginning with `of ...`.
+- `obj_desc_name()` invokes this dictionary only after the original
+  `object_is_known_artifact(obj)` condition succeeds AND `ODESC_ZH_TW`
+  is set for a Traditional Chinese screen. Unknown keys and English-mode
+  screens keep the canonical text unchanged; any unflagged export path
+  keeps the original English names and save compatibility.
+- The static source guard and JSON coverage audit verify 138/138 names
+  against `artifact.txt` without modifying game-data values. Native
+  `test_artifact_names_locale.c` is included in the host C99 test script,
+  and the UI source regression verifies display-only and known-artifact
+  gating.
+- Local Android NDK compilation and actual visual gameplay checks for
+  artifact inventory/knowledge, tiny screens and combinations of base,
+  artifact and ego names are still required. Full game localization and
+  independent bundled variants remain incomplete.
+

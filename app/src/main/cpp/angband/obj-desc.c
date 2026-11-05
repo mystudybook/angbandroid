@@ -27,6 +27,7 @@
 #include "droid.h"
 #include "zh-tw-items.h"
 #include "zh-tw-ego-names.h"
+#include "zh-tw-artifact-names.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -353,8 +354,16 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	}
 
 	/* Append extra names of various kinds */
-	if (object_is_known_artifact(obj))
-		strnfcat(buf, max, &end, " %s", obj->artifact->name);
+	if (object_is_known_artifact(obj)) {
+		/* Only known artifacts in explicitly translated UI descriptions.
+		 * Canonical artifact names and unflagged exports stay untouched. */
+		const char *artifact_name = obj->artifact->name;
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled()) {
+			const char *localized = angdroid_zh_tw_artifact_name(artifact_name);
+			if (localized) artifact_name = localized;
+		}
+		strnfcat(buf, max, &end, " %s", artifact_name);
+	}
 	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store)) {
 		/* Only translate a revealed ego suffix for opted-in screen calls.
 		 * Unknown ego text, English mode and unflagged exports stay intact. */
