@@ -1461,9 +1461,9 @@ canonical translation dictionary is still 326 entries.
 - All five ego-item records with source `desc:` paragraphs have Traditional
   Chinese narrative mappings: `of Accuracy`, `of Power`, `of Wounding`,
   `of Slaying` and `of Craftsmanship` (**5/5**).
-- The first **43/138** canonical artifact descriptions are translated,
+- **All 138/138** canonical artifact descriptions are translated,
   including Galadriel's Phial, Angrist, Sting, Andúril and Olórin's staff.
-  The other **95** artifact flavor paragraphs still fall back to English.
+  Unrecognized source names still fall back to English.
 - Both dictionaries look up canonical artifact/ego **names** only when the
   engine already allows the text in `describe_flavor_text()`. This is
   presentation-only; the source `artifact.txt`, `ego_item.txt`, object
