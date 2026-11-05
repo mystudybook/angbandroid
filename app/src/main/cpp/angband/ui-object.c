@@ -53,6 +53,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "object-list-text.h"
+#include "item-selection-layout.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -659,6 +660,7 @@ static struct object **floor_list;
 static struct object **throwing_list;
 static olist_detail_t olist_mode = 0;
 static int item_mode;
+static int item_prompt_columns;
 static cmd_code item_cmd;
 static bool newmenu = false;
 static bool allow_all = false;
@@ -1049,55 +1051,91 @@ static bool get_item_action(struct menu *menu, const ui_event *event, int oid)
  */
 static void item_menu_browser(int oid, void *data, const region *local_area)
 {
-	char tmp_val[80];
-	int count, j, i = num_obj;
-	int quiver_slots = (player->upkeep->quiver_cnt + z_info->quiver_slot_size - 1)
-		/ z_info->quiver_slot_size;
+    int j, i = num_obj;
+    int quiver_slots, col, max_columns;
+    char tmp_val[80], label[16], visible[80];
 
-	/* Set up to output below the menu */
-	text_out_hook = text_out_to_screen;
-	text_out_wrap = 0;
-	text_out_indent = local_area->col - 1;
-	text_out_pad = 1;
-	prt("", local_area->row + local_area->page_rows, MAX(0, local_area->col - 1));
-	Term_gotoxy(local_area->col, local_area->row + local_area->page_rows);
+    /* Scrolled menus and rotated screens must never draw the quiver
+     * footer into a selectable item row or beyond Term->hgt. */
+    if (!Term || !local_area || local_area->page_rows <= 0)
+        return;
+    col = local_area->col;
+    if (col < 0 || col >= Term->wid) return;
+    max_columns = MIN(local_area->width, Term->wid - col);
+    if (max_columns <= 0) return;
+    if (!(olist_mode & OLIST_QUIVER) ||
+        player->upkeep->command_wrk != USE_INVEN)
+        return;
 
-	/* If we're printing pack slots the quiver takes up */
-	if (olist_mode & OLIST_QUIVER && player->upkeep->command_wrk == USE_INVEN) {
-		/* Quiver may take multiple lines */
-		for (j = 0; j < quiver_slots; j++, i++) {
-			const char *fmt = "in Quiver: %d missile%s\n";
-			char letter = all_letters_nohjkl[i];
+    quiver_slots = (player->upkeep->quiver_cnt +
+        z_info->quiver_slot_size - 1) / z_info->quiver_slot_size;
+    if (z_info->quiver_slot_size <= 0) return;
+    for (j = 0; j < quiver_slots; ++j, ++i) {
+        int line = angdroid_item_selection_footer_row(local_area->row,
+            local_area->page_rows, Term->hgt, j);
+        int count;
+        size_t label_cols;
+        if (line < 0 || i >= (int)strlen(all_letters_nohjkl)) break;
+        if (j == quiver_slots - 1)
+            count = player->upkeep->quiver_cnt -
+                z_info->quiver_slot_size * (quiver_slots - 1);
+        else
+            count = z_info->quiver_slot_size;
+        prt("", line, MAX(col - 1, 0));
+        strnfmt(label, sizeof(label), "%c) ", all_letters_nohjkl[i]);
+        label_cols = angdroid_menu_copy_columns(visible, sizeof(visible),
+            label, (size_t)max_columns);
+        if (visible[0]) c_put_str(COLOUR_SLATE, visible, line, col);
 
-			/* Number of missiles in this "slot" */
-			if (j == quiver_slots - 1)
-				count = player->upkeep->quiver_cnt - (z_info->quiver_slot_size *
-													  (quiver_slots - 1));
-			else
-				count = z_info->quiver_slot_size;
+        if (angdroid_zh_tw_enabled())
+            strnfmt(tmp_val, sizeof(tmp_val), "箭袋：%d 支彈藥", count);
+        else
+            strnfmt(tmp_val, sizeof(tmp_val), "in Quiver: %d missile%s",
+                count, count == 1 ? "" : "s");
+        angdroid_menu_copy_columns(visible, sizeof(visible), tmp_val,
+            (size_t)max_columns - label_cols);
+        if (visible[0])
+            c_put_str(COLOUR_L_UMBER, visible, line, col + (int)label_cols);
+    }
+}
 
-			/* Print the (disabled) label */
-			strnfmt(tmp_val, sizeof(tmp_val), "%c) ", letter);
-			text_out_c(COLOUR_SLATE, tmp_val, local_area->row + i, local_area->col);
+/* Recalculate selection coordinates using the CURRENT terminal after each
+ * Android resize. The menu may be scrolled; do not alter its cursor/stock IDs.
+ */
+static void item_menu_resize(struct menu *m)
+{
+    int width, height;
+    bool footer;
+    angdroid_item_selection_layout layout;
 
-			/* Print the count */
-			strnfmt(tmp_val, sizeof(tmp_val), fmt, count,
-					count == 1 ? "" : "s");
-			text_out_c(COLOUR_L_UMBER, tmp_val, local_area->row + i, local_area->col + 3);
-		}
-	}
-
-	/* Always print a blank line */
-	prt("", local_area->row + i, MAX(0, local_area->col - 1));
-
-	/* Blank out whole tiles */
-	while ((tile_height > 1) && ((local_area->row + i) % tile_height != 0)) {
-		i++;
-		prt("", local_area->row + i, MAX(0, local_area->col - 1));
-	}
-
-	text_out_pad = 0;
-	text_out_indent = 0;
+    Term_get_size(&width, &height);
+    olist_render_mode = object_list_visible_extras(olist_mode, width);
+    ex_width = 0;
+    if (olist_render_mode & OLIST_PRICE) ex_width += 9;
+    if (olist_render_mode & OLIST_FAIL) ex_width += 10;
+    if (olist_render_mode & OLIST_RECHARGE) ex_width += 10;
+    if (olist_render_mode & OLIST_WEIGHT) ex_width += 9;
+    footer = (olist_mode & OLIST_QUIVER) &&
+        player->upkeep->command_wrk == USE_INVEN &&
+        player->upkeep->quiver_cnt > 0;
+    if (!angdroid_item_selection_region(width, height,
+            item_prompt_columns, max_len,
+            angdroid_utf8_display_columns(header), ex_width, m->count,
+            footer, &layout)) {
+        area.col = 0;
+        area.row = 1;
+        area.width = 0;
+        area.page_rows = 0;
+        menu_layout(m, &area);
+        return;
+    }
+    area.col = layout.col;
+    area.row = layout.row;
+    area.width = layout.width;
+    area.page_rows = layout.page_rows;
+    ex_offset = angdroid_object_list_name_offset(width, area.col,
+        ex_width, max_len);
+    menu_layout(m, &area);
 }
 
 /**
@@ -1106,10 +1144,10 @@ static void item_menu_browser(int oid, void *data, const region *local_area)
 static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 {
 	menu_iter menu_f = { get_item_tag, get_item_validity, get_item_display,
-						 get_item_action, 0 };
+						 get_item_action, item_menu_resize };
 	struct menu *m = menu_new(MN_SKIN_OBJECT, &menu_f);
 	ui_event evt = { 0 };
-	int row, inscrip;
+	int inscrip;
 	struct object *obj = NULL;
 
 	/* Set up the menu */
@@ -1145,34 +1183,9 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	if (mode & OLIST_QUIVER && player->upkeep->quiver[0] != NULL)
 		max_len = MAX(max_len, 24);
 
-	olist_render_mode = object_list_visible_extras(olist_mode, Term->wid);
-	ex_width = 0;
-	if (olist_render_mode & OLIST_PRICE) ex_width += 9;
-	if (olist_render_mode & OLIST_FAIL) ex_width += 10;
-	if (olist_render_mode & OLIST_RECHARGE) ex_width += 10;
-	if (olist_render_mode & OLIST_WEIGHT) ex_width += 9;
-
-	/* Set up the menu region */
-	area.page_rows = m->count;
-	area.row = 1;
-	area.col = MIN(Term->wid - 1 - (int) max_len - ex_width, prompt_size - 2);
-	if (area.col <= 3)
-		area.col = 0;
-	ex_offset = angdroid_object_list_name_offset(
-		Term->wid, area.col, ex_width, max_len);
-	while (angdroid_utf8_display_columns(header) <
-		max_len + ex_width) {
-		my_strcat(header, " ", sizeof(header));
-		if (strlen(header) > sizeof(header) - 2) break;
-	}
-	area.width = (int)MIN((size_t)MAX(1, Term->wid - area.col),
-		MAX(max_len + (size_t)ex_width,
-			angdroid_utf8_display_columns(header)));
-
-	for (row = area.row; row < area.row + area.page_rows; row++)
-		prt("", row, MAX(0, area.col - 1));
-
-	menu_layout(m, &area);
+	/* Prompt and numeric columns are recalculated on each rotation. */
+	item_prompt_columns = prompt_size;
+	item_menu_resize(m);
 
 	/* Choose */
 	evt = menu_select(m, 0, true);
