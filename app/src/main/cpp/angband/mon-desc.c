@@ -22,6 +22,7 @@
 #include "mon-predicate.h"
 #include "droid.h"
 #include "zh-tw-monsters.h"
+#include "zh-tw-unique-monsters.h"
 
 /**
  * Perform simple English pluralization on a monster name.
@@ -48,13 +49,19 @@ void get_mon_name(char *buf, size_t buflen,
 {
 	assert(race != NULL);
 
-	/* Monster-list labels only: keep canonical race names and the English
-	 * grammar in monster_desc() for combat, lore and saved-game data. */
-	if (angdroid_zh_tw_enabled() && !rf_has(race->flags, RF_UNIQUE)) {
-		const char *translated =
-			angdroid_zh_tw_monster_list_name(race->name);
+	/* Monster-list labels only; the underlying race name remains canonical.
+	 * Unique monsters keep their [U] marker, while regular monsters keep
+	 * their count. No translated names enter monster_desc() grammar. */
+	if (angdroid_zh_tw_enabled()) {
+		const bool is_unique = rf_has(race->flags, RF_UNIQUE);
+		const char *translated = is_unique
+			? angdroid_zh_tw_unique_monster_name(race->name)
+			: angdroid_zh_tw_monster_list_name(race->name);
 		if (translated) {
-			strnfmt(buf, buflen, "%3d %s", num, translated);
+			if (is_unique)
+				strnfmt(buf, buflen, "[U] %s", translated);
+			else
+				strnfmt(buf, buflen, "%3d %s", num, translated);
 			return;
 		}
 	}
