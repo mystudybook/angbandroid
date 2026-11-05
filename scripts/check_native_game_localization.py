@@ -202,6 +202,12 @@ def main():
            "Message search highlight may cut through a Chinese character")
 
     # Unique monster names only alter UI labels, not engine race identities.
+    unique_test = source(
+        ROOT / "tests/native/test_unique_monster_locale.c", errors)
+    expect("test_unique_monster_locale.c" in native_tests
+           and 'ANGDROID_ZH_TW_UNIQUE_MONSTER_NAMES == 101' in unique_test
+           and 'angdroid_zh_tw_unique_monster_name(NULL) == NULL' in unique_test,
+           "Unique monster C99 regression must be registered with fallbacks")
     unique_entries = table(unique_mon_header)
     unique_source_names = {
         name for name, unique in monster_records if unique
@@ -908,7 +914,7 @@ def main():
                knowledge_group_tests for en in category_source),
            "Native C99 group-name regression must cover all Chinese categories")
 
-    # Monster knowledge rows reuse the 522-name curated translation and cell clip.
+    # Monster knowledge uses 522 regular and 101 unique labels with CJK clipping.
     monster_label_header = source(CPP / "angband/knowledge-monster-label.h", errors)
     monster_label_test = source(ROOT / "tests/native/test_knowledge_monster_label.c", errors)
     expect('"knowledge-monster-label.h"' in knowledge_ui and
