@@ -68,4 +68,13 @@ if handler.count("store_get_stock(m);") != 2:
 if handler.count("angdroid_store_stock_index_valid(") < 2:
     raise SystemExit("FAIL: direct mouse/Enter stock dispatch bypasses bounds")
 
-print("PASS: cancel releases temporary stack; stale stock cannot buy/examine")
+# After any store reorder, the next command must make a fresh selection.
+recalc = block("static void store_menu_recalc(", "\n/**\n * Process a command")
+if "angdroid_store_clear_stale_selection(ctx->stock_changed," not in recalc:
+    raise SystemExit("FAIL: changed stock may silently keep a different product")
+if "ctx->stock_changed = true;" not in source:
+    raise SystemExit("FAIL: stock mutation does not invalidate pending selection")
+if "flush(type, unused, user);" not in source:
+    raise SystemExit("FAIL: queued fast touches can act on reordered products")
+
+print("PASS: cancel cleanup, changed stock and purchase index guards")
