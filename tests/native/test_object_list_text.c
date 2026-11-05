@@ -68,18 +68,20 @@ int main(void)
         assert(!e.price && !e.fail && !e.recharge && !e.weight);
         assert(e.reserved == 0);
         e = angdroid_object_list_fit_extras(21, 12, true, true, true, true);
+        assert(!e.price && !e.fail && !e.recharge && !e.weight);
+        e = angdroid_object_list_fit_extras(22, 12, true, true, true, true);
         assert(e.price && !e.fail && !e.recharge && !e.weight);
         assert(e.reserved == 9);
-        e = angdroid_object_list_fit_extras(31, 12, true, true, true, true);
+        e = angdroid_object_list_fit_extras(32, 12, true, true, true, true);
         assert(e.price && e.fail && !e.recharge && !e.weight);
         assert(e.reserved == 19);
-        e = angdroid_object_list_fit_extras(40, 12, true, true, true, true);
+        e = angdroid_object_list_fit_extras(41, 12, true, true, true, true);
         assert(e.price && e.fail && !e.recharge && e.weight);
         assert(e.reserved == 28);
-        e = angdroid_object_list_fit_extras(50, 12, true, true, true, true);
+        e = angdroid_object_list_fit_extras(51, 12, true, true, true, true);
         assert(e.price && e.fail && e.recharge && e.weight);
         assert(e.reserved == 38);
-        e = angdroid_object_list_fit_extras(22, 12, false, false, true, false);
+        e = angdroid_object_list_fit_extras(23, 12, false, false, true, false);
         assert(!e.price && !e.fail && e.recharge && !e.weight);
         assert(e.reserved == 10);
 
@@ -102,8 +104,8 @@ int main(void)
                 if (e.weight) expected += 9;
                 assert(e.reserved == expected);
                 assert(e.reserved >= 0);
-                assert(screen < 12 ? e.reserved == 0 :
-                    e.reserved <= screen - 12);
+                assert(screen <= 12 ? e.reserved == 0 :
+                    e.reserved <= screen - 13);
             }
         }
     }

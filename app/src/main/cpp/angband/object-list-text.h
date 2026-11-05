@@ -32,7 +32,7 @@ static inline size_t angdroid_object_list_cell_budget(
 /* Selection, inventory and equipment share the same preference order for
  * optional numeric fields. Leave at least min_name terminal cells for the
  * item shortcut/name before reserving 9/10-column detail fields.
- * The +1 right-edge margin is handled by the renderer, not by this helper.
+ * Leave one more cell for the renderer's right-edge margin.
  */
 typedef struct {
     bool price;
@@ -51,7 +51,7 @@ static inline angdroid_object_list_extras angdroid_object_list_fit_extras(
     if (row_width <= 0) return out;
     if (min_name < 0) min_name = 0;
     if (min_name >= row_width) return out;
-    remaining = row_width - min_name;
+    remaining = row_width - min_name - 1;
 
     /* Price/failure information precedes optional weight on narrow phones. */
     if (price && remaining >= 9) {
