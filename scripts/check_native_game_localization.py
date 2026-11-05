@@ -1025,17 +1025,17 @@ def main():
             return [(json.loads(en), json.loads(zh)) for en, zh in raw]
         except ValueError:
             return []
-    for table, expected in (
+    for table_name, expected in (
         ("terrain_names", canonical_terrain),
         ("terrain_lore", canonical_terrain - {"unknown grid"}),
         ("trap_names", canonical_trap),
         ("trap_lore", canonical_trap_lore)):
-        pairs = terrain_table_pairs(table)
+        pairs = terrain_table_pairs(table_name)
         expect(len(pairs) == len(expected) and
                {en for en, _ in pairs} == expected and
                len({en for en, _ in pairs}) == len(pairs) and
                all(zh.strip() for _, zh in pairs),
-               "Terrain/trap table must match all canonical source records: " + table)
+               "Terrain/trap table must match all canonical source records: " + table_name)
     expect('"zh-tw-terrain-trap.h"' in knowledge_ui and
            'angdroid_terrain_name(feat->name, angdroid_zh_tw_enabled())' in knowledge_ui and
            'angdroid_terrain_lore(' in knowledge_ui and
