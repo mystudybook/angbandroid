@@ -1072,6 +1072,39 @@ def main():
            'store(NULL, 10, "", 1,' in knowledge_menu_test,
            "Knowledge store label test must cover both locales and unknown names")
 
+    # Shape names come exclusively from canonical shape.txt; displayed
+    # translations never replace shape IDs, effect data or original sort keys.
+    shape_data = source(ROOT / "variant_lib/angband/gamedata/shape.txt", errors)
+    shape_header = source(CPP / "angband/zh-tw-shape-lore.h", errors)
+    shape_test = source(ROOT / "tests/native/test_shape_lore_locale.c", errors)
+    canonical_shape_names = {
+        line[5:] for line in shape_data.splitlines() if line.startswith("name:")
+    }
+    shape_map = shape_header.partition(
+        "static inline const char *angdroid_shape_name(")[2].partition(
+        "static inline const char *angdroid_shape_class(")[0]
+    shape_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', shape_map)
+    expect(len(shape_pairs) == len(canonical_shape_names) and
+           {en for en, _ in shape_pairs} == canonical_shape_names and
+           all(zh.strip() for _, zh in shape_pairs),
+           "Shape label dictionary must match all canonical shape.txt names")
+    expect('"zh-tw-shape-lore.h"' in knowledge_ui and
+           'angdroid_shape_name(sarray[i]->name, angdroid_zh_tw_enabled())' in knowledge_ui and
+           'angdroid_shape_intro(angdroid_zh_tw_enabled())' in knowledge_ui and
+           'angdroid_zh_tw_spell_name(spell->name, true)' in knowledge_ui and
+           'angdroid_shape_class(c->name, true)' in knowledge_ui and
+           'return my_stricmp((*sleft)->name, (*sright)->name);' in knowledge_ui and
+           'effect_describe(s->effect, "Changing into the shape "' in knowledge_ui,
+           "Shape lore must not modify sorting, effect descriptions or identity")
+    expect('test_shape_lore_locale.c' in native_tests and
+           'shape("Pukel-man", "普克爾人")' in shape_test and
+           'angdroid_shape_intro(0)' in shape_test,
+           "Shape lore C99 fallback regression must be registered")
+
+    expect(knowledge_ui.count('textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\\n" : ".\\n");') == 9 and
+           'textblock_append(tb, angdroid_zh_tw_enabled() ?' not in knowledge_ui,
+           "Shape lore localized punctuation must use a literal printf format")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

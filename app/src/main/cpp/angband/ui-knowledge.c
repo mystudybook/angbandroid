@@ -70,6 +70,8 @@
 #include "zh-tw-rune-lore.h"
 #include "zh-tw-terrain-trap.h"
 #include "zh-tw-knowledge-menu.h"
+#include "zh-tw-shape-lore.h"
+#include "zh-tw-spell-names.h"
 #include "knowledge-monster-label.h"
 #include "knowledge-column-text.h"
 #include "menu-text-fit.h"
@@ -2884,7 +2886,7 @@ static const char *skill_index_to_name(int i)
 		break;
 	}
 
-	return name;
+	return angdroid_shape_term(name, angdroid_zh_tw_enabled());
 }
 
 
@@ -2894,11 +2896,15 @@ static void shape_lore_append_list(textblock *tb,
 	int i;
 
 	if (n > 0) {
-		textblock_append(tb, " %s", list[0]);
+		textblock_append(tb, " %s", angdroid_shape_term(list[0],
+			angdroid_zh_tw_enabled()));
 	}
 	for (i = 1; i < n; ++i) {
-		textblock_append(tb, "%s %s", (i < n - 1) ? "," : " and",
-			list[i]);
+		if (angdroid_zh_tw_enabled())
+			textblock_append(tb, "、%s", angdroid_shape_term(list[i], true));
+		else
+			textblock_append(tb, "%s %s", (i < n - 1) ? "," : " and",
+				list[i]);
 	}
 }
 
@@ -2913,24 +2919,34 @@ static void shape_lore_append_basic_combat(textblock *tb,
 	int n = 0;
 
 	if (s->to_a != 0) {
-		strnfmt(toa_msg, sizeof(toa_msg), "%+d to AC", s->to_a);
+		if (angdroid_zh_tw_enabled())
+			strnfmt(toa_msg, sizeof(toa_msg), "%+d 護甲", s->to_a);
+		else
+			strnfmt(toa_msg, sizeof(toa_msg), "%+d to AC", s->to_a);
 		msgs[n] = toa_msg;
 		++n;
 	}
 	if (s->to_h != 0) {
-		strnfmt(toh_msg, sizeof(toh_msg), "%+d to hit", s->to_h);
+		if (angdroid_zh_tw_enabled())
+			strnfmt(toh_msg, sizeof(toh_msg), "%+d 命中", s->to_h);
+		else
+			strnfmt(toh_msg, sizeof(toh_msg), "%+d to hit", s->to_h);
 		msgs[n] = toh_msg;
 		++n;
 	}
 	if (s->to_d != 0) {
-		strnfmt(tod_msg, sizeof(tod_msg), "%+d to damage", s->to_d);
+		if (angdroid_zh_tw_enabled())
+			strnfmt(tod_msg, sizeof(tod_msg), "%+d 傷害", s->to_d);
+		else
+			strnfmt(tod_msg, sizeof(tod_msg), "%+d to damage", s->to_d);
 		msgs[n] = tod_msg;
 		++n;
 	}
 	if (n > 0) {
-		textblock_append(tb, "Adds");
+		textblock_append(tb, "%s", angdroid_shape_term("Adds",
+			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 	}
 }
 
@@ -2945,16 +2961,18 @@ static void shape_lore_append_skills(textblock *tb,
 	for (i = 0; i < SKILL_MAX; ++i) {
 		if (s->skills[i] != 0) {
 			shape_lore_helper_append_to_list(
-				format("%+d to %s", s->skills[i],
-					skill_index_to_name(i)),
+				(angdroid_zh_tw_enabled() ?
+					format("%+d %s", s->skills[i], skill_index_to_name(i)) :
+					format("%+d to %s", s->skills[i], skill_index_to_name(i))),
 				&msgs, &nmax, &n);
 		}
 	}
 
 	if (n > 0) {
-		textblock_append(tb, "Adds");
+		textblock_append(tb, "%s", angdroid_shape_term("Adds",
+			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
@@ -2974,17 +2992,20 @@ static void shape_lore_append_non_stat_modifiers(textblock *tb,
 	for (i = STAT_MAX; i < OBJ_MOD_MAX; ++i) {
 		if (s->modifiers[i] != 0) {
 			shape_lore_helper_append_to_list(
-				format("%+d to %s",
-					s->modifiers[i],
-					lookup_obj_property(OBJ_PROPERTY_MOD, i)->name),
+				(angdroid_zh_tw_enabled() ?
+					format("%+d %s", s->modifiers[i],
+						angdroid_shape_term(lookup_obj_property(OBJ_PROPERTY_MOD, i)->name, true)) :
+					format("%+d to %s", s->modifiers[i],
+						lookup_obj_property(OBJ_PROPERTY_MOD, i)->name)),
 				&msgs, &nmax, &n);
 		}
 	}
 
 	if (n > 0) {
-		textblock_append(tb, "Adds");
+		textblock_append(tb, "%s", angdroid_shape_term("Adds",
+			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
@@ -3004,17 +3025,20 @@ static void shape_lore_append_stat_modifiers(textblock *tb,
 	for (i = 0; i < STAT_MAX; ++i) {
 		if (s->modifiers[i] != 0) {
 			shape_lore_helper_append_to_list(
-				format("%+d to %s",
-					s->modifiers[i],
-					lookup_obj_property(OBJ_PROPERTY_MOD, i)->name),
+				(angdroid_zh_tw_enabled() ?
+					format("%+d %s", s->modifiers[i],
+						angdroid_shape_term(lookup_obj_property(OBJ_PROPERTY_MOD, i)->name, true)) :
+					format("%+d to %s", s->modifiers[i],
+						lookup_obj_property(OBJ_PROPERTY_MOD, i)->name)),
 				&msgs, &nmax, &n);
 		}
 	}
 
 	if (n > 0) {
-		textblock_append(tb, "Adds");
+		textblock_append(tb, "%s", angdroid_shape_term("Adds",
+			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
@@ -3047,21 +3071,24 @@ static void shape_lore_append_resistances(textblock *tb,
 	}
 
 	if (nvul != 0) {
-		textblock_append(tb, "Makes you vulnerable to");
+		textblock_append(tb, "%s", angdroid_shape_term("Makes you vulnerable to",
+			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, vul, nvul);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 	}
 
 	if (nres != 0) {
-		textblock_append(tb, "Makes you resistant to");
+		textblock_append(tb, "%s", angdroid_shape_term("Makes you resistant to",
+			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, res, nres);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 	}
 
 	if (nimm != 0) {
-		textblock_append(tb, "Makes you immune to");
+		textblock_append(tb, "%s", angdroid_shape_term("Makes you immune to",
+			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, imm, nimm);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 	}
 }
 
@@ -3085,9 +3112,10 @@ static void shape_lore_append_protection_flags(textblock *tb,
 	}
 
 	if (n > 0) {
-		textblock_append(tb, "Provides protection from");
+		textblock_append(tb, "%s", angdroid_shape_term("Provides protection from",
+			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
@@ -3115,9 +3143,10 @@ static void shape_lore_append_sustains(textblock *tb,
 	}
 
 	if (n > 0) {
-		textblock_append(tb, "Sustains");
+		textblock_append(tb, "%s", angdroid_shape_term("Sustains",
+			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
@@ -3207,12 +3236,16 @@ static void shape_lore_append_triggering_spells(textblock *tb,
 						if (n == 0) {
 							textblock_append(tb, "\n");
 						}
-						textblock_append(tb,
-							"The %s spell, %s, from %s triggers the shapechange.",
-							c->name,
-							spell->name,
-							kind->name
-						);
+						if (angdroid_zh_tw_enabled())
+							textblock_append(tb,
+								"%s的法術「%s」（出自 %s）會觸發變身。",
+								angdroid_shape_class(c->name, true),
+								angdroid_zh_tw_spell_name(spell->name, true),
+								kind->name);
+						else
+							textblock_append(tb,
+								"The %s spell, %s, from %s triggers the shapechange.",
+								c->name, spell->name, kind->name);
 						++n;
 					}
 				}
@@ -3233,14 +3266,8 @@ static void shape_lore(const struct player_shape *s)
 {
 	textblock *tb = textblock_new();
 
-	textblock_append(tb, "%s", s->name);
-	textblock_append(tb, "\nLike all shapes, the equipment at the time of "
-		"the shapechange sets the base attributes, including damage "
-		"per blow, number of blows and resistances.  While changed, "
-		"items in your pack or on the floor (except for pickup or "
-		"eating) are inaccessible.  To switch back to your normal "
-		"shape, cast a spell or use an item command other than eat "
-		"(drop, for instance).\n");
+	textblock_append(tb, "%s", angdroid_shape_name(s->name, angdroid_zh_tw_enabled()));
+	textblock_append(tb, "%s", angdroid_shape_intro(angdroid_zh_tw_enabled()));
 	shape_lore_append_basic_combat(tb, s);
 	shape_lore_append_skills(tb, s);
 	shape_lore_append_non_stat_modifiers(tb, s);
@@ -3293,7 +3320,7 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 	sort(sarray, count, sizeof(sarray[0]), compare_shape_names);
 	narray = mem_alloc(count * sizeof(*narray));
 	for (i = 0; i < count; ++i) {
-		narray[i] = sarray[i]->name;
+		narray[i] = angdroid_shape_name(sarray[i]->name, angdroid_zh_tw_enabled());
 	}
 
 	menu_setpriv(m, count, narray);
