@@ -1362,13 +1362,14 @@ static bool monster_turn_try_push(struct monster *mon, const char *m_name,
 			become_aware(cave, mon1);
 
 		/* Note if visible */
-		if (monster_is_visible(mon) && monster_is_in_view(mon))
+		if (monster_is_visible(mon) && monster_is_in_view(mon)) {
 			if (angdroid_zh_tw_enabled())
 				msg("%s%s%s。", m_name, angdroid_move_quest_text(
 					kill_ok ? "tramples over" : "pushes past", true), n_name);
 			else
 				msg("%s %s %s.", m_name, kill_ok ? "tramples over" : "pushes past",
 					n_name);
+		}
 
 		/* Monster ate another monster */
 		if (kill_ok)
