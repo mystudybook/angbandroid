@@ -1601,6 +1601,37 @@ def main():
            'unknown future prompt' in player_feedback_test,
            "Player feedback native bilingual C99 test must be registered")
 
+    # Generic spell handlers: localize exact static gameplay messages only;
+    # formatted dynamic object and monster outcomes remain untouched here.
+    general_effects = source(CPP / "angband/effect-handler-general.c", errors)
+    general_effect_header = source(
+        CPP / "angband/zh-tw-general-effect-messages.h", errors)
+    general_effect_test = source(
+        ROOT / "tests/native/test_general_effect_messages_locale.c", errors)
+    general_effect_pairs = re.findall(
+        r'\{ "([^"]+)", "([^"]+)" \}', general_effect_header)
+    general_effect_test_pairs = re.findall(
+        r'\{ "([^"]+)", "([^"]+)" \}', general_effect_test)
+    expect(len(general_effect_pairs) == 71 and
+           len({en for en, _ in general_effect_pairs}) == 71 and
+           all(zh.strip() and "%" not in zh for _, zh in general_effect_pairs) and
+           general_effect_test_pairs == general_effect_pairs,
+           "Generic spell feedback must have 71 canonical English keys and tests")
+    expect('"zh-tw-general-effect-messages.h"' in general_effects and
+           general_effects.count('msg("%s", angdroid_general_effect_message(')
+                == 78 and
+           general_effects.count('"%s", angdroid_general_effect_message(')
+                == 82 and
+           'msgt(MSG_TPLEVEL, "%s", angdroid_general_effect_message(' in
+                general_effects and
+           'angdroid_zh_tw_enabled()' in general_effects and
+           'effect_calculate_value(context,' in general_effects,
+           "All 82 original fixed-format spell feedback sinks must be localized")
+    expect('test_general_effect_messages_locale.c' in native_tests and
+           'Nothing happens!' in general_effect_test and
+           'Teleportation forbidden!' in general_effect_test,
+           "Generic effect host C99 regression must be registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

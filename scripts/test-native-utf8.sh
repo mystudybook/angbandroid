@@ -109,6 +109,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_knowledge_store_menu_locale"
 "$BUILD_DIR/test_knowledge_store_menu_locale"
 
+# Native generic effect messages: magic detection, teleport and recovery.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_general_effect_messages_locale.c" \
+    -o "$BUILD_DIR/test_general_effect_messages_locale"
+"$BUILD_DIR/test_general_effect_messages_locale"
+
 # Player warnings, death notices, shape prompts and misc commands.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_player_feedback_locale.c" \

@@ -48,6 +48,8 @@
 #include "source.h"
 #include "target.h"
 #include "trap.h"
+#include "droid.h"
+#include "zh-tw-general-effect-messages.h"
 
 
 /**
@@ -229,7 +231,8 @@ static bool uncurse_object(struct object *obj, int strength, char *dice_string)
 			take_hit(player, dam, "Failed uncursing");
 		} else {
 			/* Non-destructive failure */
-			msg("The removal fails.");
+			msg("%s", angdroid_general_effect_message("The removal fails.",
+			angdroid_zh_tw_enabled()));
 		}
 	} else {
 		return false;
@@ -412,7 +415,8 @@ static bool enchant_spell(int num_hit, int num_dam, int num_ac, struct command *
 		event_signal(EVENT_INPUT_FLUSH);
 
 		/* Message */
-		msg("The enchantment failed.");
+		msg("%s", angdroid_general_effect_message("The enchantment failed.",
+			angdroid_zh_tw_enabled()));
 	}
 
 	/* Something happened */
@@ -477,7 +481,8 @@ static void brand_object(struct object *obj, const char *name)
 		enchant(obj, randint0(3) + 4, ENCH_TOHIT | ENCH_TODAM);
 	} else {
 		event_signal(EVENT_INPUT_FLUSH);
-		msg("The branding failed.");
+		msg("%s", angdroid_general_effect_message("The branding failed.",
+			angdroid_zh_tw_enabled()));
 	}
 }
 
@@ -514,7 +519,8 @@ bool effect_handler_NOURISH(effect_handler_context_t *context)
 		/* Set food level to amount, vomiting if necessary */
 		bool message = player->timed[TMD_FOOD] > amount;
 		if (message) {
-			msg("You vomit!");
+			msg("%s", angdroid_general_effect_message("You vomit!",
+			angdroid_zh_tw_enabled()));
 		}
 		player_set_timed(player, TMD_FOOD, MAX(amount, 0), false,
 			context->origin.what != SRC_PLAYER || !context->aware);
@@ -535,9 +541,11 @@ bool effect_handler_NOURISH(effect_handler_context_t *context)
 bool effect_handler_CRUNCH(effect_handler_context_t *context)
 {
 	if (one_in_(2))
-		msg("It's crunchy.");
+		msg("%s", angdroid_general_effect_message("It's crunchy.",
+			angdroid_zh_tw_enabled()));
 	else
-		msg("It nearly breaks your tooth!");
+		msg("%s", angdroid_general_effect_message("It nearly breaks your tooth!",
+			angdroid_zh_tw_enabled()));
 	context->ident = true;
 	return true;
 }
@@ -705,13 +713,15 @@ bool effect_handler_GLYPH(effect_handler_context_t *context)
 
 	/* Only one decoy at a time */
 	if (!loc_is_zero(decoy) && (context->subtype == GLYPH_DECOY)) {
-		msg("You can only deploy one decoy at a time.");
+		msg("%s", angdroid_general_effect_message("You can only deploy one decoy at a time.",
+			angdroid_zh_tw_enabled()));
 		return false;
 	}
 
 	/* See if the effect works */
 	if (!square_istrappable(cave, player->grid)) {
-		msg("There is no clear floor on which to cast the spell.");
+		msg("%s", angdroid_general_effect_message("There is no clear floor on which to cast the spell.",
+			angdroid_zh_tw_enabled()));
 		return false;
 	}
 
@@ -895,7 +905,8 @@ bool effect_handler_RESTORE_EXP(effect_handler_context_t *context)
 	if (player->exp < player->max_exp) {
 		/* Message */
 		if (context->origin.what != SRC_NONE)
-			msg("You feel your life energies returning.");
+			msg("%s", angdroid_general_effect_message("You feel your life energies returning.",
+			angdroid_zh_tw_enabled()));
 		player_exp_gain(player, player->max_exp - player->exp);
 
 		/* Recalculate max. hitpoints */
@@ -913,7 +924,8 @@ bool effect_handler_GAIN_EXP(effect_handler_context_t *context)
 {
 	int amount = effect_calculate_value(context, false);
 	if (player->exp < PY_MAX_EXP) {
-		msg("You feel more experienced.");
+		msg("%s", angdroid_general_effect_message("You feel more experienced.",
+			angdroid_zh_tw_enabled()));
 		player_exp_gain(player, amount / 2);
 	}
 	context->ident = true;
@@ -938,7 +950,8 @@ bool effect_handler_DRAIN_LIGHT(effect_handler_context_t *context)
 
 		/* Notice */
 		if (!player->timed[TMD_BLIND]) {
-			msg("Your light dims.");
+			msg("%s", angdroid_general_effect_message("Your light dims.",
+			angdroid_zh_tw_enabled()));
 			context->ident = true;
 		}
 
@@ -986,7 +999,8 @@ bool effect_handler_DRAIN_MANA(effect_handler_context_t *context)
 
 	/* The player has no mana */
 	if (!player->csp) {
-		msg("The draining fails.");
+		msg("%s", angdroid_general_effect_message("The draining fails.",
+			angdroid_zh_tw_enabled()));
 		if (monster) {
 			update_smart_learn(mon, player, 0, PF_NO_MANA, -1);
 		}
@@ -1034,9 +1048,11 @@ bool effect_handler_RESTORE_MANA(effect_handler_context_t *context)
 		if (player->csp > player->msp) {
 			player->csp = player->msp;
 			player->csp_frac = 0;
-			msg("You feel your head clear.");
+			msg("%s", angdroid_general_effect_message("You feel your head clear.",
+			angdroid_zh_tw_enabled()));
 		} else
-			msg("You feel your head clear somewhat.");
+			msg("%s", angdroid_general_effect_message("You feel your head clear somewhat.",
+			angdroid_zh_tw_enabled()));
 		player->upkeep->redraw |= (PR_MANA);
 	}
 	context->ident = true;
@@ -1096,20 +1112,23 @@ bool effect_handler_RECALL(effect_handler_context_t *context)
 
 	/* No recall */
 	if (OPT(player, birth_no_recall) && !player->total_winner) {
-		msg("Nothing happens.");
+		msg("%s", angdroid_general_effect_message("Nothing happens.",
+			angdroid_zh_tw_enabled()));
 		return true;
 	}
 
 	/* No recall from quest levels with force_descend */
 	if (OPT(player, birth_force_descend)
 			&& is_quest(player, player->depth)) {
-		msg("Nothing happens.");
+		msg("%s", angdroid_general_effect_message("Nothing happens.",
+			angdroid_zh_tw_enabled()));
 		return true;
 	}
 
 	/* No recall from single combat */
 	if (player->upkeep->arena_level) {
-		msg("Nothing happens.");
+		msg("%s", angdroid_general_effect_message("Nothing happens.",
+			angdroid_zh_tw_enabled()));
 		return true;
 	}
 
@@ -1141,14 +1160,16 @@ bool effect_handler_RECALL(effect_handler_context_t *context)
 		}
 
 		player->word_recall = randint0(20) + 15;
-		msg("The air about you becomes charged...");
+		msg("%s", angdroid_general_effect_message("The air about you becomes charged...",
+			angdroid_zh_tw_enabled()));
 	} else {
 		/* Deactivate recall */
 		if (!get_check("Word of Recall is already active.  Do you want to cancel it? "))
 			return false;
 
 		player->word_recall = 0;
-		msg("A tension leaves the air around you...");
+		msg("%s", angdroid_general_effect_message("A tension leaves the air around you...",
+			angdroid_zh_tw_enabled()));
 	}
 
 	/* Redraw status line */
@@ -1174,14 +1195,16 @@ bool effect_handler_DEEP_DESCENT(effect_handler_context_t *context)
 	}
 
 	if (target_depth > player->depth) {
-		msgt(MSG_TPLEVEL, "The air around you starts to swirl...");
+		msgt(MSG_TPLEVEL, "%s", angdroid_general_effect_message("The air around you starts to swirl...",
+			angdroid_zh_tw_enabled()));
 		player->deep_descent = 3 + randint1(4);
 
 		/* Redraw status line */
 		player->upkeep->redraw |= PR_STATUS;
 		handle_stuff(player);
 	} else {
-		msgt(MSG_TPLEVEL, "You sense a malevolent presence blocking passage to the levels below.");
+		msgt(MSG_TPLEVEL, "%s", angdroid_general_effect_message("You sense a malevolent presence blocking passage to the levels below.",
+			angdroid_zh_tw_enabled()));
 	}
 	context->ident = true;
 	return true;
@@ -1191,7 +1214,8 @@ bool effect_handler_ALTER_REALITY(effect_handler_context_t *context)
 {
 	/* Don't allow in single combat arenas. */
 	if (player->upkeep->arena_level) return true;
-	msg("The world changes!");
+	msg("%s", angdroid_general_effect_message("The world changes!",
+			angdroid_zh_tw_enabled()));
 	dungeon_change_level(player, player->depth);
 	context->ident = true;
 	return true;
@@ -1313,7 +1337,8 @@ bool effect_handler_READ_MINDS(effect_handler_context_t *context)
 	}
 
 	if (found) {
-		msg("Images form in your mind!");
+		msg("%s", angdroid_general_effect_message("Images form in your mind!",
+			angdroid_zh_tw_enabled()));
 		context->ident = true;
 	}
 
@@ -1385,11 +1410,13 @@ bool effect_handler_DETECT_TRAPS(effect_handler_context_t *context)
 
 	/* Describe */
 	if (detect)
-		msg("You sense the presence of traps!");
+		msg("%s", angdroid_general_effect_message("You sense the presence of traps!",
+			angdroid_zh_tw_enabled()));
 
 	/* Trap detection always makes you aware, even if no traps are present */
 	else
-		msg("You sense no traps.");
+		msg("%s", angdroid_general_effect_message("You sense no traps.",
+			angdroid_zh_tw_enabled()));
 
 	/* Notice */
 	context->ident = true;
@@ -1457,9 +1484,11 @@ bool effect_handler_DETECT_DOORS(effect_handler_context_t *context)
 
 	/* Describe */
 	if (doors)
-		msg("You sense the presence of doors!");
+		msg("%s", angdroid_general_effect_message("You sense the presence of doors!",
+			angdroid_zh_tw_enabled()));
 	else if (context->aware)
-		msg("You sense no doors.");
+		msg("%s", angdroid_general_effect_message("You sense no doors.",
+			angdroid_zh_tw_enabled()));
 
 	context->ident = true;
 
@@ -1509,9 +1538,11 @@ bool effect_handler_DETECT_STAIRS(effect_handler_context_t *context)
 
 	/* Describe */
 	if (stairs)
-		msg("You sense the presence of stairs!");
+		msg("%s", angdroid_general_effect_message("You sense the presence of stairs!",
+			angdroid_zh_tw_enabled()));
 	else if (context->aware)
-		msg("You sense no stairs.");
+		msg("%s", angdroid_general_effect_message("You sense no stairs.",
+			angdroid_zh_tw_enabled()));
 
 	context->ident = true;
 	return true;
@@ -1566,9 +1597,11 @@ bool effect_handler_DETECT_ORE(effect_handler_context_t *context)
 	/* Message unless we're silently detecting */
 	if (context->origin.what != SRC_NONE) {
 		if (gold_buried) {
-			msg("You sense the presence of buried treasure!");
+			msg("%s", angdroid_general_effect_message("You sense the presence of buried treasure!",
+			angdroid_zh_tw_enabled()));
 		} else if (context->aware) {
-			msg("You sense no buried treasure.");
+			msg("%s", angdroid_general_effect_message("You sense no buried treasure.",
+			angdroid_zh_tw_enabled()));
 		}
 	}
 
@@ -1690,9 +1723,11 @@ bool effect_handler_SENSE_GOLD(effect_handler_context_t *context)
 	bool money = sense_stuff(context, tval_is_money, unknown_gold_kind);
 
 	if (money) {
-		msg("You sense the presence of gold!");
+		msg("%s", angdroid_general_effect_message("You sense the presence of gold!",
+			angdroid_zh_tw_enabled()));
 	} else if (context->aware) {
-		msg("You sense no gold.");
+		msg("%s", angdroid_general_effect_message("You sense no gold.",
+			angdroid_zh_tw_enabled()));
 	}
 
 	context->ident = true;
@@ -1707,9 +1742,11 @@ bool effect_handler_DETECT_GOLD(effect_handler_context_t *context)
 	bool money = detect_stuff(context, tval_is_money);
 
 	if (money) {
-		msg("You detect the presence of gold!");
+		msg("%s", angdroid_general_effect_message("You detect the presence of gold!",
+			angdroid_zh_tw_enabled()));
 	} else if (context->aware) {
-		msg("You detect no gold.");
+		msg("%s", angdroid_general_effect_message("You detect no gold.",
+			angdroid_zh_tw_enabled()));
 	}
 
 	context->ident = true;
@@ -1734,9 +1771,11 @@ bool effect_handler_SENSE_OBJECTS(effect_handler_context_t *context)
 		unknown_item_kind);
 
 	if (objects) {
-		msg("You sense the presence of objects!");
+		msg("%s", angdroid_general_effect_message("You sense the presence of objects!",
+			angdroid_zh_tw_enabled()));
 	} else if (context->aware) {
-		msg("You sense no objects.");
+		msg("%s", angdroid_general_effect_message("You sense no objects.",
+			angdroid_zh_tw_enabled()));
 	}
 
 	/* Redraw object list */
@@ -1754,9 +1793,11 @@ bool effect_handler_DETECT_OBJECTS(effect_handler_context_t *context)
 	bool objects = detect_stuff(context, tval_is_not_money);
 
 	if (objects) {
-		msg("You detect the presence of objects!");
+		msg("%s", angdroid_general_effect_message("You detect the presence of objects!",
+			angdroid_zh_tw_enabled()));
 	} else if (context->aware) {
-		msg("You detect no objects.");
+		msg("%s", angdroid_general_effect_message("You detect no objects.",
+			angdroid_zh_tw_enabled()));
 	}
 
 	/* Redraw object list */
@@ -1841,9 +1882,11 @@ bool effect_handler_DETECT_LIVING_MONSTERS(effect_handler_context_t *context)
 	bool monsters = detect_monsters(context->y, context->x, monster_is_living);
 
 	if (monsters)
-		msg("You sense life!");
+		msg("%s", angdroid_general_effect_message("You sense life!",
+			angdroid_zh_tw_enabled()));
 	else if (context->aware)
-		msg("You sense no life.");
+		msg("%s", angdroid_general_effect_message("You sense no life.",
+			angdroid_zh_tw_enabled()));
 
 	context->ident = true;
 	return true;
@@ -1864,9 +1907,11 @@ bool effect_handler_DETECT_VISIBLE_MONSTERS(effect_handler_context_t *context)
 									monster_is_not_invisible);
 
 	if (monsters)
-		msg("You sense the presence of monsters!");
+		msg("%s", angdroid_general_effect_message("You sense the presence of monsters!",
+			angdroid_zh_tw_enabled()));
 	else if (context->aware)
-		msg("You sense no monsters.");
+		msg("%s", angdroid_general_effect_message("You sense no monsters.",
+			angdroid_zh_tw_enabled()));
 
 	context->ident = true;
 	return true;
@@ -1884,9 +1929,11 @@ bool effect_handler_DETECT_INVISIBLE_MONSTERS(effect_handler_context_t *context)
 									monster_is_invisible);
 
 	if (monsters)
-		msg("You sense the presence of invisible creatures!");
+		msg("%s", angdroid_general_effect_message("You sense the presence of invisible creatures!",
+			angdroid_zh_tw_enabled()));
 	else if (context->aware)
-		msg("You sense no invisible creatures.");
+		msg("%s", angdroid_general_effect_message("You sense no invisible creatures.",
+			angdroid_zh_tw_enabled()));
 
 	context->ident = true;
 	return true;
@@ -1902,9 +1949,11 @@ bool effect_handler_DETECT_FEARFUL_MONSTERS(effect_handler_context_t *context)
 	bool monsters = detect_monsters(context->y, context->x, monster_is_fearful);
 
 	if (monsters)
-		msg("These monsters could provide good sport.");
+		msg("%s", angdroid_general_effect_message("These monsters could provide good sport.",
+			angdroid_zh_tw_enabled()));
 	else if (context->aware)
-		msg("You smell no fear in the air.");
+		msg("%s", angdroid_general_effect_message("You smell no fear in the air.",
+			angdroid_zh_tw_enabled()));
 
 	context->ident = true;
 	return true;
@@ -1920,9 +1969,11 @@ bool effect_handler_DETECT_EVIL(effect_handler_context_t *context)
 	bool monsters = detect_monsters(context->y, context->x, monster_is_evil);
 
 	if (monsters)
-		msg("You sense the presence of evil creatures!");
+		msg("%s", angdroid_general_effect_message("You sense the presence of evil creatures!",
+			angdroid_zh_tw_enabled()));
 	else if (context->aware)
-		msg("You sense no evil creatures.");
+		msg("%s", angdroid_general_effect_message("You sense no evil creatures.",
+			angdroid_zh_tw_enabled()));
 
 	context->ident = true;
 	return true;
@@ -1938,9 +1989,11 @@ bool effect_handler_DETECT_SOUL(effect_handler_context_t *context)
 	bool monsters = detect_monsters(context->y, context->x, monster_has_spirit);
 
 	if (monsters)
-		msg("You sense the presence of spirits!");
+		msg("%s", angdroid_general_effect_message("You sense the presence of spirits!",
+			angdroid_zh_tw_enabled()));
 	else if (context->aware)
-		msg("You sense no spirits.");
+		msg("%s", angdroid_general_effect_message("You sense no spirits.",
+			angdroid_zh_tw_enabled()));
 
 	context->ident = true;
 	return true;
@@ -1985,13 +2038,15 @@ bool effect_handler_CREATE_STAIRS(effect_handler_context_t *context)
 
 	/* Only allow stairs to be created on empty floor */
 	if (!square_isfloor(cave, player->grid)) {
-		msg("There is no empty floor here.");
+		msg("%s", angdroid_general_effect_message("There is no empty floor here.",
+			angdroid_zh_tw_enabled()));
 		return false;
 	}
 
 	/* Fails for persistent levels (for now) and arenas */
 	if (OPT(player, birth_levels_persist) || player->upkeep->arena_level) {
-		msg("Nothing happens!");
+		msg("%s", angdroid_general_effect_message("Nothing happens!",
+			angdroid_zh_tw_enabled()));
 		return false;
 	}
 
@@ -2164,8 +2219,10 @@ bool effect_handler_RECHARGE(effect_handler_context_t *context)
 		struct object *destroyed;
 		bool none_left = false;
 
-		msg("The recharge backfires!");
-		msg("There is a bright flash of light.");
+		msg("%s", angdroid_general_effect_message("The recharge backfires!",
+			angdroid_zh_tw_enabled()));
+		msg("%s", angdroid_general_effect_message("There is a bright flash of light.",
+			angdroid_zh_tw_enabled()));
 
 		/* Reduce and describe inventory */
 		if (object_is_carried(player, obj)) {
@@ -2233,7 +2290,8 @@ bool effect_handler_WAKE(effect_handler_context_t *context)
 
 	/* Messages */
 	if (woken) {
-		msg("You hear a sudden stirring in the distance!");
+		msg("%s", angdroid_general_effect_message("You hear a sudden stirring in the distance!",
+			angdroid_zh_tw_enabled()));
 	}
 
 	context->ident = true;
@@ -2312,7 +2370,8 @@ bool effect_handler_SUMMON(effect_handler_context_t *context)
 
 		/* Summoner failed */
 		if (!count)
-			msg("But nothing comes.");
+			msg("%s", angdroid_general_effect_message("But nothing comes.",
+			angdroid_zh_tw_enabled()));
 	} else {
 		/* If not a monster summon, it's simple */
 		while (summon_max) {
@@ -2351,7 +2410,8 @@ bool effect_handler_BANISH(effect_handler_context_t *context)
 
 	/* Don't allow in an arena. */
 	if (player->upkeep->arena_level) {
-		msg("Nothing happens.");
+		msg("%s", angdroid_general_effect_message("Nothing happens.",
+			angdroid_zh_tw_enabled()));
 		return true;
 	}
 
@@ -2414,7 +2474,8 @@ bool effect_handler_MASS_BANISH(effect_handler_context_t *context)
 
 	/* Don't allow in an arena. */
 	if (player->upkeep->arena_level) {
-		msg("Nothing happens.");
+		msg("%s", angdroid_general_effect_message("Nothing happens.",
+			angdroid_zh_tw_enabled()));
 		return true;
 	}
 
@@ -2475,7 +2536,8 @@ bool effect_handler_PROBE(effect_handler_context_t *context)
 			char m_name[80];
 
 			/* Start the message */
-			if (!probe) msg("Probing...");
+			if (!probe) msg("%s", angdroid_general_effect_message("Probing...",
+			angdroid_zh_tw_enabled()));
 
 			/* Get "the monster" or "something" */
 			monster_desc(m_name, sizeof(m_name), mon,
@@ -2494,7 +2556,8 @@ bool effect_handler_PROBE(effect_handler_context_t *context)
 
 	/* Done */
 	if (probe) {
-		msg("That's all.");
+		msg("%s", angdroid_general_effect_message("That's all.",
+			angdroid_zh_tw_enabled()));
 		context->ident = true;
 	}
 
@@ -2553,14 +2616,16 @@ bool effect_handler_TELEPORT(effect_handler_context_t *context)
 		/* Check for a no teleport grid */
 		if (square_isno_teleport(cave, start) &&
 			((dis > 10) || (dis == 0))) {
-			msg("Teleportation forbidden!");
+			msg("%s", angdroid_general_effect_message("Teleportation forbidden!",
+			angdroid_zh_tw_enabled()));
 			return true;
 		}
 
 		/* Check for a no teleport curse */
 		if (player_of_has(player, OF_NO_TELEPORT)) {
 			equip_learn_flag(player, OF_NO_TELEPORT);
-			msg("Teleportation forbidden!");
+			msg("%s", angdroid_general_effect_message("Teleportation forbidden!",
+			angdroid_zh_tw_enabled()));
 			return true;
 		}
 	} else {
@@ -2639,7 +2704,8 @@ bool effect_handler_TELEPORT(effect_handler_context_t *context)
 	/* Report failure (very unlikely) */
 	if (!num_spots) {
 		if (is_player) {
-			msg("Failed to find teleport destination!");
+			msg("%s", angdroid_general_effect_message("Failed to find teleport destination!",
+			angdroid_zh_tw_enabled()));
 		} else {
 			/*
 			 * With either teleport self or teleport other, it'll
@@ -2742,14 +2808,16 @@ bool effect_handler_TELEPORT_TO(effect_handler_context_t *context)
 
 		/* Check for a no teleport grid */
 		if (square_isno_teleport(cave, start)) {
-			msg("Teleportation forbidden!");
+			msg("%s", angdroid_general_effect_message("Teleportation forbidden!",
+			angdroid_zh_tw_enabled()));
 			return true;
 		}
 
 		/* Check for a no teleport curse */
 		if (player_of_has(player, OF_NO_TELEPORT)) {
 			equip_learn_flag(player, OF_NO_TELEPORT);
-			msg("Teleportation forbidden!");
+			msg("%s", angdroid_general_effect_message("Teleportation forbidden!",
+			angdroid_zh_tw_enabled()));
 			return true;
 		}
 	}
@@ -2858,21 +2926,24 @@ bool effect_handler_TELEPORT_LEVEL(effect_handler_context_t *context)
 
 	/* Check for a no teleport grid */
 	if (square_isno_teleport(cave, player->grid)) {
-		msg("Teleportation forbidden!");
+		msg("%s", angdroid_general_effect_message("Teleportation forbidden!",
+			angdroid_zh_tw_enabled()));
 		return true;
 	}
 
 	/* Check for a no teleport curse */
 	if (player_of_has(player, OF_NO_TELEPORT)) {
 		equip_learn_flag(player, OF_NO_TELEPORT);
-		msg("Teleportation forbidden!");
+		msg("%s", angdroid_general_effect_message("Teleportation forbidden!",
+			angdroid_zh_tw_enabled()));
 		return true;
 	}
 
 	/* Resist hostile teleport */
 	if (context->origin.what == SRC_MONSTER &&
 			player_resists(player, ELEM_NEXUS)) {
-		msg("You resist the effect!");
+		msg("%s", angdroid_general_effect_message("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 		return true;
 	}
 
@@ -2904,13 +2975,15 @@ bool effect_handler_TELEPORT_LEVEL(effect_handler_context_t *context)
 	 * command in the queue and is then hit by a teleport level spell)
 	 */
 	if (up) {
-		msgt(MSG_TPLEVEL, "You rise up through the ceiling.");
+		msgt(MSG_TPLEVEL, "%s", angdroid_general_effect_message("You rise up through the ceiling.",
+			angdroid_zh_tw_enabled()));
 		cmdq_flush();
 		target_depth = dungeon_get_next_level(player,
 			player->depth, -1);
 		dungeon_change_level(player, target_depth);
 	} else if (down) {
-		msgt(MSG_TPLEVEL, "You sink through the floor.");
+		msgt(MSG_TPLEVEL, "%s", angdroid_general_effect_message("You sink through the floor.",
+			angdroid_zh_tw_enabled()));
 
 		cmdq_flush();
 		if (OPT(player, birth_force_descend)) {
@@ -2923,7 +2996,8 @@ bool effect_handler_TELEPORT_LEVEL(effect_handler_context_t *context)
 			dungeon_change_level(player, target_depth);
 		}
 	} else {
-		msg("Nothing happens.");
+		msg("%s", angdroid_general_effect_message("Nothing happens.",
+			angdroid_zh_tw_enabled()));
 	}
 
 	return true;
@@ -3002,7 +3076,8 @@ bool effect_handler_LIGHT_LEVEL(effect_handler_context_t *context)
 {
 	bool full = context->value.base ? true : false;
 	if (full)
-		msg("An image of your surroundings forms in your mind...");
+		msg("%s", angdroid_general_effect_message("An image of your surroundings forms in your mind...",
+			angdroid_zh_tw_enabled()));
 	wiz_light(cave, player, full);
 	context->ident = true;
 	return true;
@@ -3012,7 +3087,8 @@ bool effect_handler_DARKEN_LEVEL(effect_handler_context_t *context)
 {
 	bool full = context->value.base ? true : false;
 	if (full)
-		msg("A great blackness rolls through the dungeon...");
+		msg("%s", angdroid_general_effect_message("A great blackness rolls through the dungeon...",
+			angdroid_zh_tw_enabled()));
 	wiz_dark(cave, player, full);
 	context->ident = true;
 	return true;
@@ -3025,7 +3101,8 @@ bool effect_handler_LIGHT_AREA(effect_handler_context_t *context)
 {
 	/* Message */
 	if (!player->timed[TMD_BLIND])
-		msg("You are surrounded by a white light.");
+		msg("%s", angdroid_general_effect_message("You are surrounded by a white light.",
+			angdroid_zh_tw_enabled()));
 
 	/* Light up the room */
 	light_room(player->grid, true);
@@ -3071,13 +3148,15 @@ bool effect_handler_DARKEN_AREA(effect_handler_context_t *context)
 			decoy_unseen = true;
 		}
 		if (message && !decoy_unseen) {
-			msg("Darkness surrounds the decoy.");
+			msg("%s", angdroid_general_effect_message("Darkness surrounds the decoy.",
+			angdroid_zh_tw_enabled()));
 			message = false;
 		}
 	}
 
 	if (message) {
-		msg("Darkness surrounds you.");
+		msg("%s", angdroid_general_effect_message("Darkness surrounds you.",
+			angdroid_zh_tw_enabled()));
 	}
 
 	/* Darken the room */
@@ -3423,7 +3502,8 @@ bool effect_handler_TAP_DEVICE(effect_handler_context_t *context)
 				(player->csp = player->msp);
 			}
 
-			msg("You feel your head clear.");
+			msg("%s", angdroid_general_effect_message("You feel your head clear.",
+			angdroid_zh_tw_enabled()));
 			used = true;
 			player_inc_timed(player, TMD_STUN, randint1(2), true,
 				context->origin.what != SRC_PLAYER
@@ -3454,7 +3534,8 @@ bool effect_handler_SHAPECHANGE(effect_handler_context_t *context)
 	/* Change shape */
 	player->shape = lookup_player_shape(shape->name);
 	msg("You assume the shape of a %s!", shape->name);
-	msg("Your gear merges into your body.");
+	msg("%s", angdroid_general_effect_message("Your gear merges into your body.",
+			angdroid_zh_tw_enabled()));
 
 	/* Do effect */
 	if (shape->effect) {
@@ -3483,7 +3564,8 @@ bool effect_handler_COMMAND(effect_handler_context_t *context)
 
 	/* Need to choose a monster, not just point */
 	if (!mon) {
-		msg("No monster selected!");
+		msg("%s", angdroid_general_effect_message("No monster selected!",
+			angdroid_zh_tw_enabled()));
 		return false;
 	}
 
@@ -3521,7 +3603,8 @@ bool effect_handler_BIZARRE(effect_handler_context_t *context)
 		case 2:
 		{
 			/* Message */
-			msg("You are surrounded by a malignant aura.");
+			msg("%s", angdroid_general_effect_message("You are surrounded by a malignant aura.",
+			angdroid_zh_tw_enabled()));
 
 			/* Decrease all stats (permanently) */
 			player_stat_dec(player, STAT_STR, true);
@@ -3539,7 +3622,8 @@ bool effect_handler_BIZARRE(effect_handler_context_t *context)
 		case 3:
 		{
 			/* Message */
-			msg("You are surrounded by a powerful aura.");
+			msg("%s", angdroid_general_effect_message("You are surrounded by a powerful aura.",
+			angdroid_zh_tw_enabled()));
 
 			/* Dispel monsters */
 			effect_simple(EF_PROJECT_LOS, context->origin, "1000", PROJ_DISP_ALL, 0, 0, 0, 0, NULL);
