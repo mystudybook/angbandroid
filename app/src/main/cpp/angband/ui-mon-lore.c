@@ -26,6 +26,7 @@
 #include "z-textblock.h"
 #include "droid.h"
 #include "zh-tw-monsters.h"
+#include "zh-tw-unique-monsters.h"
 
 /**
  * Place a monster recall title into a textblock.
@@ -52,10 +53,11 @@ void lore_title(textblock *tb, const struct monster_race *race)
 	standard_attr = race->d_attr;
 	optional_attr = monster_x_attr[race->ridx];
 
-	/* Translate only curated non-unique display names; preserve uniques. */
-    const char *name_zh = (angdroid_zh_tw_enabled() &&
-        !rf_has(race->flags, RF_UNIQUE)) ?
-        angdroid_zh_tw_monster_list_name(race->name) : NULL;
+	/* Translate only the visible title; canonical monster_race data is stable. */
+    const bool unique = rf_has(race->flags, RF_UNIQUE);
+    const char *name_zh = angdroid_zh_tw_enabled() ?
+        (unique ? angdroid_zh_tw_unique_monster_name(race->name) :
+                  angdroid_zh_tw_monster_list_name(race->name)) : NULL;
     if (!rf_has(race->flags, RF_UNIQUE)) {
         if (!name_zh) textblock_append(tb, "The ");
     } else if (OPT(player, purple_uniques)) {
