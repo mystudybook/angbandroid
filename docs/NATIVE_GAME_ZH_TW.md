@@ -1501,3 +1501,21 @@ canonical translation dictionary is still 326 entries.
   not automatically covered by those four dictionaries. Android gameplay
   verification must still be run for this new change.
 
+## Ego knowledge browser display (2026-11-05)
+
+- The full 79-name ego-item dictionary is now also used for the knowledge
+  browser's ego-item list and the ego recall title. Both labels choose
+  Traditional Chinese only in the game-text locale; English mode and
+  unrecognized names retain the canonical original.
+- The list's name is clipped by terminal display columns through
+  `angdroid_knowledge_clip_label()`, so a double-cell Chinese glyph is
+  not split on narrow screens. Group headings use the existing knowledge
+  group translator, but raw ego identities and sort/group logic do not
+  change.
+- The new `test_ego_knowledge_screen.py` guards list/recall names,
+  English fallback and bounded clipping, and is registered in
+  `scripts/verify-zh-tw.sh`. The native source checker also asserts that
+  the display path uses these helpers.
+- Android UI/emulator tests remain required for actual font and touch
+  interaction behavior.
+
