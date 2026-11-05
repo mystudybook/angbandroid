@@ -33,4 +33,33 @@ mouse = source.split("bool menu_handle_mouse(", 1)[1].split(
 if "if (is_valid_row(menu, new_cursor))" not in mouse:
     raise SystemExit("FAIL: invalid touch hit can select an action")
 
-print("PASS: native scroll/object/column menus reject blank touch targets")
+# The current touch must resolve its new stock row BEFORE dispatching.
+# Header/outside actions must still run independently of the active list.
+select = source.split("ui_event menu_select(", 1)[1].split(
+    "\n/* ================== MENU ACCESSORS", 1
+)[0]
+inside = select.split("if (in.type == EVT_MOUSE) {", 1)[1].split(
+    "} else if (in.type == EVT_KBRD)", 1
+)[0]
+for phrase in (
+    "if (region_inside(&menu->active, &in)) {",
+    "menu_handle_mouse(menu, &in, &out);",
+    "if (out.type == EVT_SELECT && !no_act &&",
+    "menu_handle_action(menu, &in))",
+    "} else {",
+    "if (!no_act && menu_handle_action(menu, &in))",
+):
+    if phrase not in inside:
+        raise SystemExit(f"FAIL: touch row may dispatch stale selection: {phrase}")
+if inside.index("menu_handle_mouse(menu, &in, &out);") > inside.index(
+    "if (out.type == EVT_SELECT && !no_act &&"
+):
+    raise SystemExit("FAIL: touch action runs before current row hit-test")
+if inside.count("menu_handle_mouse(menu, &in, &out);") != 2:
+    raise SystemExit("FAIL: header and item touch paths are inconsistent")
+if "if (new_cursor == menu->cursor || !(menu->flags & MN_DBL_TAP))" not in mouse:
+    raise SystemExit("FAIL: first tap of a new row bypasses double-tap setting")
+if "if (in->mouse.button == 2)" not in mouse:
+    raise SystemExit("FAIL: touchscreen right-click/return path missing")
+
+print("PASS: native touch dispatch resolves current row before action")

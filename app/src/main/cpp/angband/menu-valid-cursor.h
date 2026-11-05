@@ -28,4 +28,19 @@ static inline int angdroid_menu_find_valid_cursor(
     return -1;
 }
 
+/* Spacebar page navigation returns a valid target INDEX, never count.
+ * The last visible item may itself be the next page's first item.
+ * Return -1 when no pages exist. This helper never selects an object. */
+static inline int angdroid_menu_page_next_cursor(
+    int cursor, int count, int page_rows)
+{
+    if (count <= 0 || page_rows <= 0 || page_rows >= count)
+        return -1;
+    if (cursor < 0 || cursor >= count)
+        return 0;
+    if (cursor >= count - page_rows)
+        return 0;
+    return cursor + page_rows;
+}
+
 #endif

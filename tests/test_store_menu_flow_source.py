@@ -45,5 +45,13 @@ for fragment in (
         raise SystemExit(f"FAIL: offscreen store popup or unsafe stock cursor: {fragment}")
 if "m->active.row + oid" in handler:
     raise SystemExit("FAIL: old unscrolled stock popup row still used")
+if "region_inside(&m->active, event) &&" not in handler:
+    raise SystemExit("FAIL: an outside/return touch can buy the selected stock row")
+if handler.index("region_inside(&m->active, event) &&") > handler.index(
+    "event->mouse.y == angdroid_store_menu_screen_row("
+):
+    raise SystemExit("FAIL: stock mouse row must validate its active bounds")
+if "if ((event->mouse.y == 0) || (event->mouse.y == 1))" not in handler:
+    raise SystemExit("FAIL: header touch no longer opens the store command popup")
 
 print("PASS: scrolled shop item popups and stock-free commands remain safe")
