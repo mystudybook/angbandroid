@@ -298,6 +298,41 @@ def main():
            and "test_item_story_locale.c" in native_tests
            and 'angdroid_zh_tw_artifact_flavor(NULL) == NULL' in story_test,
            "Artifact/ego narratives need known-item and dump isolation")
+    # Original object.txt has 141 described kinds. Translating their lore
+    # must not reveal unknown objects or alter chardump/spoiler output.
+    kind_story = source(CPP / "angband/zh-tw-kind-lore.h", errors)
+    kind_story_test = source(ROOT / "tests/native/test_kind_lore_locale.c", errors)
+    described_kinds = set()
+    current_kind_name = None
+    has_kind_description = False
+    for line in item_data.splitlines():
+        if line.startswith("name:"):
+            if current_kind_name is not None and has_kind_description:
+                described_kinds.add(current_kind_name)
+            current_kind_name = line[5:]
+            has_kind_description = False
+        elif line.startswith("desc:") and current_kind_name is not None:
+            has_kind_description = True
+    if current_kind_name is not None and has_kind_description:
+        described_kinds.add(current_kind_name)
+    kind_lore_pairs = table(kind_story)
+    expect(len(described_kinds) == 141
+           and len(kind_lore_pairs) == 141
+           and {en for en, _ in kind_lore_pairs} == described_kinds
+           and len({en for en, _ in kind_lore_pairs}) == len(kind_lore_pairs)
+           and all(zh.strip() for _, zh in kind_lore_pairs)
+           and "#define ANGDROID_ZH_TW_KIND_LORE 141" in kind_story,
+           "All 141 original item-kind stories must match canonical source")
+    expect('"zh-tw-kind-lore.h"' in obj_info
+           and "if (obj->kind != obj->known->kind)" in obj_info
+           and "object_flavor_is_aware(obj) || ego" in obj_info
+           and "if (!ego && obj->kind->text)" in obj_info
+           and "angdroid_zh_tw_kind_flavor(obj->kind->name)" in obj_info
+           and "if (translated) flavor = translated;" in obj_info
+           and "!(mode & OINFO_SPOIL)" in obj_info
+           and "test_kind_lore_locale.c" in native_tests
+           and 'angdroid_zh_tw_kind_flavor(NULL) == NULL' in kind_story_test,
+           "Known-kind narrative display must preserve identity and English export")
     # Only known artifacts and explicit display flags may use translated
     # labels. All 138 names must match canonical artifact.txt exactly.
     artifact_source = source(ROOT / "variant_lib/angband/gamedata/artifact.txt", errors)
