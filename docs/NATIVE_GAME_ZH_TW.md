@@ -1096,3 +1096,27 @@ raw byte count. The original ability group/flag codes, descriptions in the
 data parser, selection identifiers, and savefile compatibility are unchanged.
 Source-matched 44/44 coverage and standalone bilingual C99 regression are
 registered; Android NDK and on-device browser verification are pending.
+
+## Dynamic shape-change effect description (2026-11-05)
+
+Native Angband shape knowledge now explains the original Pukel-man, bat,
+warg, vampire and werewolf shape-change effects in Traditional Chinese.
+The new `effect_describe_shape_zh()` handles exactly four canonical
+effect types: `CURE`, `DAMAGE`, `TIMED_INC`, `PROJECT_LOS`.
+The source descriptions are matched to `player_timed.txt` and
+`projection.txt`, with unchanged `dice_roll()` and
+`format_dice_string()` evaluation so level- and HP-dependent damage
+and timed durations remain dynamic. Unknown effects or unrecognized
+subtypes make the whole description fall back to the original English
+`effect_describe()` rather than displaying an incomplete translated
+summary. Only the knowledge UI invokes the localized renderer; actual
+shapeshifting behavior, canonical data and English behavior are unchanged.
+Native C99 source/lookup tests are registered, but full NDK/UI gameplay
+validation remains necessary.
+
+A separate host regression extracts the **actual C effect formatter and shape
+renderer** from `effects-info.c`, compiles them with strict C99 and
+`-Werror=format-security` using lightweight engine stubs, and exercises
+Pukel-man/bat/warg/vampire/werewolf descriptions, runtime dice changes,
+unknown subtype fallback, and entirely unknown effect stacks. This test
+runs in `scripts/verify-zh-tw.sh` without an Android SDK.

@@ -1095,8 +1095,9 @@ def main():
            'angdroid_zh_tw_spell_name(spell->name, true)' in knowledge_ui and
            'angdroid_shape_class(c->name, true)' in knowledge_ui and
            'return my_stricmp((*sleft)->name, (*sright)->name);' in knowledge_ui and
-           'effect_describe(s->effect, "Changing into the shape "' in knowledge_ui,
-           "Shape lore must not modify sorting, effect descriptions or identity")
+           'effect_describe(s->effect, "Changing into the shape "' in knowledge_ui and
+           'effect_describe_shape_zh(s->effect)' in knowledge_ui,
+           "Shape lore must retain identity, sorting and generic effect fallback")
     expect('test_shape_lore_locale.c' in native_tests and
            'shape("Pukel-man", "普克爾人")' in shape_test and
            'angdroid_shape_intro(0)' in shape_test,
@@ -1286,6 +1287,53 @@ def main():
            'test_player_ability_locale.c' in native_tests and
            'Custom Ability' in ability_test,
            "Player ability render-only locale must preserve keys and ids")
+
+    # Shape effects use the original effect and dice engine; only known
+    # descriptions receive zh-TW labels, while unknown stacks return NULL.
+    effect_engine = source(CPP / "angband/effects-info.c", errors)
+    effect_engine_header = source(CPP / "angband/effects-info.h", errors)
+    effect_header = source(CPP / "angband/zh-tw-shape-effects.h", errors)
+    effect_locale_test = source(ROOT / "tests/native/test_shape_effect_locale.c", errors)
+    source_effects = source(CPP / "angband/list-effects.h", errors)
+    timed_source = source(ROOT / "variant_lib/angband/gamedata/player_timed.txt", errors)
+    projection_source = source(ROOT / "variant_lib/angband/gamedata/projection.txt", errors)
+    canonical_terms = ("poisoning", "stunning", "fear", "berserk rage",
+                       "temporary hitpoint siphoning", "causes monsters to flee")
+    effect_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', effect_header)
+    expect(len(effect_pairs) == 6 and
+           {en for en, _ in effect_pairs} == set(canonical_terms) and
+           all(zh.strip() for _, zh in effect_pairs) and
+           all("desc:" + en in timed_source or
+               "desc:" + en in projection_source for en in canonical_terms),
+           "Shape effect translations must match source timed/projection texts")
+    shape_effects = "\n".join(line for line in shape_data.splitlines()
+           if line.startswith("effect:"))
+    expect(all(("EFFECT(" + name + "," in source_effects) for name in
+               ("CURE", "DAMAGE", "TIMED_INC", "PROJECT_LOS")) and
+           all(line.split(":")[1] in
+               ("CURE", "DAMAGE", "TIMED_INC", "PROJECT_LOS") for line in
+               shape_effects.splitlines()) and
+           'effect_describe_shape_zh(' in effect_engine_header and
+           'textblock *effect_describe_shape_zh(' in effect_engine,
+           "Shape effect helper must cover canonical types and expose interface")
+    shape_renderer = effect_engine.partition(
+        "textblock *effect_describe_shape_zh(")[2].partition(
+        "size_t effect_get_menu_name(")[0]
+    expect('return NULL;' in shape_renderer and
+           'effect_desc(current)' in shape_renderer and
+           'dice_roll(current->dice, &value)' in shape_renderer and
+           'format_dice_string(&value, 1,' in shape_renderer and
+           'copy_to_textblock_with_coloring(tb, dice_string)' in shape_renderer and
+           'angdroid_shape_effect_known(original)' in shape_renderer and
+           'textblock_append(tb, "變身時，");' in shape_renderer and
+           'textblock_append(tb, "%s", localized)' in shape_renderer and
+           'textblock_append(tb, localized)' not in shape_renderer and
+           'textblock_append(tb, "%s", translated ? "。\\n" : ".\\n");' in
+                knowledge_ui and
+           'test_shape_effect_locale.c' in native_tests and
+           'tests/test_shape_effect_render_source.py' in source(ROOT / "scripts/verify-zh-tw.sh", errors) and
+           'new future effect' in effect_locale_test,
+           "Shape effect formatting and unknown fallback must preserve values")
 
     if errors:
         for item in errors:
