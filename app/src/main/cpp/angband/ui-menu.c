@@ -811,7 +811,13 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 			eat = true;
 		}
 	} else if (in->key.code == KC_ENTER) {
-		out->type = EVT_SELECT;
+		/* A stock refresh deliberately clears the previous selection.
+		 * Enter on an empty/invalid cursor must not close the store or
+		 * act on an item which has shifted to this index. */
+		if (is_valid_row(menu, menu->cursor))
+			out->type = EVT_SELECT;
+		else
+			eat = true;
 	} else {
 		/* Try directional movement */
 		int dir = target_dir(in->key);

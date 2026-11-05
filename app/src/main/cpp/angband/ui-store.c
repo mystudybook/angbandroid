@@ -139,6 +139,8 @@ struct store_context {
 	struct object **list;	/* List of objects (unused) */
 	int flags;				/* Display flags */
 	bool inspect_only;		/* Only allow looking */
+	/* A changed stock list invalidates a previous row's identity. */
+	bool stock_changed;
 
 	/* Places for the various things displayed onscreen */
 	unsigned int scr_places_x[LOC_MAX];
@@ -921,6 +923,10 @@ static void store_menu_recalc(struct menu *m)
 {
 	struct store_context *ctx = menu_priv(m);
 	menu_setpriv(m, ctx->store->stock_num, ctx);
+	/* menu_setpriv() verifies indices, but an old index could now be a
+	 * completely different product. Require a fresh touch/tag instead. */
+	angdroid_store_clear_stale_selection(ctx->stock_changed,
+		&m->cursor, &m->top);
 }
 
 /**
@@ -1146,7 +1152,11 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 	bool processed = true;
 	struct store_context *ctx = menu_priv(m);
 	struct store *store = ctx->store;
-	
+
+	/* A fresh command/touch acknowledges the new stock generation.
+	 * The flag remains set through nested purchase callbacks. */
+	ctx->stock_changed = false;
+
 	if (event->type == EVT_SELECT) {
 		/* Stock IDs are absolute, but menu positions are relative to the
 		 * visible page. Never put a popup outside the current list. */
@@ -1330,6 +1340,7 @@ static void store_menu_init(struct store_context *ctx, struct store *store, bool
 	ctx->store = store;
 	ctx->flags = STORE_INIT_CHANGE;
 	ctx->inspect_only = inspect_only;
+	ctx->stock_changed = false;
 	ctx->list = mem_zalloc(sizeof(struct object *) * z_info->store_inven_max);
 
 	store_stock_list(ctx->store, ctx->list, z_info->store_inven_max);
@@ -1381,6 +1392,12 @@ static void refresh_stock(game_event_type type, game_event_data *unused, void *u
 	struct menu *menu = &ctx->menu;
 
 	store_stock_list(ctx->store, ctx->list, z_info->store_inven_max);
+
+	/* A queued fast second tap still has coordinates from the previous
+	 * stock ordering. Clear pending input before the next menu read,
+	 * and require an explicit new selection after the list changes. */
+	ctx->stock_changed = true;
+	flush(type, unused, user);
 
 	/* Display the store */
 	store_display_recalc(ctx);

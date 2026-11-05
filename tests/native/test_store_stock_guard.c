@@ -36,6 +36,22 @@ int main(void)
     assert(angdroid_store_selected_index(1, 0, INT_MAX, 20) == 0);
     assert(angdroid_store_selected_index(1, INT_MIN, 20, 20) == -1);
 
+    /* A stock mutation is not merely a new count: the same slot might
+     * now refer to a different product after a sale or reorder. */
+    {
+        int cursor = 7, top = 5;
+        angdroid_store_clear_stale_selection(false, &cursor, &top);
+        assert(cursor == 7 && top == 5);
+        angdroid_store_clear_stale_selection(true, &cursor, &top);
+        assert(cursor == -1 && top == 0);
+        cursor = INT_MAX;
+        top = INT_MIN;
+        angdroid_store_clear_stale_selection(true, &cursor, &top);
+        assert(cursor == -1 && top == 0);
+        angdroid_store_clear_stale_selection(true, NULL, &top);
+        angdroid_store_clear_stale_selection(true, &cursor, NULL);
+    }
+
     puts("PASS: store cancel, zero-stock and bounded purchase index");
     return 0;
 }
