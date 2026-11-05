@@ -41,6 +41,26 @@ int main(void)
     assert(angdroid_menu_find_valid_cursor(0, 0, 1, &none, valid_row) == -1);
     assert(angdroid_menu_find_valid_cursor(0, 6, 1, &menu, NULL) == -1);
 
+    /* Spacebar paging must reach the last row, not wrap one row early. */
+    assert(angdroid_menu_page_next_cursor(0, 9, 4) == 4);
+    assert(angdroid_menu_page_next_cursor(4, 9, 4) == 8);
+    assert(angdroid_menu_page_next_cursor(8, 9, 4) == 0);
+    assert(angdroid_menu_page_next_cursor(4, 5, 1) == 0);
+    assert(angdroid_menu_page_next_cursor(-1, 9, 4) == 0);
+    assert(angdroid_menu_page_next_cursor(99, 9, 4) == 0);
+    assert(angdroid_menu_page_next_cursor(0, 4, 4) == -1);
+    assert(angdroid_menu_page_next_cursor(0, 4, 0) == -1);
+    assert(angdroid_menu_page_next_cursor(INT_MAX, INT_MAX, 1) == 0);
+    assert(angdroid_menu_page_next_cursor(INT_MAX - 2, INT_MAX, 1)
+        == INT_MAX - 1);
+    {
+        struct menu_data only_last = { 6, flags };
+        int candidate = angdroid_menu_page_next_cursor(0, 6, 4);
+        assert(candidate == 4);
+        assert(angdroid_menu_find_valid_cursor(
+            candidate, 6, 1, &only_last, valid_row) == 5);
+    }
+
     puts("PASS: horizontal menu navigation always terminates on invalid rows");
     return 0;
 }

@@ -1190,7 +1190,8 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 					return false;
 
 				action = true;
-			} else if (ctx->list && angdroid_store_stock_index_valid(
+			} else if (region_inside(&m->active, event) &&
+				ctx->list && angdroid_store_stock_index_valid(
 				oid, store->stock_num, z_info->store_inven_max) &&
 				ctx->list[oid] &&
 				event->mouse.y == angdroid_store_menu_screen_row(

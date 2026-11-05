@@ -796,16 +796,16 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 		/* Menus with no rows can't be navigated or used, so eat keypresses */
 		eat = true;
 	} else if (in->key.code == ' ') {
-		/* Try existing, known keys */
-		int rows = menu->active.page_rows;
-		int total = count;
-
-		if (rows < total) {
-			/* Go to start of next page */
-			menu->cursor += menu->active.page_rows;
-			if (menu->cursor >= total - 1) menu->cursor = 0;
-			menu->top = menu->cursor;
-	
+		/* Keep the last item reachable even when the next page starts
+		 * exactly at count - 1. Skip disabled rows without selecting
+		 * them; wrapping occurs only after passing the final index. */
+		int target = angdroid_menu_page_next_cursor(menu->cursor,
+			count, menu->active.page_rows);
+		int next = target < 0 ? -1 : angdroid_menu_find_valid_cursor(
+			target, count, 1, menu, menu_navigation_is_valid);
+		if (next >= 0) {
+			menu->cursor = next;
+			menu->top = next;
 			out->type = EVT_MOVE;
 		} else {
 			eat = true;
@@ -960,12 +960,21 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 
 		in = inkey_ex();
 
-		/* Handle mouse & keyboard commands */
+		/* An active-row touch must update the cursor BEFORE dispatching
+		 * an action. Otherwise store code receives the previously selected
+		 * stock ID even though the user touched another visible row.
+		 * Keep header/outside touches on the old context-action path. */
 		if (in.type == EVT_MOUSE) {
-			if (!no_act && menu_handle_action(menu, &in)) {
-				continue;
+			if (region_inside(&menu->active, &in)) {
+				menu_handle_mouse(menu, &in, &out);
+				if (out.type == EVT_SELECT && !no_act &&
+						menu_handle_action(menu, &in))
+					continue;
+			} else {
+				if (!no_act && menu_handle_action(menu, &in))
+					continue;
+				menu_handle_mouse(menu, &in, &out);
 			}
-			menu_handle_mouse(menu, &in, &out);
 		} else if (in.type == EVT_KBRD) {
 			/* Command key */
 			if (!no_act && menu->cmd_keys &&
@@ -1089,19 +1098,27 @@ void menu_release_filter(struct menu *menu)
 
 void menu_ensure_cursor_valid(struct menu *m)
 {
-	int row;
 	int count = m->filter_list ? m->filter_count : m->count;
+	int start, next;
 
-	for (row = m->cursor; row < count; row++) {
-		if (is_valid_row(m, row)) {
-			m->cursor = row;
-			return;
-		}
+	if (count <= 0) {
+		m->cursor = -1;
+		m->top = 0;
+		return;
 	}
-
-	/* If we've run off the end, without finding a valid row, put cursor
-	 * on the last row */
-	m->cursor = count - 1;
+	/* Preserve the same selected stock row if it remains valid, while
+	 * recovering from removed/filtered rows without selecting disabled
+	 * entries. Empty/fully disabled views deliberately have cursor -1. */
+	start = m->cursor < 0 ? 0 :
+		m->cursor >= count ? count - 1 : m->cursor;
+	next = angdroid_menu_find_valid_cursor(start, count, 1,
+		m, menu_navigation_is_valid);
+	m->cursor = next;
+	if (next < 0) {
+		m->top = 0;
+	} else if (m->top < 0 || m->top >= count) {
+		m->top = next;
+	}
 }
 
 /* ======================== MENU INITIALIZATION ==================== */
