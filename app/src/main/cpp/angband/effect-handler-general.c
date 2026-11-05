@@ -50,6 +50,8 @@
 #include "trap.h"
 #include "droid.h"
 #include "zh-tw-general-effect-messages.h"
+#include "zh-tw-general-effect-terms.h"
+#include "zh-tw-shape-lore.h"
 
 
 /**
@@ -200,7 +202,10 @@ static bool uncurse_object(struct object *obj, int strength, char *dice_string)
 			/* Failure to remove, object is now fragile */
 			object_desc(o_name, sizeof(o_name), obj, ODESC_FULL,
 				player);
-			msgt(MSG_CURSED, "The spell fails; your %s is now fragile.", o_name);
+			if (angdroid_zh_tw_enabled())
+				msgt(MSG_CURSED, "法術失敗了，你的 %s 變得脆弱。", o_name);
+			else
+				msgt(MSG_CURSED, "The spell fails; your %s is now fragile.", o_name);
 			of_on(obj->flags, OF_FRAGILE);
 			player_learn_flag(player, OF_FRAGILE);
 		} else if (one_in_(4)) {
@@ -215,7 +220,10 @@ static bool uncurse_object(struct object *obj, int strength, char *dice_string)
 				strnfmt(dam_text, sizeof(dam_text), " (%d)",
 					dam);
 			}
-			msg("%s%s", "There is a bang and a flash!", dam_text);
+			if (angdroid_zh_tw_enabled())
+				msg("砰的一聲，伴隨著閃光！%s", dam_text);
+			else
+				msg("%s%s", "There is a bang and a flash!", dam_text);
 			if (object_is_carried(player, obj)) {
 				destroyed = gear_object_for_use(player, obj,
 					1, false, &none_left);
@@ -400,9 +408,14 @@ static bool enchant_spell(int num_hit, int num_dam, int num_ac, struct command *
 	object_desc(o_name, sizeof(o_name), obj, ODESC_BASE, player);
 
 	/* Describe */
-	msg("%s %s glow%s brightly!",
-		(object_is_carried(player, obj) ? "Your" : "The"), o_name,
-			   ((obj->number > 1) ? "" : "s"));
+	if (angdroid_zh_tw_enabled()) {
+		msg("%s %s 發出耀眼的光芒！",
+			object_is_carried(player, obj) ? "你持有的" : "地上的", o_name);
+	} else {
+		msg("%s %s glow%s brightly!",
+			(object_is_carried(player, obj) ? "Your" : "The"), o_name,
+			((obj->number > 1) ? "" : "s"));
+	}
 
 	/* Enchant */
 	if (num_dam && enchant(obj, num_hit, ENCH_TOBOTH)) okay = true;
@@ -443,8 +456,12 @@ static void brand_object(struct object *obj, const char *name)
 		strnfmt(brand, sizeof(brand), "of %s", name);
 
 		/* Describe */
-		msg("The %s %s surrounded with an aura of %s.", o_name,
-			(obj->number > 1) ? "are" : "is", name);
+		if (angdroid_zh_tw_enabled())
+			msg("%s 被%s光環包圍了。", o_name,
+				angdroid_general_brand_name(name, true));
+		else
+			msg("The %s %s surrounded with an aura of %s.", o_name,
+				(obj->number > 1) ? "are" : "is", name);
 
 		/* Get the right ego type for the object */
 		for (i = 0; i < z_info->e_max; i++) {
@@ -801,7 +818,11 @@ bool effect_handler_RESTORE_STAT(effect_handler_context_t *context)
 	update_stuff(player);
 
 	/* Message */
-	msg("You feel less %s.", desc_stat(stat, false));
+	if (angdroid_zh_tw_enabled())
+		msg("你感覺自己不再那麼%s。",
+			angdroid_general_stat_adjective(desc_stat(stat, false), true));
+	else
+		msg("You feel less %s.", desc_stat(stat, false));
 
 	return (true);
 }
@@ -826,8 +847,12 @@ bool effect_handler_DRAIN_STAT(effect_handler_context_t *context)
 		equip_learn_flag(player, flag);
 
 		/* Message */
-		msg("You feel very %s for a moment, but the feeling passes.",
-				   desc_stat(stat, false));
+		if (angdroid_zh_tw_enabled())
+			msg("你一時感到非常%s，但這感覺很快消失了。",
+				angdroid_general_stat_adjective(desc_stat(stat, false), true));
+		else
+			msg("You feel very %s for a moment, but the feeling passes.",
+				desc_stat(stat, false));
 
 		return (true);
 	}
@@ -846,8 +871,13 @@ bool effect_handler_DRAIN_STAT(effect_handler_context_t *context)
 		if (dam > 0 && OPT(player, show_damage)) {
 			strnfmt(dam_text, sizeof(dam_text), " (%d)", dam);
 		}
-		msgt(MSG_DRAIN_STAT, "You feel very %s.%s",
-			desc_stat(stat, false), dam_text);
+		if (angdroid_zh_tw_enabled())
+			msgt(MSG_DRAIN_STAT, "你感覺自己非常%s。%s",
+				angdroid_general_stat_adjective(desc_stat(stat, false), true),
+				dam_text);
+		else
+			msgt(MSG_DRAIN_STAT, "You feel very %s.%s",
+				desc_stat(stat, false), dam_text);
 		take_hit(player, dam, "stat drain");
 	}
 
@@ -868,7 +898,11 @@ bool effect_handler_LOSE_RANDOM_STAT(effect_handler_context_t *context)
 
 	/* Attempt to reduce the stat */
 	if (player_stat_dec(player, loss_stat, true)) {
-		msgt(MSG_DRAIN_STAT, "You feel very %s.", desc_stat(loss_stat, false));
+		if (angdroid_zh_tw_enabled())
+			msgt(MSG_DRAIN_STAT, "你感覺自己非常%s。",
+				angdroid_general_stat_adjective(desc_stat(loss_stat, false), true));
+		else
+			msgt(MSG_DRAIN_STAT, "You feel very %s.", desc_stat(loss_stat, false));
 	}
 
 	/* ID */
@@ -887,7 +921,11 @@ bool effect_handler_GAIN_STAT(effect_handler_context_t *context)
 
 	/* Attempt to increase */
 	if (player_stat_inc(player, stat)) {
-		msg("You feel very %s!", desc_stat(stat, true));
+		if (angdroid_zh_tw_enabled())
+			msg("你感覺自己格外%s！",
+				angdroid_general_stat_adjective(desc_stat(stat, true), true));
+		else
+			msg("You feel very %s!", desc_stat(stat, true));
 	}
 
 	/* Notice */
@@ -1028,8 +1066,12 @@ bool effect_handler_DRAIN_MANA(effect_handler_context_t *context)
 				player->upkeep->redraw |= (PR_HEALTH);
 
 			/* Special message */
-			if (monster_is_visible(mon))
-				msg("%s appears healthier.", m_name);
+			if (monster_is_visible(mon)) {
+				if (angdroid_zh_tw_enabled())
+					msg("%s 看起來更健康了。", m_name);
+				else
+					msg("%s appears healthier.", m_name);
+			}
 		}
 	}
 
@@ -2108,9 +2150,13 @@ bool effect_handler_DISENCHANT(effect_handler_context_t *context)
 	/* Artifacts have a 60% chance to resist */
 	if (obj->artifact && (randint0(100) < 60)) {
 		/* Message */
-		msg("Your %s (%c) resist%s disenchantment!", o_name,
-			gear_to_label(player, obj),
-			((obj->number != 1) ? "" : "s"));
+		if (angdroid_zh_tw_enabled())
+			msg("你的 %s（%c）抵抗了解除魔法的效果！", o_name,
+				gear_to_label(player, obj));
+		else
+			msg("Your %s (%c) resist%s disenchantment!", o_name,
+				gear_to_label(player, obj),
+				((obj->number != 1) ? "" : "s"));
 
 		return true;
 	}
@@ -2135,9 +2181,13 @@ bool effect_handler_DISENCHANT(effect_handler_context_t *context)
 	}
 
 	/* Message */
-	msg("Your %s (%c) %s disenchanted!", o_name,
-		gear_to_label(player, obj),
-		((obj->number != 1) ? "were" : "was"));
+	if (angdroid_zh_tw_enabled())
+		msg("你的 %s（%c）的附魔效果被削弱了！", o_name,
+			gear_to_label(player, obj));
+	else
+		msg("Your %s (%c) %s disenchanted!", o_name,
+			gear_to_label(player, obj),
+			((obj->number != 1) ? "were" : "was"));
 
 	/* Recalculate bonuses */
 	player->upkeep->update |= (PU_BONUS);
@@ -2386,8 +2436,12 @@ bool effect_handler_SUMMON(effect_handler_context_t *context)
 
 	/* Message for the blind */
 	if (count && player->timed[TMD_BLIND])
-		msgt(message_type, "You hear %s appear nearby.",
-			 (count > 1 ? "many things" : "something"));
+		if (angdroid_zh_tw_enabled())
+			msgt(message_type, "你聽見附近出現了%s。",
+				count > 1 ? "許多生物" : "某個生物");
+		else
+			msgt(message_type, "You hear %s appear nearby.",
+				(count > 1 ? "many things" : "something"));
 
 	return true;
 }
@@ -2449,7 +2503,10 @@ bool effect_handler_BANISH(effect_handler_context_t *context)
 	/* Hurt the player */
 	dam = player_apply_damage_reduction(player, dam);
 	if (dam > 0 && OPT(player, show_damage)) {
-		msg("You take %d damage.\n", dam);
+		if (angdroid_zh_tw_enabled())
+			msg("你受到 %d 點傷害。\n", dam);
+		else
+			msg("You take %d damage.\n", dam);
 	}
 	take_hit(player, dam, "the strain of casting Banishment");
 
@@ -2502,7 +2559,10 @@ bool effect_handler_MASS_BANISH(effect_handler_context_t *context)
 	/* Hurt the player */
 	dam = player_apply_damage_reduction(player, dam);
 	if (dam > 0 && OPT(player, show_damage)) {
-		msg("You take %d damage.\n", dam);
+		if (angdroid_zh_tw_enabled())
+			msg("你受到 %d 點傷害。\n", dam);
+		else
+			msg("You take %d damage.\n", dam);
 	}
 	take_hit(player, dam, "the strain of casting Mass Banishment");
 
@@ -2544,6 +2604,9 @@ bool effect_handler_PROBE(effect_handler_context_t *context)
 				MDESC_IND_HID | MDESC_CAPITAL | MDESC_COMMA);
 
 			/* Describe the monster */
+			if (angdroid_zh_tw_enabled())
+			msg("%s 有 %d 點生命值。", m_name, mon->hp);
+		else
 			msg("%s has %d hit point%s.", m_name, mon->hp, (mon->hp == 1) ? "" : "s");
 
 			/* Learn all of the non-spell, non-treasure flags */
@@ -3135,7 +3198,10 @@ bool effect_handler_DARKEN_AREA(effect_handler_context_t *context)
 		target = t_mon->grid;
 		monster_desc(m_name, sizeof(m_name), t_mon, MDESC_TARG);
 		if (message) {
-			msg("Darkness surrounds %s.", m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("黑暗籠罩著 %s。", m_name);
+			else
+				msg("Darkness surrounds %s.", m_name);
 			message = false;
 		}
 	}
@@ -3194,14 +3260,20 @@ bool effect_handler_CURSE_ARMOR(effect_handler_context_t *context)
 
 	/* Attempt a saving throw for artifacts */
 	if (obj->artifact && (randint0(100) < 50)) {
-		msg("A %s tries to %s, but your %s resists the effects!",
-				   "terrible black aura", "surround your armor", o_name);
+		if (angdroid_zh_tw_enabled())
+			msg("一股可怕的黑暗氣息試圖包圍你的盔甲，但 %s 抵抗了效果！", o_name);
+		else
+			msg("A %s tries to %s, but your %s resists the effects!",
+				"terrible black aura", "surround your armor", o_name);
 	} else {
 		int num = randint1(3);
 		int max_tries = 20;
 		int old_weight = obj->number * object_weight_one(obj);
 
-		msg("A terrible black aura blasts your %s!", o_name);
+		if (angdroid_zh_tw_enabled())
+			msg("一道可怕的黑暗氣息轟擊你的 %s！", o_name);
+		else
+			msg("A terrible black aura blasts your %s!", o_name);
 
 		/* Take down bonus a wee bit */
 		obj->to_a -= randint1(3);
@@ -3258,14 +3330,20 @@ bool effect_handler_CURSE_WEAPON(effect_handler_context_t *context)
 
 	/* Attempt a saving throw */
 	if (obj->artifact && (randint0(100) < 50)) {
-		msg("A %s tries to %s, but your %s resists the effects!",
-				   "terrible black aura", "surround your weapon", o_name);
+		if (angdroid_zh_tw_enabled())
+			msg("一股可怕的黑暗氣息試圖包圍你的武器，但 %s 抵抗了效果！", o_name);
+		else
+			msg("A %s tries to %s, but your %s resists the effects!",
+				"terrible black aura", "surround your weapon", o_name);
 	} else {
 		int num = randint1(3);
 		int max_tries = 20;
 		int old_weight = obj->number * object_weight_one(obj);
 
-		msg("A terrible black aura blasts your %s!", o_name);
+		if (angdroid_zh_tw_enabled())
+			msg("一道可怕的黑暗氣息轟擊你的 %s！", o_name);
+		else
+			msg("A terrible black aura blasts your %s!", o_name);
 
 		/* Hurt it a bit */
 		obj->to_h = 0 - randint1(3);
@@ -3481,7 +3559,10 @@ bool effect_handler_TAP_DEVICE(effect_handler_context_t *context)
 	/* Turn energy into mana. */
 	if (energy < 36) {
 		/* Require a resonable amount of energy */
-		msg("That %s had no useable energy", item);
+		if (angdroid_zh_tw_enabled())
+			msg("這件%s已沒有可用的能量。", angdroid_general_item_type(item, true));
+		else
+			msg("That %s had no useable energy", item);
 	} else {
 		/* If mana below maximum, increase mana and drain object. */
 		if (player->csp < player->msp) {
@@ -3513,7 +3594,11 @@ bool effect_handler_TAP_DEVICE(effect_handler_context_t *context)
 		} else {
 			char *cap = string_make(item);
 			my_strcap(cap);
-			msg("Your mana was already at its maximum.  %s not drained.", cap);
+			if (angdroid_zh_tw_enabled())
+				msg("你的魔力已經全滿，沒有吸取%s的能量。",
+					angdroid_general_item_type(item, true));
+			else
+				msg("Your mana was already at its maximum.  %s not drained.", cap);
 			string_free(cap);
 		}
 	}
@@ -3533,7 +3618,10 @@ bool effect_handler_SHAPECHANGE(effect_handler_context_t *context)
 
 	/* Change shape */
 	player->shape = lookup_player_shape(shape->name);
-	msg("You assume the shape of a %s!", shape->name);
+	if (angdroid_zh_tw_enabled())
+		msg("你變成了%s！", angdroid_shape_name(shape->name, true));
+	else
+		msg("You assume the shape of a %s!", shape->name);
 	msg("%s", angdroid_general_effect_message("Your gear merges into your body.",
 			angdroid_zh_tw_enabled()));
 
@@ -3576,7 +3664,10 @@ bool effect_handler_COMMAND(effect_handler_context_t *context)
 	if (randint1(player->lev) < randint1(mon->race->level)) {
 		char m_name[80];
 		monster_desc(m_name, sizeof(m_name), mon, MDESC_STANDARD);
-		msg("%s resists your command!", m_name);
+		if (angdroid_zh_tw_enabled())
+			msg("%s 抵抗了你的命令！", m_name);
+		else
+			msg("%s resists your command!", m_name);
 		return false;
 	}
 

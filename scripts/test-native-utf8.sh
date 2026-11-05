@@ -109,6 +109,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_knowledge_store_menu_locale"
 "$BUILD_DIR/test_knowledge_store_menu_locale"
 
+# Native generic spell formatted messages: canonical stat/brand/device terms.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_general_effect_terms_locale.c" \
+    -o "$BUILD_DIR/test_general_effect_terms_locale"
+"$BUILD_DIR/test_general_effect_terms_locale"
+
 # Native generic effect messages: magic detection, teleport and recovery.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_general_effect_messages_locale.c" \

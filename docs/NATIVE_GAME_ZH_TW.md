@@ -1236,3 +1236,19 @@ so effect numbers, monster names and %s arguments are not misrendered.
 The 71 source strings each have a bilingual C99 test case; the
 static checker guards all 82 output sink uses. NDK and in-game tests
 are still required.
+
+## Generic spell and magic formatted feedback (2026-11-05)
+
+The 25 remaining dynamic `msg()`/`msgt()` callsites in original
+`effect-handler-general.c` now render their own Traditional Chinese
+literal-format branches. They retain monster names, item names, enchanted
+gear labels, real HP and damage values and English fallback. The
+`zh-tw-general-effect-terms.h` helper covers all ten original positive/
+negative stat adjectives from `object_property.txt`, the Flame/Frost/Venom
+brand descriptors, and staff/wand names. Messages include dispelling and
+cursing items, monster probing, attribute draining/restoration, summoned
+creatures, banishment damage, body-shape changing, enchantment, possession
+of magical equipment and other dynamic effects. All 15 source-matched
+term pairs have an independent C99 bilingual test; none of the original
+power/HP/brand IDs or RPG game mechanics are modified.
+Full Android/NDK build and gameplay tests are still necessary.

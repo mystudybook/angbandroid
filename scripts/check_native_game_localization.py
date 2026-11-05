@@ -1632,6 +1632,44 @@ def main():
            'Teleportation forbidden!' in general_effect_test,
            "Generic effect host C99 regression must be registered")
 
+    # Formatted generic effect feedback: preserve original numeric values,
+    # monster/item names, original stat/brand identities and game logic.
+    formatted_effects = source(CPP / "angband/effect-handler-general.c", errors)
+    formatted_header = source(
+        CPP / "angband/zh-tw-general-effect-terms.h", errors)
+    formatted_test = source(
+        ROOT / "tests/native/test_general_effect_terms_locale.c", errors)
+    canonical_obj_property = source(
+        ROOT / "variant_lib/angband/gamedata/object_property.txt", errors)
+    formatted_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', formatted_header)
+    stat_properties = [en for en, _ in formatted_pairs[:10]]
+    expect(len(formatted_pairs) == 15 and
+           len({en for en, _ in formatted_pairs}) == 15 and
+           all(any(key + en in canonical_obj_property
+                   for key in ("adjective:", "neg-adjective:"))
+               for en in stat_properties),
+           "Formatted effect stat adjectives must match object_property.txt")
+    expect('"zh-tw-general-effect-terms.h"' in formatted_effects and
+           '"zh-tw-shape-lore.h"' in formatted_effects and
+           'angdroid_general_brand_name(name, true)' in formatted_effects and
+           'angdroid_general_stat_adjective(desc_stat(' in formatted_effects and
+           'angdroid_general_item_type(item, true)' in formatted_effects and
+           'angdroid_shape_name(shape->name, true)' in formatted_effects and
+           'msg("%s 有 %d 點生命值。", m_name, mon->hp);' in formatted_effects and
+           'msg("你受到 %d 點傷害。\\n", dam);' in formatted_effects and
+           'msgt(MSG_DRAIN_STAT, "你感覺自己非常%s。%s",' in formatted_effects and
+           'msg("Your %s (%c) %s disenchanted!", o_name,' in formatted_effects and
+           'effect_calculate_value(context,' in formatted_effects and
+           'player_stat_dec(player,' in formatted_effects,
+           "Formatted effect localization must not change game calculations")
+    expect('test_general_effect_terms_locale.c' in native_tests and
+           'verify(angdroid_general_brand_name, "Flame", "火焰");' in
+                formatted_test and
+           'verify(angdroid_general_stat_adjective, "weak", "虛弱");' in
+                formatted_test,
+           "Formatted native spell locale tests must be registered")
+
+
     if errors:
         for item in errors:
             print("FAIL:", item)
