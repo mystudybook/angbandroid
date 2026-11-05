@@ -1000,3 +1000,17 @@ custom labels fall back to the original English format instead of being
 displayed with broken UTF-8. An independent C99 regression exercises all 11
 fixed labels, selected shop names, English fallback, missing names, and tiny
 buffers. Android APK/NDK and emulator verification are still required.
+
+
+## Shape lore and spell sources (2026-11-05)
+
+Eight non-normal shapes in `shape.txt`, detailed fixed equipment and
+pickup/eat/drop restrictions, basic combat and skill/modifier changes,
+resistance/protection/sustain headings, and known triggering spell and
+class names now use display-only Traditional Chinese. English mode retains
+its original text. Original shape identity, English sorting, gameplay
+operations and numeric bonuses remain unchanged. The dynamic text from
+`effect_describe()` and arbitrary free-form object/player ability flag
+sentences remain English until reviewed independently. The separate C99
+locale regression and complete-source coverage audit are registered;
+Android NDK and on-device verification remain outstanding.
