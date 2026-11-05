@@ -1551,3 +1551,15 @@ canonical translation dictionary is still 326 entries.
 - Original English-mode formatting, unrecognized source text, special artifacts, ego items, scrolls, character exports, random flavor seeding and save data remain unchanged. Failed formatting returns to the previous path.
 - The independent C99 test covers counters 0/1/many, all seven types, known effect display and atomic UTF-8 buffer sizing. A Python integration test checks locale gating, export isolation and original RNG.
 - Android NDK build and emulator/device layout must still be tested.
+
+
+## Identified item classifiers, special suffix grammar and UTF-8 clipping (2026-11-05)
+
+- For screen-only, previously translated identified kinds, all **36/36** upstream `list-tvals.h` names now have an explicit Traditional Chinese classifier. For example, 15 arrows → `15 支箭矢`, 2 boots → `2 雙皮靴`, 3 rings → `3 枚力量戒指`, 4 potions → `4 瓶治療藥水`, and two books → `2 本魔法書`. Unknown upstream categories fall back to `件`.
+- When both the base item and an **already revealed** ego or artifact label are translated, the Chinese UI now joins complete names without an English-space separator: `長劍（屠龍）`, `長劍（神聖復仇者）`, `長劍「安都瑞爾」`. An already parenthesized or quoted localized suffix is not double-wrapped.
+- Untranslated suffixes or untranslated bases retain original English-spacing behavior. The original `object_is_known_artifact()`, `obj->known->ego` and `ODESC_NOEGO` gates remain intact. Source keys, random artifacts, object identities, savefiles, exported character data and standard English mode are unchanged.
+- New `zh-tw-item-grammar.h` provides complete, bounded C99 name/suffix formatting and UTF-8-codepoint-aligned appending to narrow output buffers, without using the locale text as a format string. Existing full game display may still require Android visual checks for terminal column width.
+- Standalone strict C99 tests verify classifiers, count 0/1/many, special suffix punctuation, NULL and insufficient-capacity cases, malformed UTF-8 and safe clipping. The Python canonical source inventory test and native static checker guard all 36 upstream category keys and identified-only integration.
+- Full Android Gradle/NDK, emulator and real device verification remain pending.
+
+- For identified items whose original `kind->name` is only an effect (`Strength`, `Healing`, `Teleportation`), source-matched Chinese UI text also adds the original tval's noun when the item has an assigned flavor and that kind has already been identified. Example: `3 枚力量戒指`, `2 張傳送卷軸`, `治療藥水`. Names that already end in the appropriate noun are not double-suffixed. This never changes the original identification gate.
