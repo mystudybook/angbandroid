@@ -729,10 +729,12 @@ void become_aware(struct chunk *c, struct monster *mon)
 			object_desc(o_name, sizeof(o_name), obj, ODESC_BASE, player);
 
 			/* Print a message */
-			if (square_isseen(c, obj->grid))
+			if (square_isseen(c, obj->grid)) {
 				if (angdroid_zh_tw_enabled())
 					msg("原來%s是一隻怪物！", o_name);
-				else msg("The %s was really a monster!", o_name);
+				else
+					msg("The %s was really a monster!", o_name);
+			}
 
 			/* Clear the mimicry */
 			obj->mimicking_m_idx = 0;
