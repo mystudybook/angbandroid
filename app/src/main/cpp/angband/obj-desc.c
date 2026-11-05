@@ -402,11 +402,21 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		strnfcat(buf, max, &end, "%s", flavored_display);
 	} else if (localized_kind) {
 		char known_display[256];
+		char named_effect[160];
+		const char *display_kind = localized_kind;
+		/* An identified flavored kind uses the effect as its source name.
+		 * Complete it with the Chinese noun, but only after the existing
+		 * aware/show_flavor checks have selected localized_kind. */
+		if (obj->kind->flavor &&
+				angdroid_zh_tw_identified_flavor_name(named_effect,
+					sizeof(named_effect), tval_find_name(obj->tval),
+					localized_kind))
+			display_kind = named_effect;
 		/* Only the user-facing Chinese text uses type-specific classifiers.
 		 * Copy whole UTF-8 codepoints on narrow terminals. */
 		if (angdroid_zh_tw_known_item_name(known_display,
 				sizeof(known_display), tval_find_name(obj->tval),
-				localized_kind, prefix, number)) {
+				display_kind, prefix, number)) {
 			angdroid_zh_tw_item_append_utf8(buf, max, &end,
 				known_display);
 		} else {

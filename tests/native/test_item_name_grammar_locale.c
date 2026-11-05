@@ -33,6 +33,21 @@ int main(void)
     name("bow", "長弓", 1, "長弓");
     name("bow", "長弓", 0, "沒有剩餘的長弓");
     name("unknown tval", "道具", 2, "2 件道具");
+    assert(angdroid_zh_tw_identified_flavor_name(buf, sizeof(buf),
+        "ring", "力量"));
+    assert(strcmp(buf, "力量戒指") == 0);
+    assert(angdroid_zh_tw_identified_flavor_name(buf, sizeof(buf),
+        "scroll", "短距離傳送"));
+    assert(strcmp(buf, "短距離傳送卷軸") == 0);
+    assert(angdroid_zh_tw_identified_flavor_name(buf, sizeof(buf),
+        "amulet", "智慧護身符"));
+    assert(strcmp(buf, "智慧護身符") == 0);
+    assert(angdroid_zh_tw_identified_flavor_name(buf, sizeof(buf),
+        "sword", "長劍"));
+    assert(strcmp(buf, "長劍") == 0);
+    assert(!angdroid_zh_tw_identified_flavor_name(small, sizeof(small),
+        "potion", "治療致命傷"));
+    assert(small[0] == '\0');
     suffix("屠龍", "（屠龍）");
     suffix("（神聖復仇者）", "（神聖復仇者）");
     suffix("「安都瑞爾」", "「安都瑞爾」");

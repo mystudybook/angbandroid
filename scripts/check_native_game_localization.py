@@ -396,6 +396,7 @@ def main():
            "Known item classifiers must match all 36 original tval labels")
     expect('"zh-tw-item-grammar.h"' in obj and
            "angdroid_zh_tw_known_item_name(" in obj and
+           "angdroid_zh_tw_identified_flavor_name(named_effect," in obj and
            "angdroid_zh_tw_item_append_utf8(buf, max, &end," in obj and
            obj.count("angdroid_zh_tw_item_suffix(") == 2 and
            obj.count("if (localized_kind && translated_suffix)") == 2 and

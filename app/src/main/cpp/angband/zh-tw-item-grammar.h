@@ -57,6 +57,51 @@ static inline const char *angdroid_zh_tw_item_classifier(const char *tval)
     return "件";
 }
 
+/* The original kind->name for flavored items is an EFFECT (e.g. Strength),
+ * not the full kind's name (Ring of Strength). Add the native Chinese noun
+ * only if the original object has a flavor and already is identified.
+ */
+static inline const char *angdroid_zh_tw_identified_flavor_noun(const char *tval)
+{
+    static const struct { const char *tval, *noun; } nouns[] = {
+        { "ring", "戒指" },
+        { "amulet", "護身符" },
+        { "staff", "法杖" },
+        { "wand", "魔杖" },
+        { "rod", "魔棒" },
+        { "potion", "藥水" },
+        { "scroll", "卷軸" },
+        { "mushroom", "蘑菇" }
+    };
+    size_t i;
+    if (!tval) return "";
+    for (i = 0; i < sizeof(nouns) / sizeof(nouns[0]); ++i)
+        if (strcmp(tval, nouns[i].tval) == 0) return nouns[i].noun;
+    return "";
+}
+
+/* Compose a source-matched, already identified effect + category noun.
+ * Avoid duplicate nouns should the localized effect contain one already.
+ */
+static inline bool angdroid_zh_tw_identified_flavor_name(char *out,
+    size_t cap, const char *tval, const char *translated_effect)
+{
+    const char *noun = angdroid_zh_tw_identified_flavor_noun(tval);
+    size_t a, b;
+    if (!out || !cap) return false;
+    out[0] = '\0';
+    if (!translated_effect || !*translated_effect) return false;
+    a = strlen(translated_effect);
+    b = strlen(noun);
+    if (b && a >= b && strcmp(translated_effect + a - b, noun) == 0)
+        b = 0;
+    if (a >= cap || b >= cap - a) return false;
+    memcpy(out, translated_effect, a);
+    if (b) memcpy(out + a, noun, b);
+    out[a + b] = '\0';
+    return true;
+}
+
 /* Atomic formatting: never return a partially written UTF-8 name. */
 static inline bool angdroid_zh_tw_known_item_name(char *out, size_t cap,
     const char *tval, const char *translated, bool prefix, unsigned int count)

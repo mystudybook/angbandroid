@@ -1561,3 +1561,5 @@ canonical translation dictionary is still 326 entries.
 - New `zh-tw-item-grammar.h` provides complete, bounded C99 name/suffix formatting and UTF-8-codepoint-aligned appending to narrow output buffers, without using the locale text as a format string. Existing full game display may still require Android visual checks for terminal column width.
 - Standalone strict C99 tests verify classifiers, count 0/1/many, special suffix punctuation, NULL and insufficient-capacity cases, malformed UTF-8 and safe clipping. The Python canonical source inventory test and native static checker guard all 36 upstream category keys and identified-only integration.
 - Full Android Gradle/NDK, emulator and real device verification remain pending.
+
+- For identified items whose original `kind->name` is only an effect (`Strength`, `Healing`, `Teleportation`), source-matched Chinese UI text also adds the original tval's noun when the item has an assigned flavor and that kind has already been identified. Example: `3 枚力量戒指`, `2 張傳送卷軸`, `治療藥水`. Names that already end in the appropriate noun are not double-suffixed. This never changes the original identification gate.
