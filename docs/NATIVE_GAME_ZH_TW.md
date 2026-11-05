@@ -1519,3 +1519,11 @@ canonical translation dictionary is still 326 entries.
 - Android UI/emulator tests remain required for actual font and touch
   interaction behavior.
 
+
+## Symbol-query object classes and terrain names (2026-11-05)
+
+- The identify-symbol command previously showed the original English `tval_find_name()` string and feature `f_info[i].name`, even when the knowledge menu was Chinese.
+- `zh-tw-symbol-query.h` now maps **all 36/36** canonical `list-tvals.h` labels for screen-only display; terrain lookup reuses the established `angdroid_terrain_name()` dictionary.
+- A translated result uses Traditional Chinese punctuation. English mode and unknown labels retain the original text and full stop. The input symbol, object-before-feature-before-monster lookup priority, monster base text, Ctrl+A/U/N actions, lore eligibility and canonical source IDs are unchanged.
+- `test_symbol_query_locale.c` exercises every original tval key as C99, plus ASCII symbol preservation, translated terrain, English mode, missing key and buffer bounds. `test_symbol_query_localization.py` enforces the complete canonical key set and source-path guards. Both are registered in the existing verification scripts.
+- Unmapped monster-base descriptions in this lookup still use upstream English. Android NDK/Gradle and emulator or real-device text-rendering checks remain outstanding.

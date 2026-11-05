@@ -71,6 +71,7 @@
 #include "zh-tw-rune-lore.h"
 #include "zh-tw-terrain-trap.h"
 #include "zh-tw-knowledge-menu.h"
+#include "zh-tw-symbol-query.h"
 #include "zh-tw-shape-lore.h"
 #include "zh-tw-spell-names.h"
 #include "knowledge-monster-label.h"
@@ -4505,7 +4506,11 @@ static void lookup_symbol(char sym, char *buf, size_t max)
 	 * associate a display character with each tval. */
 	for (i = 0; i < z_info->k_max; i++) {
 		if (char_matches_key(k_info[i].d_char, sym)) {
-			strnfmt(buf, max, "%c - %s.", sym, tval_find_name(k_info[i].tval));
+			const char *canonical = tval_find_name(k_info[i].tval);
+			const char *localized = angdroid_symbol_tval_name(
+				canonical, angdroid_zh_tw_enabled());
+			angdroid_symbol_query_format(buf, max, sym, canonical,
+				localized, angdroid_zh_tw_enabled());
 			return;
 		}
 	}
@@ -4515,7 +4520,11 @@ static void lookup_symbol(char sym, char *buf, size_t max)
 	 * door, and '^' matches trap door (instead of the more generic "trap"). */
 	for (i = 1; i < FEAT_MAX; i++) {
 		if (char_matches_key(f_info[i].d_char, sym)) {
-			strnfmt(buf, max, "%c - %s.", sym, f_info[i].name);
+			const char *canonical = f_info[i].name;
+			const char *localized = angdroid_terrain_name(
+				canonical, angdroid_zh_tw_enabled());
+			angdroid_symbol_query_format(buf, max, sym, canonical,
+				localized, angdroid_zh_tw_enabled());
 			return;
 		}
 	}
