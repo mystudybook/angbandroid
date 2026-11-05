@@ -1585,7 +1585,8 @@ def main():
            'msgt(MSG_DEATH, "%s", angdroid_player_feedback(' in player_util_i18n and
            'msgt(MSG_HITPOINT_WARN, "%s", angdroid_player_feedback(' in player_util_i18n and
            'my_strcpy(p->died_from, kb_str, sizeof(p->died_from));' in player_util_i18n and
-           'player_stat_dec(' not in player_util_i18n,
+           'p->chp -= dam;' in player_util_i18n and
+           'take_hit(p, dam, "over-exertion");' in player_util_i18n,
            "Player event display must retain death, damage and savefile state")
     expect('"zh-tw-player-feedback.h"' in misc_i18n and
            'history_add(player, note, HIST_USER_INPUT);' in misc_i18n and
