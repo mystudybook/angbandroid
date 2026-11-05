@@ -34,6 +34,22 @@ class VisibleObjectLocalizationTest(unittest.TestCase):
         self.assertIn("obj_desc_name_prefix(buf, max, end, obj, basename", DESCRIBE)
         self.assertIn("obj_desc_name_format(buf, max, end, basename, modstr, plural)", DESCRIBE)
 
+    def test_ego_suffixes_only_display_when_identified(self):
+        ego_header = (CPP / "zh-tw-ego-names.h").read_text(encoding="utf-8")
+        pairs = re.findall(
+            r'\{\s*"([^"\n]+)",\s*"([^"\n]+)"\s*\}', ego_header
+        )
+        self.assertEqual(len(pairs), 79)
+        self.assertEqual(len({name for name, _ in pairs}), 79)
+        self.assertIn('#include "zh-tw-ego-names.h"', DESCRIBE)
+        self.assertIn('obj->known->ego && !(mode & ODESC_NOEGO)', DESCRIBE)
+        self.assertIn('obj->ego && store', DESCRIBE)
+        self.assertIn('const char *ego_name = obj->ego->name;', DESCRIBE)
+        self.assertIn('angdroid_zh_tw_ego_name(ego_name)', DESCRIBE)
+        self.assertIn('if (localized) ego_name = localized;', DESCRIBE)
+        self.assertIn('strnfcat(buf, max, &end, " %s", ego_name);', DESCRIBE)
+        self.assertIn('strnfcat(buf, max, &end, " %s", obj->artifact->name);', DESCRIBE)
+
     def test_only_requested_screen_calls_opt_in(self):
         for name, expected in UI_CALL_COUNTS.items():
             content = (CPP / name).read_text(encoding="utf-8")
