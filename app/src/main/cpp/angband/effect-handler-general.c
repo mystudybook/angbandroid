@@ -2435,13 +2435,14 @@ bool effect_handler_SUMMON(effect_handler_context_t *context)
 	context->ident = true;
 
 	/* Message for the blind */
-	if (count && player->timed[TMD_BLIND])
+	if (count && player->timed[TMD_BLIND]) {
 		if (angdroid_zh_tw_enabled())
 			msgt(message_type, "你聽見附近出現了%s。",
 				count > 1 ? "許多生物" : "某個生物");
 		else
 			msgt(message_type, "You hear %s appear nearby.",
 				(count > 1 ? "many things" : "something"));
+	}
 
 	return true;
 }
