@@ -5,7 +5,7 @@
 #include "../../app/src/main/cpp/angband/zh-tw-monsters.h"
 int main(void)
 {
-    assert(ANGDROID_ZH_TW_MONSTER_LORE == 199);
+    assert(ANGDROID_ZH_TW_MONSTER_LORE == 279);
     assert(strcmp(angdroid_zh_tw_monster_flavor("silver jelly"),
         "這是一大團銀色的肉塊，會吸收周遭的光線。") == 0);
     assert(strcmp(angdroid_zh_tw_monster_flavor("ruffian"),
@@ -20,6 +20,10 @@ int main(void)
         "這隻剛孵化的藍龍身體仍很柔軟，眼睛還不習慣光線，鱗片呈淡藍色。") == 0);
     assert(strcmp(angdroid_zh_tw_monster_flavor("giant tarantula"),
         "這隻巨型蜘蛛移動迅速，長著毛茸茸的黑紅色腿。") == 0);
+    assert(strcmp(angdroid_zh_tw_monster_flavor("gelatinous cube"),
+        "這團巨大的明膠狀怪物填滿了整條走廊，形成方形身軀；透過透明的身體，你看得見被它吞下的寶物，還有幾具屍體。") == 0);
+    assert(strcmp(angdroid_zh_tw_monster_flavor("Angamaitë of Umbar"),
+        "這名黑努曼諾爾人憎恨西方的人類。") == 0);
     assert(angdroid_zh_tw_monster_flavor("Morgoth, Lord of Darkness") == NULL);
     assert(angdroid_zh_tw_monster_flavor(NULL) == NULL);
     assert(strcmp(angdroid_zh_tw_monster_list_name("scrawny cat"), "瘦弱的貓") == 0);
