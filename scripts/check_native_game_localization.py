@@ -1105,6 +1105,25 @@ def main():
            'textblock_append(tb, angdroid_zh_tw_enabled() ?' not in knowledge_ui,
            "Shape lore localized punctuation must use a literal printf format")
 
+    # Only exact shape.txt misc flag and ROCK player ability descriptions
+    # are localized. All unrecognized descriptions retain their source text.
+    shape_misc_source = source(ROOT / "variant_lib/angband/gamedata/object_property.txt", errors)
+    shape_player_source = source(ROOT / "variant_lib/angband/gamedata/player_property.txt", errors)
+    exact_shape_desc = (
+        "Feather Falling", "Prevents paralysis", "Speeds regeneration",
+        "Sustains your life force", "Grants the ability to see invisible things",
+        "Gives immunity to traps")
+    expect(all("desc:" + desc in shape_misc_source for desc in exact_shape_desc) and
+           "desc:You are made of rock." in shape_player_source and
+           all('{ "' + desc + '", "' in shape_header for desc in
+               exact_shape_desc + ("You are made of rock.",)),
+           "Shape misc descriptions must use exact canonical English keys")
+    expect('angdroid_shape_misc_desc(prop->desc,' in knowledge_ui and
+           'angdroid_shape_misc_desc(ability->desc,' in knowledge_ui and
+           'strcmp(localized, prop->desc) != 0' in knowledge_ui and
+           'Custom flag.' in shape_test,
+           "Only known shape misc descriptions may be changed at display time")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

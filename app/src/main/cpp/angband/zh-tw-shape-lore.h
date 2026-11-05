@@ -96,4 +96,21 @@ static inline const char *angdroid_shape_intro(int zh_tw)
         "shape, cast a spell or use an item command other than eat "
         "(drop, for instance).\n";
 }
+
+/* Source keys are the exact desc: text of flags used by shape.txt. Other
+ * object/player abilities retain their original English description. */
+static inline const char *angdroid_shape_misc_desc(const char *english, int zh_tw)
+{
+    static const struct angdroid_shape_pair map[] = {
+        { "Feather Falling", "緩慢墜落" },
+        { "Prevents paralysis", "防止麻痺" },
+        { "Speeds regeneration", "加快生命恢復" },
+        { "Sustains your life force", "維持生命力" },
+        { "Grants the ability to see invisible things", "能看見隱形事物" },
+        { "Gives immunity to traps", "免疫陷阱效果" },
+        { "You are made of rock.", "你的身體由岩石構成。" },
+    };
+    return angdroid_shape_lookup(english, zh_tw, map,
+        sizeof(map) / sizeof(map[0]));
+}
 #endif

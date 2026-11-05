@@ -54,6 +54,31 @@ int main(void)
     assert(strstr(angdroid_shape_intro(0), "items in your pack") != NULL);
     assert(strstr(angdroid_shape_intro(0), "drop, for instance") != NULL);
     checks += 5;
+
+    /* All six misc flag desc: keys and the ROCK player flag in shape.txt. */
+    {
+        static const struct { const char *en; const char *zh; } cases[] = {
+            { "Feather Falling", "緩慢墜落" },
+            { "Prevents paralysis", "防止麻痺" },
+            { "Speeds regeneration", "加快生命恢復" },
+            { "Sustains your life force", "維持生命力" },
+            { "Grants the ability to see invisible things", "能看見隱形事物" },
+            { "Gives immunity to traps", "免疫陷阱效果" },
+            { "You are made of rock.", "你的身體由岩石構成。" },
+        };
+        size_t i;
+        for (i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+            assert(strcmp(angdroid_shape_misc_desc(cases[i].en, 1),
+                cases[i].zh) == 0);
+            assert(strcmp(angdroid_shape_misc_desc(cases[i].en, 0),
+                cases[i].en) == 0);
+            checks += 2;
+        }
+    }
+    assert(strcmp(angdroid_shape_misc_desc("Custom flag.", 1),
+        "Custom flag.") == 0);
+    assert(angdroid_shape_misc_desc(NULL, 1) == NULL);
+    checks += 2;
     printf("PASS: Angband shape knowledge bilingual labels (%d checks)\n", checks);
     return 0;
 }
