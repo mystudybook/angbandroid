@@ -1172,6 +1172,38 @@ def main():
            'verify(angdroid_record_ui_text, "Unused label", "Unused label")' in records_test,
            "History/highscore C99 bilingual regression must be registered")
 
+    # Equipment comparison text is display-only: keyboard and mouse action
+    # identifiers remain unchanged while both help screens and status lines
+    # are localized in zh-TW. Unknown dynamic status text is kept in English.
+    cmp_ui = source(CPP / "angband/ui-equip-cmp.c", errors)
+    cmp_header = source(CPP / "angband/zh-tw-equip-cmp.h", errors)
+    cmp_test = source(ROOT / "tests/native/test_equip_cmp_locale.c", errors)
+    cmp_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', cmp_header)
+    expect(len(cmp_pairs) == 49 and
+           len({x for x, _ in cmp_pairs}) == len(cmp_pairs) and
+           all(x.strip() and y.strip() for x, y in cmp_pairs),
+           "Equipment comparison text dictionary must have unique nonempty labels")
+    expect('angdroid_equip_cmp_text(english, angdroid_zh_tw_enabled())' in
+               cmp_ui.replace("\n", " ") or
+           'angdroid_equip_cmp_text(english, angdroid_zh_tw_enabled())' in
+               cmp_ui,
+           "Equipment comparison help must use locale-aware display helper")
+    expect('equip_cmp_print_label(states[istate].prompt,' in cmp_ui and
+           'equip_cmp_print_label(the_summary->dlg_trans_msg,' in cmp_ui and
+           'angdroid_equip_cmp_text("Enter 2 or 3 ' in cmp_ui and
+           "case 'q':" in cmp_ui and "case '!':" in cmp_ui and
+           "case 'c':" in cmp_ui and "case 'r':" in cmp_ui and
+           "case 'R':" in cmp_ui,
+           "Equipment comparison input shortcuts and dynamic prompts must remain")
+    expect('menu_dynamic_add_label(m, angdroid_equip_cmp_text(' in cmp_ui and
+           'ACT_CTX_EQUIPCMP_DUMP_FILE' in cmp_ui and
+           'ACT_CTX_EQUIPCMP_RESET' in cmp_ui and
+           'angdroid_menu_copy_columns(clipped, sizeof(clipped),' in cmp_ui and
+           'test_equip_cmp_locale.c' in native_tests and
+           'check("Skip selection", "略過選取");' in cmp_test and
+           'Unsupported future label' in cmp_test,
+           "Equipment comparison mouse labels and C99 fallback test must remain")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
