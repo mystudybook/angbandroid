@@ -53,7 +53,7 @@ class VisibleObjectLocalizationTest(unittest.TestCase):
     def test_artifact_names_only_after_identification(self):
         art_header = (CPP / "zh-tw-artifact-names.h").read_text(encoding="utf-8")
         pairs = re.findall(
-            r'\\{\\s*"([^"\\n]+)",\\s*"([^"\\n]+)"\\s*\\}', art_header
+            r'\{\s*"([^"\n]+)",\s*"([^"\n]+)"\s*\}', art_header
         )
         self.assertEqual(len(pairs), 138)
         self.assertEqual(len({name for name, _ in pairs}), 138)
