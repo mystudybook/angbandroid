@@ -39,10 +39,13 @@ enum {
 	ODESC_CAPITAL = 0x80,	/*!< Capitalise object name */
 	ODESC_TERSE = 0x100,  	/*!< Make terse names */
 	ODESC_NOEGO = 0x200,  	/*!< Don't show ego names */
-	ODESC_ALTNUM = 0x400	/*!< Use the high 16 bits of mode rather
+	ODESC_ALTNUM = 0x400,	/*!< Use the high 16 bits of mode rather
 					than obj->number as the number
 					of objects; not fully compatible
 					with ODESC_EXTRA */
+	ODESC_ZH_TW = 0x800	/*!< Localize only an explicitly requested
+					on-screen item description. Never add this
+					to save/export or canonical game data calls. */
 };
 
 

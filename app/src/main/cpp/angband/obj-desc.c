@@ -326,21 +326,37 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	const char *basename = obj_desc_get_basename(obj, aware, terse,
 		mode, p);
 	const char *modstr = obj_desc_get_modstr(obj->kind);
+	const char *localized_kind = NULL;
+	bool show_flavor = !terse && obj->kind->flavor;
 
-	/* Quantity prefix */
-	if (prefix)
-		end = obj_desc_name_prefix(buf, max, end, obj, basename,
-			modstr, terse, number);
+	/* UI-only display translation. Never expose an unidentified kind,
+	 * change the canonical grammar, or affect save/character exports. */
+	if (store || (aware && p && !OPT(p, show_flavors)))
+		show_flavor = false;
+	if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() && aware &&
+			!show_flavor && obj->kind->name)
+		localized_kind = angdroid_zh_tw_item_kind_name(obj->kind->name);
 
-	/* Base name */
-	end = obj_desc_name_format(buf, max, end, basename, modstr, plural);
+	if (localized_kind) {
+		if (prefix && number == 0)
+			strnfcat(buf, max, &end, "沒有剩餘的");
+		else if (prefix && number > 1)
+			strnfcat(buf, max, &end, "%u 件", number);
+		strnfcat(buf, max, &end, "%s", localized_kind);
+	} else {
+		/* Preserve English pluralization and unidentified flavor text. */
+		if (prefix)
+			end = obj_desc_name_prefix(buf, max, end, obj, basename,
+				modstr, terse, number);
+		end = obj_desc_name_format(buf, max, end, basename, modstr, plural);
+	}
 
 	/* Append extra names of various kinds */
 	if (object_is_known_artifact(obj))
 		strnfcat(buf, max, &end, " %s", obj->artifact->name);
 	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store))
 		strnfcat(buf, max, &end, " %s", obj->ego->name);
-	else if (aware && !obj->artifact &&
+	else if (!localized_kind && aware && !obj->artifact &&
 			 (obj->kind->flavor || obj->kind->tval == TV_SCROLL)) {
 		if (terse)
 			strnfcat(buf, max, &end, " '%s'", obj->kind->name);
@@ -443,11 +459,15 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
  * Describe remaining light for refuellable lights
  */
 static size_t obj_desc_light(const struct object *obj, char *buf, size_t max,
-							 size_t end)
+							 size_t end, uint32_t mode)
 {
 	/* Fuelled light sources get number of remaining turns appended */
-	if (tval_is_light(obj) && !of_has(obj->flags, OF_NO_FUEL))
-		strnfcat(buf, max, &end, " (%d turns)", obj->timeout);
+	if (tval_is_light(obj) && !of_has(obj->flags, OF_NO_FUEL)) {
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			strnfcat(buf, max, &end, "（剩餘 %d 回合）", obj->timeout);
+		else
+			strnfcat(buf, max, &end, " (%d turns)", obj->timeout);
+	}
 
 	return end;
 }
@@ -505,14 +525,23 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
 
 	/* Wands and staffs have charges, others may be charging */
 	if (aware && tval_can_have_charges(obj)) {
-		strnfcat(buf, max, &end, " (%d charge%s)", obj->pval,
-				 PLURAL(obj->pval));
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			strnfcat(buf, max, &end, "（剩餘 %d 次充能）", obj->pval);
+		else
+			strnfcat(buf, max, &end, " (%d charge%s)", obj->pval,
+				PLURAL(obj->pval));
 	} else if (obj->timeout > 0) {
-		if (tval_is_rod(obj) && obj->number > 1)
-			strnfcat(buf, max, &end, " (%d charging)", number_charging(obj));
-		else if (tval_is_rod(obj) || obj->activation || obj->effect)
-			/* Artifacts, single rods */
-			strnfcat(buf, max, &end, " (charging)");
+		if (tval_is_rod(obj) && obj->number > 1) {
+			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+				strnfcat(buf, max, &end, "（%d 個充能中）", number_charging(obj));
+			else
+				strnfcat(buf, max, &end, " (%d charging)", number_charging(obj));
+		} else if (tval_is_rod(obj) || obj->activation || obj->effect) {
+			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+				strnfcat(buf, max, &end, "（充能中）");
+			else
+				strnfcat(buf, max, &end, " (charging)");
+		}
 	}
 
 	return end;
@@ -522,7 +551,7 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
  * Add player-defined inscriptions or game-defined descriptions
  */
 static size_t obj_desc_inscrip(const struct object *obj, char *buf,
-		size_t max, size_t end, const struct player *p)
+		size_t max, size_t end, const struct player *p, uint32_t mode)
 {
 	const char *u[6] = { 0, 0, 0, 0, 0, 0 };
 	int n = 0;
@@ -556,7 +585,18 @@ static size_t obj_desc_inscrip(const struct object *obj, char *buf,
 		for (i = 0; i < n; i++) {
 			if (i == 0)
 				strnfcat(buf, max, &end, " {");
-			strnfcat(buf, max, &end, "%s", u[i]);
+			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() &&
+					!(i == 0 && obj->note)) {
+				const char *label = u[i];
+				if (streq(label, "empty")) label = "已耗盡";
+				else if (streq(label, "tried")) label = "已試用";
+				else if (streq(label, "cursed")) label = "受詛咒";
+				else if (streq(label, "ignore")) label = "忽略";
+				strnfcat(buf, max, &end, "%s", label);
+			} else {
+				/* User-written inscriptions are never translated. */
+				strnfcat(buf, max, &end, "%s", u[i]);
+			}
 			if (i < n - 1)
 				strnfcat(buf, max, &end, ", ");
 		}
@@ -573,14 +613,20 @@ static size_t obj_desc_inscrip(const struct object *obj, char *buf,
  * and "??" to not fully known unflavored items 
  */
 static size_t obj_desc_aware(const struct object *obj, char *buf, size_t max,
-							 size_t end)
+							 size_t end, uint32_t mode)
 {
 	if (!object_flavor_is_aware(obj)) {
-		strnfcat(buf, max, &end, " {unseen}");
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			strnfcat(buf, max, &end, " {未見過}");
+		else
+			strnfcat(buf, max, &end, " {unseen}");
 	} else if (!object_runes_known(obj)) {
 		strnfcat(buf, max, &end, " {??}");
 	} else if (obj->known->curses) {
-		strnfcat(buf, max, &end, " {cursed}");
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			strnfcat(buf, max, &end, " {受詛咒}");
+		else
+			strnfcat(buf, max, &end, " {cursed}");
 	}
 
 	return end;
@@ -624,11 +670,16 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 	size_t end = 0;
 
 	/* Simple description for null item */
-	if (!obj || !obj->known)
+	if (!obj || !obj->known) {
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			return strnfmt(buf, max, "（空）");
 		return strnfmt(buf, max, "(nothing)");
+	}
 
 	/* Unknown itema and cash get straightforward descriptions */
 	if (obj->known && obj->kind != obj->known->kind) {
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			return strnfmt(buf, max, "未知物品");
 		if (prefix)
 			return strnfmt(buf, max, "an unknown item");
 		return strnfmt(buf, max, "unknown item");
@@ -656,7 +707,7 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 		if (tval_is_chest(obj))
 			end = obj_desc_chest(obj, buf, max, end);
 		else if (tval_is_light(obj))
-			end = obj_desc_light(obj, buf, max, end);
+			end = obj_desc_light(obj, buf, max, end, mode);
 
 		end = obj_desc_combat(obj->known, buf, max, end, mode, p);
 	}
@@ -668,9 +719,9 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 		end = obj_desc_charges(obj, buf, max, end, mode);
 
 		if (mode & ODESC_STORE)
-			end = obj_desc_aware(obj, buf, max, end);
+			end = obj_desc_aware(obj, buf, max, end, mode);
 		else
-			end = obj_desc_inscrip(obj, buf, max, end, p);
+			end = obj_desc_inscrip(obj, buf, max, end, p, mode);
 	}
 
 	return end;

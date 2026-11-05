@@ -1688,8 +1688,7 @@ void do_cmd_buy(struct command *cmd)
 	}
 
 	/* Describe the object (fully) */
-	object_desc(o_name, sizeof(o_name), bought, ODESC_PREFIX | ODESC_FULL,
-		player);
+	object_desc(o_name, sizeof(o_name), bought, ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 
 	/* Extract the price for the entire stack */
 	price = price_item(store, bought, false, bought->number);
@@ -1710,8 +1709,7 @@ void do_cmd_buy(struct command *cmd)
 	player->upkeep->notice |= (PN_COMBINE | PN_IGNORE);
 
 	/* Describe the object (fully) again for the message */
-	object_desc(o_name, sizeof(o_name), bought, ODESC_PREFIX | ODESC_FULL,
-		player);
+	object_desc(o_name, sizeof(o_name), bought, ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 
 	/* Message */
 	if (one_in_(3)) msgt(MSG_STORE5, "%s", ONE_OF(comment_accept));
@@ -1948,7 +1946,7 @@ void do_cmd_sell(struct command *cmd)
 
 	/* Get the description all over again */
 	object_desc(o_name, sizeof(o_name), sold_item,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 
 	/* Describe the result (in message buffer) */
 	if (OPT(player, birth_no_selling)) {
@@ -2046,7 +2044,7 @@ void do_cmd_stash(struct command *cmd)
 
 	/* Describe */
 	object_desc(o_name, sizeof(o_name), dropped,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 
 	/* Message */
 	msg("You drop %s (%c).", o_name, label);
