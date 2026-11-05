@@ -37,6 +37,7 @@
 #include "player-timed.h"
 #include "player-util.h"
 #include "project.h"
+#include "droid.h"
 
 /**
  * This file deals with monster attacks (including spells) as follows:
@@ -457,7 +458,10 @@ bool make_ranged_attack(struct monster *mon)
 	/* Check for spell failure (innate attacks never fail) */
 	failrate = monster_spell_failrate(mon);
 	if (!mon_spell_is_innate(thrown_spell) && (randint0(100) < failrate)) {
-		msg("%s tries to cast a spell, but fails.", m_name);
+		if (angdroid_zh_tw_enabled())
+			msg("%s 試圖施法，但失敗了。", m_name);
+		else
+			msg("%s tries to cast a spell, but fails.", m_name);
 		return true;
 	}
 
@@ -602,7 +606,10 @@ bool make_attack_normal(struct monster *mon, struct player *p)
 				if (monster_is_evil(mon) && p->lev >= rlev &&
 				    randint0(100) + p->lev > 50) {
 					/* Message */
-					msg("%s is repelled.", m_name);
+					if (angdroid_zh_tw_enabled())
+			msg("%s 被擊退了。", m_name);
+		else
+			msg("%s is repelled.", m_name);
 
 					/* Hack -- Next attack */
 					continue;
@@ -647,7 +654,10 @@ bool make_attack_normal(struct monster *mon, struct player *p)
 				blinked = context.blinked;
 				damage = context.damage;
 			} else {
-				msg("ERROR: Effect handler not found for %s.", effect->name);
+				if (angdroid_zh_tw_enabled())
+			msg("錯誤：找不到 %s 的效果處理程序。", effect->name);
+		else
+			msg("ERROR: Effect handler not found for %s.", effect->name);
 			}
 
 			/* Don't cut or stun if player is dead */
@@ -719,7 +729,10 @@ bool make_attack_normal(struct monster *mon, struct player *p)
 			if (monster_is_visible(mon) &&	method->miss) {
 				/* Disturbing */
 				disturb(p);
-				msg("%s misses you.", m_name);
+				if (angdroid_zh_tw_enabled())
+			msg("%s 沒有擊中你。", m_name);
+		else
+			msg("%s misses you.", m_name);
 			}
 		}
 
@@ -838,7 +851,10 @@ bool monster_attack_monster(struct monster *mon, struct monster *t_mon)
 				blinked = context.blinked;
 				damage = context.damage;
 			} else {
-				msg("ERROR: Effect handler not found for %s.", effect->name);
+				if (angdroid_zh_tw_enabled())
+			msg("錯誤：找不到 %s 的效果處理程序。", effect->name);
+		else
+			msg("ERROR: Effect handler not found for %s.", effect->name);
 			}
 
 			/* Handle stun */
@@ -865,7 +881,10 @@ bool monster_attack_monster(struct monster *mon, struct monster *t_mon)
 		} else {
 			/* Visible monster missed monster, so notify if appropriate. */
 			if (monster_is_visible(mon) && method->miss) {
-				msg("%s misses %s.", m_name, t_name);
+				if (angdroid_zh_tw_enabled())
+			msg("%s 沒有擊中 %s。", m_name, t_name);
+		else
+			msg("%s misses %s.", m_name, t_name);
 			}
 		}
 

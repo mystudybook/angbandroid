@@ -32,6 +32,8 @@
 #include "project.h"
 #include "source.h"
 #include "trap.h"
+#include "droid.h"
+#include "zh-tw-projection-feedback.h"
 
 /**
  * Adjust damage according to resistance or vulnerability.
@@ -119,7 +121,11 @@ static void project_player_drain_stats(int num)
 			case 5: k = STAT_CON; act = "hale"; break;
 		}
 
-		msg("You're not as %s as you used to be...", act);
+		if (angdroid_zh_tw_enabled()) {
+			msg("你感覺自己的%s有所衰退……", angdroid_project_stat(act, true));
+		} else {
+			msg("You're not as %s as you used to be...", act);
+		}
 		player_stat_dec(player, k, false);
 	}
 
@@ -163,7 +169,8 @@ static int project_player_handler_FIRE(project_player_handler_context_t *context
 	/* Occasional side-effects for powerful fire attacks */
 	if (context->power >= 80) {
 		if (randint0(context->dam) > 500) {
-			msg("The intense heat saps you.");
+			msg("%s", angdroid_project_feedback("The intense heat saps you.",
+			angdroid_zh_tw_enabled()));
 			effect_simple(EF_DRAIN_STAT, source_none(), "0", STAT_STR, 0, 0, 0,
 						  0, &context->obvious);
 		}
@@ -171,14 +178,16 @@ static int project_player_handler_FIRE(project_player_handler_context_t *context
 			if (player_inc_timed(player, TMD_BLIND,
 					randint1(context->dam / 100), true,
 					true, true)) {
-				msg("Your eyes fill with smoke!");
+				msg("%s", angdroid_project_feedback("Your eyes fill with smoke!",
+			angdroid_zh_tw_enabled()));
 			}
 		}
 		if (randint0(context->dam) > 500) {
 			if (player_inc_timed(player, TMD_POISONED,
 					randint1(context->dam / 10), true,
 					true, true)) {
-				msg("You are assailed by poisonous fumes!");
+				msg("%s", angdroid_project_feedback("You are assailed by poisonous fumes!",
+			angdroid_zh_tw_enabled()));
 			}
 		}
 	}
@@ -193,7 +202,8 @@ static int project_player_handler_COLD(project_player_handler_context_t *context
 	/* Occasional side-effects for powerful cold attacks */
 	if (context->power >= 80) {
 		if (randint0(context->dam) > 500) {
-			msg("The cold seeps into your bones.");
+			msg("%s", angdroid_project_feedback("The cold seeps into your bones.",
+			angdroid_zh_tw_enabled()));
 			effect_simple(EF_DRAIN_STAT, source_none(), "0", STAT_DEX, 0, 0, 0,
 						  0, &context->obvious);
 		}
@@ -202,7 +212,8 @@ static int project_player_handler_COLD(project_player_handler_context_t *context
 				equip_learn_flag(player, OF_HOLD_LIFE);
 			} else {
 				int drain = context->dam;
-				msg("The cold withers your life force!");
+				msg("%s", angdroid_project_feedback("The cold withers your life force!",
+			angdroid_zh_tw_enabled()));
 				player_exp_lose(player, drain, false);
 			}
 		}
@@ -216,7 +227,8 @@ static int project_player_handler_POIS(project_player_handler_context_t *context
 
 	if (!player_inc_timed(player, TMD_POISONED, 10 + randint1(context->dam),
 			true, true, true)) {
-		msg("You resist the effect!");
+		msg("%s", angdroid_project_feedback("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 	}
 
 	/* Occasional side-effects for powerful poison attacks */
@@ -224,7 +236,8 @@ static int project_player_handler_POIS(project_player_handler_context_t *context
 		if (randint0(context->dam) > 200) {
 			if (!player_is_immune(player, ELEM_ACID)) {
 				int dam = context->dam / 5;
-				msg("The venom stings your skin!");
+				msg("%s", angdroid_project_feedback("The venom stings your skin!",
+			angdroid_zh_tw_enabled()));
 				inven_damage(player, PROJ_ACID, dam);
 				xtra += adjust_dam(player, PROJ_ACID, dam, RANDOMISE,
 								 player->state.el_info[PROJ_ACID].res_level,
@@ -232,7 +245,8 @@ static int project_player_handler_POIS(project_player_handler_context_t *context
 			}
 		}
 		if (randint0(context->dam) > 200) {
-			msg("The stench sickens you.");
+			msg("%s", angdroid_project_feedback("The stench sickens you.",
+			angdroid_zh_tw_enabled()));
 			effect_simple(EF_DRAIN_STAT, source_none(), "0", STAT_CON, 0, 0, 0,
 						  0, &context->obvious);
 		}
@@ -243,7 +257,8 @@ static int project_player_handler_POIS(project_player_handler_context_t *context
 static int project_player_handler_LIGHT(project_player_handler_context_t *context)
 {
 	if (player_resists(player, ELEM_LIGHT)) {
-		msg("You resist the effect!");
+		msg("%s", angdroid_project_feedback("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 		return 0;
 	}
 
@@ -254,7 +269,8 @@ static int project_player_handler_LIGHT(project_player_handler_context_t *contex
 	if (context->dam > 300) {
 		/* Check for resistance before issuing a message. */
 		if (player_inc_check(player, TMD_CONFUSED, false)) {
-			msg("You are dazzled!");
+			msg("%s", angdroid_project_feedback("You are dazzled!",
+			angdroid_zh_tw_enabled()));
 		}
 		(void)player_inc_timed(player, TMD_CONFUSED,
 			2 + randint1(context->dam / 100), true, true, true);
@@ -265,7 +281,8 @@ static int project_player_handler_LIGHT(project_player_handler_context_t *contex
 static int project_player_handler_DARK(project_player_handler_context_t *context)
 {
 	if (player_resists(player, ELEM_DARK)) {
-		msg("You resist the effect!");
+		msg("%s", angdroid_project_feedback("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 		return 0;
 	}
 
@@ -280,21 +297,24 @@ static int project_player_handler_DARK(project_player_handler_context_t *context
 				equip_learn_flag(player, OF_HOLD_LIFE);
 			} else {
 				int drain = context->dam;
-				msg("The darkness steals your life force!");
+				msg("%s", angdroid_project_feedback("The darkness steals your life force!",
+			angdroid_zh_tw_enabled()));
 				player_exp_lose(player, drain, false);
 			}
 		}
 
 		/* Slowing */
 		if (randint0(context->dam) > 200) {
-			msg("You feel unsure of yourself in the darkness.");
+			msg("%s", angdroid_project_feedback("You feel unsure of yourself in the darkness.",
+			angdroid_zh_tw_enabled()));
 			(void)player_inc_timed(player, TMD_SLOW,
 				context->dam / 100, true, true, false);
 		}
 
 		/* Amnesia */
 		if (randint0(context->dam) > 300) {
-			msg("Darkness penetrates your mind!");
+			msg("%s", angdroid_project_feedback("Darkness penetrates your mind!",
+			angdroid_zh_tw_enabled()));
 			(void)player_inc_timed(player, TMD_AMNESIA,
 				context->dam / 100, true, true, false);
 		}
@@ -305,7 +325,8 @@ static int project_player_handler_DARK(project_player_handler_context_t *context
 static int project_player_handler_SOUND(project_player_handler_context_t *context)
 {
 	if (player_resists(player, ELEM_SOUND)) {
-		msg("You resist the effect!");
+		msg("%s", angdroid_project_feedback("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 		return 0;
 	}
 
@@ -323,7 +344,8 @@ static int project_player_handler_SOUND(project_player_handler_context_t *contex
 	if (context->dam > 300) {
 		/* Check for resistance before issuing a message. */
 		if (player_inc_check(player, TMD_CONFUSED, false)) {
-			msg("The noise disorients you.");
+			msg("%s", angdroid_project_feedback("The noise disorients you.",
+			angdroid_zh_tw_enabled()));
 		}
 		(void)player_inc_timed(player, TMD_CONFUSED,
 			2 + randint1(context->dam / 100), true, true, true);
@@ -334,7 +356,8 @@ static int project_player_handler_SOUND(project_player_handler_context_t *contex
 static int project_player_handler_SHARD(project_player_handler_context_t *context)
 {
 	if (player_resists(player, ELEM_SHARD)) {
-		msg("You resist the effect!");
+		msg("%s", angdroid_project_feedback("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 		return 0;
 	}
 
@@ -352,13 +375,15 @@ static int project_player_handler_NEXUS(project_player_handler_context_t *contex
 	}
 
 	if (player_resists(player, ELEM_NEXUS)) {
-		msg("You resist the effect!");
+		msg("%s", angdroid_project_feedback("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 		return 0;
 	}
 
 	/* Stat swap */
 	if (randint0(100) < player->state.skills[SKILL_SAVE]) {
-		msg("You avoid the effect!");
+		msg("%s", angdroid_project_feedback("You avoid the effect!",
+			angdroid_zh_tw_enabled()));
 	} else {
 		player_inc_timed(player, TMD_SCRAMBLE, randint0(20) + 20, true,
 			true, true);
@@ -369,7 +394,8 @@ static int project_player_handler_NEXUS(project_player_handler_context_t *contex
 					  mon->grid.y, mon->grid.x, NULL);
 	} else if (one_in_(4)) { /* Teleport level */
 		if (randint0(100) < player->state.skills[SKILL_SAVE]) {
-			msg("You avoid the effect!");
+			msg("%s", angdroid_project_feedback("You avoid the effect!",
+			angdroid_zh_tw_enabled()));
 			return 0;
 		}
 		effect_simple(EF_TELEPORT_LEVEL, context->origin, "0", 0, 0, 0, 0, 0,
@@ -387,27 +413,31 @@ static int project_player_handler_NETHER(project_player_handler_context_t *conte
 
 	if (player_resists(player, ELEM_NETHER) ||
 		player_of_has(player, OF_HOLD_LIFE)) {
-		msg("You resist the effect!");
+		msg("%s", angdroid_project_feedback("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 		equip_learn_flag(player, OF_HOLD_LIFE);
 		return 0;
 	}
 
 	/* Life draining */
-	msg("You feel your life force draining away!");
+	msg("%s", angdroid_project_feedback("You feel your life force draining away!",
+			angdroid_zh_tw_enabled()));
 	player_exp_lose(player, drain, false);
 
 	/* Powerful nether attacks have further side-effects */
 	if (context->power >= 80) {
 		/* Mana loss */
 		if ((randint0(context->dam) > 100) && player->msp) {
-			msg("Your mind is dulled.");
+			msg("%s", angdroid_project_feedback("Your mind is dulled.",
+			angdroid_zh_tw_enabled()));
 			player->csp -= MIN(player->csp, context->dam / 10);
 			player->upkeep->redraw |= PR_MANA;
 		}
 
 		/* Loss of energy */
 		if (randint0(context->dam) > 200) {
-			msg("Your energy is sapped!");
+			msg("%s", angdroid_project_feedback("Your energy is sapped!",
+			angdroid_zh_tw_enabled()));
 			player->energy = 0;
 		}
 	}
@@ -417,7 +447,8 @@ static int project_player_handler_NETHER(project_player_handler_context_t *conte
 static int project_player_handler_CHAOS(project_player_handler_context_t *context)
 {
 	if (player_resists(player, ELEM_CHAOS)) {
-		msg("You resist the effect!");
+		msg("%s", angdroid_project_feedback("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 		return 0;
 	}
 
@@ -432,7 +463,8 @@ static int project_player_handler_CHAOS(project_player_handler_context_t *contex
 	/* Life draining */
 	if (!player_of_has(player, OF_HOLD_LIFE)) {
 		int drain = ((player->exp * 3)/ (100 * 2)) * z_info->life_drain_percent;
-		msg("You feel your life force draining away!");
+		msg("%s", angdroid_project_feedback("You feel your life force draining away!",
+			angdroid_zh_tw_enabled()));
 		player_exp_lose(player, drain, false);
 	} else {
 		equip_learn_flag(player, OF_HOLD_LIFE);
@@ -443,7 +475,8 @@ static int project_player_handler_CHAOS(project_player_handler_context_t *contex
 static int project_player_handler_DISEN(project_player_handler_context_t *context)
 {
 	if (player_resists(player, ELEM_DISEN)) {
-		msg("You resist the effect!");
+		msg("%s", angdroid_project_feedback("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 		return 0;
 	}
 
@@ -474,7 +507,8 @@ static int project_player_handler_ICE(project_player_handler_context_t *context)
 		(void)player_inc_timed(player, TMD_CUT, damroll(5, 8), true,
 			true, false);
 	} else {
-		msg("You resist the effect!");
+		msg("%s", angdroid_project_feedback("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 	}
 
 	/* Stun */
@@ -485,7 +519,8 @@ static int project_player_handler_ICE(project_player_handler_context_t *context)
 
 static int project_player_handler_GRAVITY(project_player_handler_context_t *context)
 {
-	msg("Gravity warps around you.");
+	msg("%s", angdroid_project_feedback("Gravity warps around you.",
+			angdroid_zh_tw_enabled()));
 
 	/* Blink */
 	if (randint1(127) > player->lev) {
@@ -541,7 +576,8 @@ static int project_player_handler_TIME(project_player_handler_context_t *context
 	if (one_in_(2)) {
 		/* Life draining */
 		int drain = 100 + (player->exp / 100) * z_info->life_drain_percent;
-		msg("You feel your life force draining away!");
+		msg("%s", angdroid_project_feedback("You feel your life force draining away!",
+			angdroid_zh_tw_enabled()));
 		player_exp_lose(player, drain, false);
 	} else if (!one_in_(5)) {
 		/* Drain some stats */
@@ -549,7 +585,8 @@ static int project_player_handler_TIME(project_player_handler_context_t *context
 	} else {
 		/* Drain all stats */
 		int i;
-		msg("You're not as powerful as you used to be...");
+		msg("%s", angdroid_project_feedback("You're not as powerful as you used to be...",
+			angdroid_zh_tw_enabled()));
 
 		for (i = 0; i < STAT_MAX; i++)
 			player_stat_dec(player, i, false);
@@ -605,7 +642,8 @@ static int project_player_handler_DARK_WEAK(project_player_handler_context_t *co
 {
 	if (player_resists(player, ELEM_DARK)) {
 		if (!player_has(player, PF_UNLIGHT)) {
-			msg("You resist the effect!");
+			msg("%s", angdroid_project_feedback("You resist the effect!",
+			angdroid_zh_tw_enabled()));
 		}
 		return 0;
 	}
@@ -881,7 +919,12 @@ bool project_p(struct source origin, int r, struct loc grid, int dam, int typ,
 
 	/* Let player know what is going on */
 	if (!seen) {
-		msg("You are hit by %s!", projections[typ].blind_desc);
+		if (angdroid_zh_tw_enabled()) {
+			msg("你遭到%s的攻擊！",
+				angdroid_project_blind_term(projections[typ].blind_desc, true));
+		} else {
+			msg("You are hit by %s!", projections[typ].blind_desc);
+		}
 	}
 
 	/* Adjust damage for resistance, immunity or vulnerability, and apply it */
@@ -905,7 +948,10 @@ bool project_p(struct source origin, int r, struct loc grid, int dam, int typ,
 		 */
 		reduced = player_apply_damage_reduction(player, context.dam);
 		if (reduced > 0 && OPT(player, show_damage)) {
-			msg("You take %d damage.", reduced);
+			if (angdroid_zh_tw_enabled())
+				msg("你受到 %d 點傷害。", reduced);
+			else
+				msg("You take %d damage.", reduced);
 		}
 		take_hit(player, reduced, killer);
 	}
@@ -916,7 +962,10 @@ bool project_p(struct source origin, int r, struct loc grid, int dam, int typ,
 
 		xtra = player_apply_damage_reduction(player, xtra);
 		if (xtra > 0 && OPT(player, show_damage)) {
-			msg("You take an extra %d damage.", xtra);
+			if (angdroid_zh_tw_enabled())
+				msg("你額外受到 %d 點傷害。", xtra);
+			else
+				msg("You take an extra %d damage.", xtra);
 		}
 		take_hit(player, xtra, killer);
 	}

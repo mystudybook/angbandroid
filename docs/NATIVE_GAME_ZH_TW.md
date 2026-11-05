@@ -1156,3 +1156,18 @@ still expands canonical item names and uses the unmodified game rules.
 Source audit now checks all 53 status groups and all 149 unique dictionary
 entries. Tests verify all translations and tagged weapon strings. Android
 APK compilation and in-game visual testing still require local execution.
+
+## Gameplay projection and monster attack messages (2026-11-05)
+
+The native `project-player.c` handler now translates all 19 unique
+unformatted side-effect messages, five attribute-drain descriptors
+and all 12 canonical `projection.txt` blind attack descriptions.
+Formatted player attack notices (stat drain, blind projectiles, damage,
+extra damage) also have separate literal-format zh-TW branches.
+Monster `mon-attack.c` now translates spell failures, repelled hits,
+monster-to-player and monster-to-monster misses, and missing-effect
+developer diagnostics, preserving original `%s` arguments and
+English fallbacks. The original damage, resistance and effect logic
+remain untouched. A native C99 bilingual test checks all 36 display
+translations and unknown fallback. Android APK and gameplay
+verification remain outstanding.
