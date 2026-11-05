@@ -959,6 +959,7 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 	while (!(in.type & notify)) {
 		ui_event out = EVENT_EMPTY;
 		int cursor = menu->cursor;
+		bool touch_select_dispatched = false;
 
 		menu_refresh(menu, popup);
 
@@ -973,9 +974,13 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 		if (in.type == EVT_MOUSE) {
 			if (region_inside(&menu->active, &in)) {
 				menu_handle_mouse(menu, &in, &out);
-				if (out.type == EVT_SELECT && !no_act &&
-						menu_handle_action(menu, &in))
-					continue;
+				if (out.type == EVT_SELECT && !no_act) {
+					/* The callback may return false to bubble the event
+					 * upstream. Never invoke it again for this one tap. */
+					touch_select_dispatched = true;
+					if (menu_handle_action(menu, &in))
+						continue;
+				}
 			} else {
 				if (!no_act && menu_handle_action(menu, &in))
 					continue;
@@ -1028,7 +1033,9 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 		}
 
 		/* If we've selected an item, then send that event out */
-		if (out.type == EVT_SELECT && !no_act && menu_handle_action(menu, &out))
+		if (out.type == EVT_SELECT && !no_act &&
+				!touch_select_dispatched &&
+				menu_handle_action(menu, &out))
 			continue;
 
 		/* Notify about the outgoing type */
