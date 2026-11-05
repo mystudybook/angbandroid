@@ -1272,3 +1272,14 @@ localizes allocation/monster-limit feedback, including deep/unique monster
 selection messages. Existing gold updates, loot transfer, monster behavior
 and original English mode are unchanged. Exact-message host C99 smoke tests
 and source checks are registered; full Android build remains unverified.
+
+
+## Native character information screen (2026-11-05)
+
+The character sheet now displays 37 newly translated Traditional Chinese
+labels and skill ratings, combat/magic fields, demographic labels, depth and
+speed values, and export/rename prompts. Stat table headings retain the
+original column positions. Attack and shot frequency use literal bilingual
+printf format strings, avoiding NDK format-security errors. This does not
+alter character numeric values, keyboard actions, or the canonical English
+character-dump format. C99 bilingual regression and source guard added.
