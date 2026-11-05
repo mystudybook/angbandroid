@@ -115,6 +115,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_shape_effect_locale"
 "$BUILD_DIR/test_shape_effect_locale"
 
+# Runtime timed-condition notification messages, source matched and bilingual.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_timed_messages_locale.c" \
+    -o "$BUILD_DIR/test_timed_messages_locale"
+"$BUILD_DIR/test_timed_messages_locale"
+
 # Shape knowledge: bilingual display names and restriction text, C99.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_shape_lore_locale.c" \
