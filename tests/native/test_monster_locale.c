@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "../../app/src/main/cpp/angband/zh-tw-monsters.h"
+#include "../../app/src/main/cpp/angband/zh-tw-unique-monsters.h"
 
 static void expect_translated(const char *english, const char *chinese)
 {
@@ -14,6 +15,17 @@ static void expect_translated(const char *english, const char *chinese)
 int main(void)
 {
     assert(ANGDROID_ZH_TW_MONSTER_NAMES == 522);
+    assert(ANGDROID_ZH_TW_UNIQUE_MONSTER_NAMES == 101);
+    assert(strcmp(angdroid_zh_tw_unique_monster_name("Morgoth, Lord of Darkness"),
+                  "黑暗魔君魔苟斯") == 0);
+    assert(strcmp(angdroid_zh_tw_unique_monster_name("Sauron, the Sorcerer"),
+                  "巫師索倫") == 0);
+    assert(strcmp(angdroid_zh_tw_unique_monster_name("Shelob, Spider of Darkness"),
+                  "黑暗蜘蛛屍羅") == 0);
+    assert(strcmp(angdroid_zh_tw_unique_monster_name("The Witch-King of Angmar"),
+                  "安格瑪巫王") == 0);
+    assert(angdroid_zh_tw_unique_monster_name("unknown unique") == NULL);
+    assert(angdroid_zh_tw_unique_monster_name(NULL) == NULL);
     expect_translated("kobold", "狗頭人");
     expect_translated("night mare", "夜魘");
     expect_translated("ancient red dragon", "遠古紅龍");
@@ -48,6 +60,6 @@ int main(void)
     assert(angdroid_zh_tw_monster_list_name("unknown monster") == NULL);
     assert(angdroid_zh_tw_monster_list_name("Kobold") == NULL);
     assert(angdroid_zh_tw_monster_list_name(NULL) == NULL);
-    puts("PASS: 522 CJK monster list entries, exact matching and English fallback");
+    puts("PASS: 522 regular and 101 unique monster display names, exact matching and English fallback");
     return 0;
 }
