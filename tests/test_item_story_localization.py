@@ -16,8 +16,8 @@ class ItemStoryLocalizationTest(unittest.TestCase):
         pattern = re.compile(r'\{\s*"((?:\\.|[^"\\])*)",\s*"((?:\\.|[^"\\])*)"\s*\}')
         art = pattern.findall(ARTIFACT)
         ego = pattern.findall(EGO)
-        self.assertEqual(len(art), 43)
-        self.assertEqual(len({name for name, _ in art}), 43)
+        self.assertEqual(len(art), 138)
+        self.assertEqual(len({name for name, _ in art}), 138)
         self.assertEqual(len(ego), 5)
         self.assertEqual(len({name for name, _ in ego}), 5)
 
