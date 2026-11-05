@@ -39,6 +39,7 @@
 
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "menu-text-fit.h"
 
 /**
  * Prompt the user for a filename to save the pref file to.
@@ -132,23 +133,18 @@ static void option_toggle_display(struct menu *m, int oid, bool cursor,
 {
 	uint8_t attr = curs_attrs[CURS_KNOWN][cursor != 0];
 	bool *options = menu_priv(m);
-	const char *desc = option_desc(oid);
-	size_t u8len = utf8_strlen(desc);
+	const char *desc = angdroid_game_ui_text(option_desc(oid),
+		angdroid_zh_tw_enabled());
+	char clipped[4 * 45 + 1];
+	size_t columns = angdroid_menu_copy_columns(clipped, sizeof(clipped),
+		desc, 45);
 
-	if (u8len < 45) {
-		c_prt(attr, format("%s%*s", desc, (int)(45 - u8len), " "), row,
-			col);
-	} else {
-		char *desc_copy = string_make(desc);
-
-		if (u8len > 45) {
-			utf8_clipto(desc_copy, 45);
-		}
-		c_prt(attr, desc_copy, row, col);
-		string_free(desc_copy);
-	}
-	c_prt(attr, format(": %s  (%s)", options[oid] ? "yes" : "no ",
-		option_name(oid)), row, col + 45);
+	/* Use terminal display cells instead of byte or codepoint counts
+	 * for CJK text. Preserve option_name() for configuration files. */
+	c_prt(attr, format("%s%*s", clipped, (int)(45 - columns), ""), row, col);
+	c_prt(attr, format(": %s  (%s)",
+		angdroid_game_ui_text(options[oid] ? "yes" : "no",
+			angdroid_zh_tw_enabled()), option_name(oid)), row, col + 45);
 }
 
 /**
@@ -181,9 +177,9 @@ static bool option_toggle_handle(struct menu *m, const ui_event *event,
 
 			screen_save();
 			if (options_save_custom(&player->opts, page)) {
-				get_com("Successfully saved.  Press any key to continue.", &dummy);
+				get_com(angdroid_game_ui_text("Successfully saved.  Press any key to continue.", angdroid_zh_tw_enabled()), &dummy);
 			} else {
-				get_com("Save failed.  Press any key to continue.", &dummy);
+				get_com(angdroid_game_ui_text("Save failed.  Press any key to continue.", angdroid_zh_tw_enabled()), &dummy);
 			}
 			screen_load();
 		/*
@@ -199,7 +195,7 @@ static bool option_toggle_handle(struct menu *m, const ui_event *event,
 			} else {
 				char dummy;
 
-				get_com("Restore failed.  Press any key to continue.", &dummy);
+				get_com(angdroid_game_ui_text("Restore failed.  Press any key to continue.", angdroid_zh_tw_enabled()), &dummy);
 				screen_load();
 			}
 		/*
@@ -346,18 +342,18 @@ static void option_toggle_menu(const char *name, int page)
 	struct menu *m = menu_new(MN_SKIN_SCROLL, &option_toggle_iter);
 
 	/* for all menus */
-	m->prompt = "Set option (y/n/t), select with movement keys or index";
+	m->prompt = angdroid_game_ui_text("Set option (y/n/t), select with movement keys or index", angdroid_zh_tw_enabled());
 	m->cmd_keys = "YyNnTt";
 	m->selections = selections;
 	m->flags = MN_DBL_TAP;
 
 	/* We add 10 onto the page amount to indicate we're at birth */
 	if (page == OPT_PAGE_BIRTH) {
-		m->prompt = "You can only modify these options at character birth.";
+		m->prompt = angdroid_game_ui_text("You can only modify these options at character birth.", angdroid_zh_tw_enabled());
 		m->cmd_keys = "";
 		m->flags = MN_NO_TAGS;
 	} else if (page == OPT_PAGE_BIRTH + 10 || page == OP_INTERFACE) {
-		m->prompt = "Set option (y/n/t), 's' to save, 'r' to restore, 'x' to reset";
+		m->prompt = angdroid_game_ui_text("Set option (y/n/t), 's' to save, 'r' to restore, 'x' to reset", angdroid_zh_tw_enabled());
 		m->cmd_keys = "YyNnTtSsRrXx";
 		/* Provide a context menu for equivalents to 's', 'r', .... */
 		m->context_hook = use_option_context_menu;
@@ -367,7 +363,7 @@ static void option_toggle_menu(const char *name, int page)
 	}
 
 	/* for this particular menu */
-	m->title = name;
+	m->title = angdroid_game_ui_text(name, angdroid_zh_tw_enabled());
 
 	/* Find the number of valid entries */
 	for (i = 0; i < OPT_PAGE_PER; i++) {
@@ -447,10 +443,10 @@ static void do_cmd_options_win(const char *name, int row)
 			if (i == y) a = COLOUR_L_BLUE;
 
 			/* Unused option */
-			if (!str) str = "(Unused option)";
+			if (!str) str = angdroid_game_ui_text("(Unused option)", angdroid_zh_tw_enabled());
 
 			/* Flag name */
-			Term_putstr(0, i + 5, -1, a, str);
+			Term_putstr(0, i + 5, -1, a, angdroid_game_ui_text(str, angdroid_zh_tw_enabled()));
 
 			/* Display the windows */
 			for (j = 0; j < ANGBAND_TERM_MAX; j++) {
@@ -2118,7 +2114,7 @@ void do_cmd_options(void)
 		option_menu = menu_new_action(option_actions,
 				N_ELEMENTS(option_actions));
 
-		option_menu->title = "Options Menu";
+		option_menu->title = angdroid_game_ui_text("Options Menu", angdroid_zh_tw_enabled());
 		option_menu->flags = MN_CASELESS_TAGS;
 	}
 
