@@ -16,7 +16,12 @@ RAND = (CPP / "obj-util.c").read_text(encoding="utf-8")
 class KnownItemGrammarTest(unittest.TestCase):
     def test_all_canonical_tvals_are_classified_in_source_order(self):
         source_names = re.findall(r'^TV\(\w+,\s*"([^"]+)"\)', CANONICAL, re.M)
-        classifications = re.findall(r'^\s*\{ "([^"]+)", "([^"]+)" \},?$', HELPERS, re.M)
+        classifier_body = HELPERS.split(
+            "units[ANGDROID_ZH_TW_ITEM_CLASSIFIERS] = {", 1
+        )[1].split("    };", 1)[0]
+        classifications = re.findall(
+            r'^\s*\{ "([^"]+)", "([^"]+)" \},?$', classifier_body, re.M
+        )
         self.assertEqual(len(source_names), 36)
         self.assertEqual([name for name, _ in classifications], source_names)
         self.assertEqual(len(set(source_names)), 36)

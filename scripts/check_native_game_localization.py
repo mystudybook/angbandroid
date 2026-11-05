@@ -387,8 +387,13 @@ def main():
     tval_source = source(CPP / "angband/list-tvals.h", errors)
     source_tvals = re.findall(r'^TV\(\w+,\s*"([^"]+)"\)', tval_source,
                               re.MULTILINE)
+    # Restrict the count to the canonical tval table; the same header
+    # also includes eight effect+noun pairs for identified flavored kinds.
+    classifier_body = grammar_header.split(
+        "units[ANGDROID_ZH_TW_ITEM_CLASSIFIERS] = {", 1)[1].split(
+        "    };", 1)[0]
     grammar_units = re.findall(r'^\s*\{ "([^"]+)", "([^"]+)" \},?$',
-                               grammar_header, re.MULTILINE)
+                               classifier_body, re.MULTILINE)
     expect(len(source_tvals) == 36 and len(grammar_units) == 36 and
            source_tvals == [name for name, _ in grammar_units] and
            len(set(source_tvals)) == 36 and
