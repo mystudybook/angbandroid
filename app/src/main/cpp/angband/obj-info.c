@@ -42,6 +42,8 @@
 #include "zh-tw-object-info.h"
 #include "zh-tw-item-info.h"
 #include "zh-tw-activations.h"
+#include "zh-tw-curse.h"
+#include "zh-tw-item-abilities.h"
 
 /**
  * Describes the number of blows possible for given stat bonuses
@@ -128,12 +130,20 @@ static bool describe_curses(textblock *tb, const struct object *obj,
 		return false;
 	for (i = 1; i < z_info->curse_max; i++) {
 		if (c[i].power) {
-			textblock_append(tb, "It ");
-			textblock_append_c(tb, COLOUR_L_RED, "%s", curses[i].desc);
-			if (c[i].power == 100) {
-				textblock_append(tb, "; this curse cannot be removed");
+			if (angdroid_zh_tw_enabled()) {
+				textblock_append(tb, "這件物品");
+				textblock_append_c(tb, COLOUR_L_RED, "%s",
+					angdroid_curse_description(curses[i].desc, true));
+				if (c[i].power == 100)
+					textblock_append(tb, "；此詛咒無法移除");
+				textblock_append(tb, "。\n");
+			} else {
+				textblock_append(tb, "It ");
+				textblock_append_c(tb, COLOUR_L_RED, "%s", curses[i].desc);
+				if (c[i].power == 100)
+					textblock_append(tb, "; this curse cannot be removed");
+				textblock_append(tb, ".\n");
 			}
-			textblock_append(tb, ".\n");
 		}
 	}
 
@@ -351,7 +361,9 @@ static bool describe_misc_magic(textblock *tb, const bitflag flags[OF_SIZE])
 		if ((prop->subtype != OFT_MISC)  && (prop->subtype != OFT_MELEE) &&
 			(prop->subtype != OFT_BAD)) continue;
 		if (of_has(flags, prop->index)) {
-			textblock_append(tb, "%s.  ", prop->desc);
+			textblock_append(tb, "%s%s  ",
+				angdroid_zh_tw_item_ability(prop->desc, angdroid_zh_tw_enabled()),
+				angdroid_zh_tw_enabled() ? "。" : ".");
 			printed = true;
 		}
 	}
