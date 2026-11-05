@@ -37,14 +37,23 @@ if "angdroid_utf8_display_columns(items[i].o_name)" not in width_calculation:
 
 if source.count("angdroid_object_list_name_offset(") != 2:
     raise SystemExit("FAIL: list and selection view calculate widths differently")
-if "show_obj(oid, row - oid, col, cursor, olist_mode, width);" not in source:
+if "show_obj(oid, row - oid, col, cursor, olist_render_mode, width);" not in source:
     raise SystemExit("FAIL: inventory selection ignores its drawable row width")
 if "show_obj(i, row, col, false, mode, Term->wid - col);" not in source:
     raise SystemExit("FAIL: inventory panel does not bound drawable row width")
 if "angdroid_utf8_display_columns(header)" not in source or (
-    "area.width = (int)MIN((size_t)MAX(1, Term->wid - area.col)," not in source
+    "angdroid_item_selection_region(width, height," not in source or
+    "area.width = layout.width;" not in source
 ):
-    raise SystemExit("FAIL: object menu width does not bound the header and numeric columns")
+    raise SystemExit("FAIL: item selection fails to resize with terminal geometry")
+if "get_item_action, item_menu_resize };" not in source:
+    raise SystemExit("FAIL: rotated item selection lacks a layout callback")
+if "angdroid_item_selection_footer_row(local_area->row," not in source:
+    raise SystemExit("FAIL: quiver footer may cover selectable item rows")
+if "local_area->row + i" in source:
+    raise SystemExit("FAIL: inventory footer still uses unbounded item count")
+if "if (z_info->quiver_slot_size <= 0) return;" not in source:
+    raise SystemExit("FAIL: quiver slot count may divide by zero")
 
 if "static olist_detail_t object_list_visible_extras(" not in source:
     raise SystemExit("FAIL: inventory numeric-column fitting policy is missing")

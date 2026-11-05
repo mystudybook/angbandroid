@@ -379,6 +379,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_object_list_text"
 "$BUILD_DIR/test_object_list_text"
 
+# Rotated item selection and scroll-safe quiver footer coordinates.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_item_selection_layout.c" \
+    -o "$BUILD_DIR/test_item_selection_layout"
+"$BUILD_DIR/test_item_selection_layout"
+
 # Store columns must remain safe when a phone's terminal is narrower than
 # the optional price/weight/gold fields.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \

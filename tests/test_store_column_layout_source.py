@@ -84,5 +84,13 @@ if "store_display_recalc(ctx);" not in resize or "store_redraw(ctx);" not in res
     raise SystemExit("FAIL: layout columns not refreshed on resize")
 if "store_menu_resize\n};" not in source:
     raise SystemExit("FAIL: resize hook not registered with shop menu")
+if "wid >= 70 && hgt >= 16" not in recalc:
+    raise SystemExit("FAIL: verbose help could cover items on a small screen")
+if "Term->wid >= 70 && Term->hgt >= 16" not in redraw:
+    raise SystemExit("FAIL: help frame and redraw use mismatched size thresholds")
+if "I 檢視  p 購買  d 出售  Esc 返回" not in redraw:
+    raise SystemExit("FAIL: portrait help does not show its keyboard shortcuts")
+if source.count("store_put_clipped(COLOUR_WHITE,") < 8:
+    raise SystemExit("FAIL: native store captions bypass UTF-8 clipping")
 
 print("PASS: store headers, name, gold, prices and rotation use bounded cells")
