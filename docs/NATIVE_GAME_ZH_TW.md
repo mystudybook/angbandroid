@@ -1563,3 +1563,11 @@ canonical translation dictionary is still 326 entries.
 - Full Android Gradle/NDK, emulator and real device verification remain pending.
 
 - For identified items whose original `kind->name` is only an effect (`Strength`, `Healing`, `Teleportation`), source-matched Chinese UI text also adds the original tval's noun when the item has an assigned flavor and that kind has already been identified. Example: `3 枚力量戒指`, `2 張傳送卷軸`, `治療藥水`. Names that already end in the appropriate noun are not double-suffixed. This never changes the original identification gate.
+
+## Equipment combat values, modifiers and inscriptions (2026-11-05)
+
+- Original Angband's opted-in zh-TW item description now labels the **same values** as the English renderer, e.g. `（傷害 2d6）`, `（倍率 ×3）`, `（命中 +4／傷害 -1）` and `〔護甲 12／防護 +6〕`. This does not change to-hit, damage dice, armor calculations, multiplier or combat balance.
+- Native source visibility remains untouched: dice knowledge, `KF_SHOW_MULT`, `OBJ_NOTICE_ASSESSED` or `ODESC_SPOIL`, individual known hit/damage/armor runes, and armor eligibility. Unknown values are never newly disclosed.
+- Known distinct nonzero modifiers still use the existing deduplication and insertion order. In Chinese UI they render as `〈+3、-2〉` instead of the original ASCII ` <+3, -2>`; English and save/export callers keep the original path.
+- Translated statuses for light fuel, known wand/staff charges, charging rods, charging and curse/unseen metadata now append only complete UTF-8 segments (or omit the entire segment when there is insufficient space). Inscription separators use `、` in zh-TW; user-authored inscriptions are not translated and preserve their content.
+- The standalone C99 test checks all eight combat field types, negative/zero/large values, modifier formatting, exact/undersized output capacity, invalid UTF-8 and original text rollback. Python source checks guard identification and English fallback; actual Android NDK build and emulator/device narrow-terminal rendering are still pending.

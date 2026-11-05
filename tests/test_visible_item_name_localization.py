@@ -94,6 +94,7 @@ class VisibleObjectLocalizationTest(unittest.TestCase):
 
     def test_user_notes_and_unknown_names_remain_safe(self):
         self.assertIn("!(i == 0 && obj->note)", DESCRIBE)
+        self.assertIn("angdroid_zh_tw_item_append_whole(buf, max, &end, label);", DESCRIBE)
         self.assertIn('strnfcat(buf, max, &end, "%s", u[i]);', DESCRIBE)
         self.assertIn('strnfmt(buf, max, "未知物品")', DESCRIBE)
         self.assertIn('strnfmt(buf, max, "an unknown item")', DESCRIBE)
