@@ -43,6 +43,7 @@ def main():
     death_header = source(CPP / "angband/zh-tw-death.h", errors)
     mon = source(CPP / "angband/mon-desc.c", errors)
     mon_header = source(CPP / "angband/zh-tw-monsters.h", errors)
+    unique_mon_header = source(CPP / "angband/zh-tw-unique-monsters.h", errors)
     obj = source(CPP / "angband/obj-desc.c", errors)
     obj_header = source(CPP / "angband/zh-tw-items.h", errors)
     monster_data = source(ROOT / "variant_lib/angband/gamedata/monster.txt", errors)
@@ -200,8 +201,25 @@ def main():
     expect("angdroid_utf8_clip_columns(highlighted" in knowledge_ui,
            "Message search highlight may cut through a Chinese character")
 
-    expect("!rf_has(race->flags, RF_UNIQUE)" in mon,
-           "Unique monster names must remain in their original display form")
+    # Unique monster names only alter UI labels, not engine race identities.
+    unique_entries = table(unique_mon_header)
+    unique_source_names = {
+        name for name, unique in monster_records if unique
+    }
+    expect(len(unique_entries) == 101 and len(unique_source_names) == 101
+           and {name for name, _ in unique_entries} == unique_source_names
+           and len({name for name, _ in unique_entries}) == len(unique_entries)
+           and all(zh.strip() for _, zh in unique_entries)
+           and "#define ANGDROID_ZH_TW_UNIQUE_MONSTER_NAMES 101"
+               in unique_mon_header,
+           "Unique monster names must cover all 101 canonical source names")
+    expect('"zh-tw-unique-monsters.h"' in mon
+           and 'angdroid_zh_tw_unique_monster_name(race->name)' in mon
+           and 'strnfmt(buf, buflen, "[U] %s", translated)' in mon
+           and 'strnfmt(buf, buflen, "[U] %s", race->name)' in mon
+           and '"zh-tw-unique-monsters.h"' in mon_msg_ui
+           and 'angdroid_zh_tw_unique_monster_name(race->name)' in mon_msg_ui,
+           "Unique names must stay display-only in lists and messages")
     expect("if (!easy_know && !kind->aware && kind->flavor)" in obj,
            "Unidentified item flavors must not be disclosed")
     expect("obj_desc_name_format(buf, max, 0, kind->name, NULL, false)" in obj,
@@ -899,11 +917,13 @@ def main():
            'c_put_str(attr, name_label, row, col);' in knowledge_ui,
            "Monster knowledge names must be localized and clipped before symbol")
     expect('"zh-tw-monsters.h"' in monster_label_header and
+           '"zh-tw-unique-monsters.h"' in monster_label_header and
            '"menu-text-fit.h"' in monster_label_header and
-           'if (!english || !zh_tw || is_unique) return english;' in monster_label_header and
+           'if (!english || !zh_tw) return english;' in monster_label_header and
+           'angdroid_zh_tw_unique_monster_name(english)' in monster_label_header and
            'return translated ? translated : english;' in monster_label_header and
            'angdroid_menu_copy_columns(dest, capacity, label,' in monster_label_header,
-           "Monster knowledge must preserve unique/English names and UTF-8 glyphs")
+           "Monster knowledge must translate unique/regular names with English fallback")
     expect('test_knowledge_monster_label.c' in native_tests and
            'strcmp(label, "遠古紅")' in monster_label_test and
            'strcmp(label, "遠古")' in monster_label_test and
