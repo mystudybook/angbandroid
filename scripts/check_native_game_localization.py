@@ -274,12 +274,12 @@ def main():
     artifact_lore_entries = table(artifact_story)
     ego_lore_entries = table(ego_story)
     expect(len(described_artifacts) == 138
-           and len(artifact_lore_entries) == 43
-           and {en for en, _ in artifact_lore_entries} <= described_artifacts
-           and len({en for en, _ in artifact_lore_entries}) == 43
+           and len(artifact_lore_entries) == 138
+           and {en for en, _ in artifact_lore_entries} == described_artifacts
+           and len({en for en, _ in artifact_lore_entries}) == 138
            and all(zh.strip() for _, zh in artifact_lore_entries)
-           and "#define ANGDROID_ZH_TW_ARTIFACT_LORE 43" in artifact_story,
-           "Artifact lore descriptions need 43 valid canonical source keys")
+           and "#define ANGDROID_ZH_TW_ARTIFACT_LORE 138" in artifact_story,
+           "Artifact lore descriptions need all 138 canonical source keys")
     expect(len(ego_lore_entries) == 5
            and {en for en, _ in ego_lore_entries} ==
                {"of Accuracy", "of Power", "of Wounding",
