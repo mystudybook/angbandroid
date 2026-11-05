@@ -326,21 +326,37 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	const char *basename = obj_desc_get_basename(obj, aware, terse,
 		mode, p);
 	const char *modstr = obj_desc_get_modstr(obj->kind);
+	const char *localized_kind = NULL;
+	bool show_flavor = !terse && obj->kind->flavor;
 
-	/* Quantity prefix */
-	if (prefix)
-		end = obj_desc_name_prefix(buf, max, end, obj, basename,
-			modstr, terse, number);
+	/* UI-only display translation. Never expose an unidentified kind,
+	 * change the canonical grammar, or affect save/character exports. */
+	if (store || (aware && p && !OPT(p, show_flavors)))
+		show_flavor = false;
+	if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() && aware &&
+			!show_flavor && obj->kind->name)
+		localized_kind = angdroid_zh_tw_item_kind_name(obj->kind->name);
 
-	/* Base name */
-	end = obj_desc_name_format(buf, max, end, basename, modstr, plural);
+	if (localized_kind) {
+		if (prefix && number == 0)
+			strnfcat(buf, max, &end, "沒有剩餘的");
+		else if (prefix && number > 1)
+			strnfcat(buf, max, &end, "%u 件", number);
+		strnfcat(buf, max, &end, "%s", localized_kind);
+	} else {
+		/* Preserve English pluralization and unidentified flavor text. */
+		if (prefix)
+			end = obj_desc_name_prefix(buf, max, end, obj, basename,
+				modstr, terse, number);
+		end = obj_desc_name_format(buf, max, end, basename, modstr, plural);
+	}
 
 	/* Append extra names of various kinds */
 	if (object_is_known_artifact(obj))
 		strnfcat(buf, max, &end, " %s", obj->artifact->name);
 	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store))
 		strnfcat(buf, max, &end, " %s", obj->ego->name);
-	else if (aware && !obj->artifact &&
+	else if (!localized_kind && aware && !obj->artifact &&
 			 (obj->kind->flavor || obj->kind->tval == TV_SCROLL)) {
 		if (terse)
 			strnfcat(buf, max, &end, " '%s'", obj->kind->name);
