@@ -224,6 +224,31 @@ def main():
            and 'strnfmt(buf, buflen, "[U] %s", translated)' in mon
            and 'strnfmt(buf, buflen, "[U] %s", race->name)' in mon,
            "Unique names must stay display-only in monster lists")
+    # Only known artifacts and explicit display flags may use translated
+    # labels. All 138 names must match canonical artifact.txt exactly.
+    artifact_source = source(ROOT / "variant_lib/angband/gamedata/artifact.txt", errors)
+    artifact_header = source(CPP / "angband/zh-tw-artifact-names.h", errors)
+    artifact_native_test = source(
+        ROOT / "tests/native/test_artifact_names_locale.c", errors)
+    artifact_names = {
+        line[5:] for line in artifact_source.splitlines() if line.startswith("name:")
+    }
+    artifact_pairs = table(artifact_header)
+    expect(len(artifact_names) == 138 and len(artifact_pairs) == 138
+           and {en for en, _ in artifact_pairs} == artifact_names
+           and len({en for en, _ in artifact_pairs}) == len(artifact_pairs)
+           and all(zh.strip() for _, zh in artifact_pairs)
+           and "#define ANGDROID_ZH_TW_ARTIFACT_NAMES 138" in artifact_header,
+           "Artifact names must cover all 138 canonical Angband keys")
+    expect('"zh-tw-artifact-names.h"' in obj
+           and 'if (object_is_known_artifact(obj))' in obj
+           and 'const char *artifact_name = obj->artifact->name;' in obj
+           and 'angdroid_zh_tw_artifact_name(artifact_name)' in obj
+           and 'if (localized) artifact_name = localized;' in obj
+           and 'strnfcat(buf, max, &end, " %s", artifact_name);' in obj
+           and "test_artifact_names_locale.c" in native_tests
+           and 'angdroid_zh_tw_artifact_name(NULL) == NULL' in artifact_native_test,
+           "Known artifact suffix names must stay display-only with English fallback")
     # The 107 ego records have 79 distinct source names; only identified,
     # opted-in screen descriptions may use their translated suffix.
     ego_source = source(ROOT / "variant_lib/angband/gamedata/ego_item.txt", errors)
