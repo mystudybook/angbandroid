@@ -68,6 +68,7 @@ def inspect() -> dict:
     monster_names, unique_names = monsters()
     item_translations = entries(CPP / "zh-tw-items.h")
     monster_translations = entries(CPP / "zh-tw-monsters.h")
+    unique_monster_translations = entries(CPP / "zh-tw-unique-monsters.h")
     lore_translations = entries(CPP / "zh-tw-lore.h")
     ui_translations = entries(CPP / "zh-tw-ui.h")
     combat_content = (CPP / "zh-tw-combat.h").read_text(encoding="utf-8")
@@ -129,6 +130,9 @@ def inspect() -> dict:
                 "untranslated": sorted(monster_names - monster_translations.keys()),
                 "invalid_keys": sorted(monster_translations.keys() - monster_names),
             },
+            "unique_monster_display_names": coverage(
+                unique_names, unique_monster_translations
+            ),
             "monster_flavor_descriptions": {
                 "translated": len(lore_translations),
                 "source_total": len(monster_names | unique_names),
@@ -154,7 +158,7 @@ def inspect() -> dict:
             "ui_literal_mappings": len(ui_translations),
             "combat_verb_and_quality_mappings": combat_labels,
             "spell_realm_display_terms": len(magic_terms),
-            "unique_monster_proper_names_retained": len(unique_names),
+            "unique_monster_canonical_names_unchanged": len(unique_names),
         },
         "variants": {
             "count": len(variants),
@@ -171,8 +175,8 @@ def inspect() -> dict:
         },
         "limitations": [
             "Item names are display-only for identified kinds, not object_desc grammar.",
-            "Monster names are display-only; unique proper names remain canonical.",
-            "Most monster lore and several dynamic event descriptions remain English.",
+            "Monster names are display-only; all unique source identities remain canonical.",
+            "Monster flavor descriptions are mapped; other lore sections and dynamic event text may still be English.",
             "Activation effects are translated only when the item's effect is known.",
             "Item names in full inventory descriptions and export text are not uniformly localized.",
             "The Android device/emulator was not tested by this report.",
