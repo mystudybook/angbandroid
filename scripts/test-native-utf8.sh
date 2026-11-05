@@ -386,6 +386,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_column_layout"
 "$BUILD_DIR/test_store_column_layout"
 
+# Store bilingual price/weight text must not truncate real numeric values.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_store_detail_text.c" \
+    -o "$BUILD_DIR/test_store_detail_text"
+"$BUILD_DIR/test_store_detail_text"
+
 # A cancelled purchase cannot select a stale or out-of-range stock item.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_store_stock_guard.c" \

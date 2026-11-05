@@ -427,6 +427,28 @@ def main():
            "angdroid_zh_tw_item_combat_text" in detail_header,
            "Combat/modifier/annotation display needs UTF-8 and source gate tests")
 
+    # Responsive item-list widths and untranslated shop stock are a coupled
+    # regression: stock is opted-in to zh-TW, amounts stay full and unmodified.
+    inventory_layout = source(CPP / "angband/object-list-text.h", errors)
+    store_detail_text = source(CPP / "angband/store-detail-text.h", errors)
+    inventory_static_test = source(
+        ROOT / "tests/test_object_list_text_source.py", errors)
+    store_static_test = source(
+        ROOT / "tests/test_store_column_layout_source.py", errors)
+    expect("angdroid_object_list_fit_extras(" in inventory_layout and
+           "angdroid_object_list_detail_fits(" in inventory_layout and
+           "object_list_visible_extras(mode, Term->wid)" in object_ui and
+           "object_list_visible_extras(olist_mode, Term->wid)" in object_ui and
+           "if (olist_render_mode & OLIST_RECHARGE) ex_width += 10;" in object_ui and
+           "angdroid_store_price_text(" in store_detail_text and
+           "angdroid_store_weight_text(" in store_detail_text and
+           '"store-detail-text.h"' in store_ui and
+           "uint32_t desc = ODESC_PREFIX | ODESC_ZH_TW;" in store_ui and
+           "test_store_detail_text.c" in native_tests and
+           "numeric-column fitting policy" in inventory_static_test and
+           "bilingual bounded formatter" in store_static_test,
+           "Shop and inventory columns must reserve numeric fields safely")
+
     # Source-matched appearance grammar only, not hidden item effects.
     flavored_header = source(CPP / "angband/zh-tw-flavored-object.h", errors)
     flavored_types = re.findall(

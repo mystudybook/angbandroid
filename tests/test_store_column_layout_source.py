@@ -11,6 +11,8 @@ source = (ROOT / "app/src/main/cpp/angband/ui-store.c").read_text(encoding="utf-
 
 if '#include "store-column-layout.h"' not in source:
     raise SystemExit("FAIL: store column layout not included")
+if '#include "store-detail-text.h"' not in source:
+    raise SystemExit("FAIL: store numeric labels lack bilingual bounded formatter")
 if '#include "menu-text-fit.h"' not in source:
     raise SystemExit("FAIL: store text lacks Unicode terminal-cell clipping")
 
@@ -39,6 +41,12 @@ entry = source.split("static void store_display_entry(", 1)[1].split(
 )[0]
 for part in (
     "angdroid_store_name_budget(columns, col, width)",
+    "uint32_t desc = ODESC_PREFIX | ODESC_ZH_TW;",
+    "char o_name[256];",
+    "angdroid_store_weight_text(out_val, sizeof(out_val),",
+    "angdroid_store_price_text(out_val, sizeof(out_val),",
+    "tval_can_have_charges(obj) && obj->number > 1,",
+    "x = price_item(store, obj, false, 1);",
     "store_put_clipped(obj->kind->base->attr, o_name, row, col, name_width)",
     "if (columns.weight_col >= 0 && columns.weight_col < col + width)",
     "if (columns.price_col >= 0 && columns.price_col < col + width)",
@@ -46,6 +54,10 @@ for part in (
 ):
     if part not in entry:
         raise SystemExit(f"FAIL: store item text/column overlap: {part}")
+if 'object_desc(o_name, sizeof(o_name), obj, desc, player);' not in entry:
+    raise SystemExit("FAIL: store product description changed its source logic")
+if entry.count("angdroid_utf8_display_columns(out_val) <= (size_t)budget") != 2:
+    raise SystemExit("FAIL: a partial price or weight may be printed")
 if "c_put_str(obj->kind->base->attr, o_name, row, col);" in entry:
     raise SystemExit("FAIL: raw unbounded item name rendering remains")
 
