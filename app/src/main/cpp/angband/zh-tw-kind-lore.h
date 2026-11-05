@@ -6,7 +6,7 @@
 #define ANGDROID_ZH_TW_KIND_LORE_H
 #include <stddef.h>
 #include <string.h>
-#define ANGDROID_ZH_TW_KIND_LORE 93
+#define ANGDROID_ZH_TW_KIND_LORE 141
 static inline const char *angdroid_zh_tw_kind_flavor(const char *name)
 {
     static const struct { const char *en; const char *zh; }
@@ -104,6 +104,54 @@ static inline const char *angdroid_zh_tw_kind_flavor(const char *name)
         { "& Iron Crown~", "這是一圈樸素的鐵製王冠，頂端伸出鐵刺，是暴君的象徵。" },
         { "& Golden Crown~", "這頂優雅的金色額環向上伸出細長尖飾，看起來理應戴在國王的額前。" },
         { "& Jewel Encrusted Crown~", "這頂厚重金冠裝飾得極為華麗，鑲滿彩虹般各色寶石，足以匹配一位至高王。" },
+        { "& Robe~", "這是厚羊毛或天鵝絨製成的實用長袍，從頸部垂至腳跟。" },
+        { "Soft Leather Armour~", "這件軟皮甲由柔韌的皮革胸甲與較厚的皮革外衣組成。" },
+        { "Studded Leather Armour~", "這件軟皮胸甲以金屬鉚釘加固。" },
+        { "Hard Leather Armour~", "這套硬皮甲由煮硬的皮革胸甲與肩甲構成。" },
+        { "Leather Scale Mail~", "這件護甲由厚實的硬化皮鱗片層層縫製成上衣與護裙。" },
+        { "Metal Scale Mail~", "這件沉重的護甲以皮革為底，覆蓋層疊的鋼製鱗片，並配有相稱的護裙與護袖。" },
+        { "Chain Mail~", "這套鎖子甲以相互交扣的鋼環製成胸甲、護腿和護袖，內襯厚實皮革。" },
+        { "Augmented Chain Mail~", "這套鎖子甲以交錯鋼環覆蓋胸甲、護腿和護袖，在要害處再加一層鐵環，底下襯著厚重護墊。" },
+        { "Bar Chain Mail~", "這套鎖子甲以交錯鋼環製成，肩部用分節鋼板加固，整套護甲內側都襯有厚重護墊。" },
+        { "Metal Brigandine Armour~", "這套僵硬護甲由縫在厚帆布內層的小金屬片構成，外面再覆上一層布料。" },
+        { "Partial Plate Armour~", "這套護甲以鋼製胸甲與護臂搭配鎖子甲護裙和護腿。" },
+        { "Metal Lamellar Armour~", "這套不尋常的鎧甲由互相重疊的金屬片編繫而成，重量卻意外輕巧。" },
+        { "Full Plate Armour~", "這是一套經過精心貼合的完整板甲，可活動的關節底下有鎖子甲，最內層則有輕薄護墊。" },
+        { "Ribbed Plate Armour~", "這套完整板甲由精密貼合的鋼板構成，板面上有加固用的凸脊。" },
+        { "Mithril Chain Mail~", "這套由細密鐵環編成的神奇秘銀鎖子甲，閃耀得如同純銀。" },
+        { "Mithril Plate Mail~", "這套真銀鎧甲由久遠年代傳奇矮人工匠打造。凝視它時，純白光澤耀眼。" },
+        { "Adamantite Plate Mail~", "這是一套精美的精金板甲，幾乎無法被穿透。" },
+        { "& Cloak~", "這件旅人用的結實外衣，可抵禦風雨。" },
+        { "& Fur Cloak~", "這件厚重披風以毛皮製成，內襯皮革，是一件奢華用品。" },
+        { "& Elven Cloak~", "這件奇妙絲質斗篷由凱蘭崔爾的精靈打造，能神奇地映出周遭環境的色彩與形狀。" },
+        { "& Ethereal Cloak~", "這件超凡的透明披風在你身邊垂落出彩虹般的紋路，重量卻完全為零。" },
+        { "& Set~ of Leather Gloves", "這雙皮革護手能保護手部，掌心開放以方便握持武器。" },
+        { "& Set~ of Gauntlets", "這雙鋼製護手覆蓋整隻手與手腕。" },
+        { "& Set~ of Mithril Gauntlets", "這雙護手以輕盈耀眼的秘銀打造。" },
+        { "& Set~ of Caestus", "這種古老的戰鬥手套專供徒手搏擊使用，多層皮革帶上加裝了看似染血的尖刺。" },
+        { "& Set~ of Alchemist's Gloves", "這雙手套專為煉金術師的元素魔法設計，具有優異的防護效果。" },
+        { "& Wicker Shield~", "這面輕盾有著圓形木框，中央以細密的柳條編織而成。" },
+        { "& Small Metal Shield~", "這面圓盾以木材製成，金屬邊框與中央圓盤使其更加堅固。" },
+        { "& Leather Shield~", "這面大型橢圓盾由層疊的木條製成，外面覆蓋厚皮革。" },
+        { "& Large Metal Shield~", "這面橢圓形木盾覆蓋皮革，四周以金屬包邊。中央大型鐵質盾臍能有效保護持盾的手。" },
+        { "& Knight's Shield~", "這面圓角鳶形盾上繪有紋章，能從胸口一路護住雙腳。" },
+        { "& Mithril Shield~", "這面純白色盾牌由秘銀打造。" },
+        { "Damage", "它能提高你的傷害加值。" },
+        { "Accuracy", "它能提高你的命中加值。" },
+        { "Slaying", "它能同時提高命中與傷害加值。" },
+        { "Protection", "它能增加你的護甲等級。" },
+        { "Black Dragon Scale Mail~", "這套龍鱗甲漆黑無比，任何金屬與木材都無法安然附著其上。" },
+        { "Blue Dragon Scale Mail~", "這套藍寶石色的龍鱗甲，在你移動時會散發幽異的電花與光暈。" },
+        { "White Dragon Scale Mail~", "這套龍鱗甲泛著冰霜般的冷白光澤，光是看著它，寒意便沿著脊背直竄。" },
+        { "Red Dragon Scale Mail~", "這套龍鱗甲涵蓋所有火焰的紅色。當你穿上它，舊日燒傷留下的疤痕隱隱作痛。" },
+        { "Green Dragon Scale Mail~", "這套龍鱗甲閃著病態的綠光，一隻觸碰後痛苦死去的老鼠骸骨正從甲片間掉落。" },
+        { "Multi-Hued Dragon Scale Mail~", "這套龍鱗甲充滿躁動的能量，必須使盡全力才能駕馭封存在其中、無休止交戰的元素。" },
+        { "Shining Dragon Scale Mail~", "這套鱗甲一面如光明燈塔般閃耀，一面又貪婪地吸取周遭所有發光之物的能量，將其投入永不滿足的黑暗。" },
+        { "Law Dragon Scale Mail~", "這套龍鱗甲呈嚴峻的藍銀色。觸摸時，你感到些微震動，彷彿遠方集結的號角與旋風傳來回聲。" },
+        { "Gold Dragon Scale Mail~", "這套龍鱗甲如鏡面黃金般閃亮。穿戴時你聽不見任何異常聲音，雙耳卻像身處刺耳喧囂之中般疼痛。" },
+        { "Chaos Dragon Scale Mail~", "這套龍鱗甲在你凝視之際，不斷變幻流動，呈現各種能想像的色彩與形狀。" },
+        { "Balance Dragon Scale Mail~", "這套鱗甲乍看只有毫無特徵的灰色；仔細凝視，才發現一層又一層彩虹般的紋路，像被精金鎖鏈束縛的能量般脈動。" },
+        { "Power Dragon Scale Mail~", "這套鱗甲呈現所有色彩，周圍環繞著元素與以太力量的光暈。那些力量雖完全自由，卻又緊密交融，並受到徹底掌控。" },
     };
     size_t i;
     if (!name) return NULL;
