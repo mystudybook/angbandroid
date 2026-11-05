@@ -35,6 +35,8 @@ class StoreConfirmationSourceTest(unittest.TestCase):
                        "\n/**\n * Buy an object")
         buy = section(STORE, "static bool store_purchase(",
                       "\n/**\n * Examine an item")
+        examine = section(STORE, "static void store_examine(",
+                          "\nstatic void store_menu_set_selections(")
         popup = section(STORE, "static bool context_menu_store_item(",
                         "\n/**\n * Handle store menu input")
         for action in ("STASH", "GIVE", "SELL"):
@@ -49,6 +51,8 @@ class StoreConfirmationSourceTest(unittest.TestCase):
         self.assertIn("ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW", sale)
         self.assertIn("ODESC_PREFIX | ODESC_FULL | ODESC_STORE | ODESC_ZH_TW", buy)
         self.assertIn("ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW |", popup)
+        self.assertIn("ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW;", examine)
+        self.assertIn("char header[256];", examine)
         self.assertIn('"[Y 確認／N 或 Esc 取消] %s %s？"', sale)
         self.assertIn('"[Y 確認／N 或 Esc 取消] 購買 %s？%s"', buy)
         self.assertIn("[Y confirm / N or Esc cancel]", sale)

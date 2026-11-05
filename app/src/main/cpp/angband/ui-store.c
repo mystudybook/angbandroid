@@ -879,10 +879,10 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 static void store_examine(struct store_context *ctx, int item)
 {
 	struct object *obj;
-	char header[120];
+	char header[256];
 	textblock *tb;
 	region area = { 0, 0, 0, 0 };
-	uint32_t odesc_flags = ODESC_PREFIX | ODESC_FULL;
+	uint32_t odesc_flags = ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW;
 
 	if (!ctx->list || !angdroid_store_stock_index_valid(
 		item, ctx->store->stock_num, z_info->store_inven_max))
