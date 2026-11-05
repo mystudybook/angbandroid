@@ -60,6 +60,7 @@
 #include "menu-text-fit.h"
 #include "store-menu-row.h"
 #include "store-stock-guard.h"
+#include "store-confirmation-text.h"
 #include "z-debug.h"
 
 
@@ -538,22 +539,22 @@ static void store_redraw(struct store_context *ctx)
 
 static bool store_get_check(const char *prompt)
 {
-	struct keypress ch;
+	ui_event response;
 
-	/* Prompt for it */
-	prt(prompt, 0, 0);
-
-	/* Get an answer */
-	ch = inkey();
-
-	/* Erase the prompt */
+	/* A second queued tap from the item/context menu must never be
+	 * interpreted as approval. Use the normal deferred input flush
+	 * before exposing the yes/no keyboard buttons. */
+	flush((game_event_type)0, NULL, NULL);
+	soft_kbd_flash("${yes_no}");
+	prt("", 0, 0);
+	store_put_clipped(COLOUR_WHITE, prompt, 0, 0, Term ? Term->wid : 0);
+	response = inkey_m();
 	prt("", 0, 0);
 
-	if (ch.code == ESCAPE) return (false);
-	if (strchr("Nn", ch.code)) return (false);
-
-	/* Success */
-	return (true);
+	/* Android touch events have no affirmative meaning here. Explicit
+	 * Y/y is the only confirmation; N, Esc, Enter and touches cancel. */
+	if (response.type != EVT_KBRD) return false;
+	return angdroid_store_explicit_yes(true, response.key.code);
 }
 
 /*
@@ -570,7 +571,8 @@ static bool store_sell(struct store_context *ctx)
 	struct object object_type_body = OBJECT_NULL;
 	struct object *temp_obj = &object_type_body;
 
-	char o_name[120];
+	char o_name[256];
+	char quantity_prompt[160];
 
 	item_tester tester = NULL;
 
@@ -612,8 +614,20 @@ static bool store_sell(struct store_context *ctx)
 		return false;
 	}
 
-	/* Get a quantity */
-	amt = get_quantity(NULL, obj->number);
+	/* Keep source item limits and the '*' = all shortcut. Only the
+	 * displayed request is localized, not the underlying quantity rule. */
+	{
+		const char *ask = NULL;
+		enum angdroid_store_quantity_action action =
+			store->feat == FEAT_HOME ? ANGDROID_STORE_Q_STASH :
+			OPT(player, birth_no_selling) ? ANGDROID_STORE_Q_GIVE :
+			ANGDROID_STORE_Q_SELL;
+		if (angdroid_zh_tw_enabled() &&
+				angdroid_store_quantity_prompt(quantity_prompt,
+					sizeof(quantity_prompt), action, obj->number, 0))
+			ask = quantity_prompt;
+		amt = get_quantity(ask, obj->number);
+	}
 
 	/* Allow user abort */
 	if (amt <= 0) return false;
@@ -633,7 +647,7 @@ static bool store_sell(struct store_context *ctx)
 
 	/* Get a full description */
 	object_desc(o_name, sizeof(o_name), temp_obj,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 
 	/* Real store */
 	if (store->feat != FEAT_HOME) {
@@ -651,9 +665,9 @@ static bool store_sell(struct store_context *ctx)
 
 		/* Confirm sale */
 		if (!store_get_check(angdroid_zh_tw_enabled() ?
-				format("%s %s？[Esc/N 取消，其他鍵確認]",
+				format("[Y 確認／N 或 Esc 取消] %s %s？",
 					OPT(player, birth_no_selling) ? "交出" : "出售", o_name) :
-				format("%s %s? [ESC, any other key to accept]",
+				format("[Y confirm / N or Esc cancel] %s %s?",
 					OPT(player, birth_no_selling) ? "Give" : "Sell", o_name))) {
 			screen_load();
 			return false;
@@ -688,7 +702,7 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 	struct object *obj;
 	struct object *dummy = NULL;
 
-	char o_name[80];
+	char o_name[256];
 
 	int amt, num;
 
@@ -770,9 +784,18 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		else
 			num = find_inven(obj);
 
-		strnfmt(o_name, sizeof o_name, "%s how many%s? (max %d) ",
+		/* Only previously known held counts are shown. Keep the original
+		 * English prompt and all selection limits when zh-TW is off. */
+		if (angdroid_zh_tw_enabled() &&
+				angdroid_store_quantity_prompt(o_name, sizeof(o_name),
+					store->feat == FEAT_HOME ? ANGDROID_STORE_Q_TAKE :
+						ANGDROID_STORE_Q_BUY, amt, num)) {
+			/* o_name now contains a Chinese, bounded quantity prompt. */
+		} else {
+			strnfmt(o_name, sizeof o_name, "%s how many%s? (max %d) ",
 				(store->feat == FEAT_HOME) ? "Take" : "Buy",
 				num ? format(" (you have %d)", num) : "", amt);
+		}
 
 		/* Get a quantity */
 		amt = get_quantity(o_name, amt);
@@ -801,7 +824,7 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 		/* Describe the object (fully) */
 		object_desc(o_name, sizeof(o_name), dummy,
-			ODESC_PREFIX | ODESC_FULL | ODESC_STORE, player);
+			ODESC_PREFIX | ODESC_FULL | ODESC_STORE | ODESC_ZH_TW, player);
 
 		/* Extract the price for the entire stack */
 		price = price_item(store, dummy, false, dummy->number);
@@ -815,12 +838,11 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 		/* Confirm purchase */
 		response = store_get_check(angdroid_zh_tw_enabled() ?
-				format("購買 %s？%s [Esc/N 取消，其他鍵確認]",
+				format("[Y 確認／N 或 Esc 取消] 購買 %s？%s",
 					o_name, obj_can_use ? "" : "（無法使用）") :
-				format("Buy %s?%s %s",
+				format("[Y confirm / N or Esc cancel] Buy %s?%s",
 					o_name,
-					obj_can_use ? "" : " (Can't use!)",
-					"[ESC, any other key to accept]"));
+					obj_can_use ? "" : " (Can't use!)"));
 
 		screen_load();
 
@@ -857,10 +879,10 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 static void store_examine(struct store_context *ctx, int item)
 {
 	struct object *obj;
-	char header[120];
+	char header[256];
 	textblock *tb;
 	region area = { 0, 0, 0, 0 };
-	uint32_t odesc_flags = ODESC_PREFIX | ODESC_FULL;
+	uint32_t odesc_flags = ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW;
 
 	if (!ctx->list || !angdroid_store_stock_index_valid(
 		item, ctx->store->stock_num, z_info->store_inven_max))
@@ -1090,7 +1112,8 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 	m = menu_dynamic_new();
 
 	object_desc(header, sizeof(header), obj,
-		ODESC_PREFIX | ODESC_FULL | ((home) ? 0 : ODESC_STORE), player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW |
+			((home) ? 0 : ODESC_STORE), player);
 
 	labels = string_make(lower_case);
 	m->selections = labels;

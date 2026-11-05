@@ -44,7 +44,7 @@ inside = select.split("if (in.type == EVT_MOUSE) {", 1)[1].split(
 for phrase in (
     "if (region_inside(&menu->active, &in)) {",
     "menu_handle_mouse(menu, &in, &out);",
-    "if (out.type == EVT_SELECT && !no_act &&",
+    "if (out.type == EVT_SELECT && !no_act) {",
     "menu_handle_action(menu, &in))",
     "} else {",
     "if (!no_act && menu_handle_action(menu, &in))",
@@ -52,9 +52,13 @@ for phrase in (
     if phrase not in inside:
         raise SystemExit(f"FAIL: touch row may dispatch stale selection: {phrase}")
 if inside.index("menu_handle_mouse(menu, &in, &out);") > inside.index(
-    "if (out.type == EVT_SELECT && !no_act &&"
+    "if (out.type == EVT_SELECT && !no_act) {"
 ):
     raise SystemExit("FAIL: touch action runs before current row hit-test")
+if "touch_select_dispatched = true;" not in inside:
+    raise SystemExit("FAIL: one touch can dispatch an action twice")
+if "!touch_select_dispatched &&" not in select:
+    raise SystemExit("FAIL: event fallback can dispatch the same action twice")
 if inside.count("menu_handle_mouse(menu, &in, &out);") != 2:
     raise SystemExit("FAIL: header and item touch paths are inconsistent")
 if "if (new_cursor == menu->cursor || !(menu->flags & MN_DBL_TAP))" not in mouse:
