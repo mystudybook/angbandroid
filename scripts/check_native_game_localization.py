@@ -427,6 +427,27 @@ def main():
            "angdroid_zh_tw_item_combat_text" in detail_header,
            "Combat/modifier/annotation display needs UTF-8 and source gate tests")
 
+    # Live touch selection must resolve its current hit row before invoking
+    # the stock callback, while empty/header and escape touches remain safe.
+    menu_hit_source = source(CPP / "angband/menu-hit-test.h", errors)
+    menu_cursor_source = source(CPP / "angband/menu-valid-cursor.h", errors)
+    touch_test = source(ROOT / "tests/test_menu_hit_test_source.py", errors)
+    nav_test = source(ROOT / "tests/test_menu_navigation_source.py", errors)
+    store_touch_test = source(
+        ROOT / "tests/test_store_menu_flow_source.py", errors)
+    expect("angdroid_menu_scrolling_hit(" in menu_hit_source and
+           "angdroid_menu_page_next_cursor(" in menu_cursor_source and
+           "if (region_inside(&menu->active, &in)) {" in menu_ui and
+           "if (out.type == EVT_SELECT && !no_act &&" in menu_ui and
+           "angdroid_menu_page_next_cursor(menu->cursor," in menu_ui and
+           "angdroid_menu_find_valid_cursor(start, count, 1," in menu_ui and
+           "region_inside(&m->active, event) &&" in store_ui and
+           "test_menu_valid_cursor.c" in native_tests and
+           "touch row may dispatch stale selection" in touch_test and
+           "Spacebar paging can skip the final menu row" in nav_test and
+           "an outside/return touch can buy" in store_touch_test,
+           "Mouse dispatch must use the tapped row, and page cursor stay valid")
+
     # Portrait rotation: item selection region, scrolled quiver footer, and
     # store help must never overlap active stock rows or invalid touch targets.
     selection_layout = source(CPP / "angband/item-selection-layout.h", errors)
