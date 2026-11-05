@@ -1330,11 +1330,23 @@ unchanged. Source checker assertions guard all bilingual branches.
   descriptions must have a Chinese mapping. A host C99 header smoke test
   is included in `scripts/verify-zh-tw.sh`.
 
+## 2026-11-05: Complete canonical Angband monster flavor paragraphs
+
+The display-only monster flavor dictionary now contains **623/623** canonical
+named monster records from `variant_lib/angband/gamedata/monster.txt`
+(excluding the internal `<player>` pseudo-record). Both ordinary and unique
+monster lore entries are covered, including Morgoth, Sauron, and the high-end
+dragons. Exact English name lookup is retained for identification and fallback;
+this change does not modify game data, combat state, savefiles, or English mode.
+The source-audit coverage regression now requires every canonical name to have
+a lore mapping. This is **complete name-key coverage for one section**, not
+a claim that all Angband or all included game variants are 100% Chinese.
+
 **Remaining work before a credible "fully localized" claim:** Angband
 `object_desc()` still has English pluralization, identification/flavor
-templates, and ego/artifact append rules in inventory and exports; most
-canonical monster flavor paragraphs remain English. Several long object,
-artifact, ego and effect narratives are not covered by the new IDs.
+templates, and ego/artifact append rules in inventory and exports. Several long
+object, artifact, ego and effect narratives and dynamic event messages may still
+appear in English; each needs a display-path and regression audit.
 The other bundled native variants are independent engines and have not
 been localized by this patch. Full Android SDK/NDK compilation, emulator
 gameplay, UI-width review, save/export compatibility, and license checks
