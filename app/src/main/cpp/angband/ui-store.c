@@ -332,10 +332,12 @@ static void store_display_entry(struct menu *menu, int oid, bool cursor, int row
 	colour = curs_attrs[CURS_KNOWN][(int)cursor];
 	if (columns.weight_col >= 0 && columns.weight_col < col + width) {
 		int weight = object_weight_one(obj);
+		int budget = MIN(10, col + width - columns.weight_col);
 		if (angdroid_store_weight_text(out_val, sizeof(out_val),
-				weight, angdroid_zh_tw_enabled()))
+				weight, angdroid_zh_tw_enabled()) &&
+				angdroid_utf8_display_columns(out_val) <= (size_t)budget)
 			store_put_clipped(colour, out_val, row, columns.weight_col,
-				MIN(10, col + width - columns.weight_col));
+				budget);
 	}
 
 	if (columns.price_col >= 0 && columns.price_col < col + width) {
@@ -343,11 +345,13 @@ static void store_display_entry(struct menu *menu, int oid, bool cursor, int row
 		x = price_item(store, obj, false, 1);
 		if (player->au < x)
 			colour = curs_attrs[CURS_UNKNOWN][(int)cursor];
+		int budget = MIN(14, col + width - columns.price_col);
 		if (angdroid_store_price_text(out_val, sizeof(out_val),
 				(long)x, tval_can_have_charges(obj) && obj->number > 1,
-				angdroid_zh_tw_enabled()))
+				angdroid_zh_tw_enabled()) &&
+				angdroid_utf8_display_columns(out_val) <= (size_t)budget)
 			store_put_clipped(colour, out_val, row, columns.price_col,
-				MIN(14, col + width - columns.price_col));
+				budget);
 	}
 }
 
