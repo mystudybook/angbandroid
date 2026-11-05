@@ -1072,6 +1072,24 @@ def main():
                knowledge_group_tests for en in category_source),
            "Native C99 group-name regression must cover all Chinese categories")
 
+    # Ego dictionary names are displayed only, with CJK-safe clipping in
+    # the knowledge listing and English fallback in the detailed header.
+    ego_knowledge_test = source(
+        ROOT / "tests/test_ego_knowledge_screen.py", errors)
+    expect('"zh-tw-ego-names.h"' in knowledge_ui
+           and 'angdroid_zh_tw_ego_name(ego->name)' in knowledge_ui
+           and 'const char *display_name = localized ? localized : ego->name;'
+               in knowledge_ui
+           and 'display_name, col, Term->wid, Term->wid' in knowledge_ui
+           and 'c_prt(attr, clipped, row, col);' in knowledge_ui
+           and 'textui_textblock_show(tb, area, format("%s %s", group, display_name));'
+               in knowledge_ui
+           and 'angdroid_knowledge_group_text(' in knowledge_ui
+           and "test_ego_knowledge_screen.py" in source(
+                ROOT / "scripts/verify-zh-tw.sh", errors)
+           and "test_recall_title_uses_same_dictionary_and_group_fallback"
+               in ego_knowledge_test,
+           "Ego knowledge needs localized suffixes with safe column clipping")
     # Monster knowledge uses 522 regular and 101 unique labels with CJK clipping.
     monster_label_header = source(CPP / "angband/knowledge-monster-label.h", errors)
     monster_label_test = source(ROOT / "tests/native/test_knowledge_monster_label.c", errors)
