@@ -51,6 +51,7 @@ run_check "Finite invalid-row menu navigation" python3 "$ROOT/tests/test_menu_na
 run_check "Inventory and equipment UTF-8 display safety" python3 "$ROOT/tests/test_object_list_text_source.py"
 run_check "UI-only item name localization and export isolation" python3 "$ROOT/tests/test_visible_item_name_localization.py"
 run_check "Item lore and character export isolation" python3 "$ROOT/tests/test_item_story_localization.py"
+run_check "Ego knowledge names, clipping and recall titles" python3 "$ROOT/tests/test_ego_knowledge_screen.py"
 run_check "Store columns on narrow/rotated terminals" python3 "$ROOT/tests/test_store_column_layout_source.py"
 run_check "Dynamic store Buy alias and popup text safety" python3 "$ROOT/tests/test_menu_dynamic_choice_source.py"
 run_check "Dynamic popup placement on tiny terminals" python3 "$ROOT/tests/test_menu_popup_layout_source.py"
