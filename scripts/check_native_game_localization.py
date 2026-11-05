@@ -1787,6 +1787,24 @@ def main():
            'angdroid_gear_message(NULL, 1) == NULL' in gear_t,
            "Inventory bilingual regression must be registered")
 
+    # Object command feedback is localized without editing item IDs,
+    # artifact objects or original English message text.
+    obj_command = source(CPP / "angband/cmd-obj.c", errors)
+    expect('format("真的要卸下 %s 嗎？ ", o_name)' in obj_command and
+           'format("Really take off %s? ", o_name)' in obj_command and
+           'msgt(MSG_WIELD, "你卸下了 %s（%c）。"' in obj_command and
+           'msgt(MSG_WIELD, "%s %s (%c).", act, o_name,' in obj_command and
+           'gear_to_label(player, equip_obj)' in obj_command and
+           'msg("你看見 %s。", name);' in obj_command and
+           'msg("You see %s.", name);' in obj_command and
+           'msg("你持有 %s（第一組 %c）。", name, label);' in obj_command and
+           'msg("You have %s (1st %c).", name, label);' in obj_command and
+           'msg("你持有 %s（%c）。", name, label);' in obj_command and
+           'msg("You have %s (%c).", name, label);' in obj_command and
+           '"Error in do_cmd_wield(), please report."' in obj_command and
+           '裝備替換時發生錯誤，請回報此問題。' in obj_command,
+           "Object use/replace feedback must preserve English fallback")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

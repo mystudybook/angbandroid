@@ -1295,3 +1295,13 @@ slot assignments or equipment calculations are changed. English fallback
 remains verbatim, and all changed printf-like messages use literal format
 strings for NDK `-Werror=format-security` compliance. A native C99
 regression checks static translated messages and unknown fallback.
+
+
+## Object command visible feedback (2026-11-05)
+
+The remaining Angband object-use / equipment-replacement prompts and
+item-after-use messages are localized at their display sites. This covers
+confirmation of replacement/takeoff, item source feedback for floor and
+inventory, and a rare equipment-replacement error. Numeric slot labels,
+command routing, original English behavior and actual item state remain
+unchanged. Source checker assertions guard all bilingual branches.

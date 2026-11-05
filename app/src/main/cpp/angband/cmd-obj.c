@@ -313,7 +313,9 @@ void do_cmd_wield(struct command *cmd)
 	if (tval_is_ring(obj)) {
 		if (cmd_get_item(cmd, "replace", &equip_obj,
 						 /* Prompt */ angdroid_game_ui_text("Replace which ring? ", angdroid_zh_tw_enabled()),
-						 /* Error  */ "Error in do_cmd_wield(), please report.",
+						 /* Error  */ (angdroid_zh_tw_enabled() ?
+				"裝備替換時發生錯誤，請回報此問題。" :
+				"Error in do_cmd_wield(), please report."),
 						 /* Filter */ tval_is_ring,
 						 /* Choice */ USE_EQUIP) != CMD_OK)
 			return;
@@ -342,7 +344,9 @@ void do_cmd_wield(struct command *cmd)
 			ODESC_PREFIX | ODESC_FULL, player);
 		
 		/* Forget it */
-		if (!get_check(format("Really take off %s? ", o_name))) return;
+		if (!get_check(angdroid_zh_tw_enabled() ?
+			format("真的要卸下 %s 嗎？ ", o_name) :
+			format("Really take off %s? ", o_name))) return;
 	}
 
 	/* Describe the object */
@@ -365,8 +369,12 @@ void do_cmd_wield(struct command *cmd)
 	inven_wield(obj, slot);
 
 	/* Message */
-	msgt(MSG_WIELD, "%s %s (%c).", act, o_name,
-		gear_to_label(player, equip_obj));
+	if (angdroid_zh_tw_enabled())
+		msgt(MSG_WIELD, "你卸下了 %s（%c）。", o_name,
+			gear_to_label(player, equip_obj));
+	else
+		msgt(MSG_WIELD, "%s %s (%c).", act, o_name,
+			gear_to_label(player, equip_obj));
 }
 
 /**
@@ -701,12 +709,21 @@ static void use_aux(struct command *cmd, struct object *obj, enum use use,
 				-1 : 0)) << 16), player);
 			if (from_floor) {
 				/* Print a message */
-				msg("You see %s.", name);
+				if (angdroid_zh_tw_enabled())
+					msg("你看見 %s。", name);
+				else
+					msg("You see %s.", name);
 			} else if (first_remainder) {
 				label = gear_to_label(player, first_remainder);
-				msg("You have %s (1st %c).", name, label);
+				if (angdroid_zh_tw_enabled())
+					msg("你持有 %s（第一組 %c）。", name, label);
+				else
+					msg("You have %s (1st %c).", name, label);
 			} else {
-				msg("You have %s (%c).", name, label);
+				if (angdroid_zh_tw_enabled())
+					msg("你持有 %s（%c）。", name, label);
+				else
+					msg("You have %s (%c).", name, label);
 			}
 		} else if (used && use == USE_CHARGE) {
 			/* Describe charges */
