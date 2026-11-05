@@ -29,6 +29,7 @@
 #include "zh-tw-ego-names.h"
 #include "zh-tw-artifact-names.h"
 #include "zh-tw-flavor-names.h"
+#include "zh-tw-scroll-title.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -59,6 +60,11 @@ void object_kind_name(char *buf, size_t max, const struct object_kind *kind,
 		const char *flavor = kind->flavor->text;
 		const char *localized = angdroid_zh_tw_enabled()
 			? angdroid_zh_tw_flavor_name(flavor) : NULL;
+		/* Generated scroll titles are not source dictionary entries.
+		 * Only wrap the ORIGINAL text in Chinese quotation marks. */
+		if (kind->tval == TV_SCROLL && angdroid_zh_tw_enabled() &&
+				angdroid_zh_tw_scroll_title(buf, max, flavor, false))
+			return;
 		my_strcpy(buf, localized ? localized : flavor, max);
 	}
 
@@ -335,6 +341,8 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		mode, p);
 	const char *modstr = obj_desc_get_modstr(obj->kind);
 	const char *localized_kind = NULL;
+	char scroll_display[96];
+	bool localized_scroll = false;
 	bool show_flavor = !terse && obj->kind->flavor;
 
 	/* UI-only display translation. Never expose an unidentified kind,
@@ -352,7 +360,23 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 			!show_flavor && obj->kind->name)
 		localized_kind = angdroid_zh_tw_item_kind_name(obj->kind->name);
 
-	if (localized_kind) {
+	/* The title is random Latin-like text, not a translatable word. Do
+	 * not regenerate it, change the flavor pointer, or disclose the kind.
+	 * Keep special ego/artifact objects on the original formatting path. */
+	if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() &&
+			obj->tval == TV_SCROLL && show_flavor &&
+			!obj->artifact && !obj->ego && obj->kind->flavor)
+		localized_scroll = angdroid_zh_tw_scroll_title(
+			scroll_display, sizeof(scroll_display),
+			obj->kind->flavor->text, true);
+
+	if (localized_scroll) {
+		if (prefix && number == 0)
+			strnfcat(buf, max, &end, "沒有剩餘的");
+		else if (prefix && number > 1)
+			strnfcat(buf, max, &end, "%u 張", number);
+		strnfcat(buf, max, &end, "%s", scroll_display);
+	} else if (localized_kind) {
 		if (prefix && number == 0)
 			strnfcat(buf, max, &end, "沒有剩餘的");
 		else if (prefix && number > 1)
@@ -386,6 +410,12 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 			if (localized) ego_name = localized;
 		}
 		strnfcat(buf, max, &end, " %s", ego_name);
+	}
+	else if (localized_scroll && aware && !obj->artifact) {
+		/* Only an identified scroll may reveal its actual effect. */
+		const char *known = angdroid_zh_tw_item_kind_name(obj->kind->name);
+		strnfcat(buf, max, &end, "（%s）",
+			known ? known : obj->kind->name);
 	}
 	else if (!localized_kind && aware && !obj->artifact &&
 			 (obj->kind->flavor || obj->kind->tval == TV_SCROLL)) {

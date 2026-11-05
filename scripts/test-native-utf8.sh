@@ -89,6 +89,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_item_flavor_locale"
 "$BUILD_DIR/test_item_flavor_locale"
 
+# Generated scroll titles: preserve original identifiers and safe CJK boundaries.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_scroll_title_locale.c" \
+    -o "$BUILD_DIR/test_scroll_title_locale"
+"$BUILD_DIR/test_scroll_title_locale"
+
 # Known artifact and ego story text, including untranslated fallbacks.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_item_story_locale.c" \
