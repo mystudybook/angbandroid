@@ -5,7 +5,13 @@
 #include "../../app/src/main/cpp/angband/zh-tw-monsters.h"
 int main(void)
 {
-    assert(ANGDROID_ZH_TW_MONSTER_LORE == 59);
+    assert(ANGDROID_ZH_TW_MONSTER_LORE == 124);
+    assert(strcmp(angdroid_zh_tw_monster_flavor("silver jelly"),
+        "這是一大團銀色的肉塊，會吸收周遭的光線。") == 0);
+    assert(strcmp(angdroid_zh_tw_monster_flavor("ruffian"),
+        "這個粗野無禮的惡棍帶著棍棒、投石索和鞭子。") == 0);
+    assert(strcmp(angdroid_zh_tw_monster_flavor("Bullroarer the Hobbit"),
+        "這位體格結實的哈比人以非凡的力量與活力聞名，是個難纏的對手。") == 0);
     assert(strcmp(angdroid_zh_tw_monster_flavor("scrawny cat"),
         "這隻瘦巴巴的毛球有著尖銳的爪子和充滿敵意的眼神。") == 0);
     assert(strcmp(angdroid_zh_tw_monster_flavor("floating eye"),
