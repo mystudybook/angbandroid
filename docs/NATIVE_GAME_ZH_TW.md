@@ -1436,3 +1436,23 @@ canonical translation dictionary is still 326 entries.
   artifact and ego names are still required. Full game localization and
   independent bundled variants remain incomplete.
 
+## All 202 nonempty unidentified item appearance labels (2026-11-05)
+
+- Original Angband `flavor.txt` defines 302 `flavor:`/`fixed:` entries,
+  containing 202 distinct nonempty appearance texts. Every distinct text is
+  mapped in `zh-tw-flavor-names.h`; the original random flavor assignment
+  and item-kind identities are unchanged.
+- `object_kind_name()` can now display an unknown object's appearance in
+  Traditional Chinese instead of leaking the true kind. The opted-in
+  `ODESC_ZH_TW` object description path translates visible `modstr`
+  only when the original `show_flavor` condition is satisfied.
+- Unknown flavor texts, English mode, unflagged character exports, hidden
+  item kinds and save-game values all preserve the original fallback.
+  Generated/random scroll titles are separate from the static `flavor.txt`
+  appearance catalog and are not claimed fully translated.
+- Exact 202/202 source keys are asserted by the native localization checker,
+  JSON coverage audit, C99 `test_item_flavor_locale.c` and UI source
+  isolation tests. Actual Android gameplay, inventory/store formatting,
+  rune identification and visual Unicode column clipping must still be
+  validated on an emulator or device.
+
