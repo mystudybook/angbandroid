@@ -1527,3 +1527,11 @@ canonical translation dictionary is still 326 entries.
 - A translated result uses Traditional Chinese punctuation. English mode and unknown labels retain the original text and full stop. The input symbol, object-before-feature-before-monster lookup priority, monster base text, Ctrl+A/U/N actions, lore eligibility and canonical source IDs are unchanged.
 - `test_symbol_query_locale.c` exercises every original tval key as C99, plus ASCII symbol preservation, translated terrain, English mode, missing key and buffer bounds. `test_symbol_query_localization.py` enforces the complete canonical key set and source-path guards. Both are registered in the existing verification scripts.
 - Unmapped monster-base descriptions in this lookup still use upstream English. Android NDK/Gradle and emulator or real-device text-rendering checks remain outstanding.
+
+## Original monster-base descriptions in symbol lookup (2026-11-05)
+
+- All **56/56** original `monster_base.txt` base-name/description pairs now have a Traditional Chinese display translation in `zh-tw-symbol-query.h`. The symbol query previously showed raw English monster-base text.
+- Both original name and exact original description must match. Unknown or changed upstream descriptions and English-mode screens preserve original text, punctuation and fallback.
+- Lookup priority remains objects → features → monster bases, without modifying the canonical source, monster flags, input bindings or save data. The upstream `Morgoth` exclusion remains; 55 of 56 source bases can be reached through this lookup.
+- C99 regression tests cover all original pairs and English/mismatch fallback; Python source checker validates source keys. JSON coverage audit now reports `monster_base_symbol_descriptions`.
+- Fixed malformed doubled shell backslashes in the earlier PR #79 C99 test script. This does not replace a local Android debug/NDK or emulator gameplay run.

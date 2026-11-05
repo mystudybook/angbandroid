@@ -78,4 +78,83 @@ static inline void angdroid_symbol_query_format(char *out, size_t capacity,
     (void)snprintf(out, capacity, "%c - %s%s", sym, label, period);
 }
 
+/* Match both canonical monster base key and description. If upstream data
+ * changes, use the original description rather than a stale translation.
+ * The original Morgoth exclusion in lookup_symbol() remains unchanged.
+ */
+#define ANGDROID_ZH_TW_SYMBOL_MONSTER_BASE_COUNT 56
+
+static inline const char *angdroid_symbol_monster_base_text(
+    const char *base_name, const char *canonical_text, int zh_tw)
+{
+    static const struct { const char *base_name; const char *canonical_text;
+        const char *traditional; }
+        descriptions[ANGDROID_ZH_TW_SYMBOL_MONSTER_BASE_COUNT] = {
+        { "ancient dragon", "Ancient Dragon/Wyrm", "遠古巨龍／龍王" },
+        { "ainu", "Ainu/maia", "埃努／邁雅" },
+        { "ant", "Ant", "螞蟻" },
+        { "bat", "Bat", "蝙蝠" },
+        { "bird", "Bird", "鳥類" },
+        { "canine", "Canine (Dog)", "犬科（狗）" },
+        { "centipede", "Centipede", "蜈蚣" },
+        { "creeping coins", "Creeping Coins", "蠕行錢幣" },
+        { "dragon", "Dragon", "龍" },
+        { "dragon fly", "Dragon Fly", "龍蠅" },
+        { "eye", "Floating Eye", "浮空之眼" },
+        { "elemental", "Elemental", "元素生物" },
+        { "feline", "Feline (Cat)", "貓科（貓）" },
+        { "ghost", "Ghost", "幽靈" },
+        { "giant", "Giant Humanoid", "巨型類人生物" },
+        { "golem", "Golem", "魔像" },
+        { "humanoid", "Hobbit/Elf/Dwarf", "哈比人／精靈／矮人" },
+        { "hybrid", "Hybrid", "混種生物" },
+        { "hydra", "Hydra", "多頭蛇" },
+        { "icky thing", "Icky Thing", "黏滑怪物" },
+        { "insect", "Insect", "昆蟲" },
+        { "jelly", "Jelly", "膠質怪物" },
+        { "killer beetle", "Killer Beetle", "殺人甲蟲" },
+        { "kobold", "Kobold", "狗頭人" },
+        { "lich", "Lich", "巫妖" },
+        { "lurker", "Lurker", "潛伏怪" },
+        { "major demon", "Major Demon", "高階惡魔" },
+        { "mimic", "Mimic", "擬態怪" },
+        { "minor demon", "Minor Demon", "低階惡魔" },
+        { "mold", "Mold", "黴菌" },
+        { "mushroom", "Mushroom", "蘑菇" },
+        { "naga", "Naga", "娜迦" },
+        { "ogre", "Ogre", "食人魔" },
+        { "orc", "Orc", "半獸人" },
+        { "person", "Person/Human", "人類" },
+        { "quadruped", "Quadruped", "四足獸" },
+        { "quylthulg", "Quylthulg", "奎爾蘇格" },
+        { "reptile", "Reptile/Amphibian", "爬蟲類／兩生類" },
+        { "rodent", "Rodent", "齧齒類" },
+        { "skeleton", "Skeleton", "骷髏" },
+        { "snake", "Snake", "蛇" },
+        { "spider", "Spider/Scorpion/Tick", "蜘蛛／蠍子／壁蝨" },
+        { "townsfolk", "Townsfolk", "城鎮居民" },
+        { "tree", "Tree/Ent", "樹木／樹人" },
+        { "troll", "Troll", "巨魔" },
+        { "vampire", "Vampire", "吸血鬼" },
+        { "vortex", "Vortex", "漩渦" },
+        { "worm", "Worm/Worm Mass", "蠕蟲／蟲群" },
+        { "wraith", "Wight/Wraith", "屍妖／怨靈" },
+        { "xorn", "Xorn/Xaren", "索恩／札倫" },
+        { "yeek", "Yeek", "伊克族" },
+        { "yeti", "Yeti", "雪人" },
+        { "zephyr hound", "Zephyr Hound", "疾風獵犬" },
+        { "zombie", "Zombie/Mummy", "殭屍／木乃伊" },
+        { "player", "You", "你" },
+        { "Morgoth", "Morgoth", "魔苟斯" },
+    };
+    size_t i;
+    if (!base_name || !canonical_text || !zh_tw) return canonical_text;
+    for (i = 0; i < ANGDROID_ZH_TW_SYMBOL_MONSTER_BASE_COUNT; ++i) {
+        if (strcmp(base_name, descriptions[i].base_name) == 0 &&
+            strcmp(canonical_text, descriptions[i].canonical_text) == 0)
+            return descriptions[i].traditional;
+    }
+    return canonical_text;
+}
+
 #endif /* ANGDROID_ZH_TW_SYMBOL_QUERY_H */

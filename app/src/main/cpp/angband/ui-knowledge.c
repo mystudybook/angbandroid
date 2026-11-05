@@ -4534,7 +4534,10 @@ static void lookup_symbol(char sym, char *buf, size_t max)
 		/* Slight hack - P appears twice */
 		if (streq(race->name, "Morgoth")) continue;
 		if (char_matches_key(race->d_char, sym)) {
-			strnfmt(buf, max, "%c - %s.", sym, race->text);
+			const char *localized = angdroid_symbol_monster_base_text(
+				race->name, race->text, angdroid_zh_tw_enabled());
+			angdroid_symbol_query_format(buf, max, sym, race->text,
+				localized, angdroid_zh_tw_enabled());
 			return;
 		}
 	}

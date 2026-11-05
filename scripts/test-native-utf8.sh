@@ -140,10 +140,16 @@ CC="${CC:-cc}"
 "$BUILD_DIR/test_terrain_trap_locale"
 
 # Symbol lookup is bilingual for all canonical tval classes and known terrain.
-"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \\
-    "$ROOT/tests/native/test_symbol_query_locale.c" \\
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_symbol_query_locale.c" \
     -o "$BUILD_DIR/test_symbol_query_locale"
 "$BUILD_DIR/test_symbol_query_locale"
+
+# All original monster base symbol descriptions; English and unknown fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_symbol_monster_base_locale.c" \
+    -o "$BUILD_DIR/test_symbol_monster_base_locale"
+"$BUILD_DIR/test_symbol_monster_base_locale"
 
 # Knowledge action names and store labels: verify locale and exact shortcuts.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
