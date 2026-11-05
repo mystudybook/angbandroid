@@ -649,7 +649,8 @@ static size_t obj_desc_light(const struct object *obj, char *buf, size_t max,
 	/* Fuelled light sources get number of remaining turns appended */
 	if (tval_is_light(obj) && !of_has(obj->flags, OF_NO_FUEL)) {
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-			strnfcat(buf, max, &end, "（剩餘 %d 回合）", obj->timeout);
+			angdroid_zh_tw_item_append_amount(buf, max, &end,
+				"（剩餘 ", obj->timeout, " 回合）");
 		else
 			strnfcat(buf, max, &end, " (%d turns)", obj->timeout);
 	}
@@ -720,19 +721,21 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
 	/* Wands and staffs have charges, others may be charging */
 	if (aware && tval_can_have_charges(obj)) {
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-			strnfcat(buf, max, &end, "（剩餘 %d 次充能）", obj->pval);
+			angdroid_zh_tw_item_append_amount(buf, max, &end,
+				"（剩餘 ", obj->pval, " 次充能）");
 		else
 			strnfcat(buf, max, &end, " (%d charge%s)", obj->pval,
 				PLURAL(obj->pval));
 	} else if (obj->timeout > 0) {
 		if (tval_is_rod(obj) && obj->number > 1) {
 			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-				strnfcat(buf, max, &end, "（%d 個充能中）", number_charging(obj));
+				angdroid_zh_tw_item_append_amount(buf, max, &end,
+					"（", number_charging(obj), " 根充能中）");
 			else
 				strnfcat(buf, max, &end, " (%d charging)", number_charging(obj));
 		} else if (tval_is_rod(obj) || obj->activation || obj->effect) {
 			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-				strnfcat(buf, max, &end, "（充能中）");
+				angdroid_zh_tw_item_append_whole(buf, max, &end, "（充能中）");
 			else
 				strnfcat(buf, max, &end, " (charging)");
 		}
@@ -786,13 +789,17 @@ static size_t obj_desc_inscrip(const struct object *obj, char *buf,
 				else if (streq(label, "tried")) label = "已試用";
 				else if (streq(label, "cursed")) label = "受詛咒";
 				else if (streq(label, "ignore")) label = "忽略";
-				strnfcat(buf, max, &end, "%s", label);
+				angdroid_zh_tw_item_append_whole(buf, max, &end, label);
 			} else {
 				/* User-written inscriptions are never translated. */
 				strnfcat(buf, max, &end, "%s", u[i]);
 			}
-			if (i < n - 1)
-				strnfcat(buf, max, &end, ", ");
+			if (i < n - 1) {
+				if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+					angdroid_zh_tw_item_append_whole(buf, max, &end, "、");
+				else
+					strnfcat(buf, max, &end, ", ");
+			}
 		}
 
 		strnfcat(buf, max, &end, "}");
@@ -811,14 +818,14 @@ static size_t obj_desc_aware(const struct object *obj, char *buf, size_t max,
 {
 	if (!object_flavor_is_aware(obj)) {
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-			strnfcat(buf, max, &end, " {未見過}");
+			angdroid_zh_tw_item_append_whole(buf, max, &end, " {未見過}");
 		else
 			strnfcat(buf, max, &end, " {unseen}");
 	} else if (!object_runes_known(obj)) {
 		strnfcat(buf, max, &end, " {??}");
 	} else if (obj->known->curses) {
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-			strnfcat(buf, max, &end, " {受詛咒}");
+			angdroid_zh_tw_item_append_whole(buf, max, &end, " {受詛咒}");
 		else
 			strnfcat(buf, max, &end, " {cursed}");
 	}
