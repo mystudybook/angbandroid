@@ -667,8 +667,9 @@ static void ui_keymap_create(const char *title, int row)
 
 		c_prt(COLOUR_L_BLUE, angdroid_game_ui_text("  Press '=' when finished.", angdroid_zh_tw_enabled()), 17, 0);
 		c_prt(COLOUR_L_BLUE, angdroid_game_ui_text("  Use 'CTRL-u' to reset.", angdroid_zh_tw_enabled()), 18, 0);
-		c_prt(COLOUR_L_BLUE, format("(Maximum keymap length is %d keys.)",
-									KEYMAP_ACTION_MAX), 19, 0);
+		c_prt(COLOUR_L_BLUE, angdroid_zh_tw_enabled()
+			? format("（鍵位設定最多 %d 個按鍵。）", KEYMAP_ACTION_MAX)
+			: format("(Maximum keymap length is %d keys.)", KEYMAP_ACTION_MAX), 19, 0);
 
 		//soft_kbd_flash("abcdefghijklmnopqrstuvwxyz0123456789*'-\x15");
 		soft_kbd_flash("mabcdefghijk0123456789*'-$\x15");
@@ -934,8 +935,11 @@ static void colors_modify(const char *title, int row)
 
 		/* Describe the color */
 		Term_putstr(5, 10, -1, COLOUR_WHITE,
-					format("Color = %d, Name = %s, Index = %c",
-						   a, name, index));
+					(angdroid_zh_tw_enabled()
+						? format("顏色：%d　名稱：%s　索引：%c", a,
+							angdroid_game_ui_text(name, true), index)
+						: format("Color = %d, Name = %s, Index = %c",
+							a, name, index)));
 
 		/* Label the Current values */
 		Term_putstr(5, 12, -1, COLOUR_WHITE,
@@ -947,7 +951,8 @@ static void colors_modify(const char *title, int row)
 
 		/* Prompt */
 		Term_putstr(0, 14, -1, COLOUR_WHITE,
-				"Command (n/N/k/K/r/R/g/G/b/B): ");
+				angdroid_game_ui_text("Command (n/N/k/K/r/R/g/G/b/B): ",
+					angdroid_zh_tw_enabled()));
 
 		/* Get a command */
 		cx = inkey();
@@ -1507,7 +1512,9 @@ static void ego_menu(const char *unused, int also_unused)
 	Term_gotoxy(1, 1);
 
 	/* Display some helpful information */
-	text_out_e(EGO_MENU_HELPTEXT);
+	text_out_e(angdroid_zh_tw_enabled()
+		? "{light green}方向鍵{/}捲動清單\n{light red}Esc{/}返回上一層\n{light blue}Enter{/}切換目前設定。"
+		: EGO_MENU_HELPTEXT);
 
 	text_out_indent = 0;
 
@@ -1583,24 +1590,19 @@ static void quality_display(struct menu *menu, int oid, bool cursor, int row,
 	if (oid) {
 		/* Note: the order of the values in quality_choices do not
 			align with the ignore_type_t enum order. - fix? NRM*/
-		const char *name = quality_choices[oid].name;
+		const char *name = angdroid_game_ui_text(
+			quality_choices[oid].name, angdroid_zh_tw_enabled());
 		uint8_t level = ignore_level[oid];
-		const char *level_name = quality_values[level].name;
+		const char *level_name = angdroid_game_ui_text(
+			quality_values[level].name, angdroid_zh_tw_enabled());
 		uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
-		size_t u8len = utf8_strlen(name);
+		char clipped[4 * 30 + 1];
+		size_t columns = angdroid_menu_copy_columns(clipped,
+			sizeof(clipped), name, 30);
 
-		if (u8len < 30) {
-			c_put_str(attr, format("%s%*s", name, (int)(30 - u8len),
-				" "), row, col);
-		} else {
-			char *name_copy = string_make(name);
-
-			if (u8len > 30) {
-				utf8_clipto(name_copy, 30);
-			}
-			c_put_str(attr, name_copy, row, col);
-			string_free(name_copy);
-		}
+		/* Keep the ignore type index and quality enum untouched. */
+		c_put_str(attr, format("%s%*s", clipped, (int)(30 - columns), ""),
+			row, col);
 		c_put_str(attr, format(" : %s", level_name), row, col + 30);
 	}
 }
@@ -1612,7 +1614,8 @@ static void quality_display(struct menu *menu, int oid, bool cursor, int row,
 static void quality_subdisplay(struct menu *menu, int oid, bool cursor, int row,
 							   int col, int width)
 {
-	const char *name = quality_values[oid].name;
+	const char *name = angdroid_game_ui_text(quality_values[oid].name,
+		angdroid_zh_tw_enabled());
 	uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
 
 	c_put_str(attr, name, row, col);
@@ -1681,7 +1684,7 @@ static void quality_menu(const char *unused, int also_unused)
 
 	/* Set up the menu */
 	menu_init(&menu, MN_SKIN_SCROLL, &menu_f);
-	menu.title = "Quality ignore menu";
+	menu.title = angdroid_game_ui_text("Quality ignore menu", angdroid_zh_tw_enabled());
 	menu_setpriv(&menu, ITYPE_MAX, quality_values);
 	menu_layout(&menu, &area);
 
@@ -1897,7 +1900,7 @@ static bool sval_menu(int tval, const char *desc)
 	clear_from(0);
 
 	/* Help text */
-	prt((angdroid_zh_tw_enabled() ? format("忽略下列 %s：", desc)
+	prt((angdroid_zh_tw_enabled() ? format("忽略下列 %s：", angdroid_game_ui_text(desc, true))
         : format("Ignore the following %s:", desc)), 0, 0);
 
 	/* Run menu */
@@ -2003,14 +2006,16 @@ static void display_options_item(struct menu *menu, int oid, bool cursor,
 		bool known = seen_tval(sval_dependent[line].tval);
 		uint8_t attr = curs_attrs[known ? CURS_KNOWN: CURS_UNKNOWN][(int)cursor];
 
-		c_prt(attr, sval_dependent[line].desc, row, col);
+		c_prt(attr, angdroid_game_ui_text(sval_dependent[line].desc,
+			angdroid_zh_tw_enabled()), row, col);
 	} else {
 		uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 
 		line = line - N_ELEMENTS(sval_dependent) - 1;
 
 		if (line < N_ELEMENTS(extra_item_options))
-			c_prt(attr, extra_item_options[line].name, row, col);
+			c_prt(attr, angdroid_game_ui_text(extra_item_options[line].name,
+				angdroid_zh_tw_enabled()), row, col);
 	}
 }
 

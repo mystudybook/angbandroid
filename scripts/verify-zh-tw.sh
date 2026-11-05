@@ -63,6 +63,7 @@ run_check "Native checker Python syntax and parser integrity" python3 "$ROOT/tes
 run_check "Targeting help printf-format security (Clang/GCC)" python3 "$ROOT/tests/test_target_help_printf_security.py"
 run_check "Dynamic shape-change effects C99 renderer" python3 "$ROOT/tests/test_shape_effect_render_source.py"
 run_check "Option descriptions and CJK menu display safety" python3 "$ROOT/tests/test_options_localization_source.py"
+run_check "Ignore menus, subwindow labels and color editor translations" python3 "$ROOT/tests/test_ignore_options_localization_source.py"
 run_check "Native Angband game zh-TW text isolation" python3 "$ROOT/scripts/check_native_game_localization.py"
 run_check "Canonical translation coverage audit" python3 "$ROOT/scripts/audit-zh-tw-coverage.py"
 run_check "Coverage audit JSON regression" python3 "$ROOT/tests/test_localization_coverage.py"
