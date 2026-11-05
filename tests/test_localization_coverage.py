@@ -28,8 +28,8 @@ assert a["ego_item_suffix_names"]["source_total"] == 79
 artifact_lore = a["artifact_flavor_descriptions"]
 ego_lore = a["ego_flavor_descriptions"]
 assert artifact_lore["source_total"] == 138
-assert artifact_lore["translated"] == 43
-assert len(artifact_lore["untranslated"]) == 95
+assert artifact_lore["translated"] == 138
+assert artifact_lore["untranslated"] == []
 assert artifact_lore["invalid_keys"] == []
 assert ego_lore["source_total"] == 5
 assert ego_lore["translated"] == 5
