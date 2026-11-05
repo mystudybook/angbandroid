@@ -630,8 +630,9 @@ def main():
            "Target help must have 16 unique translation fragments")
     expect('"zh-tw-target-help.h"' in target_ui and
            'bool zh_tw = angdroid_zh_tw_enabled();' in help_part and
-           help_part.count("text_out(angdroid_target_help_text(") == 18,
-           "Target help text outputs must all use the selected locale")
+           help_part.count('text_out("%s", angdroid_target_help_text(') == 18 and
+           'text_out(angdroid_target_help_text(' not in target_ui,
+           "NDK format-security: all 18 targeting help fragments need literal %s")
     expect('text_out_c(COLOUR_L_GREEN, "%s", label);' in help_part and
            all('text_out_c(COLOUR_L_GREEN, "' + k + '");' in help_part
                for k in ("<dir>", "<click>", "g", "p", "q", "r",
