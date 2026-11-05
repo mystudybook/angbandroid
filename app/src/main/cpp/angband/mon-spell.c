@@ -30,6 +30,9 @@
 #include "player-timed.h"
 #include "player-util.h"
 #include "project.h"
+#include "droid.h"
+#include "zh-tw-mon-spell-text.h"
+#include "zh-tw-mon-spell-lash.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -126,11 +129,14 @@ static void spell_message(struct monster *mon,
 			if (in_cursor == NULL) {
 				in_cursor = level->blind_message;
 				if (in_cursor == NULL) {
-					msg("No message-invis for monster "
-						"spell %d cast by %s.  "
-						"Please report this bug.",
-						(int)spell->index,
-						mon->race->name);
+					if (angdroid_zh_tw_enabled())
+						msg("怪物 %s 施放法術 %d 時缺少不可見訊息，請回報此錯誤。",
+							mon->race->name, (int)spell->index);
+					else
+						msg("No message-invis for monster "
+							"spell %d cast by %s.  "
+							"Please report this bug.",
+							(int)spell->index, mon->race->name);
 					return;
 				}
 			} else if (in_cursor[0] == '\0') {
@@ -143,9 +149,13 @@ static void spell_message(struct monster *mon,
 		if (in_cursor == NULL) {
 			in_cursor = level->miss_message;
 			if (in_cursor == NULL) {
-				msg("No message-miss for monster spell %d "
-					"cast by %s.  Please report this bug.",
-					(int)spell->index, mon->race->name);
+				if (angdroid_zh_tw_enabled())
+					msg("怪物 %s 施放法術 %d 時缺少落空訊息，請回報此錯誤。",
+						mon->race->name, (int)spell->index);
+				else
+					msg("No message-miss for monster spell %d "
+						"cast by %s.  Please report this bug.",
+						(int)spell->index, mon->race->name);
 				return;
 			}
 		} else if (in_cursor[0] == '\0') {
@@ -157,9 +167,13 @@ static void spell_message(struct monster *mon,
 		if (in_cursor == NULL) {
 			in_cursor = level->message;
 			if (in_cursor == NULL) {
-				msg("No message-vis for monster spell %d "
-					"cast by %s.  Please report this bug.",
-					(int)spell->index, mon->race->name);
+				if (angdroid_zh_tw_enabled())
+					msg("怪物 %s 施放法術 %d 時缺少可見訊息，請回報此錯誤。",
+						mon->race->name, (int)spell->index);
+				else
+					msg("No message-vis for monster spell %d "
+						"cast by %s.  Please report this bug.",
+						(int)spell->index, mon->race->name);
 				return;
 			}
 		} else if (in_cursor[0] == '\0') {
@@ -167,6 +181,10 @@ static void spell_message(struct monster *mon,
 		}
 	}
 
+	/* Translate complete spell templates *before* original tag expansion.
+	 * Unknown race-specific messages keep their original English string. */
+	in_cursor = angdroid_mon_spell_text(in_cursor,
+		angdroid_zh_tw_enabled());
 	next = strchr(in_cursor, '{');
 	is_leading = (next == in_cursor);
 	while (next) {
@@ -228,30 +246,36 @@ static void spell_message(struct monster *mon,
 						strnfcat(buf, sizeof(buf), &end,
 							"%s", m_name);
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "you");
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							angdroid_zh_tw_enabled() ? "你" : "you");
 					}
 					break;
 				}
 
 				case SPELL_TAG_TYPE: {
-					/* Get the attack type (assuming lash) */
+					/* Preserve canonical lash type, localize its label. */
 					int type = mon->race->blow[0].effect->lash_type;
 					char *type_name = projections[type].lash_desc;
-
 					strnfcat(buf, sizeof(buf), &end, "%s",
-						type_name);
+						angdroid_mon_spell_lash(type_name,
+							angdroid_zh_tw_enabled()));
 					break;
 				}
 
 				case SPELL_TAG_OF_TYPE: {
-					/* Get the attack type (assuming lash) */
 					int type = mon->race->blow[0].effect->lash_type;
 					char *type_name = projections[type].lash_desc;
-
 					if (type_name) {
-						strnfcat(buf, sizeof(buf), &end, " of ");
-						strnfcat(buf, sizeof(buf), &end,
-							"%s", type_name);
+						if (angdroid_zh_tw_enabled()) {
+							strnfcat(buf, sizeof(buf), &end, "（");
+							strnfcat(buf, sizeof(buf), &end, "%s",
+								angdroid_mon_spell_lash(type_name, true));
+							strnfcat(buf, sizeof(buf), &end, "）");
+						} else {
+							strnfcat(buf, sizeof(buf), &end, " of ");
+							strnfcat(buf, sizeof(buf), &end,
+								"%s", type_name);
+						}
 					}
 					break;
 				}
@@ -379,7 +403,8 @@ void do_mon_spell(int index, struct monster *mon, bool seen)
 		/* Try a saving throw if available */
 		if (level->save_message && (target_midx <= 0) &&
 				randint0(100) < player->state.skills[SKILL_SAVE]) {
-			msg("%s", level->save_message);
+			msg("%s", angdroid_mon_spell_text(level->save_message,
+				angdroid_zh_tw_enabled()));
 			spell_check_for_fail_rune(spell);
 		} else {
 			effect_do(spell->effect, source_monster(mon->midx), NULL, &ident, true, 0, 0, 0, NULL);

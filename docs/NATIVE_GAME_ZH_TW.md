@@ -1186,3 +1186,24 @@ changing the underlying projection subtype. Host C99 tests check all 22
 static feedback labels and 55 source descriptions, including English/unknown
 fallback. The Android build and actual spell gameplay still need
 revalidation.
+
+## All original monster spell messages (2026-11-05)
+
+The live `mon-spell.c` UI now chooses Traditional Chinese or English
+display templates *before* expanding the existing monster spell tags.
+All **247** `monster_spell.txt` message occurrences (**209** distinct strings),
+and all **49** monster-specific override occurrences from `monster.txt`
+(**17** distinct strings) are represented in the display dictionary.
+It includes visible, unseen, missed, saving-throw, summoning, breath and
+mental attack messages. Canonical `{name}`, `{target}`, `{type}`,
+`{oftype}` tokens remain active. The Chinese variants omit English
+possessive `{pronoun}` and use natural Chinese grammar; when the spell
+target is the player, it expands `{target}` to "你" rather than "you".
+There are also Traditional Chinese labels for all **23** distinct
+`projection.txt` lash descriptions, and Chinese `{oftype}` uses
+parentheses instead of the English " of " joiner. The English parser,
+power thresholds, spell selection, effects and numeric calculations are
+unchanged, as are unsupported custom message fallbacks. An independent
+native C99 test validates all 226 message keys, tags and English fallback;
+the source auditor checks exact canonical coverage. Android APK, native
+integration and on-device combat verification are still necessary.

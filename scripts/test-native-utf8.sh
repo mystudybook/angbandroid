@@ -109,6 +109,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_knowledge_store_menu_locale"
 "$BUILD_DIR/test_knowledge_store_menu_locale"
 
+# All canonical monster spell messages (and original race overrides).
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_mon_spell_message_locale.c" \
+    -o "$BUILD_DIR/test_mon_spell_message_locale"
+"$BUILD_DIR/test_mon_spell_message_locale"
+
 # Original attack effect handler and all 55 projection.txt display terms.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_attack_feedback_locale.c" \

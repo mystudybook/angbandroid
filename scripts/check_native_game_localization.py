@@ -1487,6 +1487,79 @@ def main():
                 in attack_feedback_test,
            "Attack feedback bilingual C99 regression must be registered")
 
+    # All 247 source monster spell messages (209 distinct) and 49 original
+    # race-specific override occurrences (17 distinct) are display-only.
+    monster_spell_ui = source(CPP / "angband/mon-spell.c", errors)
+    monster_spell_template_header = source(
+        CPP / "angband/zh-tw-mon-spell-text.h", errors)
+    monster_spell_test = source(
+        ROOT / "tests/native/test_mon_spell_message_locale.c", errors)
+    monster_spell_data = source(
+        ROOT / "variant_lib/angband/gamedata/monster_spell.txt", errors)
+    monster_alt_data = source(
+        ROOT / "variant_lib/angband/gamedata/monster.txt", errors)
+    monster_projection_data = source(
+        ROOT / "variant_lib/angband/gamedata/projection.txt", errors)
+    spell_originals = [line.partition(":")[2]
+        for line in monster_spell_data.splitlines()
+        if line.startswith(("message-vis:", "message-invis:",
+                            "message-miss:", "message-save:"))]
+    alt_originals = [line.split(":", 2)[2]
+        for line in monster_alt_data.splitlines()
+        if line.startswith(("message-vis:", "message-invis:",
+                            "message-miss:")) and line.count(":") >= 2]
+    source_keys = set(spell_originals + alt_originals)
+    spell_fragment_files = (
+        "zh-tw-mon-spell-0.inc", "zh-tw-mon-spell-1.inc",
+        "zh-tw-mon-spell-2.inc", "zh-tw-mon-spell-3.inc",
+        "zh-tw-mon-spell-alt.inc")
+    source_parts = [source(CPP / "angband" / fname, errors)
+                    for fname in spell_fragment_files]
+    spell_fragment_pairs = [
+        re.findall(r'\{ "([^"]+)", "([^"]+)" \}', part)
+        for part in source_parts]
+    spell_pairs = [pair for frag in spell_fragment_pairs for pair in frag]
+    expect(len(spell_originals) == 247 and
+           len(set(spell_originals)) == 209 and
+           len(alt_originals) == 49 and
+           len(set(alt_originals)) == 17 and
+           [len(x) for x in spell_fragment_pairs] == [55, 55, 55, 44, 17] and
+           len(spell_pairs) == len(source_keys) == 226 and
+           {en for en, _ in spell_pairs} == source_keys and
+           all(zh.strip() and "%" not in zh for _, zh in spell_pairs),
+           "Monster spell bilingual source dictionary must cover every key")
+    preserved_tags = ("name", "target", "type", "oftype")
+    expect(all(
+        all(("{"+ tag +"}" in en) == ("{"+ tag +"}" in zh)
+            for tag in preserved_tags) and
+        "{pronoun}" not in zh
+        for en, zh in spell_pairs),
+        "Localized spell messages must preserve dynamic name/target/type tags")
+    lash_text = source(CPP / "angband/zh-tw-mon-spell-lash.h", errors)
+    lash_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', lash_text)
+    canonical_lashes = {line[10:] for line in
+        monster_projection_data.splitlines() if line.startswith("lash-desc:")}
+    expect(len(lash_pairs) == 23 and
+           {en for en, _ in lash_pairs} == canonical_lashes and
+           all(zh.strip() for _, zh in lash_pairs),
+           "Monster whip and spit lash types must match canonical projections")
+    expect('"zh-tw-mon-spell-text.h"' in monster_spell_ui and
+           '"zh-tw-mon-spell-lash.h"' in monster_spell_ui and
+           'in_cursor = angdroid_mon_spell_text(in_cursor,' in
+                monster_spell_ui and
+           'angdroid_mon_spell_text(level->save_message,' in monster_spell_ui and
+           'angdroid_mon_spell_lash(type_name, true)' in monster_spell_ui and
+           'angdroid_zh_tw_enabled() ? "你" : "you"' in monster_spell_ui and
+           'msgt(spell->msgt, "%s", buf);' in monster_spell_ui and
+           'spell_check_for_fail_rune(spell);' in monster_spell_ui,
+           "Monster spell display hook must preserve IDs and original combat engine")
+    expect(all('#include "' + f + '"' in monster_spell_template_header
+               for f in spell_fragment_files) and
+           'test_mon_spell_message_locale.c' in native_tests and
+           'sizeof(cases) / sizeof(cases[0]) == 226' in monster_spell_test and
+           'A new monster spell.' in monster_spell_test,
+           "Monster spell locale integration must register independent C99 test")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
