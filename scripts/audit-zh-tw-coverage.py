@@ -69,6 +69,7 @@ def inspect() -> dict:
     item_translations = entries(CPP / "zh-tw-items.h")
     ego_translations = entries(CPP / "zh-tw-ego-names.h")
     artifact_translations = entries(CPP / "zh-tw-artifact-names.h")
+    flavor_translations = entries(CPP / "zh-tw-flavor-names.h")
     monster_translations = entries(CPP / "zh-tw-monsters.h")
     unique_monster_translations = entries(CPP / "zh-tw-unique-monsters.h")
     lore_translations = entries(CPP / "zh-tw-lore.h")
@@ -141,6 +142,17 @@ def inspect() -> dict:
             "artifact_display_names": coverage(
                 names("artifact.txt"), artifact_translations
             ),
+            "unidentified_flavor_labels": coverage(
+                {
+                    p[-1] for line in (GAMEDATA / "flavor.txt").read_text(
+                        encoding="utf-8"
+                    ).splitlines()
+                    if line.startswith(("flavor:", "fixed:"))
+                    for p in [line.split(":")]
+                    if p[-1]
+                },
+                flavor_translations,
+            ),
             "monster_flavor_descriptions": {
                 "translated": len(lore_translations),
                 "source_total": len(monster_names | unique_names),
@@ -209,6 +221,7 @@ def main() -> int:
             ("unique_monster_display_names", "Unique monster display names"),
             ("ego_item_suffix_names", "Ego item suffix names"),
             ("artifact_display_names", "Artifact display names"),
+            ("unidentified_flavor_labels", "Unidentified flavor labels"),
             ("monster_flavor_descriptions", "Monster flavor descriptions"),
             ("activation_effect_descriptions", "Activation effect descriptions"),
             ("object_property_descriptions", "Object property descriptions"),
