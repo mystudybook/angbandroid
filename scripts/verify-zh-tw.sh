@@ -64,6 +64,8 @@ run_check "Targeting help printf-format security (Clang/GCC)" python3 "$ROOT/tes
 run_check "Dynamic shape-change effects C99 renderer" python3 "$ROOT/tests/test_shape_effect_render_source.py"
 run_check "Option descriptions and CJK menu display safety" python3 "$ROOT/tests/test_options_localization_source.py"
 run_check "Ignore menus, subwindow labels and color editor translations" python3 "$ROOT/tests/test_ignore_options_localization_source.py"
+run_check "Activation, curse and item-property translation source coverage" python3 "$ROOT/tests/test_activation_effects_coverage.py"
+run_check "Activation, curse and item-property C99 smoke compilation" sh "$ROOT/scripts/test-activation-effects-locale.sh"
 run_check "Native Angband game zh-TW text isolation" python3 "$ROOT/scripts/check_native_game_localization.py"
 run_check "Canonical translation coverage audit" python3 "$ROOT/scripts/audit-zh-tw-coverage.py"
 run_check "Coverage audit JSON regression" python3 "$ROOT/tests/test_localization_coverage.py"
