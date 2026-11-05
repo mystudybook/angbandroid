@@ -51,6 +51,7 @@
 
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "quantity-input.h"
 #include "../curses/unicode_display.h"
 
 static bool inkey_xtra;
@@ -1174,47 +1175,33 @@ static int textui_get_quantity(const char *prompt, int max)
 {
 	int amt = 1;
 
-	/* Prompt if needed */
-	if (max != 1) {
+	if (max <= 0) return 0;
+	if (max == 1) return 1;
+	{
 		char tmp[80];
-		char buf[80];
-
-		/* Build a prompt if needed */
+		char buf[32];
 		if (!prompt) {
-			/* Build a prompt */
-			strnfmt(tmp, sizeof(tmp), "Quantity (0-%d, *=all): ", max);
-
-			/* Use that prompt */
+			strnfmt(tmp, sizeof(tmp), angdroid_zh_tw_enabled() ?
+				"數量（0-%d，* 代表全部）：" :
+				"Quantity (0-%d, *=all): ", max);
 			prompt = tmp;
 		}
-
-		/* Build the default */
-		strnfmt(buf, sizeof(buf), "%d", amt);
-
 		Term_control_quantity(prompt, max, amt);
-
 		soft_kbd_linger("${quant}*");
 
-		/* Ask for a quantity */
-		if (!get_string(prompt, buf, 7)) return (0);
-
-		/* Extract a number */
-		amt = atoi(buf);
-
-		/* A star or letter means "all" */
-		if ((buf[0] == '*') || isalpha((unsigned char)buf[0])) amt = max;
+		/* A mistaken letter never means "all"; let the user retry.
+		 * Esc continues to cancel and a numeric value above max clamps. */
+		while (true) {
+			strnfmt(buf, sizeof(buf), "%d", amt);
+			if (!get_string(prompt, buf, sizeof(buf))) return 0;
+			if (angdroid_parse_quantity(buf, max, &amt)) break;
+			msg("%s", angdroid_game_ui_text(
+				"Invalid quantity. Enter a number or * for all.",
+				angdroid_zh_tw_enabled()));
+		}
 	}
-
-	/* Enforce the maximum */
-	if (amt > max) amt = max;
-
-	/* Enforce the minimum */
-	if (amt < 0) amt = 0;
-
-	/* Return the result */
-	return (amt);
+	return amt;
 }
-
 
 /**
  * Verify something with the user
