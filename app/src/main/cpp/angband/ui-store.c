@@ -56,6 +56,7 @@
 #include "zh-tw-store-hints.h"
 #include "zh-tw-class-titles.h"
 #include "store-column-layout.h"
+#include "store-detail-text.h"
 #include "menu-text-fit.h"
 #include "store-menu-row.h"
 #include "store-stock-guard.h"
@@ -304,8 +305,8 @@ static void store_display_entry(struct menu *menu, int oid, bool cursor, int row
 	struct object *obj;
 	int name_width;
 	int32_t x;
-	uint32_t desc = ODESC_PREFIX;
-	char o_name[80];
+	uint32_t desc = ODESC_PREFIX | ODESC_ZH_TW;
+	char o_name[256];
 	char out_val[160];
 	uint8_t colour;
 
@@ -331,10 +332,10 @@ static void store_display_entry(struct menu *menu, int oid, bool cursor, int row
 	colour = curs_attrs[CURS_KNOWN][(int)cursor];
 	if (columns.weight_col >= 0 && columns.weight_col < col + width) {
 		int weight = object_weight_one(obj);
-		strnfmt(out_val, sizeof out_val, "%3d.%d lb",
-			weight / 10, weight % 10);
-		store_put_clipped(colour, out_val, row, columns.weight_col,
-			MIN(10, col + width - columns.weight_col));
+		if (angdroid_store_weight_text(out_val, sizeof(out_val),
+				weight, angdroid_zh_tw_enabled()))
+			store_put_clipped(colour, out_val, row, columns.weight_col,
+				MIN(10, col + width - columns.weight_col));
 	}
 
 	if (columns.price_col >= 0 && columns.price_col < col + width) {
@@ -342,12 +343,11 @@ static void store_display_entry(struct menu *menu, int oid, bool cursor, int row
 		x = price_item(store, obj, false, 1);
 		if (player->au < x)
 			colour = curs_attrs[CURS_UNKNOWN][(int)cursor];
-		if (tval_can_have_charges(obj) && obj->number > 1)
-			strnfmt(out_val, sizeof out_val, "%9ld avg", (long)x);
-		else
-			strnfmt(out_val, sizeof out_val, "%9ld    ", (long)x);
-		store_put_clipped(colour, out_val, row, columns.price_col,
-			MIN(14, col + width - columns.price_col));
+		if (angdroid_store_price_text(out_val, sizeof(out_val),
+				(long)x, tval_can_have_charges(obj) && obj->number > 1,
+				angdroid_zh_tw_enabled()))
+			store_put_clipped(colour, out_val, row, columns.price_col,
+				MIN(14, col + width - columns.price_col));
 	}
 }
 
