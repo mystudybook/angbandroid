@@ -427,6 +427,23 @@ def main():
            "angdroid_zh_tw_item_combat_text" in detail_header,
            "Combat/modifier/annotation display needs UTF-8 and source gate tests")
 
+    # Explicit trade approval must not accept native touch converted to Enter.
+    shop_confirm_header = source(
+        CPP / "angband/store-confirmation-text.h", errors)
+    shop_confirm_test = source(
+        ROOT / "tests/test_store_confirmation_source.py", errors)
+    expect('"store-confirmation-text.h"' in store_ui and
+           "angdroid_store_explicit_yes(true, response.key.code)" in store_ui and
+           "if (response.type != EVT_KBRD) return false;" in store_ui and
+           "flush((game_event_type)0, NULL, NULL);" in store_ui and
+           "angdroid_store_quantity_prompt(" in store_ui and
+           "angdroid_store_explicit_yes(" in shop_confirm_header and
+           "test_store_confirmation_text.c" in native_tests and
+           "test_store_confirmation_source.py" in source(
+               ROOT / "scripts/verify-zh-tw.sh", errors) and
+           "test_confirmation_accepts_explicit_y_only" in shop_confirm_test,
+           "Store trades require explicit Y and translated quantity prompts")
+
     # Actual stock reorder invalidates prior item identity even if the same
     # numeric index stays within the new stock count. Queued taps are drained.
     invalidation_source = source(
@@ -454,7 +471,8 @@ def main():
     expect("angdroid_menu_scrolling_hit(" in menu_hit_source and
            "angdroid_menu_page_next_cursor(" in menu_cursor_source and
            "if (region_inside(&menu->active, &in)) {" in menu_ui and
-           "if (out.type == EVT_SELECT && !no_act &&" in menu_ui and
+           "if (out.type == EVT_SELECT && !no_act) {" in menu_ui and
+           "!touch_select_dispatched &&" in menu_ui and
            "angdroid_menu_page_next_cursor(menu->cursor," in menu_ui and
            "angdroid_menu_find_valid_cursor(start, count, 1," in menu_ui and
            "region_inside(&m->active, event) &&" in store_ui and

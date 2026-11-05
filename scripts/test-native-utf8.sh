@@ -404,6 +404,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_stock_guard"
 "$BUILD_DIR/test_store_stock_guard"
 
+# Confirmation must never accept a touch or an accidental Enter.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_store_confirmation_text.c" \
+    -o "$BUILD_DIR/test_store_confirmation_text"
+"$BUILD_DIR/test_store_confirmation_text"
+
 # Dynamic popup keys such as shop g must choose a tagged action, never
 # accidentally execute whichever entry currently has focus.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
