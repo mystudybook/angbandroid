@@ -46,6 +46,7 @@
 #include "zh-tw-item-abilities.h"
 #include "zh-tw-artifact-lore.h"
 #include "zh-tw-ego-lore.h"
+#include "zh-tw-kind-lore.h"
 #include "zh-tw-monsters.h"
 
 /**
@@ -2389,7 +2390,15 @@ static void describe_flavor_text(textblock *tb, const struct object *obj,
 		bool did_desc = false;
 
 		if (!ego && obj->kind->text) {
-			textblock_append(tb, "%s", obj->kind->text);
+			/* Translating the revealed kind's lore never discloses an
+			 * unknown kind, mutates source data, or affects spoiler export. */
+			const char *flavor = obj->kind->text;
+			if (zh_tw) {
+				const char *translated =
+					angdroid_zh_tw_kind_flavor(obj->kind->name);
+				if (translated) flavor = translated;
+			}
+			textblock_append(tb, "%s", flavor);
 			did_desc = true;
 		}
 
