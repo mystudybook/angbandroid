@@ -30,6 +30,8 @@
 #include "obj-util.h"
 #include "player-calcs.h"
 #include "player-util.h"
+#include "droid.h"
+#include "zh-tw-gear-messages.h"
 
 static const struct slot_info {
 	int index;
@@ -416,8 +418,14 @@ bool minus_ac(struct player *p)
 
 		/* Object resists */
 		if (obj->el_info[ELEM_ACID].flags & EL_INFO_IGNORE) {
+			if (angdroid_zh_tw_enabled())
+			msg("你的 %s 沒有受到影響！", o_name);
+		else
 			msg("Your %s is unaffected!", o_name);
 		} else {
+			if (angdroid_zh_tw_enabled())
+			msg("你的 %s 受損了！", o_name);
+		else
 			msg("Your %s is damaged!", o_name);
 
 			/* Damage the item */
@@ -620,11 +628,20 @@ struct object *gear_object_for_use(struct player *p, struct object *obj,
 	/* Print a message if desired */
 	if (message) {
 		if (artifact) {
+			if (angdroid_zh_tw_enabled())
+			msg("你已不再持有 %s（%c）。", name, label);
+		else
 			msg("You no longer have the %s (%c).", name, label);
 		} else if (first_remainder) {
 			label = gear_to_label(p, first_remainder);
+			if (angdroid_zh_tw_enabled())
+			msg("你持有 %s（第一組 %c）。", name, label);
+		else
 			msg("You have %s (1st %c).", name, label);
 		} else {
+			if (angdroid_zh_tw_enabled())
+			msg("你持有 %s（%c）。", name, label);
+		else
 			msg("You have %s (%c).", name, label);
 		}
 	}
@@ -793,9 +810,11 @@ void inven_item_charges(struct object *obj)
 {
 	/* Require staff/wand */
 	if (tval_can_have_charges(obj) && object_flavor_is_aware(obj)) {
-		msg("You have %d charge%s remaining.",
-				obj->pval,
-				PLURAL(obj->pval));
+		if (angdroid_zh_tw_enabled())
+			msg("你還有 %d 次充能可用。", obj->pval);
+		else
+			msg("You have %d charge%s remaining.",
+				obj->pval, PLURAL(obj->pval));
 	}
 }
 
@@ -879,7 +898,8 @@ void inven_carry(struct player *p, struct object *obj, bool absorb,
 		if (!object_flavor_is_aware(obj)) {
 			if (player_has(p, PF_KNOW_MUSHROOM) && tval_is_mushroom(obj)) {
 				object_flavor_aware(p, obj);
-				msg("Mushrooms for breakfast!");
+				msg("%s", angdroid_gear_message("Mushrooms for breakfast!",
+			angdroid_zh_tw_enabled()));
 			} else if (player_has(p, PF_KNOW_ZAPPER) && tval_is_zapper(obj))
 				object_flavor_aware(p, obj);
 		}
@@ -912,9 +932,15 @@ void inven_carry(struct player *p, struct object *obj, bool absorb,
 			(total << 16), p);
 		label = gear_to_label(p, first);
 		if (total > first->number) {
+			if (angdroid_zh_tw_enabled())
+			msg("你持有 %s（第一組 %c）。", o_name, label);
+		else
 			msg("You have %s (1st %c).", o_name, label);
 		} else {
 			assert(first == obj);
+			if (angdroid_zh_tw_enabled())
+			msg("你持有 %s（%c）。", o_name, label);
+		else
 			msg("You have %s (%c).", o_name, label);
 		}
 	}
@@ -996,12 +1022,25 @@ void inven_wield(struct object *obj, int slot)
 		ODESC_PREFIX | ODESC_FULL, player);
 
 	/* Message */
-	msgt(MSG_WIELD, fmt, o_name, gear_to_label(player, wielded));
+	if (angdroid_zh_tw_enabled()) {
+		char label = gear_to_label(player, wielded);
+		if (tval_is_melee_weapon(wielded))
+			msgt(MSG_WIELD, "你握持了 %s（%c）。", o_name, label);
+		else if (wielded->tval == TV_BOW)
+			msgt(MSG_WIELD, "你用 %s（%c）進行射擊。", o_name, label);
+		else if (tval_is_light(wielded))
+			msgt(MSG_WIELD, "你以 %s（%c）作為光源。", o_name, label);
+		else
+			msgt(MSG_WIELD, "你穿戴了 %s（%c）。", o_name, label);
+	} else {
+		msgt(MSG_WIELD, fmt, o_name, gear_to_label(player, wielded));
+	}
 
 	/* Sticky flag geats a special mention */
 	if (of_has(wielded->flags, OF_STICKY)) {
 		/* Warn the player */
-		msgt(MSG_CURSED, "Oops! It feels deathly cold!");
+		msgt(MSG_CURSED, "%s", angdroid_gear_message("Oops! It feels deathly cold!",
+			angdroid_zh_tw_enabled()));
 	}
 
 	/* See if we have to overflow the pack */
@@ -1061,7 +1100,10 @@ void inven_takeoff(struct object *obj)
 	update_stuff(player);
 
 	/* Message */
-	msgt(MSG_WIELD, "%s %s (%c).", act, o_name, gear_to_label(player, obj));
+	if (angdroid_zh_tw_enabled())
+		msgt(MSG_WIELD, "你卸下了 %s（%c）。", o_name, gear_to_label(player, obj));
+	else
+		msgt(MSG_WIELD, "%s %s (%c).", act, o_name, gear_to_label(player, obj));
 
 	return;
 }
@@ -1117,13 +1159,19 @@ void inven_drop(struct object *obj, int amt)
 		player);
 
 	/* Message */
-	msg("You drop %s (%c).", name, label);
+	if (angdroid_zh_tw_enabled())
+			msg("你丟下了 %s（%c）。", name, label);
+		else
+			msg("You drop %s (%c).", name, label);
 
 	/* Describe what's left */
 	if (dropped->artifact) {
 		object_desc(name, sizeof(name), dropped,
 			ODESC_FULL | ODESC_SINGULAR, player);
-		msg("You no longer have the %s (%c).", name, label);
+		if (angdroid_zh_tw_enabled())
+			msg("你已不再持有 %s（%c）。", name, label);
+		else
+			msg("You no longer have the %s (%c).", name, label);
 	} else {
 		struct object *first;
 		struct object *desc_target;
@@ -1153,13 +1201,22 @@ void inven_drop(struct object *obj, int amt)
 			ODESC_PREFIX | ODESC_FULL | ODESC_ALTNUM |
 			(total << 16), player);
 		if (!first) {
+			if (angdroid_zh_tw_enabled())
+			msg("你持有 %s（%c）。", name, label);
+		else
 			msg("You have %s (%c).", name, label);
 		} else {
 			label = gear_to_label(player, first);
 			if (total > first->number) {
-				msg("You have %s (1st %c).", name, label);
+				if (angdroid_zh_tw_enabled())
+			msg("你持有 %s（第一組 %c）。", name, label);
+		else
+			msg("You have %s (1st %c).", name, label);
 			} else {
-				msg("You have %s (%c).", name, label);
+				if (angdroid_zh_tw_enabled())
+			msg("你持有 %s（%c）。", name, label);
+		else
+			msg("You have %s (%c).", name, label);
 			}
 		}
 	}
@@ -1311,7 +1368,8 @@ void combine_pack(struct player *p)
 
 	/* Message */
 	if (display_message) {
-		msg("You combine some items in your pack.");
+		msg("%s", angdroid_gear_message("You combine some items in your pack.",
+			angdroid_zh_tw_enabled()));
 
 		/*
 		 * Stop "repeat last command" from working if a stack was
@@ -1352,7 +1410,8 @@ void pack_overflow(struct object *obj)
 	disturb(player);
 
 	/* Warning */
-	msg("Your pack overflows!");
+	msg("%s", angdroid_gear_message("Your pack overflows!",
+			angdroid_zh_tw_enabled()));
 
 	/* Get the last proper item */
 	for (i = 1; i <= z_info->pack_size; i++)
@@ -1372,14 +1431,20 @@ void pack_overflow(struct object *obj)
 		player);
 
 	/* Message */
-	msg("You drop %s.", o_name);
+	if (angdroid_zh_tw_enabled())
+			msg("你丟下了 %s。", o_name);
+		else
+			msg("You drop %s.", o_name);
 
 	/* Excise the object and drop it (carefully) near the player */
 	gear_excise_object(player, obj);
 	drop_near(cave, &obj, 0, player->grid, false, true);
 
 	/* Describe */
-	msg("You no longer have %s.", o_name);
+	if (angdroid_zh_tw_enabled())
+			msg("你已不再持有 %s。", o_name);
+		else
+			msg("You no longer have %s.", o_name);
 
 	/* Notice, update, redraw */
 	if (player->upkeep->notice) notice_stuff(player);
