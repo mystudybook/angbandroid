@@ -1207,3 +1207,17 @@ unchanged, as are unsupported custom message fallbacks. An independent
 native C99 test validates all 226 message keys, tags and English fallback;
 the source auditor checks exact canonical coverage. Android APK, native
 integration and on-device combat verification are still necessary.
+
+## Core player events and miscellaneous commands (2026-11-05)
+
+Localized 39 original player-facing feedback labels, including character
+death and low-HP warnings, exertion and terrain/lava damage, changing
+shape, casting and reading prerequisites, searching, light refueling,
+wizard/borg warnings and prompts, and the note entry prompt. Shape-related
+display names use the previously introduced display dictionary; original
+shape IDs and commands remain unchanged. A Chinese note is displayed in
+Chinese while the original typed note and `history_add()` format are
+preserved for savefile/history compatibility. All unrecognized strings
+and English locales retain their original wording. Native strict C99
+tests cover all 39 source labels and unknown fallback; Android build and
+on-device regression remain to be run.
