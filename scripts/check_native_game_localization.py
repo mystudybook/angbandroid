@@ -1101,6 +1101,10 @@ def main():
            'angdroid_shape_intro(0)' in shape_test,
            "Shape lore C99 fallback regression must be registered")
 
+    expect(knowledge_ui.count('textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\\n" : ".\\n");') == 9 and
+           'textblock_append(tb, angdroid_zh_tw_enabled() ?' not in knowledge_ui,
+           "Shape lore localized punctuation must use a literal printf format")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

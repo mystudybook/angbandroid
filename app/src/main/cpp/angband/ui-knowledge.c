@@ -2946,7 +2946,7 @@ static void shape_lore_append_basic_combat(textblock *tb,
 		textblock_append(tb, "%s", angdroid_shape_term("Adds",
 			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 	}
 }
 
@@ -2972,7 +2972,7 @@ static void shape_lore_append_skills(textblock *tb,
 		textblock_append(tb, "%s", angdroid_shape_term("Adds",
 			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
@@ -3005,7 +3005,7 @@ static void shape_lore_append_non_stat_modifiers(textblock *tb,
 		textblock_append(tb, "%s", angdroid_shape_term("Adds",
 			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
@@ -3038,7 +3038,7 @@ static void shape_lore_append_stat_modifiers(textblock *tb,
 		textblock_append(tb, "%s", angdroid_shape_term("Adds",
 			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
@@ -3074,21 +3074,21 @@ static void shape_lore_append_resistances(textblock *tb,
 		textblock_append(tb, "%s", angdroid_shape_term("Makes you vulnerable to",
 			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, vul, nvul);
-		textblock_append(tb, angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 	}
 
 	if (nres != 0) {
 		textblock_append(tb, "%s", angdroid_shape_term("Makes you resistant to",
 			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, res, nres);
-		textblock_append(tb, angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 	}
 
 	if (nimm != 0) {
 		textblock_append(tb, "%s", angdroid_shape_term("Makes you immune to",
 			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, imm, nimm);
-		textblock_append(tb, angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 	}
 }
 
@@ -3115,7 +3115,7 @@ static void shape_lore_append_protection_flags(textblock *tb,
 		textblock_append(tb, "%s", angdroid_shape_term("Provides protection from",
 			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
@@ -3146,7 +3146,7 @@ static void shape_lore_append_sustains(textblock *tb,
 		textblock_append(tb, "%s", angdroid_shape_term("Sustains",
 			angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+		textblock_append(tb, "%s", angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
