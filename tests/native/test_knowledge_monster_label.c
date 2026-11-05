@@ -13,6 +13,19 @@ int main(void)
                   "kobold") == 0);
     assert(strcmp(angdroid_knowledge_monster_label("kobold", 1, 1),
                   "kobold") == 0);
+    assert(strcmp(angdroid_knowledge_monster_label(
+                  "Morgoth, Lord of Darkness", 1, 1),
+                  "黑暗魔君魔苟斯") == 0);
+    assert(strcmp(angdroid_knowledge_monster_label(
+                  "Morgoth, Lord of Darkness", 1, 0),
+                  "Morgoth, Lord of Darkness") == 0);
+    assert(strcmp(angdroid_knowledge_monster_label(
+                  "unknown unique", 1, 1),
+                  "unknown unique") == 0);
+    cells = angdroid_knowledge_monster_copy(label, sizeof(label),
+        "Morgoth, Lord of Darkness", 1, 1, 6);
+    assert(cells == 6 && strcmp(label, "黑暗魔") == 0);
+
     assert(strcmp(angdroid_knowledge_monster_label("ancient red dragon", 0, 1),
                   "遠古紅龍") == 0);
     assert(strcmp(angdroid_knowledge_monster_label("unknown creature", 0, 1),
@@ -39,6 +52,6 @@ int main(void)
     cells = angdroid_knowledge_monster_copy(NULL, 0,
         "kobold", 0, 1, 20);
     assert(cells == 0);
-    puts("PASS: knowledge monster labels, uniques and UTF-8 column clipping");
+    puts("PASS: regular/unique monster names and CJK knowledge-column clipping");
     return 0;
 }
