@@ -48,4 +48,10 @@ for item in (
     if item not in repair:
         raise SystemExit(f"FAIL: stock update may leave an invalid selection: {item}")
 
-print("PASS: native menu direction, Spacebar paging and cursor recovery")
+# Enter must not emit SELECT after the stock list was invalidated.
+if "if (is_valid_row(menu, menu->cursor))" not in section:
+    raise SystemExit("FAIL: Enter with a cleared cursor exits or selects an item")
+if "else\n\t\t\teat = true;" not in section:
+    raise SystemExit("FAIL: invalid Enter still escapes the menu")
+
+print("PASS: native menu direction, paging, Enter and cursor recovery")

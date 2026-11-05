@@ -427,6 +427,22 @@ def main():
            "angdroid_zh_tw_item_combat_text" in detail_header,
            "Combat/modifier/annotation display needs UTF-8 and source gate tests")
 
+    # Actual stock reorder invalidates prior item identity even if the same
+    # numeric index stays within the new stock count. Queued taps are drained.
+    invalidation_source = source(
+        ROOT / "tests/test_store_input_invalidation_source.py", errors)
+    expect("angdroid_store_clear_stale_selection(" in source(
+               CPP / "angband/store-stock-guard.h", errors) and
+           "ctx->stock_changed = true;" in store_ui and
+           "flush(type, unused, user);" in store_ui and
+           "angdroid_store_clear_stale_selection(ctx->stock_changed," in store_ui and
+           "if (is_valid_row(menu, menu->cursor))" in menu_ui and
+           "test_store_input_invalidation_source.py" in source(
+               ROOT / "scripts/verify-zh-tw.sh", errors) and
+           "test_mutation_invalidates_previous_stock_id_and_drains_queue"
+               in invalidation_source,
+           "Stock changes must invalidate old selection and pending input")
+
     # Live touch selection must resolve its current hit row before invoking
     # the stock callback, while empty/header and escape touches remain safe.
     menu_hit_source = source(CPP / "angband/menu-hit-test.h", errors)

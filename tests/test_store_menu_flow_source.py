@@ -54,4 +54,7 @@ if handler.index("region_inside(&m->active, event) &&") > handler.index(
 if "if ((event->mouse.y == 0) || (event->mouse.y == 1))" not in handler:
     raise SystemExit("FAIL: header touch no longer opens the store command popup")
 
-print("PASS: scrolled shop item popups and stock-free commands remain safe")
+if "ctx->stock_changed = false;" not in handler:
+    raise SystemExit("FAIL: a fresh action never acknowledges the new stock list")
+
+print("PASS: scrolled shop popup, invalidated stock and empty commands safe")
