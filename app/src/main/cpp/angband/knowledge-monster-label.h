@@ -7,14 +7,16 @@
 
 #include <stddef.h>
 #include "zh-tw-monsters.h"
+#include "zh-tw-unique-monsters.h"
 #include "menu-text-fit.h"
 
 static inline const char *angdroid_knowledge_monster_label(
     const char *english, int is_unique, int zh_tw)
 {
     const char *translated;
-    if (!english || !zh_tw || is_unique) return english;
-    translated = angdroid_zh_tw_monster_list_name(english);
+    if (!english || !zh_tw) return english;
+    translated = is_unique ? angdroid_zh_tw_unique_monster_name(english)
+                           : angdroid_zh_tw_monster_list_name(english);
     return translated ? translated : english;
 }
 
