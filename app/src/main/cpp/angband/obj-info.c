@@ -44,6 +44,8 @@
 #include "zh-tw-activations.h"
 #include "zh-tw-curse.h"
 #include "zh-tw-item-abilities.h"
+#include "zh-tw-artifact-lore.h"
+#include "zh-tw-ego-lore.h"
 #include "zh-tw-monsters.h"
 
 /**
@@ -2370,12 +2372,18 @@ static bool describe_origin(textblock *tb, const struct object *obj, bool terse)
  * real object)
  */
 static void describe_flavor_text(textblock *tb, const struct object *obj,
-								 bool ego)
+								 bool ego, bool zh_tw)
 {
 	/* Display the known artifact or object description */
 	if (!OPT(player, birth_randarts) && obj->artifact &&
 		obj->known->artifact && obj->artifact->text) {
-		textblock_append(tb, "%s\n\n", obj->artifact->text);
+		const char *flavor = obj->artifact->text;
+		if (zh_tw) {
+			const char *translated =
+				angdroid_zh_tw_artifact_flavor(obj->artifact->name);
+			if (translated) flavor = translated;
+		}
+		textblock_append(tb, "%s\n\n", flavor);
 
 	} else if (object_flavor_is_aware(obj) || ego) {
 		bool did_desc = false;
@@ -2386,9 +2394,16 @@ static void describe_flavor_text(textblock *tb, const struct object *obj,
 		}
 
 		/* Display an additional ego-item description */
-		if ((ego || (obj->known->ego != NULL)) && obj->ego->text) {
+		if ((ego || (obj->known->ego != NULL)) && obj->ego &&
+				obj->ego->text) {
+			const char *flavor = obj->ego->text;
+			if (zh_tw) {
+				const char *translated =
+					angdroid_zh_tw_ego_flavor(obj->ego->name);
+				if (translated) flavor = translated;
+			}
 			if (did_desc) textblock_append(tb, "  ");
-			textblock_append(tb, "%s\n\n", obj->ego->text);
+			textblock_append(tb, "%s\n\n", flavor);
 		} else if (did_desc) {
 			textblock_append(tb, "\n\n");
 		}
@@ -2448,7 +2463,10 @@ static textblock *object_info_out(const struct object *obj, int mode)
 	get_known_elements(obj, mode, el_info);
 
 	if (subjective) describe_origin(tb, obj, terse);
-	if (!terse) describe_flavor_text(tb, obj, ego);
+	/* Spoiler generation and terse character dumps keep original source
+	 * flavor; on-screen lore uses the selected game-text language. */
+	if (!terse) describe_flavor_text(tb, obj, ego,
+		angdroid_zh_tw_enabled() && !(mode & OINFO_SPOIL));
 
 	if (!object_fully_known(obj) &&	(obj->known->notice & OBJ_NOTICE_ASSESSED) && !tval_is_useable(obj)) {
 		textblock_append(tb, "%s", angdroid_item_info_text("You do not know the full extent of this item's powers.\n", angdroid_zh_tw_enabled()));
