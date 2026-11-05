@@ -17,7 +17,7 @@ for key in ("identified_item_kind_names", "nonunique_monster_names"):
     assert section["translated"] == section["source_total"], key
     assert section["untranslated"] == [], key
     assert section["invalid_keys"] == [], key
-assert a["monster_flavor_descriptions"]["translated"] >= 124
+assert a["monster_flavor_descriptions"]["translated"] >= 199
 assert a["monster_flavor_descriptions"]["invalid_keys"] == []
 for key in ("activation_effect_descriptions", "object_property_descriptions",
             "curse_descriptions", "item_origin_labels"):
