@@ -1734,7 +1734,7 @@ def main():
     sheet_ui = source(CPP / "angband/ui-player.c", errors)
     sheet_header = source(CPP / "angband/zh-tw-character-sheet.h", errors)
     sheet_test = source(ROOT / "tests/native/test_character_sheet_locale.c", errors)
-    sheet_pairs = re.findall(r'\\{ "([^"]+)", "([^"]+)" \\}', sheet_header)
+    sheet_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', sheet_header)
     expect(len(sheet_pairs) == 37 and
            len({en for en, _ in sheet_pairs}) == 37 and
            all(zh.strip() for _, zh in sheet_pairs),
