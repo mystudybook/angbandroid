@@ -1124,6 +1124,54 @@ def main():
            'Custom flag.' in shape_test,
            "Only known shape misc descriptions may be changed at display time")
 
+    # Character history and hall-of-fame names are UI-only; exported history,
+    # persistent score records, original paging keys and rank calculations stay.
+    history_ui = source(CPP / "angband/ui-history.c", errors)
+    score_ui = source(CPP / "angband/ui-score.c", errors)
+    records_header = source(CPP / "angband/zh-tw-records.h", errors)
+    records_test = source(ROOT / "tests/native/test_history_score_locale.c", errors)
+    race_data = source(ROOT / "variant_lib/angband/gamedata/p_race.txt", errors)
+    record_class_data = source(ROOT / "variant_lib/angband/gamedata/class.txt", errors)
+    def record_name_map(begin, finish):
+        chunk = records_header.partition(begin)[2].partition(finish)[0]
+        return re.findall(r'\{ "([^"]+)", "([^"]+)" \}', chunk)
+    record_races = record_name_map(
+        "static inline const char *angdroid_record_race(",
+        "static inline const char *angdroid_record_class(")
+    record_classes = record_name_map(
+        "static inline const char *angdroid_record_class(", "#endif")
+    expect(len(record_races) == 11 and
+           {x for x, _ in record_races} ==
+           {s[5:] for s in race_data.splitlines() if s.startswith("name:")} and
+           len(record_classes) == 9 and
+           {x for x, _ in record_classes} ==
+           {s[5:] for s in record_class_data.splitlines() if s.startswith("name:")} and
+           all(zh.strip() for _, zh in record_races + record_classes),
+           "Historical record display dictionary must cover all original races/classes")
+    exported_history = history_ui.partition("void dump_history(")[2]
+    expect('"zh-tw-records.h"' in history_ui and
+           'angdroid_record_ui_text("[Player history]"' in history_ui and
+           'angdroid_record_ui_text(" (LOST)"' in history_ui and
+           'file_putf(file, "[Player history]\\n");' in exported_history and
+           'file_putf(file, "      Turn   Depth  Note\\n");' in exported_history and
+           'my_strcat(buf, " (LOST)", sizeof(buf));' in exported_history and
+           "case 'n':" in history_ui and "case 'p':" in history_ui,
+           "History display locale must not modify text exports or paging keys")
+    expect('"zh-tw-records.h"' in score_ui and
+           'angdroid_record_race(r ? r->name : "<none>", true)' in score_ui and
+           'angdroid_record_class(c ? c->name : "<none>", true)' in score_ui and
+           'score_print_row(attr, out_val,' in score_ui and
+           'angdroid_menu_copy_columns(clipped, sizeof(clipped), line, available);' in score_ui and
+           '"Killed by %s on dungeon level %d"' in score_ui and
+           '"%s Hall of Fame"' in score_ui and
+           'if (ch.code == ESCAPE)' in score_ui,
+           "High score screen must preserve English fallback and original controls")
+    expect('test_history_score_locale.c' in native_tests and
+           'verify(angdroid_record_race, "Dunadan", "杜內丹人")' in records_test and
+           'verify(angdroid_record_class, "Blackguard", "黑衛士")' in records_test and
+           'verify(angdroid_record_ui_text, "Unused label", "Unused label")' in records_test,
+           "History/highscore C99 bilingual regression must be registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

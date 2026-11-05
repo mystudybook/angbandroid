@@ -21,14 +21,24 @@
 #include "ui-history.h"
 #include "ui-input.h"
 #include "ui-output.h"
+#include "droid.h"
+#include "zh-tw-records.h"
 
 /**
  * Print the header for the history display
  */
 static void print_history_header(void)
 {
-	c_put_str(COLOUR_WHITE, "[Player history]", 0, 0);
-	c_put_str(COLOUR_L_BLUE, "      Turn   Depth  Note", 1, 0);
+	c_put_str(COLOUR_WHITE, angdroid_record_ui_text("[Player history]",
+		angdroid_zh_tw_enabled()), 0, 0);
+	if (angdroid_zh_tw_enabled()) {
+		/* Preserve the numeric turn/depth columns of the original rows. */
+		c_put_str(COLOUR_L_BLUE, "回合", 1, 6);
+		c_put_str(COLOUR_L_BLUE, "深度", 1, 13);
+		c_put_str(COLOUR_L_BLUE, "記事", 1, 20);
+	} else {
+		c_put_str(COLOUR_L_BLUE, "      Turn   Depth  Note", 1, 0);
+	}
 }
 
 
@@ -70,13 +80,16 @@ void history_display(void)
 				history_list_local[i].event);
 
 			if (hist_has(history_list_local[i].type, HIST_ARTIFACT_LOST))
-				my_strcat(buf, " (LOST)", sizeof(buf));
+				my_strcat(buf, angdroid_record_ui_text(" (LOST)",
+					angdroid_zh_tw_enabled()), sizeof(buf));
 
 			/* Size of header = 3 lines */
 			prt(buf, row + 2, 0);
 			row++;
 		}
-		prt("[Arrow keys scroll, p/PgUp for previous page, n/PgDn for next page, ESC to exit.]", hgt - 1, 0);
+		prt(angdroid_record_ui_text(
+			"[Arrow keys scroll, p/PgUp for previous page, n/PgDn for next page, ESC to exit.]",
+			angdroid_zh_tw_enabled()), hgt - 1, 0);
 
 		ch = inkey();
 
