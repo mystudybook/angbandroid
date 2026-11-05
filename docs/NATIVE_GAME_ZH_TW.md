@@ -1221,3 +1221,18 @@ preserved for savefile/history compatibility. All unrecognized strings
 and English locales retain their original wording. Native strict C99
 tests cover all 39 source labels and unknown fallback; Android build and
 on-device regression remain to be run.
+
+## Generic spell effect fixed messages (2026-11-05)
+
+Native `effect-handler-general.c` now localizes **all 82 fixed,
+zero-format-argument `msg()` and `msgt()` callsites**, representing
+71 unique English strings. This includes magic detection and negative
+results, enchantment, recharge, dispel failures, teleport transitions,
+light and dark effects, monster summons and probing. The source
+dictionary is exact-match, presentation-only, and preserves English
+for all non-zh-TW locales and unknown future messages.
+Dynamic and formatted spell strings remain intentionally separate
+so effect numbers, monster names and %s arguments are not misrendered.
+The 71 source strings each have a bilingual C99 test case; the
+static checker guards all 82 output sink uses. NDK and in-game tests
+are still required.
