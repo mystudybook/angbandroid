@@ -87,5 +87,23 @@ class ActivationEffectsCoverageTest(unittest.TestCase):
         self.assertIn('angdroid_item_info_text("It can be eaten.', src)
 
 
+    def test_all_visible_item_origins_have_chinese_display_paths(self):
+        origin_source = (CPP / "list-origins.h").read_text(encoding="utf-8")
+        entries = re.findall(
+            r'ORIGIN\(\s*(\w+),\s*(-?\d+),', origin_source
+        )
+        visible = {name for name, count in entries if int(count) >= 0}
+        self.assertGreaterEqual(len(visible), 15)
+        src = (CPP / "obj-info.c").read_text(encoding="utf-8")
+        missing = [name for name in visible if "case ORIGIN_" + name + ":" not in src]
+        self.assertEqual(missing, [], "visible origin case missing")
+        self.assertIn('"地城 %d 英呎（第 %d 層）"', src)
+        self.assertIn("angdroid_zh_tw_monster_list_name(dropper)", src)
+        self.assertIn('textblock_append(tb, "由%s在%s掉落"', src)
+        self.assertIn('textblock_append(tb, "從商店購得");', src)
+        self.assertIn("handled = false;", src)
+        self.assertIn("textblock_append(tb, origins[origin].desc, name, loot_spot)", src)
+
+
 if __name__ == "__main__":
     unittest.main()
