@@ -1449,6 +1449,44 @@ def main():
                projection_test,
            "Projection bilingual host test must be registered")
 
+    # Attack effect messages and all original projection descriptions are
+    # translated at display-only sites. Calculation and monster handlers stay.
+    attack_effect_ui = source(CPP / "angband/effect-handler-attack.c", errors)
+    attack_feedback_header = source(CPP / "angband/zh-tw-attack-feedback.h", errors)
+    projection_terms_header = source(CPP / "angband/zh-tw-projection-terms.h", errors)
+    attack_feedback_test = source(ROOT / "tests/native/test_attack_feedback_locale.c", errors)
+    source_projection_terms = source(
+        ROOT / "variant_lib/angband/gamedata/projection.txt", errors)
+    projection_descs = {x[5:] for x in source_projection_terms.splitlines()
+                        if x.startswith("desc:")}
+    attack_strings = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', attack_feedback_header)
+    projection_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', projection_terms_header)
+    expect(len(attack_strings) == 22 and
+           len({en for en, _ in attack_strings}) == 22 and
+           len(projection_pairs) == 55 and
+           {en for en, _ in projection_pairs} == projection_descs and
+           all(zh.strip() and "%" not in zh for _, zh in
+               attack_strings + projection_pairs),
+           "Attack feedback/project names must cover all original source keys")
+    expect('"zh-tw-attack-feedback.h"' in attack_effect_ui and
+           '"zh-tw-projection-terms.h"' in attack_effect_ui and
+           'angdroid_attack_feedback(hurt_msg,' in attack_effect_ui and
+           'angdroid_projection_description(projections[type].desc, true)'
+                in attack_effect_ui and
+           'msg("你受到 %d 點傷害。", dam);' in attack_effect_ui and
+           'msg("你從 %s 身上汲取力量。", m_name);' in attack_effect_ui and
+           'msg("You draw power from the %s.", m_name);' in attack_effect_ui and
+           'msgt(MSG_GENERIC, "目標距離太遠（%d）。", taim);' in attack_effect_ui and
+           'effect_calculate_value(context,' in attack_effect_ui and
+           'take_hit(player, dam, killer);' in attack_effect_ui,
+           "Effect-handler message locale must preserve original combat logic")
+    expect('test_attack_feedback_locale.c' in native_tests and
+           'verify(angdroid_projection_description, "chaos", "混沌");' in
+               attack_feedback_test and
+           'verify(angdroid_attack_feedback, "You feel better.", "你感覺好多了。");'
+                in attack_feedback_test,
+           "Attack feedback bilingual C99 regression must be registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

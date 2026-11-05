@@ -1171,3 +1171,18 @@ English fallbacks. The original damage, resistance and effect logic
 remain untouched. A native C99 bilingual test checks all 36 display
 translations and unknown fallback. Android APK and gameplay
 verification remain outstanding.
+
+## Attack spell effects and canonical projection names (2026-11-05)
+
+`effect-handler-attack.c` now localizes healing feedback, monsters healing
+and recovering courage, player breath messages, earthquake/cave collapse,
+damage/dodge, tapping unlife, vampiric bites, arena combat, target validation
+and related notices. Formatted `msg()` and `msgt()` calls select literal
+Chinese or original English strings to avoid NDK printf-format injection.
+The unrelated damage/status calculations are unchanged. The source-matched
+projection dictionary contains all **55 unique `desc:` descriptions**
+from `projection.txt` and translates the player's breath descriptor without
+changing the underlying projection subtype. Host C99 tests check all 22
+static feedback labels and 55 source descriptions, including English/unknown
+fallback. The Android build and actual spell gameplay still need
+revalidation.
