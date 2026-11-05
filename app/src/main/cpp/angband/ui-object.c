@@ -1067,9 +1067,9 @@ static void item_menu_browser(int oid, void *data, const region *local_area)
         player->upkeep->command_wrk != USE_INVEN)
         return;
 
+    if (z_info->quiver_slot_size <= 0) return;
     quiver_slots = (player->upkeep->quiver_cnt +
         z_info->quiver_slot_size - 1) / z_info->quiver_slot_size;
-    if (z_info->quiver_slot_size <= 0) return;
     for (j = 0; j < quiver_slots; ++j, ++i) {
         int line = angdroid_item_selection_footer_row(local_area->row,
             local_area->page_rows, Term->hgt, j);
@@ -1539,7 +1539,7 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 			newmenu = false;
 
 			/* Get an item choice */
-			*choice = item_menu(cmd, MAX(pmt ? strlen(pmt) : 0, 15), mode);
+			*choice = item_menu(cmd, MAX(pmt ? (int)angdroid_utf8_display_columns(pmt) : 0, 15), mode);
 
 			/* Fix the screen */
 			screen_load();

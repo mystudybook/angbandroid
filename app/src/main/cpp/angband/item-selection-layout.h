@@ -24,9 +24,11 @@ static inline bool angdroid_item_selection_region(
     if (terminal_width <= 0 || terminal_height <= 1 ||
         count <= 0 || extra_columns < 0) return false;
 
-    desired = (int64_t)name_columns + extra_columns;
-    if (name_columns > (size_t)INT_MAX || desired > INT_MAX)
+    if (name_columns > (size_t)INT_MAX ||
+        (int64_t)name_columns > INT_MAX - extra_columns)
         desired = INT_MAX;
+    else
+        desired = (int64_t)name_columns + extra_columns;
     if (header_columns > (size_t)desired)
         desired = header_columns > INT_MAX ? INT_MAX : (int64_t)header_columns;
     if (desired <= 0) desired = 1;
