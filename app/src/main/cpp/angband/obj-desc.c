@@ -551,7 +551,7 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
  * Add player-defined inscriptions or game-defined descriptions
  */
 static size_t obj_desc_inscrip(const struct object *obj, char *buf,
-		size_t max, size_t end, const struct player *p)
+		size_t max, size_t end, const struct player *p, uint32_t mode)
 {
 	const char *u[6] = { 0, 0, 0, 0, 0, 0 };
 	int n = 0;
@@ -585,7 +585,18 @@ static size_t obj_desc_inscrip(const struct object *obj, char *buf,
 		for (i = 0; i < n; i++) {
 			if (i == 0)
 				strnfcat(buf, max, &end, " {");
-			strnfcat(buf, max, &end, "%s", u[i]);
+			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() &&
+					!(i == 0 && obj->note)) {
+				const char *label = u[i];
+				if (streq(label, "empty")) label = "已耗盡";
+				else if (streq(label, "tried")) label = "已試用";
+				else if (streq(label, "cursed")) label = "受詛咒";
+				else if (streq(label, "ignore")) label = "忽略";
+				strnfcat(buf, max, &end, "%s", label);
+			} else {
+				/* User-written inscriptions are never translated. */
+				strnfcat(buf, max, &end, "%s", u[i]);
+			}
 			if (i < n - 1)
 				strnfcat(buf, max, &end, ", ");
 		}
@@ -602,14 +613,20 @@ static size_t obj_desc_inscrip(const struct object *obj, char *buf,
  * and "??" to not fully known unflavored items 
  */
 static size_t obj_desc_aware(const struct object *obj, char *buf, size_t max,
-							 size_t end)
+							 size_t end, uint32_t mode)
 {
 	if (!object_flavor_is_aware(obj)) {
-		strnfcat(buf, max, &end, " {unseen}");
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			strnfcat(buf, max, &end, " {未見過}");
+		else
+			strnfcat(buf, max, &end, " {unseen}");
 	} else if (!object_runes_known(obj)) {
 		strnfcat(buf, max, &end, " {??}");
 	} else if (obj->known->curses) {
-		strnfcat(buf, max, &end, " {cursed}");
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			strnfcat(buf, max, &end, " {受詛咒}");
+		else
+			strnfcat(buf, max, &end, " {cursed}");
 	}
 
 	return end;
@@ -653,11 +670,16 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 	size_t end = 0;
 
 	/* Simple description for null item */
-	if (!obj || !obj->known)
+	if (!obj || !obj->known) {
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			return strnfmt(buf, max, "（空）");
 		return strnfmt(buf, max, "(nothing)");
+	}
 
 	/* Unknown itema and cash get straightforward descriptions */
 	if (obj->known && obj->kind != obj->known->kind) {
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			return strnfmt(buf, max, "未知物品");
 		if (prefix)
 			return strnfmt(buf, max, "an unknown item");
 		return strnfmt(buf, max, "unknown item");
@@ -697,9 +719,9 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 		end = obj_desc_charges(obj, buf, max, end, mode);
 
 		if (mode & ODESC_STORE)
-			end = obj_desc_aware(obj, buf, max, end);
+			end = obj_desc_aware(obj, buf, max, end, mode);
 		else
-			end = obj_desc_inscrip(obj, buf, max, end, p);
+			end = obj_desc_inscrip(obj, buf, max, end, p, mode);
 	}
 
 	return end;
