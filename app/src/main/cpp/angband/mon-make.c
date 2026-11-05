@@ -1118,15 +1118,19 @@ static bool place_new_monster_one(struct chunk *c, struct loc grid,
 	/* Check out-of-depth-ness */
 	if (race->level > c->depth) {
 		if (rf_has(race->flags, RF_UNIQUE)) { /* OOD unique */
-			if (OPT(player, cheat_hear))
+			if (OPT(player, cheat_hear)) {
 				if (angdroid_zh_tw_enabled())
 					msg("深層獨特怪物（%s）。", race->name);
-				else msg("Deep unique (%s).", race->name);
+				else
+					msg("Deep unique (%s).", race->name);
+			}
 		} else { /* Normal monsters but OOD */
-			if (OPT(player, cheat_hear))
+			if (OPT(player, cheat_hear)) {
 				if (angdroid_zh_tw_enabled())
 					msg("深層怪物（%s）。", race->name);
-				else msg("Deep monster (%s).", race->name);
+				else
+					msg("Deep monster (%s).", race->name);
+			}
 		}
 		/* Boost rating by power per 10 levels OOD */
 		add_to_monster_rating(c, (race->level - c->depth) * race->level
