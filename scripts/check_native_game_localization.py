@@ -43,6 +43,7 @@ def main():
     death_header = source(CPP / "angband/zh-tw-death.h", errors)
     mon = source(CPP / "angband/mon-desc.c", errors)
     mon_header = source(CPP / "angband/zh-tw-monsters.h", errors)
+    unique_mon_header = source(CPP / "angband/zh-tw-unique-monsters.h", errors)
     obj = source(CPP / "angband/obj-desc.c", errors)
     obj_header = source(CPP / "angband/zh-tw-items.h", errors)
     monster_data = source(ROOT / "variant_lib/angband/gamedata/monster.txt", errors)
@@ -157,8 +158,8 @@ def main():
            "Original Angband item-kind catalog incomplete: "
            + ", ".join(sorted(real_item_names - item_translated_names)[:15]))
     # Every non-unique source monster (excluding the <player> placeholder)
-    # must have a display-only Chinese label. Unique monster proper names
-    # deliberately retain their canonical name and purple rendering.
+    # must have display-only Chinese labels. The unique name dictionary
+    # must also match the source exactly without mutating canonical races.
     monster_records = []
     current_name = None
     current_unique = False
@@ -181,6 +182,17 @@ def main():
     expect(regular_names == translated_monster_names,
            "Original Angband non-unique monster catalog incomplete: "
            + ", ".join(sorted(regular_names - translated_monster_names)[:15]))
+    unique_names = {name for name, unique in monster_records if unique}
+    unique_pairs = table(unique_mon_header)
+    unique_header_size = re.search(
+        r"#define\s+ANGDROID_ZH_TW_UNIQUE_MONSTER_NAMES\s+(\d+)",
+        unique_mon_header)
+    expect(bool(unique_header_size) and int(unique_header_size.group(1)) == 101
+           and len(unique_pairs) == len(unique_names) == 101
+           and len({en for en, _ in unique_pairs}) == len(unique_pairs)
+           and {en for en, _ in unique_pairs} == unique_names
+           and all(zh.strip() for _, zh in unique_pairs),
+           "All 101 unique monster display names must match canonical records")
     for symbol in ("angdroid_utf8_display_columns",
                    "angdroid_utf8_clip_columns",
                    "angdroid_utf8_printf_field_bytes"):
@@ -200,8 +212,13 @@ def main():
     expect("angdroid_utf8_clip_columns(highlighted" in knowledge_ui,
            "Message search highlight may cut through a Chinese character")
 
-    expect("!rf_has(race->flags, RF_UNIQUE)" in mon,
-           "Unique monster names must remain in their original display form")
+    expect('"zh-tw-unique-monsters.h"' in mon
+           and "angdroid_zh_tw_unique_monster_name(race->name)" in mon
+           and 'localized ? localized : race->name' in mon
+           and '"zh-tw-unique-monsters.h"' in monster_lore_ui
+           and 'unique ? angdroid_zh_tw_unique_monster_name(race->name)' in
+           monster_lore_ui,
+           "Unique monster display list and lore titles must use the bilingual lookup")
     expect("if (!easy_know && !kind->aware && kind->flavor)" in obj,
            "Unidentified item flavors must not be disclosed")
     expect("obj_desc_name_format(buf, max, 0, kind->name, NULL, false)" in obj,
@@ -526,8 +543,10 @@ def main():
            and "(msg->flags & MON_MSG_FLAG_OFFSCREEN) != 0" in mon_msg_ui,
            "Monster message translation and Chinese subjects are not wired")
     expect("angdroid_zh_tw_monster_list_name(race->name)" in mon_msg_ui
-           and 'if (!skip_subject(msg->msg_code))' in mon_msg_ui,
-           "Monster message names or omit-subject code changed")
+           and 'if (!skip_subject(msg->msg_code))' in mon_msg_ui
+           and '"zh-tw-unique-monsters.h"' in mon_msg_ui
+           and 'angdroid_zh_tw_unique_monster_name(race->name)' in mon_msg_ui,
+           "Monster message names, unique translations or omit-subject code changed")
     expect('msgt(msg_type, "%s%s（平均 %d）"' in mon_msg_ui
            and 'msgt(msg_type, "%s%s (average %d)"' in mon_msg_ui,
            "Monster damage average translation missing English fallback")
@@ -899,11 +918,13 @@ def main():
            'c_put_str(attr, name_label, row, col);' in knowledge_ui,
            "Monster knowledge names must be localized and clipped before symbol")
     expect('"zh-tw-monsters.h"' in monster_label_header and
+           '"zh-tw-unique-monsters.h"' in monster_label_header and
            '"menu-text-fit.h"' in monster_label_header and
-           'if (!english || !zh_tw || is_unique) return english;' in monster_label_header and
+           'if (!english || !zh_tw) return english;' in monster_label_header and
+           'angdroid_zh_tw_unique_monster_name(english)' in monster_label_header and
            'return translated ? translated : english;' in monster_label_header and
            'angdroid_menu_copy_columns(dest, capacity, label,' in monster_label_header,
-           "Monster knowledge must preserve unique/English names and UTF-8 glyphs")
+           "Monster knowledge must preserve unique and English fallback with UTF-8 glyphs")
     expect('test_knowledge_monster_label.c' in native_tests and
            'strcmp(label, "遠古紅")' in monster_label_test and
            'strcmp(label, "遠古")' in monster_label_test and
@@ -1832,7 +1853,7 @@ def main():
             print("FAIL:", item)
         return 1
     print(f"PASS: {checks} native game-localization source safeguards")
-    print("  Monster list entries: 522 | item kind labels: 326")
+    print("  Monster list entries: 522 regular + 101 unique | item kind labels: 326")
     print("  Death menu labels: 9 | death prompts: 11")
     print("NOTE: Requires Android NDK and on-device zh-TW gameplay validation")
     return 0
