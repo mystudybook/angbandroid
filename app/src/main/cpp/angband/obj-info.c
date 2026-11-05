@@ -41,6 +41,7 @@
 #include "droid.h"
 #include "zh-tw-object-info.h"
 #include "zh-tw-item-info.h"
+#include "zh-tw-activations.h"
 
 /**
  * Describes the number of blows possible for given stat bonuses
@@ -2100,6 +2101,7 @@ static bool describe_effect(textblock *tb, const struct object *obj,
 	struct effect *effect = NULL;
 	bool aimed = false;
 	int min_time, max_time, failure_chance;
+	const char *localized_activation = NULL;
 
 	/* Sometimes we only print artifact activation info */
 	if (only_artifacts && !obj->artifact) {
@@ -2128,10 +2130,18 @@ static bool describe_effect(textblock *tb, const struct object *obj,
 		return true;
 	}
 
-	/* Activations get a special message */
+	/* Describe an already-known activation only. The canonical ID and
+	 * effect data remain English; missing translations fall back cleanly. */
 	if (obj->activation && obj->activation->desc) {
-		textblock_append(tb, "When activated, it ");
-		textblock_append(tb, "%s", obj->activation->desc);
+		localized_activation = angdroid_zh_tw_activation_description(
+			obj->activation->name, angdroid_zh_tw_enabled());
+		if (localized_activation) {
+			textblock_append(tb, "啟動後會");
+			textblock_append(tb, "%s", localized_activation);
+		} else {
+			textblock_append(tb, "When activated, it ");
+			textblock_append(tb, "%s", obj->activation->desc);
+		}
 	} else {
 		int level = obj->artifact ?
 			obj->artifact->level : obj->kind->level;
@@ -2160,7 +2170,7 @@ static bool describe_effect(textblock *tb, const struct object *obj,
 		textblock_free(tbe);
 	}
 
-	textblock_append(tb, ".\n");
+	textblock_append(tb, "%s", localized_activation ? "。\n" : ".\n");
 
 	if (min_time || max_time) {
 		/* Sometimes adjust for player speed */
