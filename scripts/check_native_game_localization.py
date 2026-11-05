@@ -251,6 +251,53 @@ def main():
            and "test_item_flavor_locale.c" in native_tests
            and 'angdroid_zh_tw_flavor_name(NULL) == NULL' in flavor_native_test,
            "Flavor display translation must preserve unknown-item isolation")
+    # Narrative paragraphs are presentation-only.  The complete source
+    # ego corpus has 5 described records, and the artifact translation
+    # grows in reviewable batches while retaining English fallback.
+    artifact_story = source(CPP / "angband/zh-tw-artifact-lore.h", errors)
+    ego_story = source(CPP / "angband/zh-tw-ego-lore.h", errors)
+    story_test = source(ROOT / "tests/native/test_item_story_locale.c", errors)
+    described_artifacts = set()
+    current_name = None
+    has_description = False
+    for line in source(
+            ROOT / "variant_lib/angband/gamedata/artifact.txt", errors).splitlines():
+        if line.startswith("name:"):
+            if current_name is not None and has_description:
+                described_artifacts.add(current_name)
+            current_name = line[5:]
+            has_description = False
+        elif line.startswith("desc:") and current_name is not None:
+            has_description = True
+    if current_name is not None and has_description:
+        described_artifacts.add(current_name)
+    artifact_lore_entries = table(artifact_story)
+    ego_lore_entries = table(ego_story)
+    expect(len(described_artifacts) == 138
+           and len(artifact_lore_entries) == 43
+           and {en for en, _ in artifact_lore_entries} <= described_artifacts
+           and len({en for en, _ in artifact_lore_entries}) == 43
+           and all(zh.strip() for _, zh in artifact_lore_entries)
+           and "#define ANGDROID_ZH_TW_ARTIFACT_LORE 43" in artifact_story,
+           "Artifact lore descriptions need 43 valid canonical source keys")
+    expect(len(ego_lore_entries) == 5
+           and {en for en, _ in ego_lore_entries} ==
+               {"of Accuracy", "of Power", "of Wounding",
+                "of Slaying", "of Craftsmanship"}
+           and "#define ANGDROID_ZH_TW_EGO_LORE 5" in ego_story
+           and all(zh.strip() for _, zh in ego_lore_entries),
+           "All five canonical ego lore descriptions need zh-TW mappings")
+    expect('"zh-tw-artifact-lore.h"' in obj_info
+           and '"zh-tw-ego-lore.h"' in obj_info
+           and "angdroid_zh_tw_artifact_flavor(obj->artifact->name)" in obj_info
+           and "angdroid_zh_tw_ego_flavor(obj->ego->name)" in obj_info
+           and "obj->known->artifact && obj->artifact->text" in obj_info
+           and "obj->known->ego != NULL" in obj_info
+           and "!(mode & OINFO_SPOIL)" in obj_info
+           and "if (translated) flavor = translated;" in obj_info
+           and "test_item_story_locale.c" in native_tests
+           and 'angdroid_zh_tw_artifact_flavor(NULL) == NULL' in story_test,
+           "Artifact/ego narratives need known-item and dump isolation")
     # Only known artifacts and explicit display flags may use translated
     # labels. All 138 names must match canonical artifact.txt exactly.
     artifact_source = source(ROOT / "variant_lib/angband/gamedata/artifact.txt", errors)
