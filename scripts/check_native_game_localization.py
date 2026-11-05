@@ -1397,6 +1397,58 @@ def main():
            'verify("Your limbs feel more energetic!", "你的四肢變得更加靈活有力！");' in timed_test,
            "Timed status C99 test must cover all groups and dynamic object-kind tags")
 
+    # Gameplay projection feedback and monster attacks are translated only
+    # at display sinks, preserving the original damage and status calculations.
+    projection_player = source(CPP / "angband/project-player.c", errors)
+    projection_monster = source(CPP / "angband/mon-attack.c", errors)
+    projection_header = source(CPP / "angband/zh-tw-projection-feedback.h", errors)
+    projection_test = source(ROOT / "tests/native/test_projection_feedback_locale.c", errors)
+    projection_data = source(ROOT / "variant_lib/angband/gamedata/projection.txt", errors)
+    function_sections = (
+        ("angdroid_project_feedback(", 19),
+        ("angdroid_project_stat(", 5),
+        ("angdroid_project_blind_term(", 12),
+    )
+    for title, count in function_sections:
+        section = projection_header.partition(
+            "static inline const char *" + title)[2].partition(
+            "return english;\n}")[0]
+        matches = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', section)
+        expect(len(matches) == count and
+               len({en for en, _ in matches}) == count and
+               all(zh.strip() and "%" not in zh for _, zh in matches),
+               "Projection dictionary source entry mismatch: " + title)
+    blind_keys = {x[11:] for x in projection_data.splitlines()
+                  if x.startswith("blind-desc:")}
+    blind_map = projection_header.partition(
+        "static inline const char *angdroid_project_blind_term(")[2]
+    expect(len(blind_keys) == 12 and
+           all('{ "' + x + '", "' in blind_map for x in blind_keys),
+           "Blind projection names must match every original source term")
+    expect('"zh-tw-projection-feedback.h"' in projection_player and
+           projection_player.count('msg("%s", angdroid_project_feedback(') >= 19 and
+           'angdroid_project_stat(act, true)' in projection_player and
+           'angdroid_project_blind_term(projections[typ].blind_desc, true)'
+                in projection_player and
+           'msg("你受到 %d 點傷害。", reduced);' in projection_player and
+           'msg("你額外受到 %d 點傷害。", xtra);' in projection_player and
+           'msg("You take %d damage.", reduced);' in projection_player and
+           'msg("You take an extra %d damage.", xtra);' in projection_player,
+           "Projection gameplay sinks must use safe locale formatting")
+    expect('"droid.h"' in projection_monster and
+           all(format_string in projection_monster for format_string in
+               ('%s 試圖施法，但失敗了。', '%s 被擊退了。',
+                '%s 沒有擊中你。', '%s 沒有擊中 %s。',
+                '錯誤：找不到 %s 的效果處理程序。')) and
+           'monster_spell_failrate(mon)' in projection_monster and
+           'chance_of_monster_hit(mon, effect)' in projection_monster,
+           "Monster attack translation must preserve the attack decision logic")
+    expect('test_projection_feedback_locale.c' in native_tests and
+           'verify(angdroid_project_stat, "strong", "力量");' in projection_test and
+           'verify(angdroid_project_blind_term, "something", "不明力量");' in
+               projection_test,
+           "Projection bilingual host test must be registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
