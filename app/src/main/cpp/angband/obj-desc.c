@@ -28,6 +28,7 @@
 #include "zh-tw-items.h"
 #include "zh-tw-ego-names.h"
 #include "zh-tw-artifact-names.h"
+#include "zh-tw-flavor-names.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -53,8 +54,13 @@ void object_kind_name(char *buf, size_t max, const struct object_kind *kind,
 					  bool easy_know)
 {
 	/* If not aware, the plain flavour (e.g. Copper) will do. */
-	if (!easy_know && !kind->aware && kind->flavor)
-		my_strcpy(buf, kind->flavor->text, max);
+	if (!easy_know && !kind->aware && kind->flavor) {
+		/* Unknown item kinds remain unknown; only the appearance changes. */
+		const char *flavor = kind->flavor->text;
+		const char *localized = angdroid_zh_tw_enabled()
+			? angdroid_zh_tw_flavor_name(flavor) : NULL;
+		my_strcpy(buf, localized ? localized : flavor, max);
+	}
 
 	/* Use the localized DISPLAY name only for a known kind. Keep
 	 * object_desc(), unidentified flavors and the canonical grammar
@@ -335,6 +341,13 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	 * change the canonical grammar, or affect save/character exports. */
 	if (store || (aware && p && !OPT(p, show_flavors)))
 		show_flavor = false;
+	/* Do not reveal the kind: translate only the existing visible flavor. */
+	if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() &&
+			show_flavor && obj->kind->flavor) {
+		const char *localized_flavor =
+			angdroid_zh_tw_flavor_name(obj->kind->flavor->text);
+		if (localized_flavor) modstr = localized_flavor;
+	}
 	if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() && aware &&
 			!show_flavor && obj->kind->name)
 		localized_kind = angdroid_zh_tw_item_kind_name(obj->kind->name);

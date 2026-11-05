@@ -64,6 +64,22 @@ class VisibleObjectLocalizationTest(unittest.TestCase):
         self.assertIn("if (localized) artifact_name = localized;", DESCRIBE)
         self.assertIn('strnfcat(buf, max, &end, " %s", artifact_name);', DESCRIBE)
 
+    def test_unknown_item_flavor_only_changes_visible_appearance(self):
+        flavor_header = (CPP / "zh-tw-flavor-names.h").read_text(encoding="utf-8")
+        pairs = re.findall(
+            r'\{\s*"([^"\n]+)",\s*"([^"\n]+)"\s*\}', flavor_header
+        )
+        self.assertEqual(len(pairs), 202)
+        self.assertEqual(len({name for name, _ in pairs}), 202)
+        self.assertIn('#include "zh-tw-flavor-names.h"', DESCRIBE)
+        self.assertIn("if (!easy_know && !kind->aware && kind->flavor)", DESCRIBE)
+        self.assertIn("angdroid_zh_tw_flavor_name(flavor)", DESCRIBE)
+        self.assertIn("my_strcpy(buf, localized ? localized : flavor, max);", DESCRIBE)
+        self.assertIn("show_flavor && obj->kind->flavor", DESCRIBE)
+        self.assertIn("angdroid_zh_tw_flavor_name(obj->kind->flavor->text)", DESCRIBE)
+        self.assertIn("if (localized_flavor) modstr = localized_flavor;", DESCRIBE)
+        self.assertIn("const char *localized_kind = NULL;", DESCRIBE)
+
     def test_only_requested_screen_calls_opt_in(self):
         for name, expected in UI_CALL_COUNTS.items():
             content = (CPP / name).read_text(encoding="utf-8")

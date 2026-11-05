@@ -12,7 +12,8 @@ out = subprocess.check_output(
 )
 report = json.loads(out)
 a = report["angband"]
-for key in ("identified_item_kind_names", "artifact_display_names",
+for key in ("identified_item_kind_names", "unidentified_flavor_labels",
+            "artifact_display_names",
             "ego_item_suffix_names",
             "nonunique_monster_names",
             "unique_monster_display_names"):
@@ -20,6 +21,7 @@ for key in ("identified_item_kind_names", "artifact_display_names",
     assert section["translated"] == section["source_total"], key
     assert section["untranslated"] == [], key
     assert section["invalid_keys"] == [], key
+assert a["unidentified_flavor_labels"]["source_total"] == 202
 assert a["artifact_display_names"]["source_total"] == 138
 assert a["ego_item_suffix_names"]["source_total"] == 79
 assert a["unique_monster_display_names"]["source_total"] == 101
