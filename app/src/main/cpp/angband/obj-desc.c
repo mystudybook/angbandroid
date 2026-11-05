@@ -26,6 +26,7 @@
 #include "obj-util.h"
 #include "droid.h"
 #include "zh-tw-items.h"
+#include "zh-tw-ego-names.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -354,8 +355,16 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	/* Append extra names of various kinds */
 	if (object_is_known_artifact(obj))
 		strnfcat(buf, max, &end, " %s", obj->artifact->name);
-	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store))
-		strnfcat(buf, max, &end, " %s", obj->ego->name);
+	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store)) {
+		/* Only translate a revealed ego suffix for opted-in screen calls.
+		 * Unknown ego text, English mode and unflagged exports stay intact. */
+		const char *ego_name = obj->ego->name;
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled()) {
+			const char *localized = angdroid_zh_tw_ego_name(ego_name);
+			if (localized) ego_name = localized;
+		}
+		strnfcat(buf, max, &end, " %s", ego_name);
+	}
 	else if (!localized_kind && aware && !obj->artifact &&
 			 (obj->kind->flavor || obj->kind->tval == TV_SCROLL)) {
 		if (terse)
