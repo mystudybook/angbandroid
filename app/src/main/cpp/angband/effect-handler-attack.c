@@ -33,6 +33,9 @@
 #include "player-util.h"
 #include "project.h"
 #include "trap.h"
+#include "droid.h"
+#include "zh-tw-attack-feedback.h"
+#include "zh-tw-projection-terms.h"
 
 
 static void get_target(struct source origin, int dir, struct loc *grid,
@@ -237,13 +240,17 @@ bool effect_handler_HEAL_HP(effect_handler_context_t *context)
 
 	/* Print a nice message */
 	if (num < 5)
-		msg("You feel a little better.");
+		msg("%s", angdroid_attack_feedback("You feel a little better.",
+			angdroid_zh_tw_enabled()));
 	else if (num < 15)
-		msg("You feel better.");
+		msg("%s", angdroid_attack_feedback("You feel better.",
+			angdroid_zh_tw_enabled()));
 	else if (num < 35)
-		msg("You feel much better.");
+		msg("%s", angdroid_attack_feedback("You feel much better.",
+			angdroid_zh_tw_enabled()));
 	else
-		msg("You feel very good.");
+		msg("%s", angdroid_attack_feedback("You feel very good.",
+			angdroid_zh_tw_enabled()));
 
 	return (true);
 }
@@ -280,13 +287,33 @@ bool effect_handler_MON_HEAL_HP(effect_handler_context_t *context)
 		mon->hp = mon->maxhp;
 
 		if (seen)
-			msg("%s looks REALLY healthy!", m_name);
+			{
+			if (angdroid_zh_tw_enabled())
+				msg("%s 看起來完全恢復了健康！", m_name);
+			else
+				msg("%s looks REALLY healthy!", m_name);
+		}
 		else
-			msg("%s sounds REALLY healthy!", m_name);
+			{
+			if (angdroid_zh_tw_enabled())
+				msg("%s 聽起來精力充沛！", m_name);
+			else
+				msg("%s sounds REALLY healthy!", m_name);
+		}
 	} else if (seen) { /* Partially healed */
-		msg("%s looks healthier.", m_name);
+		{
+			if (angdroid_zh_tw_enabled())
+				msg("%s 看起來好轉了。", m_name);
+			else
+				msg("%s looks healthier.", m_name);
+		}
 	} else {
-		msg("%s sounds healthier.", m_name);
+		{
+			if (angdroid_zh_tw_enabled())
+				msg("%s 聽起來精神好多了。", m_name);
+			else
+				msg("%s sounds healthier.", m_name);
+		}
 	}
 
 	/* Redraw (later) if needed */
@@ -296,7 +323,12 @@ bool effect_handler_MON_HEAL_HP(effect_handler_context_t *context)
 	/* Cancel fear */
 	if (mon->m_timed[MON_TMD_FEAR]) {
 		mon_clear_timed(mon, MON_TMD_FEAR, MON_TMD_FLG_NOMESSAGE);
-		msg("%s recovers %s courage.", m_name, m_poss);
+		{
+			if (angdroid_zh_tw_enabled())
+				msg("%s 恢復了勇氣。", m_name);
+			else
+				msg("%s recovers %s courage.", m_name, m_poss);
+		}
 	}
 
 	/* ID */
@@ -337,9 +369,19 @@ bool effect_handler_MON_HEAL_KIN(effect_handler_context_t *context)
 
 	if (seen) {
 		if (mon->hp == mon->maxhp) {
-			msg("%s looks REALLY healthy!", m_name);
+			{
+			if (angdroid_zh_tw_enabled())
+				msg("%s 看起來完全恢復了健康！", m_name);
+			else
+				msg("%s looks REALLY healthy!", m_name);
+		}
 		} else if (seen) { /* Partially healed */
-			msg("%s looks healthier.", m_name);
+			{
+			if (angdroid_zh_tw_enabled())
+				msg("%s 看起來好轉了。", m_name);
+			else
+				msg("%s looks healthier.", m_name);
+		}
 		}
 	}
 
@@ -350,7 +392,12 @@ bool effect_handler_MON_HEAL_KIN(effect_handler_context_t *context)
 	/* Cancel fear */
 	if (mon->m_timed[MON_TMD_FEAR]) {
 		mon_clear_timed(mon, MON_TMD_FEAR, MON_TMD_FLG_NOMESSAGE);
-		msg("%s recovers %s courage.", m_name, m_poss);
+		{
+			if (angdroid_zh_tw_enabled())
+				msg("%s 恢復了勇氣。", m_name);
+			else
+				msg("%s recovers %s courage.", m_name, m_poss);
+		}
 	}
 
 	/* ID */
@@ -530,7 +577,12 @@ bool effect_handler_DAMAGE(effect_handler_context_t *context)
 	/* Hit the player */
 	dam = player_apply_damage_reduction(player, dam);
 	if (dam && OPT(player, show_damage)) {
-		msg("You take %d damage.", dam);
+		{
+			if (angdroid_zh_tw_enabled())
+				msg("你受到 %d 點傷害。", dam);
+			else
+				msg("You take %d damage.", dam);
+		}
 	}
 	take_hit(player, dam, killer);
 
@@ -738,7 +790,11 @@ bool effect_handler_BREATH(effect_handler_context_t *context)
 			diameter_of_source /= 2;
 		}
 	} else if (context->origin.what == SRC_PLAYER) {
-		msgt(projections[type].msgt, "You breathe %s.", projections[type].desc);
+		if (angdroid_zh_tw_enabled())
+			msgt(projections[type].msgt, "你吐出了%s氣息。",
+				angdroid_projection_description(projections[type].desc, true));
+		else
+			msgt(projections[type].msgt, "You breathe %s.", projections[type].desc);
 
 		/* Ask for a target if no direction given */
 		if (context->dir == DIR_TARGET && target_okay()) {
@@ -1039,7 +1095,8 @@ bool effect_handler_STAR(effect_handler_context_t *context)
 
 	/* Describe */
 	if (!player->timed[TMD_BLIND])
-		msg("Light shoots in all directions!");
+		msg("%s", angdroid_attack_feedback("Light shoots in all directions!",
+			angdroid_zh_tw_enabled()));
 
 	for (i = 0; i < 8; i++) {
 		/* Use the current direction */
@@ -1178,7 +1235,8 @@ bool effect_handler_DESTRUCTION(effect_handler_context_t *context)
 
 	/* No effect in town or arena */
 	if ((!player->depth) || (player->upkeep->arena_level)) {
-		msg("The ground shakes for a moment.");
+		msg("%s", angdroid_attack_feedback("The ground shakes for a moment.",
+			angdroid_zh_tw_enabled()));
 		return true;
 	}
 
@@ -1248,14 +1306,16 @@ bool effect_handler_DESTRUCTION(effect_handler_context_t *context)
 
 	/* Player is affected */
 	if (elem == ELEM_LIGHT) {
-		msg("There is a searing blast of light!");
+		msg("%s", angdroid_attack_feedback("There is a searing blast of light!",
+			angdroid_zh_tw_enabled()));
 		equip_learn_element(player, ELEM_LIGHT);
 		if (!player_resists(player, ELEM_LIGHT)) {
 			(void)player_inc_timed(player, TMD_BLIND,
 				10 + randint1(10), true, true, true);
 		}
 	} else if (elem == ELEM_DARK) {
-		msg("Darkness seems to crush you!");
+		msg("%s", angdroid_attack_feedback("Darkness seems to crush you!",
+			angdroid_zh_tw_enabled()));
 		equip_learn_element(player, ELEM_DARK);
 		if (!player_resists(player, ELEM_DARK)) {
 			(void)player_inc_timed(player, TMD_BLIND,
@@ -1319,10 +1379,12 @@ bool effect_handler_EARTHQUAKE(effect_handler_context_t *context)
 
 	if ((player->depth) && ((!player->upkeep->arena_level)
 							|| (context->origin.what == SRC_MONSTER))) {
-		msg("The ground shakes! The ceiling caves in!");
+		msg("%s", angdroid_attack_feedback("The ground shakes! The ceiling caves in!",
+			angdroid_zh_tw_enabled()));
 	} else {
 		/* No effect in town or arena */
-		msg("The ground shakes for a moment.");
+		msg("%s", angdroid_attack_feedback("The ground shakes for a moment.",
+			angdroid_zh_tw_enabled()));
 		return true;
 	}
 
@@ -1399,18 +1461,22 @@ bool effect_handler_EARTHQUAKE(effect_handler_context_t *context)
 		{
 			case 1:
 			{
-				msg("The cave ceiling collapses on you!");
+				msg("%s", angdroid_attack_feedback("The cave ceiling collapses on you!",
+			angdroid_zh_tw_enabled()));
 				break;
 			}
 			case 2:
 			{
-				msg("The cave floor twists in an unnatural way!");
+				msg("%s", angdroid_attack_feedback("The cave floor twists in an unnatural way!",
+			angdroid_zh_tw_enabled()));
 				break;
 			}
 			default:
 			{
-				msg("The cave quakes!");
-				msg("You are pummeled with debris!");
+				msg("%s", angdroid_attack_feedback("The cave quakes!",
+			angdroid_zh_tw_enabled()));
+				msg("%s", angdroid_attack_feedback("You are pummeled with debris!",
+			angdroid_zh_tw_enabled()));
 				break;
 			}
 		}
@@ -1423,7 +1489,12 @@ bool effect_handler_EARTHQUAKE(effect_handler_context_t *context)
 				strnfmt(dam_text, sizeof(dam_text), " (%d)",
 					damage);
 			}
-			msg("You are severely crushed!%s", dam_text);
+			{
+			if (angdroid_zh_tw_enabled())
+				msg("你受到嚴重的擠壓傷害！%s", dam_text);
+			else
+				msg("You are severely crushed!%s", dam_text);
+		}
 		} else {
 			/* Destroy the grid, and push the player to (relative) safety */
 			const char *hurt_msg = "";
@@ -1455,7 +1526,8 @@ bool effect_handler_EARTHQUAKE(effect_handler_context_t *context)
 				strnfmt(dam_text, sizeof(dam_text), " (%d)",
 					damage);
 			}
-			msg("%s%s", hurt_msg, dam_text);
+			msg("%s%s", angdroid_attack_feedback(hurt_msg,
+				angdroid_zh_tw_enabled()), dam_text);
 
 			/* Move player */
 			monster_swap(pgrid, safe_grid);
@@ -1636,9 +1708,19 @@ bool effect_handler_TAP_UNLIFE(effect_handler_context_t *context)
 	drain = MIN(mon->hp, amount) / 4;
 	monster_desc(m_name, sizeof(m_name), mon, MDESC_TARG);
 	if (OPT(player, show_damage)) {
-		msg("You draw power from the %s. (%d)", m_name, amount);
+		{
+			if (angdroid_zh_tw_enabled())
+				msg("你從 %s 身上汲取力量。（%d）", m_name, amount);
+			else
+				msg("You draw power from the %s. (%d)", m_name, amount);
+		}
 	} else {
-		msg("You draw power from the %s.", m_name);
+		{
+			if (angdroid_zh_tw_enabled())
+				msg("你從 %s 身上汲取力量。", m_name);
+			else
+				msg("You draw power from the %s.", m_name);
+		}
 	}
 	dead = mon_take_hit(mon, player, amount, &fear, " is destroyed!");
 
@@ -1677,7 +1759,8 @@ bool effect_handler_CURSE(effect_handler_context_t *context)
 
 	/* Need to choose a monster, not just point */
 	if (!mon) {
-		msg("No monster selected!");
+		msg("%s", angdroid_attack_feedback("No monster selected!",
+			angdroid_zh_tw_enabled()));
 		return false;
 	}
 
@@ -1739,7 +1822,12 @@ bool effect_handler_JUMP_AND_BITE(effect_handler_context_t *context)
 
 	/* Needed to be adjacent */
 	if (d == first_d + 8) {
-		msg("Not enough room next to %s!", m_name);
+		{
+			if (angdroid_zh_tw_enabled())
+				msg("%s 身旁沒有足夠的空間！", m_name);
+			else
+				msg("Not enough room next to %s!", m_name);
+		}
 		return false;
 	}
 
@@ -1754,9 +1842,19 @@ bool effect_handler_JUMP_AND_BITE(effect_handler_context_t *context)
 	drain = MIN(mon->hp + 1, amount);
 	assert(drain > 0);
 	if (OPT(player, show_damage)) {
-		msg("You bite %s. (%d)", m_name, drain);
+		{
+			if (angdroid_zh_tw_enabled())
+				msg("你咬了 %s 一口。（%d）", m_name, drain);
+			else
+				msg("You bite %s. (%d)", m_name, drain);
+		}
 	} else {
-		msg("You bite %s.", m_name);
+		{
+			if (angdroid_zh_tw_enabled())
+				msg("你咬了 %s 一口。", m_name);
+			else
+				msg("You bite %s.", m_name);
+		}
 	}
 	dead = mon_take_hit(mon, player, amount, &fear, " is drained dry!");
 
@@ -1802,7 +1900,8 @@ bool effect_handler_MOVE_ATTACK(effect_handler_context_t *context)
 
 	mon = square_monster(cave, target);
 	if (mon == NULL || !monster_is_obvious(mon)) {
-		msg("This spell must target a monster.");
+		msg("%s", angdroid_attack_feedback("This spell must target a monster.",
+			angdroid_zh_tw_enabled()));
 		return false;
 	}
 
@@ -1831,7 +1930,8 @@ bool effect_handler_MOVE_ATTACK(effect_handler_context_t *context)
 				if (square_monster(cave, next_grid)) attack = true;
 				break;
 			} else if (i == 2) {
-				msg("The way is barred.");
+				msg("%s", angdroid_attack_feedback("The way is barred.",
+			angdroid_zh_tw_enabled()));
 				return moves != 4;
 			}
 		}
@@ -1862,7 +1962,8 @@ bool effect_handler_SINGLE_COMBAT(effect_handler_context_t *context)
 
 	/* Already in an arena */
 	if (player->upkeep->arena_level) {
-		msg("You are already in single combat!");
+		msg("%s", angdroid_attack_feedback("You are already in single combat!",
+			angdroid_zh_tw_enabled()));
 		return false;
 	}
 
@@ -1875,7 +1976,12 @@ bool effect_handler_SINGLE_COMBAT(effect_handler_context_t *context)
 			char m_name[80];
 			monster_desc(m_name, sizeof(m_name), mon,
 				MDESC_CAPITAL | MDESC_COMMA);
-			msg("%s resists!", m_name);
+			{
+			if (angdroid_zh_tw_enabled())
+				msg("%s 抵抗了效果！", m_name);
+			else
+				msg("%s resists!", m_name);
+		}
 			return true;
 		}
 
@@ -1893,7 +1999,8 @@ bool effect_handler_SINGLE_COMBAT(effect_handler_context_t *context)
 		target_set_monster(cave_monster(cave, 1));
 		player->upkeep->health_who = cave_monster(cave, 1);
 	} else {
-		msg("No monster selected!");
+		msg("%s", angdroid_attack_feedback("No monster selected!",
+			angdroid_zh_tw_enabled()));
 		return false;
 	}
 
@@ -1930,10 +2037,14 @@ bool effect_handler_MELEE_BLOWS(effect_handler_context_t *context)
 	taim = distance(grid, target);
 	mon = square_monster(cave, target);
 	if (taim > 1) {
-		msgt(MSG_GENERIC, "Target too far away (%d).", taim);
+		if (angdroid_zh_tw_enabled())
+			msgt(MSG_GENERIC, "目標距離太遠（%d）。", taim);
+		else
+			msgt(MSG_GENERIC, "Target too far away (%d).", taim);
 		return false;
 	} else if (!mon) {
-		msg("You must attack a monster.");
+		msg("%s", angdroid_attack_feedback("You must attack a monster.",
+			angdroid_zh_tw_enabled()));
 		return false;
 	}
 
@@ -1998,7 +2109,8 @@ bool effect_handler_WONDER(effect_handler_context_t *context)
 	context->ident = true;
 
 	if (die > 100)
-		msg("You feel a surge of power!");
+		msg("%s", angdroid_attack_feedback("You feel a surge of power!",
+			angdroid_zh_tw_enabled()));
 
 	if (die < 8) {
 		subtype = PROJ_MON_CLONE;
