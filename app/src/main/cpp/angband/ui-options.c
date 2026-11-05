@@ -283,11 +283,9 @@ static bool use_option_context_menu(struct menu *m, const ui_event *in,
 	switch (selected) {
 	case ACT_CTX_OPT_SAVE:
 		if (options_save_custom(&player->opts, page)) {
-			get_com("Successfully saved.  Press any key to "
-				"continue.", &dummy);
+			get_com(angdroid_game_ui_text("Successfully saved.  Press any key to continue.", angdroid_zh_tw_enabled()), &dummy);
 		} else {
-			get_com("Save failed.  Press any key to continue.",
-				&dummy);
+			get_com(angdroid_game_ui_text("Save failed.  Press any key to continue.", angdroid_zh_tw_enabled()), &dummy);
 		}
 		break;
 
@@ -295,8 +293,7 @@ static bool use_option_context_menu(struct menu *m, const ui_event *in,
 		if (options_restore_custom(&player->opts, page)) {
 			refresh = true;
 		} else {
-			get_com("Restore failed.  Press any key to continue.",
-				&dummy);
+			get_com(angdroid_game_ui_text("Restore failed.  Press any key to continue.", angdroid_zh_tw_enabled()), &dummy);
 		}
 		break;
 
