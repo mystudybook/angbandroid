@@ -216,10 +216,8 @@ def main():
     expect('"zh-tw-unique-monsters.h"' in mon
            and 'angdroid_zh_tw_unique_monster_name(race->name)' in mon
            and 'strnfmt(buf, buflen, "[U] %s", translated)' in mon
-           and 'strnfmt(buf, buflen, "[U] %s", race->name)' in mon
-           and '"zh-tw-unique-monsters.h"' in mon_msg_ui
-           and 'angdroid_zh_tw_unique_monster_name(race->name)' in mon_msg_ui,
-           "Unique names must stay display-only in lists and messages")
+           and 'strnfmt(buf, buflen, "[U] %s", race->name)' in mon,
+           "Unique names must stay display-only in monster lists")
     expect("if (!easy_know && !kind->aware && kind->flavor)" in obj,
            "Unidentified item flavors must not be disclosed")
     expect("obj_desc_name_format(buf, max, 0, kind->name, NULL, false)" in obj,
@@ -523,6 +521,10 @@ def main():
     expect('test_object_info_locale.c' in native_tests,
            "Object info host C test not registered")
     mon_msg_ui = source(CPP / "angband/mon-msg.c", errors)
+    expect('"zh-tw-unique-monsters.h"' in mon_msg_ui
+           and 'angdroid_zh_tw_unique_monster_name(race->name)' in mon_msg_ui
+           and 'if (invisible)' in mon_msg_ui,
+           "Unique message subjects need hidden-identity and English fallback")
     mon_msg_originals = source(CPP / "angband/list-mon-message.h", errors)
     mon_msg_zh = source(CPP / "angband/zh-tw-mon-messages.h", errors)
     pain_source = source(ROOT / "variant_lib/angband/gamedata/pain.txt", errors)
