@@ -1252,3 +1252,13 @@ of magical equipment and other dynamic effects. All 15 source-matched
 term pairs have an independent C99 bilingual test; none of the original
 power/HP/brand IDs or RPG game mechanics are modified.
 Full Android/NDK build and gameplay tests are still necessary.
+
+
+## Monster movement and quest victory events (2026-11-05)
+
+Monster collisions against canonical terrain, locked doors, broken
+wards, pushing/trampling, floor pickups, and awakening now show zh-TW
+in Angband. Quest stairs and victory messages are also localized.
+Original action logic, data, English fallback and saved quest state are
+untouched. Twelve exact-label pairs are covered by native C99 tests and
+canonical terrain checks. Full Android build and device verification pending.

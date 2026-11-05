@@ -1670,6 +1670,35 @@ def main():
            "Formatted native spell locale tests must be registered")
 
 
+    # Monster terrain messages and quest victory: display-only translation.
+    movement_ui = source(CPP / "angband/mon-move.c", errors)
+    quest_ui = source(CPP / "angband/player-quest.c", errors)
+    movement_locale = source(CPP / "angband/zh-tw-move-quest.h", errors)
+    movement_test = source(ROOT / "tests/native/test_move_quest_locale.c", errors)
+    terrain_data = source(ROOT / "variant_lib/angband/gamedata/terrain.txt", errors)
+    move_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', movement_locale)
+    terrain_phrases = {line.partition(":")[2] for line in
+                       terrain_data.splitlines()
+                       if line.startswith("confused-msg:")}
+    expect(len(move_pairs) == 12 and
+           len({en for en, _ in move_pairs}) == 12 and
+           terrain_phrases.issubset({en for en, _ in move_pairs}) and
+           all(zh.strip() and "%" not in zh for _, zh in move_pairs),
+           "Movement and quest dictionaries must match original terrain keys")
+    expect('"zh-tw-move-quest.h"' in movement_ui and
+           '"zh-tw-move-quest.h"' in quest_ui and
+           'angdroid_move_quest_text(m ? m : "stumbles", true)' in movement_ui and
+           'msg("%s%s。", m_name,' in movement_ui and
+           'msg("%s %s.", m_name, m ? m : "stumbles")' in movement_ui and
+           'angdroid_move_quest_text(' in quest_ui and
+           'square_set_feat(cave, grid, FEAT_MORE);' in quest_ui and
+           'p->total_winner = true;' in quest_ui,
+           "Movement and quest original game behavior must remain")
+    expect('test_move_quest_locale.c' in native_tests and
+           'test("bashes into a wall", "撞上了牆壁");' in movement_test and
+           'test("*** CONGRATULATIONS ***", "＊＊＊ 恭喜你 ＊＊＊");' in movement_test,
+           "Movement and quest regression must remain registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
