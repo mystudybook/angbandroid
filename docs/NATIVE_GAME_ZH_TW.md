@@ -1478,3 +1478,26 @@ canonical translation dictionary is still 326 entries.
   `scripts/verify-zh-tw.sh`. A fresh Android NDK build and real-device
   layout validation remain necessary for this batch.
 
+## All 141 identified object-kind descriptions (2026-11-05)
+
+- The original `object.txt` contains 141 records with `desc:` paragraphs.
+  The complete canonical key set is now translated as display-only
+  Traditional Chinese in `zh-tw-kind-lore.h` (**141/141**).
+- Food, potions, ordinary weapons, ammunition, tools, protective equipment,
+  and all dragon-scale armor descriptions are included; source objects and
+  their parser-facing `name:` keys remain untouched.
+- `describe_flavor_text()` translates the known kind's description only
+  after the existing `obj->kind != obj->known->kind` early return and
+  `object_flavor_is_aware(obj) || ego` gate. Unknown/hidden kinds and
+  unidentified flavor assignments stay unchanged. English mode or missing
+  translations fall back to the original description.
+- The shared lore output path excludes `OINFO_SPOIL`; terse character dumps
+  likewise skip this narrative text. C99 and Python regression checks cover
+  canonical counts, UTF-8 samples, original fallback, and display isolation.
+- With the earlier batches, the original Angband **monster descriptions,
+  artifact narratives, described ego templates and normal kind
+  descriptions** are now each complete as source dictionaries. Full
+  Chinese game-play strings and the other independent native variants are
+  not automatically covered by those four dictionaries. Android gameplay
+  verification must still be run for this new change.
+

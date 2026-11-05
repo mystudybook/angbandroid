@@ -35,6 +35,11 @@ assert ego_lore["source_total"] == 5
 assert ego_lore["translated"] == 5
 assert ego_lore["untranslated"] == []
 assert ego_lore["invalid_keys"] == []
+kind_lore = a["item_kind_flavor_descriptions"]
+assert kind_lore["source_total"] == 141
+assert kind_lore["translated"] == 141
+assert kind_lore["untranslated"] == []
+assert kind_lore["invalid_keys"] == []
 assert a["unique_monster_display_names"]["source_total"] == 101
 assert a["unique_monster_canonical_names_unchanged"] == 101
 assert a["monster_flavor_descriptions"]["translated"] == a["monster_flavor_descriptions"]["source_total"]

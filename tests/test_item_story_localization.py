@@ -9,6 +9,7 @@ CPP = ROOT / "app/src/main/cpp/angband"
 SOURCE = (CPP / "obj-info.c").read_text(encoding="utf-8")
 ARTIFACT = (CPP / "zh-tw-artifact-lore.h").read_text(encoding="utf-8")
 EGO = (CPP / "zh-tw-ego-lore.h").read_text(encoding="utf-8")
+KIND = (CPP / "zh-tw-kind-lore.h").read_text(encoding="utf-8")
 
 
 class ItemStoryLocalizationTest(unittest.TestCase):
@@ -16,6 +17,9 @@ class ItemStoryLocalizationTest(unittest.TestCase):
         pattern = re.compile(r'\{\s*"((?:\\.|[^"\\])*)",\s*"((?:\\.|[^"\\])*)"\s*\}')
         art = pattern.findall(ARTIFACT)
         ego = pattern.findall(EGO)
+        kind = pattern.findall(KIND)
+        self.assertEqual(len(kind), 141)
+        self.assertEqual(len({name for name, _ in kind}), 141)
         self.assertEqual(len(art), 138)
         self.assertEqual(len({name for name, _ in art}), 138)
         self.assertEqual(len(ego), 5)
@@ -28,6 +32,16 @@ class ItemStoryLocalizationTest(unittest.TestCase):
         self.assertIn("const char *flavor = obj->artifact->text;", SOURCE)
         self.assertIn("if (translated) flavor = translated;", SOURCE)
         self.assertIn('textblock_append(tb, "%s\\n\\n", flavor);', SOURCE)
+
+    def test_item_kind_lore_only_after_original_awareness_guard(self):
+        self.assertIn('if (obj->kind != obj->known->kind)', SOURCE)
+        self.assertIn('object_flavor_is_aware(obj) || ego', SOURCE)
+        self.assertIn('if (!ego && obj->kind->text)', SOURCE)
+        self.assertIn('const char *flavor = obj->kind->text;', SOURCE)
+        self.assertIn('angdroid_zh_tw_kind_flavor(obj->kind->name)', SOURCE)
+        self.assertIn('if (translated) flavor = translated;', SOURCE)
+        self.assertIn('textblock_append(tb, "%s", flavor);', SOURCE)
+        self.assertIn('#include "zh-tw-kind-lore.h"', SOURCE)
 
     def test_ego_lore_does_not_disclose_unidentified_ego(self):
         self.assertIn("obj->known->ego != NULL", SOURCE)

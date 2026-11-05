@@ -90,6 +90,7 @@ def inspect() -> dict:
     ego_translations = entries(CPP / "zh-tw-ego-names.h")
     artifact_translations = entries(CPP / "zh-tw-artifact-names.h")
     artifact_lore_translations = entries(CPP / "zh-tw-artifact-lore.h")
+    kind_lore_translations = entries(CPP / "zh-tw-kind-lore.h")
     ego_lore_translations = entries(CPP / "zh-tw-ego-lore.h")
     flavor_translations = entries(CPP / "zh-tw-flavor-names.h")
     monster_translations = entries(CPP / "zh-tw-monsters.h")
@@ -166,6 +167,9 @@ def inspect() -> dict:
             ),
             "artifact_flavor_descriptions": coverage(
                 described_names("artifact.txt"), artifact_lore_translations
+            ),
+            "item_kind_flavor_descriptions": coverage(
+                described_names("object.txt"), kind_lore_translations
             ),
             "ego_flavor_descriptions": coverage(
                 described_names("ego_item.txt"), ego_lore_translations
@@ -250,6 +254,7 @@ def main() -> int:
             ("ego_item_suffix_names", "Ego item suffix names"),
             ("artifact_display_names", "Artifact display names"),
             ("artifact_flavor_descriptions", "Artifact flavor descriptions"),
+            ("item_kind_flavor_descriptions", "Item kind flavor descriptions"),
             ("ego_flavor_descriptions", "Ego flavor descriptions"),
             ("unidentified_flavor_labels", "Unidentified flavor labels"),
             ("monster_flavor_descriptions", "Monster flavor descriptions"),

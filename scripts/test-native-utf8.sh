@@ -95,6 +95,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_item_story_locale"
 "$BUILD_DIR/test_item_story_locale"
 
+# Identified object-kind lore preserves English fallback and original IDs.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_kind_lore_locale.c" \
+    -o "$BUILD_DIR/test_kind_lore_locale"
+"$BUILD_DIR/test_kind_lore_locale"
+
 "$BUILD_DIR/test_item_locale"
 
 # Native UI translations: compile without Android SDK or the game engine.
