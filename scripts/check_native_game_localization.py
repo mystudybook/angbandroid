@@ -1699,6 +1699,37 @@ def main():
            'test("*** CONGRATULATIONS ***", "＊＊＊ 恭喜你 ＊＊＊");' in movement_test,
            "Movement and quest regression must remain registered")
 
+    # Monster theft, mimic revelation and allocation diagnostics are
+    # translated at the output only; inventory/loot logic remains canonical.
+    monster_util_ui = source(CPP / "angband/mon-util.c", errors)
+    monster_make_ui = source(CPP / "angband/mon-make.c", errors)
+    monster_event_dict = source(CPP / "angband/zh-tw-monster-events.h", errors)
+    monster_event_test = source(ROOT / "tests/native/test_monster_events_locale.c", errors)
+    monster_event_pairs = re.findall(
+        r'\{ "([^"]+)", "([^"]+)" \}', monster_event_dict)
+    expect(len(monster_event_pairs) == 5 and
+           len({en for en, _ in monster_event_pairs}) == 5 and
+           all(zh.strip() and "%" not in zh for _, zh in monster_event_pairs),
+           "Monster allocation/theft messages must have safe unique translations")
+    expect('"zh-tw-monster-events.h"' in monster_util_ui and
+           '"zh-tw-monster-events.h"' in monster_make_ui and
+           'angdroid_monster_event("treasure", angdroid_zh_tw_enabled())' in
+                monster_util_ui and
+           'angdroid_monster_event("You vanish into the shadows!",' in
+                monster_util_ui and
+           'msg("你沒能從%s身上偷到%s。", m_name, o_name)' in monster_util_ui and
+           'msg("You fail to steal %s from %s.", o_name, m_name)' in
+                monster_util_ui and
+           'effect_simple(EF_TELEPORT,' in monster_util_ui and
+           'player->au += obj->pval;' in monster_util_ui and
+           'get_mon_num_prep(' in monster_make_ui and
+           'angdroid_monster_event("Too many monsters!",' in monster_make_ui,
+           "Monster theft and spawning behavior must remain untouched")
+    expect('test_monster_events_locale.c' in native_tests and
+           'angdroid_monster_event("treasure", 1)' in monster_event_test and
+           'future event' in monster_event_test,
+           "Monster event C99 regression must be registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

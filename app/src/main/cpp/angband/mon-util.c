@@ -43,6 +43,7 @@
 #include "player-history.h"
 #include "droid.h"
 #include "zh-tw-monsters.h"
+#include "zh-tw-monster-events.h"
 #include "player-quest.h"
 #include "player-timed.h"
 #include "player-util.h"
@@ -729,7 +730,9 @@ void become_aware(struct chunk *c, struct monster *mon)
 
 			/* Print a message */
 			if (square_isseen(c, obj->grid))
-				msg("The %s was really a monster!", o_name);
+				if (angdroid_zh_tw_enabled())
+					msg("原來%s是一隻怪物！", o_name);
+				else msg("The %s was really a monster!", o_name);
 
 			/* Clear the mimicry */
 			obj->mimicking_m_idx = 0;
@@ -1459,7 +1462,9 @@ void steal_monster_item(struct monster *mon, int midx)
 
 		/* No object */
 		if (!obj) {
-			msg("You can find nothing to steal from %s.", m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("你找不到任何能從%s身上偷走的物品。", m_name);
+			else msg("You can find nothing to steal from %s.", m_name);
 			if (one_in_(3)) {
 				/* Monster notices */
 				monster_wake(mon, false, 100);
@@ -1488,7 +1493,9 @@ void steal_monster_item(struct monster *mon, int midx)
 			obj->held_m_idx = 0;
 			pile_excise(&mon->held_obj, obj);
 			if (tval_is_money(obj)) {
-				msg("You steal %d gold pieces worth of treasure.", obj->pval);
+				if (angdroid_zh_tw_enabled())
+					msg("你偷走了價值 %d 枚金幣的財寶。", obj->pval);
+				else msg("You steal %d gold pieces worth of treasure.", obj->pval);
 				player->au += obj->pval;
 				player->upkeep->redraw |= (PR_GOLD);
 				delist_object(cave, obj);
@@ -1505,7 +1512,9 @@ void steal_monster_item(struct monster *mon, int midx)
 						ODESC_PREFIX | ODESC_FULL,
 						player);
 					drop_near(cave, &obj, 0, player->grid, true, true);
-					msg("You drop %s.", o_name);
+					if (angdroid_zh_tw_enabled())
+						msg("你丟下了%s。", o_name);
+					else msg("You drop %s.", o_name);
 				} else {
 					inven_carry(player, obj, true, true);
 				}
@@ -1522,19 +1531,24 @@ void steal_monster_item(struct monster *mon, int midx)
 
 			object_see(player, obj);
 			if (tval_is_money(obj)) {
-				(void)strnfmt(o_name, sizeof(o_name), "treasure");
+				(void)strnfmt(o_name, sizeof(o_name), "%s",
+					angdroid_monster_event("treasure", angdroid_zh_tw_enabled()));
 			} else {
 				object_desc(o_name, sizeof(o_name), obj,
 					ODESC_PREFIX | ODESC_FULL, player);
 			}
-			msg("You fail to steal %s from %s.", o_name, m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("你沒能從%s身上偷到%s。", m_name, o_name);
+			else msg("You fail to steal %s from %s.", o_name, m_name);
 			/* Monster wakes, may notice */
 			monster_wake(mon, true, 50);
 		} else {
 			/* Bungled it */
 			monster_wake(mon, true, 100);
 			monster_desc(m_name, sizeof(m_name), mon, MDESC_STANDARD);
-			msg("%s cries out in anger!", m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("%s憤怒地大叫！", m_name);
+			else msg("%s cries out in anger!", m_name);
 			effect_simple(EF_WAKE, source_monster(mon->midx), "", 0, 0, 0, 0, 0,
 						  NULL);
 		}
@@ -1542,7 +1556,8 @@ void steal_monster_item(struct monster *mon, int midx)
 		/* Player hit and run */
 		if (player->timed[TMD_ATT_RUN]) {
 			const char *near = "20";
-			msg("You vanish into the shadows!");
+			msg("%s", angdroid_monster_event("You vanish into the shadows!",
+				angdroid_zh_tw_enabled()));
 			effect_simple(EF_TELEPORT, source_player(), near, 0, 0, 0, 0, 0,
 						  NULL);
 			(void) player_clear_timed(player, TMD_ATT_RUN, false,
@@ -1558,10 +1573,14 @@ void steal_monster_item(struct monster *mon, int midx)
 		/* Try to steal */
 		if (!obj || react_to_slay(obj, thief)) {
 			/* Fail to steal */
-			msg("%s tries to steal something from %s, but fails.", t_name,
+			if (angdroid_zh_tw_enabled())
+				msg("%s試著從%s身上偷東西，但失敗了。", t_name, m_name);
+			else msg("%s tries to steal something from %s, but fails.", t_name,
 				m_name);
 		} else {
-			msg("%s steals something from %s!", t_name, m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("%s從%s身上偷走了東西！", t_name, m_name);
+			else msg("%s steals something from %s!", t_name, m_name);
 
 			/* Steal and carry */
 			obj->held_m_idx = 0;

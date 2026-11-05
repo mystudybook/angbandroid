@@ -34,6 +34,8 @@
 #include "player-calcs.h"
 #include "player-timed.h"
 #include "target.h"
+#include "droid.h"
+#include "zh-tw-monster-events.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -487,7 +489,8 @@ void compact_monsters(struct chunk *c, int num_to_compact)
 
 	/* Message (only if compacting) */
 	if (num_to_compact)
-		msg("Compacting monsters...");
+		msg("%s", angdroid_monster_event("Compacting monsters...",
+			angdroid_zh_tw_enabled()));
 
 
 	/* Compact at least 'num_to_compact' objects */
@@ -676,7 +679,8 @@ int16_t mon_pop(struct chunk *c)
 
 	/* Warn the player if no index is available */
 	if (character_dungeon)
-		msg("Too many monsters!");
+		msg("%s", angdroid_monster_event("Too many monsters!",
+			angdroid_zh_tw_enabled()));
 
 	/* Try not to crash */
 	return 0;
@@ -1115,16 +1119,22 @@ static bool place_new_monster_one(struct chunk *c, struct loc grid,
 	if (race->level > c->depth) {
 		if (rf_has(race->flags, RF_UNIQUE)) { /* OOD unique */
 			if (OPT(player, cheat_hear))
-				msg("Deep unique (%s).", race->name);
+				if (angdroid_zh_tw_enabled())
+					msg("深層獨特怪物（%s）。", race->name);
+				else msg("Deep unique (%s).", race->name);
 		} else { /* Normal monsters but OOD */
 			if (OPT(player, cheat_hear))
-				msg("Deep monster (%s).", race->name);
+				if (angdroid_zh_tw_enabled())
+					msg("深層怪物（%s）。", race->name);
+				else msg("Deep monster (%s).", race->name);
 		}
 		/* Boost rating by power per 10 levels OOD */
 		add_to_monster_rating(c, (race->level - c->depth) * race->level
 			* race->level);
 	} else if (rf_has(race->flags, RF_UNIQUE) && OPT(player, cheat_hear)) {
-		msg("Unique (%s).", race->name);
+		if (angdroid_zh_tw_enabled())
+			msg("獨特怪物（%s）。", race->name);
+		else msg("Unique (%s).", race->name);
 	}
 
 	/* Get local monster */
@@ -1505,7 +1515,8 @@ bool pick_and_place_distant_monster(struct chunk *c, struct loc to_avoid,
 
 	if (!attempts_left) {
 		if (OPT(player, cheat_xtra) || OPT(player, cheat_hear))
-			msg("Warning! Could not allocate a new monster.");
+			msg("%s", angdroid_monster_event("Warning! Could not allocate a new monster.",
+			angdroid_zh_tw_enabled()));
 
 		return false;
 	}

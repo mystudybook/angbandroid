@@ -1262,3 +1262,13 @@ in Angband. Quest stairs and victory messages are also localized.
 Original action logic, data, English fallback and saved quest state are
 untouched. Twelve exact-label pairs are covered by native C99 tests and
 canonical terrain checks. Full Android build and device verification pending.
+
+
+## Monster mimicry, theft and spawning messages (2026-11-05)
+
+`mon-util.c` now localizes mimic revelation, all original theft outcomes,
+loot descriptions and hit-and-run escape messages. `mon-make.c` now
+localizes allocation/monster-limit feedback, including deep/unique monster
+selection messages. Existing gold updates, loot transfer, monster behavior
+and original English mode are unchanged. Exact-message host C99 smoke tests
+and source checks are registered; full Android build remains unverified.
