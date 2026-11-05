@@ -1543,3 +1543,11 @@ canonical translation dictionary is still 326 entries.
 - The wrapped output requires original double quotes and a short ASCII alphabetic title. Invalid data, English-mode callers, non-opted-in exports, terse/ineligible displays, special artifacts, and other unknown-item flows continue using the existing original representation.
 - Renderer uses no RNG and never mutates `flavor_init()`, `scroll_adj`, `seed_flavor`, `kind->flavor->text`, parser IDs or saved data.
 - Standalone C99 tests cover valid output, unchanged source strings, distinct titles, narrow buffers, malformed source and NULL handling. Python/source-checker tests assert wiring, gating and export/RNG isolation. Full Android NDK build and emulator/real device visual checks remain required.
+
+## Seven ordinary flavored object nouns (2026-11-05)
+
+- Previously the localized appearance might still be embedded in English grammar such as "a 紅寶石 Ring". Now the opted-in Traditional Chinese screen can display full phrases: "紅寶石戒指", "3 枚紅寶石戒指", "2 根橡木法杖" and "2 瓶黏稠粉紅色藥水".
+- Source-matched appearance labels are required; only the original aware state permits displaying the translated kind effect in parentheses. Unseen effects never leak. Supported: ring, amulet, staff, wand, rod, potion and mushroom.
+- Original English-mode formatting, unrecognized source text, special artifacts, ego items, scrolls, character exports, random flavor seeding and save data remain unchanged. Failed formatting returns to the previous path.
+- The independent C99 test covers counters 0/1/many, all seven types, known effect display and atomic UTF-8 buffer sizing. A Python integration test checks locale gating, export isolation and original RNG.
+- Android NDK build and emulator/device layout must still be tested.

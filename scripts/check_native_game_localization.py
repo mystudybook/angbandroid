@@ -382,6 +382,20 @@ def main():
            and "test_ego_names_locale.c" in native_tests
            and 'angdroid_zh_tw_ego_name(NULL) == NULL' in ego_native_test,
            "Ego suffix must remain identified, screen-only and C99 tested")
+    # Source-matched appearance grammar only, not hidden item effects.
+    flavored_header = source(CPP / "angband/zh-tw-flavored-object.h", errors)
+    flavored_types = re.findall(
+        r'\{ "(ring|amulet|staff|wand|rod|potion|mushroom)", "[^"]+", "[^"]+" \}',
+        flavored_header)
+    expect(len(flavored_types) == 7 and len(set(flavored_types)) == 7 and
+           '"zh-tw-flavored-object.h"' in obj and
+           "if (!aware || visible_effect)" in obj and
+           "else if (localized_flavored)" in obj and
+           "test_flavored_object_locale.c" in native_tests and
+           "test_flavored_object_localization.py" in source(
+               ROOT / "scripts/verify-zh-tw.sh", errors),
+           "Flavored item noun grammar must be visible-only and C99 tested")
+
     # Random Latin-like scroll titles must remain stable identifiers.
     scroll_header = source(CPP / "angband/zh-tw-scroll-title.h", errors)
     scroll_tests = source(ROOT / "tests/test_scroll_title_localization.py", errors)
