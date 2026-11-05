@@ -410,6 +410,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_confirmation_text"
 "$BUILD_DIR/test_store_confirmation_text"
 
+# Generic quantity parser rejects accidental letter aliases and overflow.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_quantity_input.c" \
+    -o "$BUILD_DIR/test_quantity_input"
+"$BUILD_DIR/test_quantity_input"
+
 # Dynamic popup keys such as shop g must choose a tagged action, never
 # accidentally execute whichever entry currently has focus.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \

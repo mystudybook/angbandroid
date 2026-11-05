@@ -51,6 +51,7 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"(Up/down or ESCAPE to exit.)", "（上下鍵捲動，Esc 離開）"},
         {"(Press any key to continue.)", "（按任意鍵繼續）"},
         {"Type '?' for help.", "按 ? 查看說明。"},
+        {"Invalid quantity. Enter a number or * for all.", "數量格式無效，請輸入數字或 *（全部）。"},
         {"Do you want to retire? ", "確定讓角色退休嗎？ "},
         {"Do you really want to retire?", "真的要讓角色退休嗎？"},
         {"Please verify RETIRING THIS CHARACTER by typing the '@' sign: ", "確認角色退休，請輸入 @："},
