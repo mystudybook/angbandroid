@@ -1528,11 +1528,24 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 				build_obj_list(throwing_num, throwing_list, tester_m,
 							   olist_mode);
 
-			/* Show the prompt */
+			/* The prompt and header share one terminal row. UTF-8 bytes
+			 * are not terminal columns; clip each visible segment. */
 			menu_header();
-			if (pmt) {
-				prt(pmt, 0, 0);
-				prt(header, 0, strlen(pmt) + 1);
+			if (pmt && Term && Term->wid > 0) {
+				char clipped[256];
+				size_t left = angdroid_menu_copy_columns(
+					clipped, sizeof(clipped), pmt,
+					(size_t)Term->wid);
+				int second_col = (int)left + 1;
+				prt("", 0, 0);
+				if (clipped[0])
+					c_put_str(COLOUR_WHITE, clipped, 0, 0);
+				if (second_col < Term->wid) {
+					angdroid_menu_copy_columns(clipped, sizeof(clipped),
+						header, (size_t)(Term->wid - second_col));
+					if (clipped[0])
+						c_put_str(COLOUR_WHITE, clipped, 0, second_col);
+				}
 			}
 
 			/* No menu change request */
