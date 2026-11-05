@@ -26,6 +26,15 @@ def entries(path: Path) -> dict[str, str]:
     return dict(pairs)
 
 
+def coverage(source: set[str], translations: dict[str, str]) -> dict:
+    return {
+        "translated": len(translations),
+        "source_total": len(source),
+        "untranslated": sorted(source - translations.keys()),
+        "invalid_keys": sorted(translations.keys() - source),
+    }
+
+
 def names(filename: str) -> set[str]:
     return {
         line.partition(":")[2]
@@ -64,6 +73,42 @@ def inspect() -> dict:
     combat_content = (CPP / "zh-tw-combat.h").read_text(encoding="utf-8")
     combat_labels = len(PAIR.findall(combat_content))
     magic_terms = entries(CPP / "zh-tw-magic.h")
+    activations = entries(CPP / "zh-tw-activations.h")
+    abilities = entries(CPP / "zh-tw-item-abilities.h")
+    curse_header = (CPP / "zh-tw-curse.h").read_text(encoding="utf-8")
+    curse_section = curse_header.split(
+        "static inline const char *angdroid_curse_description", 1
+    )[1].split("static inline void angdroid_curse_row", 1)[0]
+    curse_descriptions = dict(
+        (json.loads(en), json.loads(zh))
+        for en, zh in PAIR.findall(curse_section)
+    )
+    activation_names: set[str] = set()
+    current_name = ""
+    for line in (GAMEDATA / "activation.txt").read_text(encoding="utf-8").splitlines():
+        if line.startswith("name:"):
+            current_name = line[5:]
+        elif line.startswith("desc:") and current_name:
+            activation_names.add(current_name)
+    ability_descriptions = {
+        line[5:] for line in
+        (GAMEDATA / "object_property.txt").read_text(encoding="utf-8").splitlines()
+        if line.startswith("desc:")
+    }
+    curse_source = {
+        line[5:] for line in
+        (GAMEDATA / "curse.txt").read_text(encoding="utf-8").splitlines()
+        if line.startswith("desc:")
+    }
+    origins = {
+        name for name, count in re.findall(
+            r"ORIGIN\\(\\s*(\\w+),\\s*(-?\\d+),",
+            (CPP / "list-origins.h").read_text(encoding="utf-8")
+        ) if int(count) >= 0
+    }
+    origin_ui = (CPP / "obj-info.c").read_text(encoding="utf-8")
+    origin_cases = {name: "case ORIGIN_" + name + ":" in origin_ui
+                    for name in origins}
     variant_root = ROOT / "variant_lib"
     variants = sorted(p.name for p in variant_root.iterdir() if p.is_dir())
     native = ROOT / "app/src/main/cpp"
@@ -90,6 +135,22 @@ def inspect() -> dict:
                 "untranslated": sorted((monster_names | unique_names) - lore_translations.keys()),
                 "invalid_keys": sorted(lore_translations.keys() - (monster_names | unique_names)),
             },
+            "activation_effect_descriptions": coverage(
+                activation_names, activations
+            ),
+            "object_property_descriptions": coverage(
+                ability_descriptions, abilities
+            ),
+            "curse_descriptions": coverage(
+                curse_source, curse_descriptions
+            ),
+            "item_origin_labels": {
+                "translated": sum(origin_cases.values()),
+                "source_total": len(origins),
+                "untranslated": sorted(
+                    name for name, present in origin_cases.items() if not present
+                ),
+            },
             "ui_literal_mappings": len(ui_translations),
             "combat_verb_and_quality_mappings": combat_labels,
             "spell_realm_display_terms": len(magic_terms),
@@ -111,7 +172,9 @@ def inspect() -> dict:
         "limitations": [
             "Item names are display-only for identified kinds, not object_desc grammar.",
             "Monster names are display-only; unique proper names remain canonical.",
-            "Most monster lore and event narration remain English.",
+            "Most monster lore and several dynamic event descriptions remain English.",
+            "Activation effects are translated only when the item's effect is known.",
+            "Item names in full inventory descriptions and export text are not uniformly localized.",
             "The Android device/emulator was not tested by this report.",
             "Other game variants need independent source and resource translation.",
         ],
@@ -132,10 +195,14 @@ def main() -> int:
             ("identified_item_kind_names", "Identified item kind names"),
             ("nonunique_monster_names", "Non-unique monster names"),
             ("monster_flavor_descriptions", "Monster flavor descriptions"),
+            ("activation_effect_descriptions", "Activation effect descriptions"),
+            ("object_property_descriptions", "Object property descriptions"),
+            ("curse_descriptions", "Curse descriptions"),
+            ("item_origin_labels", "Item origin display cases"),
         ):
             section = angband[label]
             print(f"{title}: {section['translated']}/{section['source_total']}")
-            if section["invalid_keys"]:
+            if section.get("invalid_keys"):
                 print("  INVALID keys:", ", ".join(section["invalid_keys"][:args.sample]))
             if section["untranslated"]:
                 print("  Untranslated examples:", ", ".join(section["untranslated"][:max(0, args.sample)]))
