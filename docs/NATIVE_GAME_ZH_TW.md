@@ -1069,3 +1069,17 @@ pattern. A new host-C99 compiler regression extracts the actual help
 function, compiles it with `-Wformat -Werror=format-security` and checks
 that an intentionally reintroduced unsafe call is rejected. This is not
 a substitute for rebuilding `assembleDebug` with the Android NDK.
+
+
+## Curse selection display (2026-11-05)
+
+Original Angband's `curse.txt` defines 27 curses. The native Remove Curse
+menu now shows each canonical curse name and exact source description in
+Traditional Chinese when enabled; English and unknown/custom records retain
+the original text. The curse power, selection indices, identification gates,
+object flags and spell effects are not changed. Menu width uses terminal
+columns (not UTF-8 bytes), and item labels are clipped only at whole glyphs;
+the prompt remains in its original English format when zh-TW is disabled.
+The strict C99 regression tests all 27 names and descriptions in both locales,
+unknown/NULL fallback, and bounded row formatting. Full Android NDK and
+on-device menu verification remain outstanding.
