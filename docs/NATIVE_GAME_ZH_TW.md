@@ -1055,17 +1055,17 @@ The C99 bilingual lookup regression includes every pair and unknown/NULL
 fallback. Android NDK/APK UI and touch acceptance remain unverified.
 
 
-## Target help NDK \`-Wformat-security\` build fix (2026-11-05)
+## Target help NDK `-Wformat-security` build fix (2026-11-05)
 
-Android Studio \`:app:assembleDebug\` failed when compiling
-\`app/src/main/cpp/angband/ui-target.c\` for arm64-v8a with NDK 28:
+Android Studio `:app:assembleDebug` failed when compiling
+`app/src/main/cpp/angband/ui-target.c` for arm64-v8a with NDK 28:
 all 18 targeting-help calls passed a localized expression as the
-\`text_out()\` format parameter. Every call now uses a literal \`"%s"\` and
+`text_out()` format parameter. Every call now uses a literal `"%s"` and
 supplies the translated text as an argument. The underlying English and
 Traditional Chinese fragments, colored shortcut glyphs and target commands
-are unchanged. \`check_native_game_localization.py\` no longer requires the
+are unchanged. `check_native_game_localization.py` no longer requires the
 unsafe call pattern; it requires 18 literal format uses and rejects the old
 pattern. A new host-C99 compiler regression extracts the actual help
-function, compiles it with \`-Wformat -Werror=format-security\` and checks
+function, compiles it with `-Wformat -Werror=format-security` and checks
 that an intentionally reintroduced unsafe call is rejected. This is not
-a substitute for rebuilding \`assembleDebug\` with the Android NDK.
+a substitute for rebuilding `assembleDebug` with the Android NDK.
