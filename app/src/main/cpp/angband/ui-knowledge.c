@@ -3170,8 +3170,14 @@ static void shape_lore_append_misc_flags(textblock *tb,
 		if ((prop->subtype == OFT_MISC || prop->subtype == OFT_MELEE ||
 			prop->subtype == OFT_BAD) &&
 			of_has(s->flags, prop->index)) {
-			textblock_append(tb, "%s%s.", (n > 0) ? "  " : "",
-				prop->desc);
+			const char *localized = angdroid_shape_misc_desc(prop->desc,
+				angdroid_zh_tw_enabled());
+			if (prop->desc && strcmp(localized, prop->desc) != 0)
+				textblock_append(tb, "%s%s。", (n > 0) ? "  " : "",
+					localized);
+			else
+				textblock_append(tb, "%s%s.", (n > 0) ? "  " : "",
+					prop->desc);
 			++n;
 		}
 	}
@@ -3180,7 +3186,8 @@ static void shape_lore_append_misc_flags(textblock *tb,
 		if (streq(ability->type, "player") &&
 			pf_has(s->pflags, ability->index)) {
 			textblock_append(tb, "%s%s", (n > 0) ? "  " : "",
-				ability->desc);
+				angdroid_shape_misc_desc(ability->desc,
+					angdroid_zh_tw_enabled()));
 			++n;
 		}
 	}

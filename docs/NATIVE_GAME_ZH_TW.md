@@ -1014,3 +1014,15 @@ operations and numeric bonuses remain unchanged. The dynamic text from
 sentences remain English until reviewed independently. The separate C99
 locale regression and complete-source coverage audit are registered;
 Android NDK and on-device verification remain outstanding.
+
+
+## Shape-specific flag descriptions (2026-11-05)
+
+The exact object ability descriptions used by the original eight forms
+(Feather Falling, paralysis prevention, regeneration, hold life,
+see invisible, trap immunity), plus the Pukel-man's Rock player flag,
+are now localized only on the shape knowledge display. Their canonical
+`object_property.txt` and `player_property.txt` source records,
+ability indices, flags and gameplay effects are unchanged. Unknown future
+flag descriptions retain English, including original punctuation. The
+existing C99 shape regression now tests the seven pairs in both locales.
