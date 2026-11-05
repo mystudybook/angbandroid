@@ -28,7 +28,7 @@ int main(void)
     known_artifact("'Angrist'", "精靈寶鑽");
     known_artifact("'Sting'", "比爾博");
     known_artifact("'Andúril'", "西方之焰");
-    known_artifact("'Glamdring'", "格蘭瑞");
+    known_artifact("'Glamdring'", "痛擊者");
     known_artifact("of Olórin", "甘道夫");
     known_ego("of Accuracy", "命中");
     known_ego("of Power", "傷害");
