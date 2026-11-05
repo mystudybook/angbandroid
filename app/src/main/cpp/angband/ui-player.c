@@ -44,6 +44,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-class-titles.h"
+#include "zh-tw-character-sheet.h"
 #include "../curses/unicode_display.h"
 
 /**
@@ -281,7 +282,7 @@ static const char *likert(int x, int y, uint8_t *attr)
 	/* Negative value */
 	if (x < 0) {
 		*attr = COLOUR_RED;
-		return ("Very Bad");
+		return angdroid_character_sheet_text("Very Bad", angdroid_zh_tw_enabled());
 	}
 
 	/* Analyze the value */
@@ -291,34 +292,34 @@ static const char *likert(int x, int y, uint8_t *attr)
 		case 1:
 		{
 			*attr = COLOUR_RED;
-			return ("Bad");
+			return angdroid_character_sheet_text("Bad", angdroid_zh_tw_enabled());
 		}
 		case 2:
 		{
 			*attr = COLOUR_RED;
-			return ("Poor");
+			return angdroid_character_sheet_text("Poor", angdroid_zh_tw_enabled());
 		}
 		case 3:
 		case 4:
 		{
 			*attr = COLOUR_YELLOW;
-			return ("Fair");
+			return angdroid_character_sheet_text("Fair", angdroid_zh_tw_enabled());
 		}
 		case 5:
 		{
 			*attr = COLOUR_YELLOW;
-			return ("Good");
+			return angdroid_character_sheet_text("Good", angdroid_zh_tw_enabled());
 		}
 		case 6:
 		{
 			*attr = COLOUR_YELLOW;
-			return ("Very Good");
+			return angdroid_character_sheet_text("Very Good", angdroid_zh_tw_enabled());
 		}
 		case 7:
 		case 8:
 		{
 			*attr = COLOUR_L_GREEN;
-			return ("Excellent");
+			return angdroid_character_sheet_text("Excellent", angdroid_zh_tw_enabled());
 		}
 		case 9:
 		case 10:
@@ -327,7 +328,7 @@ static const char *likert(int x, int y, uint8_t *attr)
 		case 13:
 		{
 			*attr = COLOUR_L_GREEN;
-			return ("Superb");
+			return angdroid_character_sheet_text("Superb", angdroid_zh_tw_enabled());
 		}
 		case 14:
 		case 15:
@@ -335,12 +336,12 @@ static const char *likert(int x, int y, uint8_t *attr)
 		case 17:
 		{
 			*attr = COLOUR_L_GREEN;
-			return ("Heroic");
+			return angdroid_character_sheet_text("Heroic", angdroid_zh_tw_enabled());
 		}
 		default:
 		{
 			*attr = COLOUR_L_GREEN;
-			return ("Legendary");
+			return angdroid_character_sheet_text("Legendary", angdroid_zh_tw_enabled());
 		}
 	}
 }
@@ -462,11 +463,11 @@ void display_player_stat_info(void)
 	col = 42;
 
 	/* Print out the labels for the columns */
-	c_put_str(COLOUR_WHITE, "  Self", row-1, col+5);
-	c_put_str(COLOUR_WHITE, " RB", row-1, col+12);
-	c_put_str(COLOUR_WHITE, " CB", row-1, col+16);
-	c_put_str(COLOUR_WHITE, " EB", row-1, col+20);
-	c_put_str(COLOUR_WHITE, "  Best", row-1, col+24);
+	c_put_str(COLOUR_WHITE, angdroid_zh_tw_enabled() ? "  自身" : "  Self", row-1, col+5);
+	c_put_str(COLOUR_WHITE, angdroid_zh_tw_enabled() ? " 種" : " RB", row-1, col+12);
+	c_put_str(COLOUR_WHITE, angdroid_zh_tw_enabled() ? " 職" : " CB", row-1, col+16);
+	c_put_str(COLOUR_WHITE, angdroid_zh_tw_enabled() ? " 裝" : " EB", row-1, col+20);
+	c_put_str(COLOUR_WHITE, angdroid_zh_tw_enabled() ? "  最佳" : "  Best", row-1, col+24);
 
 	/* Display the stats */
 	for (i = 0; i < STAT_MAX; i++) {
@@ -659,7 +660,7 @@ static const char *show_depth(void)
 {
 	static char buffer[13];
 
-	if (player->max_depth == 0) return "Town";
+	if (player->max_depth == 0) return angdroid_character_sheet_text("Town", angdroid_zh_tw_enabled());
 
 	strnfmt(buffer, sizeof(buffer), "%d' (L%d)",
 	        player->max_depth * 50, player->max_depth);
@@ -672,7 +673,7 @@ static const char *show_speed(void)
 	int tmp = player->state.speed;
 	if (player->timed[TMD_FAST]) tmp -= 10;
 	if (player->timed[TMD_SLOW]) tmp += 10;
-	if (tmp == 110) return "Normal";
+	if (tmp == 110) return angdroid_character_sheet_text("Normal", angdroid_zh_tw_enabled());
 	int multiplier = 10 * extract_energy[tmp] / extract_energy[110];
 	int int_mul = multiplier / 10;
 	int dec_mul = multiplier % 10;
@@ -740,7 +741,8 @@ static struct panel *get_panel_combat(void) {
 	int melee_dice = 1, melee_sides = 1;
 
 	/* AC */
-	panel_line(p, COLOUR_L_BLUE, "Armor", "[%d,%+d]",
+	panel_line(p, COLOUR_L_BLUE, angdroid_character_sheet_text("Armor",
+		angdroid_zh_tw_enabled()), "[%d,%+d]",
 			player->known_state.ac, player->known_state.to_a);
 
 	/* Melee */
@@ -756,10 +758,17 @@ static struct panel *get_panel_combat(void) {
 	}
 
 	panel_space(p);
-	panel_line(p, COLOUR_L_BLUE, "Melee", "%dd%d,%+d", melee_dice, melee_sides, dam);
-	panel_line(p, COLOUR_L_BLUE, "To-hit", "%d,%+d", bth / 10, hit);
-	panel_line(p, COLOUR_L_BLUE, "Blows", "%d.%d/turn",
+	panel_line(p, COLOUR_L_BLUE, angdroid_character_sheet_text("Melee",
+		angdroid_zh_tw_enabled()), "%dd%d,%+d", melee_dice, melee_sides, dam);
+	panel_line(p, COLOUR_L_BLUE, angdroid_character_sheet_text("To-hit",
+		angdroid_zh_tw_enabled()), "%d,%+d", bth / 10, hit);
+	if (angdroid_zh_tw_enabled()) {
+		panel_line(p, COLOUR_L_BLUE, "攻擊次數", "%d.%d/回合",
 			player->state.num_blows / 100, (player->state.num_blows / 10 % 10));
+	} else {
+		panel_line(p, COLOUR_L_BLUE, "Blows", "%d.%d/turn",
+			player->state.num_blows / 100, (player->state.num_blows / 10 % 10));
+	}
 
 	/* Ranged */
 	obj = equipped_item_by_slot_name(player, "shooting");
@@ -772,10 +781,17 @@ static struct panel *get_panel_combat(void) {
 	}
 
 	panel_space(p);
-	panel_line(p, COLOUR_L_BLUE, "Shoot to-dam", "%+d", dam);
-	panel_line(p, COLOUR_L_BLUE, "To-hit", "%d,%+d", bth / 10, hit);
-	panel_line(p, COLOUR_L_BLUE, "Shots", "%d.%d/turn",
-			   player->state.num_shots / 10, player->state.num_shots % 10);
+	panel_line(p, COLOUR_L_BLUE, angdroid_character_sheet_text("Shoot to-dam",
+		angdroid_zh_tw_enabled()), "%+d", dam);
+	panel_line(p, COLOUR_L_BLUE, angdroid_character_sheet_text("To-hit",
+		angdroid_zh_tw_enabled()), "%d,%+d", bth / 10, hit);
+	if (angdroid_zh_tw_enabled()) {
+		panel_line(p, COLOUR_L_BLUE, "射擊次數", "%d.%d/回合",
+			player->state.num_shots / 10, player->state.num_shots % 10);
+	} else {
+		panel_line(p, COLOUR_L_BLUE, "Shots", "%d.%d/turn",
+			player->state.num_shots / 10, player->state.num_shots % 10);
+	}
 
 	return p;
 }
@@ -792,30 +808,37 @@ static struct panel *get_panel_skills(void) {
 
 	/* Saving throw */
 	skill = BOUND(player->state.skills[SKILL_SAVE], 0, 100);
-	panel_line(p, colour_table[skill / 10], "Saving Throw", "%d%%", skill);
+	panel_line(p, colour_table[skill / 10], angdroid_character_sheet_text("Saving Throw",
+		angdroid_zh_tw_enabled()), "%d%%", skill);
 
 	/* Stealth */
 	desc = likert(player->state.skills[SKILL_STEALTH], 1, &attr);
-	panel_line(p, attr, "Stealth", "%s", desc);
+	panel_line(p, attr, angdroid_character_sheet_text("Stealth",
+		angdroid_zh_tw_enabled()), "%s", desc);
 
 	/* Physical disarming: assume we're disarming a dungeon trap */
 	skill = BOUND(player->state.skills[SKILL_DISARM_PHYS] - depth / 5, 2, 100);
-	panel_line(p, colour_table[skill / 10], "Disarm - phys.", "%d%%", skill);
+	panel_line(p, colour_table[skill / 10], angdroid_character_sheet_text("Disarm - phys.",
+		angdroid_zh_tw_enabled()), "%d%%", skill);
 
 	/* Magical disarming */
 	skill = BOUND(player->state.skills[SKILL_DISARM_MAGIC] - depth / 5, 2, 100);
-	panel_line(p, colour_table[skill / 10], "Disarm - magic", "%d%%", skill);
+	panel_line(p, colour_table[skill / 10], angdroid_character_sheet_text("Disarm - magic",
+		angdroid_zh_tw_enabled()), "%d%%", skill);
 
 	/* Magic devices */
 	skill = player->state.skills[SKILL_DEVICE];
-	panel_line(p, colour_table[skill / 13], "Magic Devices", "%d", skill);
+	panel_line(p, colour_table[skill / 13], angdroid_character_sheet_text("Magic Devices",
+		angdroid_zh_tw_enabled()), "%d", skill);
 
 	/* Searching ability */
 	skill = BOUND(player->state.skills[SKILL_SEARCH], 0, 100);
-	panel_line(p, colour_table[skill / 10], "Searching", "%d%%", skill);
+	panel_line(p, colour_table[skill / 10], angdroid_character_sheet_text("Searching",
+		angdroid_zh_tw_enabled()), "%d%%", skill);
 
 	/* Infravision */
-	panel_line(p, COLOUR_L_GREEN, "Infravision", "%d ft",
+	panel_line(p, COLOUR_L_GREEN, angdroid_character_sheet_text("Infravision",
+		angdroid_zh_tw_enabled()), "%d ft",
 			player->state.see_infra * 10);
 
 	/* Speed */
@@ -823,7 +846,8 @@ static struct panel *get_panel_skills(void) {
 	if (player->timed[TMD_FAST]) skill -= 10;
 	if (player->timed[TMD_SLOW]) skill += 10;
 	attr = skill < 110 ? COLOUR_L_UMBER : COLOUR_L_GREEN;
-	panel_line(p, attr, "Speed", "%s", show_speed());
+	panel_line(p, attr, angdroid_character_sheet_text("Speed",
+		angdroid_zh_tw_enabled()), "%s", show_speed());
 
 	return p;
 }
@@ -832,13 +856,20 @@ static struct panel *get_panel_misc(void) {
 	struct panel *p = panel_allocate(7);
 	uint8_t attr = COLOUR_L_BLUE;
 
-	panel_line(p, attr, "Age", "%d", player->age);
-	panel_line(p, attr, "Height", "%d'%d\"", player->ht / 12, player->ht % 12);
-	panel_line(p, attr, "Weight", "%dst %dlb", player->wt / 14, player->wt % 14);
-	panel_line(p, attr, "Turns used:", "");
-	panel_line(p, attr, "Game", "%d", turn);
-	panel_line(p, attr, "Standard", "%d", player->total_energy / 100);
-	panel_line(p, attr, "Resting", "%d", player->resting_turn);
+	panel_line(p, attr, angdroid_character_sheet_text("Age",
+		angdroid_zh_tw_enabled()), "%d", player->age);
+	panel_line(p, attr, angdroid_character_sheet_text("Height",
+		angdroid_zh_tw_enabled()), "%d'%d\"", player->ht / 12, player->ht % 12);
+	panel_line(p, attr, angdroid_character_sheet_text("Weight",
+		angdroid_zh_tw_enabled()), "%dst %dlb", player->wt / 14, player->wt % 14);
+	panel_line(p, attr, angdroid_character_sheet_text("Turns used:",
+		angdroid_zh_tw_enabled()), "");
+	panel_line(p, attr, angdroid_character_sheet_text("Game",
+		angdroid_zh_tw_enabled()), "%d", turn);
+	panel_line(p, attr, angdroid_character_sheet_text("Standard",
+		angdroid_zh_tw_enabled()), "%d", player->total_energy / 100);
+	panel_line(p, attr, angdroid_character_sheet_text("Resting",
+		angdroid_zh_tw_enabled()), "%d", player->resting_turn);
 
 	return p;
 }
@@ -1206,7 +1237,10 @@ void write_character_dump(ang_file *fff)
 bool dump_save(const char *path)
 {
 	if (text_lines_to_file(path, write_character_dump)) {
-		msg("Failed to create file %s.new", path);
+		if (angdroid_zh_tw_enabled())
+			msg("無法建立檔案 %s.new", path);
+		else
+			msg("Failed to create file %s.new", path);
 		return false;
 	}
 
@@ -1231,7 +1265,8 @@ void do_cmd_change_name(void)
 	bool more = true;
 
 	/* Prompt */
-	p = "['c' to change name, 'f' to file, 'h' to change mode, or ESC]";
+	p = angdroid_character_sheet_text("['c' to change name, 'f' to file, 'h' to change mode, or ESC]",
+		angdroid_zh_tw_enabled());
 
 	/* Save screen */
 	screen_save();
@@ -1254,7 +1289,7 @@ void do_cmd_change_name(void)
 				case ESCAPE: more = false; break;
 				case 'c': {
 					if(arg_force_name)
-						msg("You are not allowed to change your name!");
+						msg("%s", angdroid_character_sheet_text("You are not allowed to change your name!", angdroid_zh_tw_enabled()));
 					else {
 					char namebuf[32] = "";
 
@@ -1277,9 +1312,9 @@ void do_cmd_change_name(void)
 
 					if (get_file(fname, buf, sizeof buf)) {
 						if (dump_save(buf))
-							msg("Character dump successful.");
+							msg("%s", angdroid_character_sheet_text("Character dump successful.", angdroid_zh_tw_enabled()));
 						else
-							msg("Character dump failed!");
+							msg("%s", angdroid_character_sheet_text("Character dump failed!", angdroid_zh_tw_enabled()));
 					}
 					break;
 				}

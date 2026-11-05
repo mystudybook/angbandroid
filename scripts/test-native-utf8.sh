@@ -175,6 +175,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_shape_lore_locale"
 "$BUILD_DIR/test_shape_lore_locale"
 
+# Character sheet labels, ratings, prompts and original locale fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_character_sheet_locale.c" \
+    -o "$BUILD_DIR/test_character_sheet_locale"
+"$BUILD_DIR/test_character_sheet_locale"
+
 # Native history and Hall of Fame: record labels, original data keys and fallback.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_history_score_locale.c" \

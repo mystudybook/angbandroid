@@ -1730,6 +1730,37 @@ def main():
            'future event' in monster_event_test,
            "Monster event C99 regression must be registered")
 
+    # Character sheet display-only translation. Export remains canonical.
+    sheet_ui = source(CPP / "angband/ui-player.c", errors)
+    sheet_header = source(CPP / "angband/zh-tw-character-sheet.h", errors)
+    sheet_test = source(ROOT / "tests/native/test_character_sheet_locale.c", errors)
+    sheet_pairs = re.findall(r'\\{ "([^"]+)", "([^"]+)" \\}', sheet_header)
+    expect(len(sheet_pairs) == 37 and
+           len({en for en, _ in sheet_pairs}) == 37 and
+           all(zh.strip() for _, zh in sheet_pairs),
+           "Character sheet display dictionary must have 37 unique labels")
+    expect('"zh-tw-character-sheet.h"' in sheet_ui and
+           'angdroid_character_sheet_text("Armor"' in sheet_ui and
+           'angdroid_character_sheet_text("Saving Throw"' in sheet_ui and
+           'angdroid_character_sheet_text("Very Bad"' in sheet_ui and
+           'angdroid_character_sheet_text("Normal"' in sheet_ui and
+           'angdroid_character_sheet_text("Town"' in sheet_ui and
+           'angdroid_character_sheet_text("Character dump successful."' in sheet_ui and
+           'panel_line(p, COLOUR_L_BLUE, "Blows", "%d.%d/turn"' in sheet_ui and
+           'panel_line(p, COLOUR_L_BLUE, "射擊次數", "%d.%d/回合"' in sheet_ui,
+           "Character sheet must keep fixed numeric formats and locale labels")
+    sheet_export = sheet_ui.partition("void write_character_dump(")[2].partition(
+        "bool dump_save(")[0]
+    expect('file_putf(fff, "  [%s Character Dump]\\n\\n", buildid);' in sheet_export and
+           'file_putf(fff, "  [Last Messages]\\n\\n");' in sheet_export and
+           'file_putf(fff, "  [Character Equipment]\\n\\n");' in sheet_export and
+           'file_putf(fff, "  [Options]\\n\\n");' in sheet_export,
+           "Canonical exported dump headings must remain intact")
+    expect('test_character_sheet_locale.c' in native_tests and
+           'pair("Legendary", "傳奇");' in sheet_test and
+           'pair("Character dump failed!", "角色資料匯出失敗！");' in sheet_test,
+           "C99 character sheet regression must remain registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
