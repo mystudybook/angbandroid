@@ -67,7 +67,7 @@ struct object_menu_data {
 	char label[80];
 	char equip_label[80];
 	struct object *object;
-	char o_name[80];
+	char o_name[256];
 	char key;
 };
 
@@ -77,6 +77,7 @@ static int num_head;
 static size_t max_len;
 static int ex_width;
 static int ex_offset;
+static olist_detail_t olist_render_mode;
 
 /**
  * ------------------------------------------------------------------------
@@ -132,6 +133,36 @@ uint8_t object_attr(const struct object *obj)
 wchar_t object_char(const struct object *obj)
 {
 	return object_kind_char(obj->kind);
+}
+
+
+/* Restrict optional fields by screen width. A narrow Android terminal must
+ * keep the tag and a useful item-name area, even for large Chinese labels. */
+static olist_detail_t object_list_visible_extras(olist_detail_t mode, int width)
+{
+    angdroid_object_list_extras fit = angdroid_object_list_fit_extras(
+        width, 12, (mode & OLIST_PRICE) != 0, (mode & OLIST_FAIL) != 0,
+        (mode & OLIST_RECHARGE) != 0, (mode & OLIST_WEIGHT) != 0);
+    if (!fit.price) mode &= ~OLIST_PRICE;
+    if (!fit.fail) mode &= ~OLIST_FAIL;
+    if (!fit.recharge) mode &= ~OLIST_RECHARGE;
+    if (!fit.weight) mode &= ~OLIST_WEIGHT;
+    return mode;
+}
+
+/* Numeric data is all-or-nothing: a truncated price or percentage would be
+ * misleading. The active row may be smaller than the full terminal. */
+static void object_list_put_detail(const char *text, int row, int col,
+                                   int offset, int row_width, int reserved)
+{
+    size_t columns;
+    if (!Term || !text || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid) return;
+    row_width = MIN(row_width, Term->wid - col);
+    columns = angdroid_utf8_display_columns(text);
+    if (angdroid_object_list_detail_fits(offset, row_width,
+                                         reserved, columns))
+        put_str(text, row, col + offset);
 }
 
 /**
@@ -197,48 +228,52 @@ static void show_obj(int obj_num, int row, int col, bool cursor,
 	/* If we don't have an object, we can skip the rest of the output */
 	if (!obj) return;
 
-	/* Extra fields */
+	/* Extra fields: keep the same reserved offsets for each row even when
+	 * one object has no price source or device-failure percentage. */
 	ex_offset_ctr = ex_offset;
 
-	/* Price */
 	if (mode & OLIST_PRICE) {
 		struct store *store = store_at(cave, player->grid);
 		if (store) {
 			int price = price_item(store, obj, true, obj->number);
-
 			strnfmt(buf, sizeof(buf), "%6d au", price);
-			put_str(buf, row + obj_num, col + ex_offset_ctr);
-			ex_offset_ctr += 9;
+			object_list_put_detail(buf, row + obj_num, col,
+				ex_offset_ctr, row_width, 9);
 		}
+		ex_offset_ctr += 9;
 	}
 
-	/* Failure chance for magic devices and activations */
-	if (mode & OLIST_FAIL && obj_can_fail(obj)) {
-		int fail = (9 + get_use_device_chance(obj)) / 10;
-		if (object_effect_is_known(obj))
-			strnfmt(buf, sizeof(buf), "%4d%% fail", fail);
-		else
-			my_strcpy(buf, "    ? fail", sizeof(buf));
-		put_str(buf, row + obj_num, col + ex_offset_ctr);
+	if (mode & OLIST_FAIL) {
+		if (obj_can_fail(obj)) {
+			int fail = (9 + get_use_device_chance(obj)) / 10;
+			if (object_effect_is_known(obj))
+				strnfmt(buf, sizeof(buf), "%4d%% fail", fail);
+			else
+				my_strcpy(buf, "    ? fail", sizeof(buf));
+			object_list_put_detail(buf, row + obj_num, col,
+				ex_offset_ctr, row_width, 10);
+		}
 		ex_offset_ctr += 10;
 	}
 
-	/* Failure chances for recharging an item; see effect_handler_RECHARGE */
 	if (mode & OLIST_RECHARGE) {
-		int fail = 1000 / recharge_failure_chance(obj, player->upkeep->recharge_pow);
+		int fail = 1000 / recharge_failure_chance(
+			obj, player->upkeep->recharge_pow);
 		if (object_effect_is_known(obj))
-			strnfmt(buf, sizeof(buf), "%2d.%1d%% fail", fail / 10, fail % 10);
+			strnfmt(buf, sizeof(buf), "%2d.%1d%% fail",
+				fail / 10, fail % 10);
 		else
 			my_strcpy(buf, "    ? fail", sizeof(buf));
-		put_str(buf, row + obj_num, col + ex_offset_ctr);
+		object_list_put_detail(buf, row + obj_num, col,
+			ex_offset_ctr, row_width, 10);
 		ex_offset_ctr += 10;
 	}
 
-	/* Weight */
 	if (mode & OLIST_WEIGHT) {
 		int weight = obj->number * object_weight_one(obj);
 		strnfmt(buf, sizeof(buf), "%4d.%1d lb", weight / 10, weight % 10);
-		put_str(buf, row + obj_num, col + ex_offset_ctr);
+		object_list_put_detail(buf, row + obj_num, col,
+			ex_offset_ctr, row_width, 9);
 	}
 }
 
@@ -406,10 +441,13 @@ static void show_obj_list(olist_detail_t mode)
 	if (mode & OLIST_QUIVER && player->upkeep->quiver[0] != NULL)
 		max_len = MAX(max_len, 24);
 
-	/* Width of extra fields */
+	/* Use one width policy for the name, price, failure and weight.
+	 * The recharge failure column also consumes ten cells. */
+	mode = object_list_visible_extras(mode, Term->wid);
 	if (mode & OLIST_WEIGHT) ex_width += 9;
 	if (mode & OLIST_PRICE) ex_width += 9;
 	if (mode & OLIST_FAIL) ex_width += 10;
+	if (mode & OLIST_RECHARGE) ex_width += 10;
 
 	/* Determine beginning row and column */
 	if (in_term) {
@@ -945,7 +983,7 @@ static void get_item_display(struct menu *menu, int oid, bool cursor, int row,
 					  int col, int width)
 {
 	/* Print it */
-	show_obj(oid, row - oid, col, cursor, olist_mode, width);
+	show_obj(oid, row - oid, col, cursor, olist_render_mode, width);
 }
 
 /**
@@ -1071,7 +1109,6 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 						 get_item_action, 0 };
 	struct menu *m = menu_new(MN_SKIN_OBJECT, &menu_f);
 	ui_event evt = { 0 };
-	int ex_offset_ctr = 0;
 	int row, inscrip;
 	struct object *obj = NULL;
 
@@ -1108,18 +1145,12 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	if (mode & OLIST_QUIVER && player->upkeep->quiver[0] != NULL)
 		max_len = MAX(max_len, 24);
 
-	if (olist_mode & OLIST_WEIGHT) {
-		ex_width += 9;
-		ex_offset_ctr += 9;
-	}
-	if (olist_mode & OLIST_PRICE) {
-		ex_width += 9;
-		ex_offset_ctr += 9;
-	}
-	if (olist_mode & OLIST_FAIL) {
-		ex_width += 10;
-		ex_offset_ctr += 10;
-	}
+	olist_render_mode = object_list_visible_extras(olist_mode, Term->wid);
+	ex_width = 0;
+	if (olist_render_mode & OLIST_PRICE) ex_width += 9;
+	if (olist_render_mode & OLIST_FAIL) ex_width += 10;
+	if (olist_render_mode & OLIST_RECHARGE) ex_width += 10;
+	if (olist_render_mode & OLIST_WEIGHT) ex_width += 9;
 
 	/* Set up the menu region */
 	area.page_rows = m->count;
@@ -1130,11 +1161,13 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	ex_offset = angdroid_object_list_name_offset(
 		Term->wid, area.col, ex_width, max_len);
 	while (angdroid_utf8_display_columns(header) <
-		max_len + ex_width + ex_offset_ctr) {
+		max_len + ex_width) {
 		my_strcat(header, " ", sizeof(header));
 		if (strlen(header) > sizeof(header) - 2) break;
 	}
-	area.width = (int)MAX(max_len, angdroid_utf8_display_columns(header));
+	area.width = (int)MIN((size_t)MAX(1, Term->wid - area.col),
+		MAX(max_len + (size_t)ex_width,
+			angdroid_utf8_display_columns(header)));
 
 	for (row = area.row; row < area.row + area.page_rows; row++)
 		prt("", row, MAX(0, area.col - 1));
