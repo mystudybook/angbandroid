@@ -96,6 +96,13 @@ def inspect() -> dict:
     monster_translations = entries(CPP / "zh-tw-monsters.h")
     unique_monster_translations = entries(CPP / "zh-tw-unique-monsters.h")
     lore_translations = entries(CPP / "zh-tw-lore.h")
+    base_desc_labels = {
+        en: zh for en, desc, zh in re.findall(
+            r'^\s*\{ "([^"]+)", "([^"]+)", "([^"]+)" \},?$',
+            (CPP / "zh-tw-symbol-query.h").read_text(encoding="utf-8"),
+            re.MULTILINE
+        )
+    }
     ui_translations = entries(CPP / "zh-tw-ui.h")
     combat_content = (CPP / "zh-tw-combat.h").read_text(encoding="utf-8")
     combat_labels = len(PAIR.findall(combat_content))
@@ -185,6 +192,9 @@ def inspect() -> dict:
                 },
                 flavor_translations,
             ),
+            "monster_base_symbol_descriptions": coverage(
+                names("monster_base.txt"), base_desc_labels
+            ),
             "monster_flavor_descriptions": {
                 "translated": len(lore_translations),
                 "source_total": len(monster_names | unique_names),
@@ -257,6 +267,7 @@ def main() -> int:
             ("item_kind_flavor_descriptions", "Item kind flavor descriptions"),
             ("ego_flavor_descriptions", "Ego flavor descriptions"),
             ("unidentified_flavor_labels", "Unidentified flavor labels"),
+            ("monster_base_symbol_descriptions", "Monster base symbol labels"),
             ("monster_flavor_descriptions", "Monster flavor descriptions"),
             ("activation_effect_descriptions", "Activation effect descriptions"),
             ("object_property_descriptions", "Object property descriptions"),

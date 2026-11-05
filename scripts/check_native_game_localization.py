@@ -1006,6 +1006,36 @@ def main():
            'strnfmt(title, sizeof(title), "artifacts (seed %08lx)"' in knowledge_ui,
            "Knowledge runes/artifacts must keep literal formats and enough UTF-8 space")
 
+    # Symbol lookup monster bases: match canonical base-name + source desc.
+    base_data = source(ROOT / "variant_lib/angband/gamedata/monster_base.txt", errors)
+    symbol_header = source(CPP / "angband/zh-tw-symbol-query.h", errors)
+    source_bases, current_base, current_desc = [], None, ""
+    for line in base_data.splitlines():
+        if line.startswith("name:"):
+            if current_base is not None:
+                source_bases.append((current_base, current_desc))
+            current_base, current_desc = line[5:], ""
+        elif current_base is not None and line.startswith("desc:"):
+            current_desc += line[5:]
+    if current_base is not None:
+        source_bases.append((current_base, current_desc))
+    symbol_bases = re.findall(
+        r'^\s*\{ "([^"]+)", "([^"]+)", "([^"]+)" \},?$',
+        symbol_header, re.MULTILINE)
+    expect(len(source_bases) == 56 and len(symbol_bases) == 56 and
+           [(name, desc) for name, desc, _ in symbol_bases] == source_bases and
+           len({name for name, _ in source_bases}) == 56 and
+           all(desc and zh for _, desc, zh in symbol_bases),
+           "Symbol monster-base labels must match all 56 canonical records")
+    expect('"zh-tw-symbol-query.h"' in knowledge_ui and
+           "angdroid_symbol_monster_base_text(" in knowledge_ui and
+           'if (streq(race->name, "Morgoth")) continue;' in knowledge_ui and
+           'angdroid_symbol_query_format(buf, max, sym, race->text,' in knowledge_ui and
+           "test_symbol_monster_base_locale.c" in native_tests and
+           "test_symbol_query_localization.py" in source(
+               ROOT / "scripts/verify-zh-tw.sh", errors),
+           "Symbol query must keep display-only monster base lookup and exclusions")
+
     # Symbol identification: display-only translated text, original keymap.
     symbol_translation_keys = [
         "Enter character to be identified, or control+[ANU]: ",

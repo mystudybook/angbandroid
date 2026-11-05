@@ -40,6 +40,11 @@ assert kind_lore["source_total"] == 141
 assert kind_lore["translated"] == 141
 assert kind_lore["untranslated"] == []
 assert kind_lore["invalid_keys"] == []
+base_symbols = a["monster_base_symbol_descriptions"]
+assert base_symbols["source_total"] == 56
+assert base_symbols["translated"] == 56
+assert base_symbols["untranslated"] == []
+assert base_symbols["invalid_keys"] == []
 assert a["unique_monster_display_names"]["source_total"] == 101
 assert a["unique_monster_canonical_names_unchanged"] == 101
 assert a["monster_flavor_descriptions"]["translated"] == a["monster_flavor_descriptions"]["source_total"]
