@@ -1066,11 +1066,12 @@ bool effect_handler_DRAIN_MANA(effect_handler_context_t *context)
 				player->upkeep->redraw |= (PR_HEALTH);
 
 			/* Special message */
-			if (monster_is_visible(mon))
+			if (monster_is_visible(mon)) {
 				if (angdroid_zh_tw_enabled())
-		msg("%s 看起來更健康了。", m_name);
-	else
-		msg("%s appears healthier.", m_name);
+					msg("%s 看起來更健康了。", m_name);
+				else
+					msg("%s appears healthier.", m_name);
+			}
 		}
 	}
 
@@ -2181,7 +2182,7 @@ bool effect_handler_DISENCHANT(effect_handler_context_t *context)
 
 	/* Message */
 	if (angdroid_zh_tw_enabled())
-		msg("你的 %s（%c）被解除魔法強化了！", o_name,
+		msg("你的 %s（%c）的附魔效果被削弱了！", o_name,
 			gear_to_label(player, obj));
 	else
 		msg("Your %s (%c) %s disenchanted!", o_name,
