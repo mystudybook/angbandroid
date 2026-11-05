@@ -102,7 +102,7 @@ def inspect() -> dict:
     }
     origins = {
         name for name, count in re.findall(
-            r"ORIGIN\\(\\s*(\\w+),\\s*(-?\\d+),",
+            r"ORIGIN\(\s*(\w+),\s*(-?\d+),",
             (CPP / "list-origins.h").read_text(encoding="utf-8")
         ) if int(count) >= 0
     }
