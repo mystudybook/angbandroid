@@ -49,6 +49,8 @@
 #include "player-util.h"
 #include "project.h"
 #include "trap.h"
+#include "droid.h"
+#include "zh-tw-move-quest.h"
 
 
 /**
@@ -1114,7 +1116,11 @@ static void monster_display_confused_move_msg(struct monster *mon,
 	if (monster_is_visible(mon) && monster_is_in_view(mon)) {
 		const char *m = square_feat(cave, new)->confused_msg;
 
-		msg("%s %s.", m_name, (m) ? m : "stumbles");
+		if (angdroid_zh_tw_enabled())
+			msg("%s%s。", m_name,
+				angdroid_move_quest_text(m ? m : "stumbles", true));
+		else
+			msg("%s %s.", m_name, m ? m : "stumbles");
 	}
 }
 
@@ -1241,9 +1247,11 @@ static bool monster_turn_can_move(struct monster *mon, const char *m_name,
 			int k = square_door_power(cave, new);
 			if (randint0(mon->hp / 10) > k) {
 				if (will_bash) {
-					msg("%s slams against the door.", m_name);
+					if (angdroid_zh_tw_enabled()) msg("%s猛力撞擊門。", m_name);
+					else msg("%s slams against the door.", m_name);
 				} else {
-					msg("%s fiddles with the lock.", m_name);
+					if (angdroid_zh_tw_enabled()) msg("%s試著打開門鎖。", m_name);
+					else msg("%s fiddles with the lock.", m_name);
 				}
 
 				/* Reduce the power of the door by one */
@@ -1265,7 +1273,8 @@ static bool monster_turn_can_move(struct monster *mon, const char *m_name,
 			if (will_bash) {
 				square_smash_door(cave, new);
 
-				msg("You hear a door burst open!");
+				msg("%s", angdroid_move_quest_text(
+					"You hear a door burst open!", angdroid_zh_tw_enabled()));
 				disturb(player);
 
 				if (confused) {
@@ -1305,7 +1314,8 @@ static bool monster_turn_attack_glyph(struct monster *mon, struct loc new)
 
 		/* Describe observable breakage */
 		if (square_isseen(cave, new)) {
-			msg("The rune of protection is broken!");
+			msg("%s", angdroid_move_quest_text(
+				"The rune of protection is broken!", angdroid_zh_tw_enabled()));
 		}
 
 		/* Break the rune */
@@ -1353,8 +1363,12 @@ static bool monster_turn_try_push(struct monster *mon, const char *m_name,
 
 		/* Note if visible */
 		if (monster_is_visible(mon) && monster_is_in_view(mon))
-			msg("%s %s %s.", m_name, kill_ok ? "tramples over" : "pushes past",
-				n_name);
+			if (angdroid_zh_tw_enabled())
+				msg("%s%s%s。", m_name, angdroid_move_quest_text(
+					kill_ok ? "tramples over" : "pushes past", true), n_name);
+			else
+				msg("%s %s %s.", m_name, kill_ok ? "tramples over" : "pushes past",
+					n_name);
 
 		/* Monster ate another monster */
 		if (kill_ok)
@@ -1427,7 +1441,9 @@ static void monster_turn_grab_objects(struct monster *mon, const char *m_name,
 					&& square_isview(cave, new)
 					&& !ignore_item_ok(player, obj)) {
 				/* Dump a message */
-				msg("%s tries to pick up %s, but fails.", m_name, o_name);
+				if (angdroid_zh_tw_enabled())
+					msg("%s試著撿起%s，但失敗了。", m_name, o_name);
+				else msg("%s tries to pick up %s, but fails.", m_name, o_name);
 			}
 		} else if (rf_has(mon->race->flags, RF_TAKE_ITEM)) {
 			/*
@@ -1450,7 +1466,8 @@ static void monster_turn_grab_objects(struct monster *mon, const char *m_name,
 			if (monster_carry(cave, mon, taken)) {
 				/* Describe observable situations */
 				if (square_isseen(cave, new) && !ignore_item_ok(player, obj)) {
-					msg("%s picks up %s.", m_name, o_name);
+					if (angdroid_zh_tw_enabled()) msg("%s撿起了%s。", m_name, o_name);
+					else msg("%s picks up %s.", m_name, o_name);
 				}
 
 				/* Delete the object */
@@ -1745,7 +1762,8 @@ static void monster_reduce_sleep(struct monster *mon)
 
 		/* Notify the player if aware */
 		if (monster_is_obvious(mon)) {
-			msg("%s wakes up.", m_name);
+			if (angdroid_zh_tw_enabled()) msg("%s醒來了。", m_name);
+			else msg("%s wakes up.", m_name);
 			equip_learn_flag(player, OF_AGGRAVATE);
 		}
 	} else if ((notice * notice * notice) <= player_noise) {

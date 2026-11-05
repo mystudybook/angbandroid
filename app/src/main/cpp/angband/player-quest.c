@@ -24,6 +24,8 @@
 #include "obj-util.h"
 #include "player-calcs.h"
 #include "player-quest.h"
+#include "droid.h"
+#include "zh-tw-move-quest.h"
 
 /**
  * Array of quests
@@ -204,7 +206,7 @@ static void build_quest_stairs(struct player *p, struct loc grid)
 	push_object(grid);
 
 	/* Explain the staircase */
-	msg("A magical staircase appears...");
+	msg("%s", angdroid_move_quest_text("A magical staircase appears...", angdroid_zh_tw_enabled()));
 
 	/* Create stairs down */
 	square_set_feat(cave, grid, FEAT_MORE);
@@ -242,9 +244,9 @@ bool quest_check(struct player *p, const struct monster *m)
 	if (total == 0) {
 		p->total_winner = true;
 		p->upkeep->redraw |= (PR_TITLE);
-		msg("*** CONGRATULATIONS ***");
-		msg("You have won the game!");
-		msg("You may retire (commit suicide) when you are ready.");
+		msg("%s", angdroid_move_quest_text("*** CONGRATULATIONS ***", angdroid_zh_tw_enabled()));
+		msg("%s", angdroid_move_quest_text("You have won the game!", angdroid_zh_tw_enabled()));
+		msg("%s", angdroid_move_quest_text("You may retire (commit suicide) when you are ready.", angdroid_zh_tw_enabled()));
 	}
 
 	return true;
