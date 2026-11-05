@@ -224,6 +224,30 @@ def main():
            and 'strnfmt(buf, buflen, "[U] %s", translated)' in mon
            and 'strnfmt(buf, buflen, "[U] %s", race->name)' in mon,
            "Unique names must stay display-only in monster lists")
+    # The 107 ego records have 79 distinct source names; only identified,
+    # opted-in screen descriptions may use their translated suffix.
+    ego_source = source(ROOT / "variant_lib/angband/gamedata/ego_item.txt", errors)
+    ego_header = source(CPP / "angband/zh-tw-ego-names.h", errors)
+    ego_native_test = source(ROOT / "tests/native/test_ego_names_locale.c", errors)
+    ego_names = {
+        line[5:] for line in ego_source.splitlines() if line.startswith("name:")
+    }
+    ego_pairs = table(ego_header)
+    expect(len(ego_names) == 79 and len(ego_pairs) == 79
+           and {en for en, _ in ego_pairs} == ego_names
+           and len({en for en, _ in ego_pairs}) == len(ego_pairs)
+           and all(zh.strip() for _, zh in ego_pairs)
+           and "#define ANGDROID_ZH_TW_EGO_NAMES 79" in ego_header,
+           "All canonical ego suffixes need exact Traditional Chinese labels")
+    expect('"zh-tw-ego-names.h"' in obj
+           and "angdroid_zh_tw_ego_name(ego_name)" in obj
+           and 'const char *ego_name = obj->ego->name;' in obj
+           and 'if (localized) ego_name = localized;' in obj
+           and 'strnfcat(buf, max, &end, " %s", ego_name);' in obj
+           and "obj->known->ego && !(mode & ODESC_NOEGO)" in obj
+           and "test_ego_names_locale.c" in native_tests
+           and 'angdroid_zh_tw_ego_name(NULL) == NULL' in ego_native_test,
+           "Ego suffix must remain identified, screen-only and C99 tested")
     expect("if (!easy_know && !kind->aware && kind->flavor)" in obj,
            "Unidentified item flavors must not be disclosed")
     expect("obj_desc_name_format(buf, max, 0, kind->name, NULL, false)" in obj,

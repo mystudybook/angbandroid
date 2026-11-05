@@ -1398,3 +1398,20 @@ canonical translation dictionary is still 326 entries.
   monster names remain unchanged; full localization of other variants,
   unidentified item flavors, artifact/ego names and grammar is still pending.
 
+## All 79 distinct ego-item suffixes (2026-11-05)
+
+- Angband `ego_item.txt` has 107 ego records but only 79 distinct text
+  suffixes. `zh-tw-ego-names.h` maps all 79 canonical names to Traditional
+  Chinese, including `of Speed`, `of *Slay Dragon*` and `(Holy Avenger)`.
+- `obj_desc_name()` translates an ego suffix only when `ODESC_ZH_TW` is
+  present, the native language is zh-TW, and the original known-ego or store
+  condition has already allowed the name to display. Unknown ego suffixes
+  retain English text. The original `ODESC_NOEGO` suppression is unchanged.
+- Canonical ego objects and game data, unknown item flavors, save files,
+  English UI and character exports are unmodified. Generic inventory text
+  that does not opt in to `ODESC_ZH_TW` is not translated.
+- `tests/native/test_ego_names_locale.c` compiles as C99 in
+  `scripts/test-native-utf8.sh`, and the native source checker and canonical
+  coverage audit assert 79/79 exact source keys. A local Android APK rebuild
+  and actual equipment/shops gameplay inspection remain necessary.
+
