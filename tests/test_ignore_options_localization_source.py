@@ -45,9 +45,9 @@ class IgnoreMenuLocalizationSourceTest(unittest.TestCase):
         self.assertEqual([x for x in all_labels if x not in TRANSLATED], [])
 
     def test_ignore_menu_is_display_only_and_cjk_width_safe(self):
-        self.assertIn("angdroid_game_ui_text(quality_choices[oid].name", UI)
-        self.assertIn("angdroid_game_ui_text(quality_values[level].name", UI)
-        self.assertIn("angdroid_game_ui_text(quality_values[oid].name", UI)
+        self.assertRegex(UI, r"angdroid_game_ui_text\(\s*quality_choices\[oid\]\.name\s*,")
+        self.assertRegex(UI, r"angdroid_game_ui_text\(\s*quality_values\[level\]\.name\s*,")
+        self.assertRegex(UI, r"angdroid_game_ui_text\(\s*quality_values\[oid\]\.name\s*,")
         self.assertIn("angdroid_menu_copy_columns(clipped,", UI)
         self.assertIn("angdroid_game_ui_text(sval_dependent[line].desc", UI)
         self.assertIn("angdroid_game_ui_text(extra_item_options[line].name", UI)

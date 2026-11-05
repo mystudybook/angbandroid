@@ -29,6 +29,14 @@ def check_source(source):
     if len(footers) != 1 or tree.body[-1] is not footers[0]:
         raise AssertionError("Expected one final __main__ entry point")
 
+    # A helper named table() is called early in main().  Any binding with
+    # that name anywhere in main(), even in a later for-loop, makes Python
+    # treat it as an uninitialized local and raises UnboundLocalError.
+    if any(isinstance(n, ast.Name) and n.id == "table"
+           and isinstance(n.ctx, (ast.Store, ast.Del))
+           for n in ast.walk(mains[0])):
+        raise AssertionError("main() shadows the table() parsing helper")
+
     parser = [n for n in ast.walk(mains[0]) if isinstance(n, ast.FunctionDef)
               and n.name == "terrain_table_pairs"]
     if len(parser) != 1:
@@ -68,6 +76,16 @@ def main():
         checks += 1
     else:
         raise AssertionError("Duplicate main-entry regression not detected")
+
+    # Regression: a future loop variable named table must be rejected
+    # before the native checker is invoked.
+    try:
+        check_source(code.replace("for table_name, expected in (",
+                                  "for table, expected in (", 1))
+    except AssertionError:
+        checks += 1
+    else:
+        raise AssertionError("table() shadowing regression not detected")
 
     # The original corruption was an unfinished regular-expression string.
     try:
