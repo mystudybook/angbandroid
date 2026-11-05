@@ -41,6 +41,10 @@
 #include "droid.h"
 #include "zh-tw-object-info.h"
 #include "zh-tw-item-info.h"
+#include "zh-tw-activations.h"
+#include "zh-tw-curse.h"
+#include "zh-tw-item-abilities.h"
+#include "zh-tw-monsters.h"
 
 /**
  * Describes the number of blows possible for given stat bonuses
@@ -127,12 +131,20 @@ static bool describe_curses(textblock *tb, const struct object *obj,
 		return false;
 	for (i = 1; i < z_info->curse_max; i++) {
 		if (c[i].power) {
-			textblock_append(tb, "It ");
-			textblock_append_c(tb, COLOUR_L_RED, "%s", curses[i].desc);
-			if (c[i].power == 100) {
-				textblock_append(tb, "; this curse cannot be removed");
+			if (angdroid_zh_tw_enabled()) {
+				textblock_append(tb, "這件物品");
+				textblock_append_c(tb, COLOUR_L_RED, "%s",
+					angdroid_curse_description(curses[i].desc, true));
+				if (c[i].power == 100)
+					textblock_append(tb, "；此詛咒無法移除");
+				textblock_append(tb, "。\n");
+			} else {
+				textblock_append(tb, "It ");
+				textblock_append_c(tb, COLOUR_L_RED, "%s", curses[i].desc);
+				if (c[i].power == 100)
+					textblock_append(tb, "; this curse cannot be removed");
+				textblock_append(tb, ".\n");
 			}
-			textblock_append(tb, ".\n");
 		}
 	}
 
@@ -350,7 +362,9 @@ static bool describe_misc_magic(textblock *tb, const bitflag flags[OF_SIZE])
 		if ((prop->subtype != OFT_MISC)  && (prop->subtype != OFT_MELEE) &&
 			(prop->subtype != OFT_BAD)) continue;
 		if (of_has(flags, prop->index)) {
-			textblock_append(tb, "%s.  ", prop->desc);
+			textblock_append(tb, "%s%s  ",
+				angdroid_zh_tw_item_ability(prop->desc, angdroid_zh_tw_enabled()),
+				angdroid_zh_tw_enabled() ? "。" : ".");
 			printed = true;
 		}
 	}
@@ -2100,6 +2114,7 @@ static bool describe_effect(textblock *tb, const struct object *obj,
 	struct effect *effect = NULL;
 	bool aimed = false;
 	int min_time, max_time, failure_chance;
+	const char *localized_activation = NULL;
 
 	/* Sometimes we only print artifact activation info */
 	if (only_artifacts && !obj->artifact) {
@@ -2128,10 +2143,18 @@ static bool describe_effect(textblock *tb, const struct object *obj,
 		return true;
 	}
 
-	/* Activations get a special message */
+	/* Describe an already-known activation only. The canonical ID and
+	 * effect data remain English; missing translations fall back cleanly. */
 	if (obj->activation && obj->activation->desc) {
-		textblock_append(tb, "When activated, it ");
-		textblock_append(tb, "%s", obj->activation->desc);
+		localized_activation = angdroid_zh_tw_activation_description(
+			obj->activation->name, angdroid_zh_tw_enabled());
+		if (localized_activation) {
+			textblock_append(tb, "啟動後會");
+			textblock_append(tb, "%s", localized_activation);
+		} else {
+			textblock_append(tb, "When activated, it ");
+			textblock_append(tb, "%s", obj->activation->desc);
+		}
 	} else {
 		int level = obj->artifact ?
 			obj->artifact->level : obj->kind->level;
@@ -2160,7 +2183,7 @@ static bool describe_effect(textblock *tb, const struct object *obj,
 		textblock_free(tbe);
 	}
 
-	textblock_append(tb, ".\n");
+	textblock_append(tb, "%s", localized_activation ? "。\n" : ".\n");
 
 	if (min_time || max_time) {
 		/* Sometimes adjust for player speed */
@@ -2250,6 +2273,75 @@ static bool describe_origin(textblock *tb, const struct object *obj, bool terse)
 	}
 	if (comma) {
 		my_strcat(name, ",", sizeof(name));
+	}
+
+	/* Only format the already-known item origin for display; keep the
+	 * canonical origin enum, monster data and exported records intact. */
+	if (angdroid_zh_tw_enabled() && origins[origin].args >= 0) {
+		char zh_spot[80];
+		const char *zh_dropper = dropper;
+		const char *found = NULL;
+		bool handled = true;
+
+		if (obj->origin_depth)
+			strnfmt(zh_spot, sizeof(zh_spot), "地城 %d 英呎（第 %d 層）",
+				obj->origin_depth * 50, obj->origin_depth);
+		else
+			my_strcpy(zh_spot, "城鎮", sizeof(zh_spot));
+
+		if (!obj->origin_race) {
+			zh_dropper = "已不可考的怪物";
+		} else if (!unique) {
+			found = angdroid_zh_tw_monster_list_name(dropper);
+			if (found) zh_dropper = found;
+		}
+
+		switch (origin) {
+		case ORIGIN_FLOOR:
+			textblock_append(tb, "在%s的地面上發現", zh_spot); break;
+		case ORIGIN_CHEST:
+			textblock_append(tb, "從%s的寶箱中取得", zh_spot); break;
+		case ORIGIN_SPECIAL:
+			textblock_append(tb, "在%s特殊房間的地面上發現", zh_spot); break;
+		case ORIGIN_PIT:
+			textblock_append(tb, "在%s的怪物坑地面上發現", zh_spot); break;
+		case ORIGIN_VAULT:
+			textblock_append(tb, "在%s的寶庫地面上發現", zh_spot); break;
+		case ORIGIN_LABYRINTH:
+			textblock_append(tb, "在%s的迷宮地面上發現", zh_spot); break;
+		case ORIGIN_CAVERN:
+			textblock_append(tb, "在%s的洞窟地面上發現", zh_spot); break;
+		case ORIGIN_RUBBLE:
+			textblock_append(tb, "在%s的碎石堆下發現", zh_spot); break;
+		case ORIGIN_ACQUIRE:
+			textblock_append(tb, "在%s以魔法取得", zh_spot); break;
+		case ORIGIN_STORE:
+			textblock_append(tb, "從商店購得"); break;
+		case ORIGIN_BIRTH:
+			textblock_append(tb, "家族傳承的物品"); break;
+		case ORIGIN_CHEAT:
+			textblock_append(tb, "由除錯模式建立"); break;
+		case ORIGIN_DROP_UNKNOWN:
+			textblock_append(tb, "由未知怪物在%s掉落", zh_spot); break;
+		case ORIGIN_DROP:
+		case ORIGIN_DROP_SPECIAL:
+		case ORIGIN_DROP_PIT:
+		case ORIGIN_DROP_VAULT:
+		case ORIGIN_DROP_BREED:
+		case ORIGIN_DROP_SUMMON:
+		case ORIGIN_DROP_POLY:
+		case ORIGIN_DROP_MIMIC:
+		case ORIGIN_DROP_WIZARD:
+			textblock_append(tb, "由%s在%s掉落", zh_dropper, zh_spot);
+			break;
+		default:
+			handled = false;
+			break;
+		}
+		if (handled) {
+			textblock_append(tb, "\n\n");
+			return true;
+		}
 	}
 
 	/* Print an appropriate description */
