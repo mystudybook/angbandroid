@@ -48,7 +48,21 @@ class VisibleObjectLocalizationTest(unittest.TestCase):
         self.assertIn('angdroid_zh_tw_ego_name(ego_name)', DESCRIBE)
         self.assertIn('if (localized) ego_name = localized;', DESCRIBE)
         self.assertIn('strnfcat(buf, max, &end, " %s", ego_name);', DESCRIBE)
-        self.assertIn('strnfcat(buf, max, &end, " %s", obj->artifact->name);', DESCRIBE)
+        self.assertIn('strnfcat(buf, max, &end, " %s", artifact_name);', DESCRIBE)
+
+    def test_artifact_names_only_after_identification(self):
+        art_header = (CPP / "zh-tw-artifact-names.h").read_text(encoding="utf-8")
+        pairs = re.findall(
+            r'\\{\\s*"([^"\\n]+)",\\s*"([^"\\n]+)"\\s*\\}', art_header
+        )
+        self.assertEqual(len(pairs), 138)
+        self.assertEqual(len({name for name, _ in pairs}), 138)
+        self.assertIn('#include "zh-tw-artifact-names.h"', DESCRIBE)
+        self.assertIn("if (object_is_known_artifact(obj))", DESCRIBE)
+        self.assertIn("const char *artifact_name = obj->artifact->name;", DESCRIBE)
+        self.assertIn("angdroid_zh_tw_artifact_name(artifact_name)", DESCRIBE)
+        self.assertIn("if (localized) artifact_name = localized;", DESCRIBE)
+        self.assertIn('strnfcat(buf, max, &end, " %s", artifact_name);', DESCRIBE)
 
     def test_only_requested_screen_calls_opt_in(self):
         for name, expected in UI_CALL_COUNTS.items():
