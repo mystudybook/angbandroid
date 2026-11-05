@@ -22,6 +22,9 @@
 #include "ui-input.h"
 #include "ui-menu.h"
 #include "ui-player-properties.h"
+#include "droid.h"
+#include "zh-tw-player-ability.h"
+#include "menu-text-fit.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -39,41 +42,52 @@ static char view_ability_tag(struct menu *menu, int oid)
 static void view_ability_display(struct menu *menu, int oid, bool cursor,
 	int row, int col, int width)
 {
-	char buf[80];
+	char buf[256], clipped[256];
 	uint8_t color;
 	struct player_ability *choices = menu->menu_data;
+	const char *name = angdroid_ability_name(choices[oid].name,
+		angdroid_zh_tw_enabled());
 
 	switch (choices[oid].group) {
 	case PLAYER_FLAG_SPECIAL:
 		{
-			strnfmt(buf, sizeof(buf), "Specialty Ability: %s",
-				choices[oid].name);
+			if (angdroid_zh_tw_enabled())
+				strnfmt(buf, sizeof(buf), "特殊能力：%s", name);
+			else
+				strnfmt(buf, sizeof(buf), "Specialty Ability: %s", name);
 			color = COLOUR_GREEN;
 			break;
 		}
 	case PLAYER_FLAG_CLASS:
 		{
-			strnfmt(buf, sizeof(buf), "Class: %s",
-				choices[oid].name);
+			if (angdroid_zh_tw_enabled())
+				strnfmt(buf, sizeof(buf), "職業能力：%s", name);
+			else
+				strnfmt(buf, sizeof(buf), "Class: %s", name);
 			color = COLOUR_UMBER;
 			break;
 		}
 	case PLAYER_FLAG_RACE:
 		{
-			strnfmt(buf, sizeof(buf), "Racial: %s",
-				choices[oid].name);
+			if (angdroid_zh_tw_enabled())
+				strnfmt(buf, sizeof(buf), "種族能力：%s", name);
+			else
+				strnfmt(buf, sizeof(buf), "Racial: %s", name);
 			color = COLOUR_ORANGE;
 			break;
 		}
 	default:
 		{
-			my_strcpy(buf, "Mysterious", sizeof(buf));
+			my_strcpy(buf, angdroid_zh_tw_enabled() ? "神祕能力" : "Mysterious",
+				sizeof(buf));
 			color = COLOUR_PURPLE;
 		}
 	}
 
 	/* Print it */
-	c_put_str(cursor ? COLOUR_WHITE : color, buf, row, col);
+	angdroid_menu_copy_columns(clipped, sizeof(clipped), buf,
+		width > 0 ? (size_t)width : 0);
+	c_put_str(cursor ? COLOUR_WHITE : color, clipped, row, col);
 
 }
 
@@ -93,7 +107,9 @@ static void view_ability_menu_browser(int oid, void *data, const region *loc)
 
 	clear_from(loc->row + loc->page_rows);
 	Term_gotoxy(loc->col, loc->row + loc->page_rows);
-	text_out_c(COLOUR_L_BLUE, "\n%s\n", (char *) choices[oid].desc);
+	text_out_c(COLOUR_L_BLUE, "\n%s\n",
+		angdroid_ability_description(choices[oid].desc,
+			angdroid_zh_tw_enabled()));
 
 	/* XXX */
 	text_out_pad = 0;
@@ -116,9 +132,14 @@ void textui_view_ability_menu(struct player_ability *ability_list,
 	screen_save();
 
 	/* Prompt choices */
-	strnfmt(buf, sizeof(buf),
-		"Race and class abilities (%c-%c, ESC=exit): ",
-		all_letters_nohjkl[0], all_letters_nohjkl[num_abilities - 1]);
+	if (angdroid_zh_tw_enabled())
+		strnfmt(buf, sizeof(buf),
+			"種族與職業能力（%c-%c，Esc 離開）：",
+			all_letters_nohjkl[0], all_letters_nohjkl[num_abilities - 1]);
+	else
+		strnfmt(buf, sizeof(buf),
+			"Race and class abilities (%c-%c, ESC=exit): ",
+			all_letters_nohjkl[0], all_letters_nohjkl[num_abilities - 1]);
 
 	/* Set up the menu */
 	menu_init(&menu, MN_SKIN_SCROLL, &menu_f);

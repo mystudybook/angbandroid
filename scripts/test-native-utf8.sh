@@ -133,6 +133,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_curse_locale"
 "$BUILD_DIR/test_curse_locale"
 
+# Player-property abilities: exact source-matched name/description locale.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_player_ability_locale.c" \
+    -o "$BUILD_DIR/test_player_ability_locale"
+"$BUILD_DIR/test_player_ability_locale"
+
 # Target selection help only localizes descriptive fragments, not key bindings.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_target_help_locale.c" \

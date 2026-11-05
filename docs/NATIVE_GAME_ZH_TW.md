@@ -1083,3 +1083,16 @@ the prompt remains in its original English format when zh-TW is disabled.
 The strict C99 regression tests all 27 names and descriptions in both locales,
 unknown/NULL fallback, and bounded row formatting. Full Android NDK and
 on-device menu verification remain outstanding.
+
+
+## Race, class and player-property ability lore (2026-11-05)
+
+The native race/class ability browser now translates all 44 canonical
+`player_property.txt` ability/property names and descriptions, including
+the multi-line Combat Regeneration explanation. Unknown data retains English.
+The three display categories, selection heading and selected ability lore are
+also localized. UTF-8 ability list labels are clipped by terminal cells, not
+raw byte count. The original ability group/flag codes, descriptions in the
+data parser, selection identifiers, and savefile compatibility are unchanged.
+Source-matched 44/44 coverage and standalone bilingual C99 regression are
+registered; Android NDK and on-device browser verification are pending.
