@@ -41,7 +41,27 @@ if "show_obj(oid, row - oid, col, cursor, olist_mode, width);" not in source:
     raise SystemExit("FAIL: inventory selection ignores its drawable row width")
 if "show_obj(i, row, col, false, mode, Term->wid - col);" not in source:
     raise SystemExit("FAIL: inventory panel does not bound drawable row width")
-if "area.width = (int)MAX(max_len, angdroid_utf8_display_columns(header));" not in source:
-    raise SystemExit("FAIL: object menu header still measured in bytes")
+if "angdroid_utf8_display_columns(header)" not in source or (
+    "area.width = (int)MIN((size_t)MAX(1, Term->wid - area.col)," not in source
+):
+    raise SystemExit("FAIL: object menu width does not bound the header and numeric columns")
+
+if "static olist_detail_t object_list_visible_extras(" not in source:
+    raise SystemExit("FAIL: inventory numeric-column fitting policy is missing")
+if 'olist_render_mode = object_list_visible_extras(olist_mode, Term->wid);' not in source:
+    raise SystemExit("FAIL: item-selection list bypasses the responsive detail policy")
+if "mode = object_list_visible_extras(mode, Term->wid);" not in source:
+    raise SystemExit("FAIL: inventory panel bypasses the responsive detail policy")
+if "if (mode & OLIST_RECHARGE) ex_width += 10;" not in source:
+    raise SystemExit("FAIL: recharge chance column is not reserved in inventory")
+if "if (olist_render_mode & OLIST_RECHARGE) ex_width += 10;" not in source:
+    raise SystemExit("FAIL: recharge chance column is not reserved in selection")
+if "angdroid_object_list_detail_fits(offset, row_width," not in source:
+    raise SystemExit("FAIL: a numeric detail may be clipped to a misleading number")
+if source.count("object_list_put_detail(buf, row + obj_num, col,") != 4:
+    raise SystemExit("FAIL: price, failure, recharge and weight need row bounds")
+if "char o_name[256];" not in source:
+    raise SystemExit("FAIL: item cached UTF-8 names are still constrained to 80 bytes")
+
 
 print("PASS: inventory and equipment names are clipped by cells without mutation")
