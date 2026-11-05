@@ -224,6 +224,33 @@ def main():
            and 'strnfmt(buf, buflen, "[U] %s", translated)' in mon
            and 'strnfmt(buf, buflen, "[U] %s", race->name)' in mon,
            "Unique names must stay display-only in monster lists")
+    # Translating an unidentified visual label must not reveal the kind.
+    # The 302 flavor/fixed source entries contain 202 distinct nonempty texts.
+    flavor_source = source(ROOT / "variant_lib/angband/gamedata/flavor.txt", errors)
+    flavor_header = source(CPP / "angband/zh-tw-flavor-names.h", errors)
+    flavor_native_test = source(
+        ROOT / "tests/native/test_item_flavor_locale.c", errors)
+    flavor_names = {
+        line.split(":")[-1] for line in flavor_source.splitlines()
+        if line.startswith(("flavor:", "fixed:")) and line.split(":")[-1]
+    }
+    flavor_pairs = table(flavor_header)
+    expect(len(flavor_names) == 202 and len(flavor_pairs) == 202
+           and {en for en, _ in flavor_pairs} == flavor_names
+           and len({en for en, _ in flavor_pairs}) == len(flavor_pairs)
+           and all(zh.strip() for _, zh in flavor_pairs)
+           and "#define ANGDROID_ZH_TW_FLAVOR_NAMES 202" in flavor_header,
+           "All unidentified flavor labels must match canonical flavor.txt")
+    expect('"zh-tw-flavor-names.h"' in obj
+           and "if (!easy_know && !kind->aware && kind->flavor)" in obj
+           and "angdroid_zh_tw_flavor_name(flavor)" in obj
+           and "my_strcpy(buf, localized ? localized : flavor, max);" in obj
+           and "show_flavor && obj->kind->flavor" in obj
+           and "angdroid_zh_tw_flavor_name(obj->kind->flavor->text)" in obj
+           and "if (localized_flavor) modstr = localized_flavor;" in obj
+           and "test_item_flavor_locale.c" in native_tests
+           and 'angdroid_zh_tw_flavor_name(NULL) == NULL' in flavor_native_test,
+           "Flavor display translation must preserve unknown-item isolation")
     # Only known artifacts and explicit display flags may use translated
     # labels. All 138 names must match canonical artifact.txt exactly.
     artifact_source = source(ROOT / "variant_lib/angband/gamedata/artifact.txt", errors)
