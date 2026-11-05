@@ -1305,3 +1305,37 @@ confirmation of replacement/takeoff, item source feedback for floor and
 inventory, and a rare equipment-replacement error. Numeric slot labels,
 command routing, original English behavior and actual item state remain
 unchanged. Source checker assertions guard all bilingual branches.
+
+
+## More item descriptions and localization coverage (2026-11-05)
+
+- Activation descriptions from `activation.txt`: **116/116** canonical activation IDs
+  with nonempty descriptions now have manually curated Traditional Chinese
+  display text in `zh-tw-activations.h`. It is selected only after the
+  original identification gate in `describe_effect()`. Unidentified items
+  do not reveal the effect, and unknown IDs fall back to English.
+- Object property descriptive labels from `object_property.txt`: **22/22**
+  are mapped in `zh-tw-item-abilities.h` and rendered by the miscellaneous
+  property section, with unmodified game flags and calculation.
+- Existing curse descriptions from `curse.txt`: **27/27** now have a
+  display-only Chinese branch in `describe_curses()` using the existing
+  curse dictionary, including a non-removable-curse indication.
+- Item origins: **22/22** visible origin enum values have Chinese display
+  paths, including map depth, store, treasure vault, and monster drops.
+  Ordinary monsters reuse translated display names; unique proper names,
+  origin enums, source monsters, and original export data are unchanged.
+- The canonical coverage audit now reports these four groups individually,
+  and `tests/test_activation_effects_coverage.py` checks that new upstream
+  descriptions must have a Chinese mapping. A host C99 header smoke test
+  is included in `scripts/verify-zh-tw.sh`.
+
+**Remaining work before a credible "fully localized" claim:** Angband
+`object_desc()` still has English pluralization, identification/flavor
+templates, and ego/artifact append rules in inventory and exports; most
+canonical monster flavor paragraphs remain English. Several long object,
+artifact, ego and effect narratives are not covered by the new IDs.
+The other bundled native variants are independent engines and have not
+been localized by this patch. Full Android SDK/NDK compilation, emulator
+gameplay, UI-width review, save/export compatibility, and license checks
+remain pending. These translations were verified by inspecting the GitHub
+sources and canonical data; no device build was run in this change.
