@@ -1456,3 +1456,25 @@ canonical translation dictionary is still 326 entries.
   rune identification and visual Unicode column clipping must still be
   validated on an emulator or device.
 
+## Original artifact and ego story paragraphs (2026-11-05)
+
+- All five ego-item records with source `desc:` paragraphs have Traditional
+  Chinese narrative mappings: `of Accuracy`, `of Power`, `of Wounding`,
+  `of Slaying` and `of Craftsmanship` (**5/5**).
+- The first **43/138** canonical artifact descriptions are translated,
+  including Galadriel's Phial, Angrist, Sting, Andúril and Olórin's staff.
+  The other **95** artifact flavor paragraphs still fall back to English.
+- Both dictionaries look up canonical artifact/ego **names** only when the
+  engine already allows the text in `describe_flavor_text()`. This is
+  presentation-only; the source `artifact.txt`, `ego_item.txt`, object
+  identity, randomized item state, identification and save files are unchanged.
+- Random artifacts retain their existing path. English mode, unrecognized
+  names and untranslated original artifacts keep the upstream story.
+  Spoiler export passes `OINFO_SPOIL` and therefore intentionally keeps
+  English narrative; terse character dumps do not output those paragraphs.
+- `scripts/audit-zh-tw-coverage.py` distinguishes artifact lore coverage
+  from the already complete 138/138 **artifact name** dictionary. Both
+  the C99 story tests and static source checks are registered in
+  `scripts/verify-zh-tw.sh`. A fresh Android NDK build and real-device
+  layout validation remain necessary for this batch.
+
