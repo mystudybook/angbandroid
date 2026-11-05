@@ -20,11 +20,11 @@ SOURCE_OPTIONS = (CPP / "list-options.h").read_text(encoding="utf-8")
 class OptionsLocalizationSourceTest(unittest.TestCase):
     def test_every_option_description_has_a_translation(self):
         descriptions = re.findall(
-            r'OP\\(\\s*[A-Za-z0-9_]+,\\s*"([^"]+)"', SOURCE_OPTIONS
+            r'OP\(\s*[A-Za-z0-9_]+,\s*"([^"]+)"', SOURCE_OPTIONS
         )
         self.assertGreaterEqual(len(descriptions), 40)
         mappings = re.findall(
-            r'\\{\\s*"([^"\\n]+)"\\s*,\\s*"([^"\\n]+)"\\s*\\}', CATALOG
+            r'\{\s*"([^"\n]+)"\s*,\s*"([^"\n]+)"\s*\}', CATALOG
         )
         translated = {source: target for source, target in mappings}
         self.assertEqual(len(mappings), len(translated), "duplicate UI mapping key")
@@ -55,7 +55,7 @@ class OptionsLocalizationSourceTest(unittest.TestCase):
             )
         self.assertNotRegex(
             OPTIONS,
-            r'get_com\\("(?:(?:Successfully saved)|(?:Save failed)|'
+            r'get_com\("(?:(?:Successfully saved)|(?:Save failed)|'
             r'(?:Restore failed))',
         )
 
