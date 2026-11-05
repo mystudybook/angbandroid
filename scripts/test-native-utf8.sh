@@ -89,6 +89,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_item_flavor_locale"
 "$BUILD_DIR/test_item_flavor_locale"
 
+# Known artifact and ego story text, including untranslated fallbacks.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_item_story_locale.c" \
+    -o "$BUILD_DIR/test_item_story_locale"
+"$BUILD_DIR/test_item_story_locale"
+
 "$BUILD_DIR/test_item_locale"
 
 # Native UI translations: compile without Android SDK or the game engine.
