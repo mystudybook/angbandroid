@@ -13,6 +13,22 @@ int main(void)
                   "kobold") == 0);
     assert(strcmp(angdroid_knowledge_monster_label("kobold", 1, 1),
                   "kobold") == 0);
+    /* Unique names are localized only for UI and retain English fallback. */
+    assert(strcmp(angdroid_knowledge_monster_label(
+        "Morgoth, Lord of Darkness", 1, 1),
+        "魔苟斯，黑暗之王") == 0);
+    assert(strcmp(angdroid_knowledge_monster_label(
+        "Sauron, the Sorcerer", 1, 1),
+        "索倫，黑暗巫師") == 0);
+    assert(strcmp(angdroid_knowledge_monster_label(
+        "Sauron, the Sorcerer", 1, 0),
+        "Sauron, the Sorcerer") == 0);
+    assert(strcmp(angdroid_knowledge_monster_label(
+        "Unknown named unique", 1, 1),
+        "Unknown named unique") == 0);
+    cells = angdroid_knowledge_monster_copy(label, sizeof(label),
+        "Morgoth, Lord of Darkness", 1, 1, 5);
+    assert(cells == 4 && strcmp(label, "魔苟") == 0);
     assert(strcmp(angdroid_knowledge_monster_label("ancient red dragon", 0, 1),
                   "遠古紅龍") == 0);
     assert(strcmp(angdroid_knowledge_monster_label("unknown creature", 0, 1),

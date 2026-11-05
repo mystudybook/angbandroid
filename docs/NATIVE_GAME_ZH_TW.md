@@ -1377,3 +1377,24 @@ No Android build or end-to-end visual/export test was run in this update.
 `tests/test_visible_item_name_localization.py` checks that only intended
 on-screen callsites opt in, the English branch remains present, and the
 canonical translation dictionary is still 326 entries.
+
+## All 101 unique monster display names (2026-11-05)
+
+- Original Angband's 101 `RF_UNIQUE` records now have an exact Traditional Chinese
+  display dictionary in `zh-tw-unique-monsters.h`.
+- `get_mon_name()` uses the Chinese name in the visible monster list while
+  preserving the `[U]` unique marker. The knowledge browser translates
+  known unique names and clips UTF-8 text before the symbol column. The
+  translated monster-event subject is localized only when the monster is
+  visible; invisible monsters keep anonymous pronouns.
+- Canonical `monster_race.name`, game-data keys, gameplay identity, save
+  contents, and English-mode strings remain unchanged. `monster_desc()`
+  and unrelated long dynamic combat grammar have NOT been globally replaced.
+- Coverage auditing asserts an exact 101/101 unique-name dictionary against
+  canonical `monster.txt`; the host C99 tests exercise famous uniques,
+  unknown-name fallback, English-mode identity and UTF-8 clipping. Actual
+  Android gameplay still requires emulator/device verification.
+- The 623/623 translated monster flavor descriptions and 522/522 regular
+  monster names remain unchanged; full localization of other variants,
+  unidentified item flavors, artifact/ego names and grammar is still pending.
+

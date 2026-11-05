@@ -46,6 +46,12 @@ CC="${CC:-cc}"
 "$BUILD_DIR/test_monster_locale"
 
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_unique_monster_locale.c" \
+    -o "$BUILD_DIR/test_unique_monster_locale"
+
+"$BUILD_DIR/test_unique_monster_locale"
+
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_monster_lore_locale.c" \
     -o "$BUILD_DIR/test_monster_lore_locale"
 "$BUILD_DIR/test_monster_lore_locale"
