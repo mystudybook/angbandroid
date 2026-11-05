@@ -926,7 +926,7 @@ def main():
     # verify the title path and existing metadata column boundaries.
     expect('o_name, col, 45, Term->wid' in knowledge_ui and
            'inscrip, 55, 75, Term->wid' in knowledge_ui and
-           'angdroid_zh_tw_rune_title(' in knowledge_ui and
+           'const char *display_name = angdroid_zh_tw_rune_title(' in knowledge_ui and
            'rune_name(oid), angdroid_zh_tw_enabled(),' in knowledge_ui and
            'display_name, col, 46, Term->wid' in knowledge_ui and
            'inscrip, 47, Term->wid, Term->wid' in knowledge_ui,
