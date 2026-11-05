@@ -29,6 +29,7 @@
 #include "z-color.h"
 #include "z-form.h"
 #include "z-util.h"
+#include "zh-tw-shape-effects.h"
 
 
 static struct {
@@ -569,6 +570,95 @@ textblock *effect_describe(const struct effect *e, const char *prefix,
 	}
 
 	return tb;
+}
+
+
+/**
+ * Describe canonical shape-change effects in Traditional Chinese.
+ *
+ * Unlike the generic effect_describe(), only the known subset used by
+ * shape.txt is handled here. Any unknown effect or unexpected subtype
+ * returns NULL so the knowledge UI can show the original full English
+ * description without losing gameplay information.
+ *
+ * Dice descriptions use the same dice_roll()/format_dice_string()
+ * pipeline as effect_describe(): dynamic PLAYER_LEVEL and PLAYER_HP
+ * expressions remain dynamic.
+ */
+textblock *effect_describe_shape_zh(const struct effect *effect)
+{
+    const struct effect *current;
+    textblock *tb;
+    int n = 0;
+
+    if (!effect) return NULL;
+
+    /* Validate the *whole* stack before rendering any translated parts. */
+    for (current = effect; current; current = current->next) {
+        const char *original;
+        if (!effect_desc(current)) return NULL;
+        switch (current->index) {
+        case EF_CURE:
+        case EF_TIMED_INC:
+            original = timed_effects[current->subtype].desc;
+            if (!angdroid_shape_effect_known(original)) return NULL;
+            break;
+        case EF_PROJECT_LOS:
+            original = projections[current->subtype].desc;
+            if (!angdroid_shape_effect_known(original)) return NULL;
+            break;
+        case EF_DAMAGE:
+            break;
+        default:
+            return NULL;
+        }
+    }
+
+    tb = textblock_new();
+    textblock_append(tb, "變身時，");
+
+    for (current = effect; current; current = current->next) {
+        random_value value = { 0, 0, 0, 0 };
+        char dice_string[20];
+        const char *localized;
+
+        /* Keep the same numeric calculations as effect_describe(). */
+        if (current->dice) {
+            (void)dice_roll(current->dice, &value);
+        }
+        format_dice_string(&value, 1, sizeof(dice_string), dice_string);
+
+        if (n > 0) textblock_append(tb, "，並");
+        switch (current->index) {
+        case EF_CURE:
+            localized = angdroid_shape_effect_term(
+                timed_effects[current->subtype].desc);
+            textblock_append(tb, "解除%s", localized);
+            break;
+        case EF_DAMAGE:
+            textblock_append(tb, "承受 ");
+            copy_to_textblock_with_coloring(tb, dice_string);
+            textblock_append(tb, " 點傷害");
+            break;
+        case EF_TIMED_INC:
+            localized = angdroid_shape_effect_term(
+                timed_effects[current->subtype].desc);
+            textblock_append(tb, "延長%s狀態 ", localized);
+            copy_to_textblock_with_coloring(tb, dice_string);
+            textblock_append(tb, " 回合");
+            break;
+        case EF_PROJECT_LOS:
+            localized = angdroid_shape_effect_term(
+                projections[current->subtype].desc);
+            textblock_append(tb, "%s", localized);
+            break;
+        default:
+            /* The preflight guarantees that this branch is unreachable. */
+            break;
+        }
+        ++n;
+    }
+    return tb;
 }
 
 /**

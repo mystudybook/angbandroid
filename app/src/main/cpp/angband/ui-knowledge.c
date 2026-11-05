@@ -3201,13 +3201,23 @@ static void shape_lore_append_misc_flags(textblock *tb,
 static void shape_lore_append_change_effects(textblock *tb,
 	const struct player_shape *s)
 {
-	textblock *tbe = effect_describe(s->effect, "Changing into the shape ",
-		0, false);
+	textblock *tbe = NULL;
+	bool translated = false;
 
+	if (angdroid_zh_tw_enabled()) {
+		tbe = effect_describe_shape_zh(s->effect);
+		translated = (tbe != NULL);
+	}
+	if (!tbe) {
+		/* Unknown effects keep all original content, not a partial
+		 * Chinese summary with missing damage or conditions. */
+		tbe = effect_describe(s->effect, "Changing into the shape ",
+			0, false);
+	}
 	if (tbe) {
 		textblock_append_textblock(tb, tbe);
 		textblock_free(tbe);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s", translated ? "。\n" : ".\n");
 	}
 }
 
