@@ -77,6 +77,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_ego_names_locale"
 "$BUILD_DIR/test_ego_names_locale"
 
+# Known artifact names retain canonical IDs and English fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_artifact_names_locale.c" \
+    -o "$BUILD_DIR/test_artifact_names_locale"
+"$BUILD_DIR/test_artifact_names_locale"
+
 "$BUILD_DIR/test_item_locale"
 
 # Native UI translations: compile without Android SDK or the game engine.
