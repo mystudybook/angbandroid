@@ -26,6 +26,8 @@ class VisibleObjectLocalizationTest(unittest.TestCase):
         self.assertIn("!show_flavor && obj->kind->name", DESCRIBE)
         self.assertIn("angdroid_zh_tw_item_kind_name(obj->kind->name)", DESCRIBE)
         self.assertIn("if (localized_kind)", DESCRIBE)
+        self.assertIn("angdroid_zh_tw_known_item_name(", DESCRIBE)
+        self.assertIn("angdroid_zh_tw_item_append_utf8(buf, max, &end,", DESCRIBE)
         self.assertIn("if (prefix && number == 0)", DESCRIBE)
         self.assertIn("else if (prefix && number > 1)", DESCRIBE)
         self.assertIn("!localized_kind && aware", DESCRIBE)

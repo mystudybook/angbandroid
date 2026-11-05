@@ -382,6 +382,28 @@ def main():
            and "test_ego_names_locale.c" in native_tests
            and 'angdroid_zh_tw_ego_name(NULL) == NULL' in ego_native_test,
            "Ego suffix must remain identified, screen-only and C99 tested")
+    # All known item-class classifiers must match the exact original tval keys.
+    grammar_header = source(CPP / "angband/zh-tw-item-grammar.h", errors)
+    tval_source = source(CPP / "angband/list-tvals.h", errors)
+    source_tvals = re.findall(r'^TV\(\w+,\s*"([^"]+)"\)', tval_source,
+                              re.MULTILINE)
+    grammar_units = re.findall(r'^\s*\{ "([^"]+)", "([^"]+)" \},?$',
+                               grammar_header, re.MULTILINE)
+    expect(len(source_tvals) == 36 and len(grammar_units) == 36 and
+           source_tvals == [name for name, _ in grammar_units] and
+           len(set(source_tvals)) == 36 and
+           all(unit for _, unit in grammar_units),
+           "Known item classifiers must match all 36 original tval labels")
+    expect('"zh-tw-item-grammar.h"' in obj and
+           "angdroid_zh_tw_known_item_name(" in obj and
+           "angdroid_zh_tw_item_append_utf8(buf, max, &end," in obj and
+           obj.count("angdroid_zh_tw_item_suffix(") == 2 and
+           obj.count("if (localized_kind && translated_suffix)") == 2 and
+           "test_item_name_grammar_locale.c" in native_tests and
+           "test_item_name_grammar_localization.py" in source(
+               ROOT / "scripts/verify-zh-tw.sh", errors),
+           "Opted-in item classifier/suffix/UTF-8 regression is not wired")
+
     # Source-matched appearance grammar only, not hidden item effects.
     flavored_header = source(CPP / "angband/zh-tw-flavored-object.h", errors)
     flavored_types = re.findall(

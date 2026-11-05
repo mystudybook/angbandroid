@@ -31,6 +31,7 @@
 #include "zh-tw-flavor-names.h"
 #include "zh-tw-scroll-title.h"
 #include "zh-tw-flavored-object.h"
+#include "zh-tw-item-grammar.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -400,11 +401,22 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	} else if (localized_flavored) {
 		strnfcat(buf, max, &end, "%s", flavored_display);
 	} else if (localized_kind) {
-		if (prefix && number == 0)
-			strnfcat(buf, max, &end, "沒有剩餘的");
-		else if (prefix && number > 1)
-			strnfcat(buf, max, &end, "%u 件", number);
-		strnfcat(buf, max, &end, "%s", localized_kind);
+		char known_display[256];
+		/* Only the user-facing Chinese text uses type-specific classifiers.
+		 * Copy whole UTF-8 codepoints on narrow terminals. */
+		if (angdroid_zh_tw_known_item_name(known_display,
+				sizeof(known_display), tval_find_name(obj->tval),
+				localized_kind, prefix, number)) {
+			angdroid_zh_tw_item_append_utf8(buf, max, &end,
+				known_display);
+		} else {
+			/* Safe backward fallback for unexpectedly long source labels. */
+			if (prefix && number == 0)
+				strnfcat(buf, max, &end, "沒有剩餘的");
+			else if (prefix && number > 1)
+				strnfcat(buf, max, &end, "%u 件", number);
+			strnfcat(buf, max, &end, "%s", localized_kind);
+		}
 	} else {
 		/* Preserve English pluralization and unidentified flavor text. */
 		if (prefix)
@@ -418,21 +430,47 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		/* Only known artifacts in explicitly translated UI descriptions.
 		 * Canonical artifact names and unflagged exports stay untouched. */
 		const char *artifact_name = obj->artifact->name;
+		const char *translated_suffix = NULL;
+		bool chinese_suffix_done = false;
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled()) {
 			const char *localized = angdroid_zh_tw_artifact_name(artifact_name);
 			if (localized) artifact_name = localized;
+			translated_suffix = localized;
 		}
-		strnfcat(buf, max, &end, " %s", artifact_name);
+		if (localized_kind && translated_suffix) {
+			char suffix_display[192];
+			if (angdroid_zh_tw_item_suffix(suffix_display,
+					sizeof(suffix_display), translated_suffix)) {
+				angdroid_zh_tw_item_append_utf8(buf, max, &end,
+					suffix_display);
+				chinese_suffix_done = true;
+			}
+		}
+		if (!chinese_suffix_done)
+			strnfcat(buf, max, &end, " %s", artifact_name);
 	}
 	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store)) {
 		/* Only translate a revealed ego suffix for opted-in screen calls.
 		 * Unknown ego text, English mode and unflagged exports stay intact. */
 		const char *ego_name = obj->ego->name;
+		const char *translated_suffix = NULL;
+		bool chinese_suffix_done = false;
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled()) {
 			const char *localized = angdroid_zh_tw_ego_name(ego_name);
 			if (localized) ego_name = localized;
+			translated_suffix = localized;
 		}
-		strnfcat(buf, max, &end, " %s", ego_name);
+		if (localized_kind && translated_suffix) {
+			char suffix_display[192];
+			if (angdroid_zh_tw_item_suffix(suffix_display,
+					sizeof(suffix_display), translated_suffix)) {
+				angdroid_zh_tw_item_append_utf8(buf, max, &end,
+					suffix_display);
+				chinese_suffix_done = true;
+			}
+		}
+		if (!chinese_suffix_done)
+			strnfcat(buf, max, &end, " %s", ego_name);
 	}
 	else if (localized_scroll && aware && !obj->artifact) {
 		/* Only an identified scroll may reveal its actual effect. */

@@ -50,6 +50,7 @@ run_check "Visible-page native menu shortcut consistency" python3 "$ROOT/tests/t
 run_check "Finite invalid-row menu navigation" python3 "$ROOT/tests/test_menu_navigation_source.py"
 run_check "Inventory and equipment UTF-8 display safety" python3 "$ROOT/tests/test_object_list_text_source.py"
 run_check "UI-only item name localization and export isolation" python3 "$ROOT/tests/test_visible_item_name_localization.py"
+run_check "Known-item classifiers and translated artifact/ego grammar" python3 "$ROOT/tests/test_item_name_grammar_localization.py"
 run_check "Flavored noun grammar and awareness isolation" python3 "$ROOT/tests/test_flavored_object_localization.py"
 run_check "Generated scroll title display and RNG isolation" python3 "$ROOT/tests/test_scroll_title_localization.py"
 run_check "Item lore and character export isolation" python3 "$ROOT/tests/test_item_story_localization.py"
