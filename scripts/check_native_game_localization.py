@@ -275,7 +275,16 @@ def main():
            "Store Buy/Sell must differ from character stat adjustment labels")
     expect("angdroid_utf8_display_columns(entry->text)" in menu_ui,
            "Dynamic menu geometry uses UTF-8 byte length instead of columns")
-    expect("MIN(menu_dynamic_longest_entry(m) + 3 + 2" in menu_ui,
+    # Popup geometry now lives in a reusable bounds helper instead of an
+    # inline MIN() expression. Check that both terminal dimensions enter
+    # the helper and that its safe region is used for the popup layout.
+    expect(re.search(r"angdroid_menu_popup_bounds\(\s*"
+                     r"Term->wid,\s*Term->hgt,\s*mx,\s*my,\s*"
+                     r"menu_dynamic_longest_entry\(m\)", menu_ui) is not None
+           and "r.col = popup.col;" in menu_ui
+           and "r.row = popup.row;" in menu_ui
+           and "r.width = popup.width;" in menu_ui
+           and "r.page_rows = popup.page_rows;" in menu_ui,
            "Dynamic menu geometry needs a screen-width bound")
     expect("angdroid_utf8_display_columns(pl->label)" in player_ui,
            "Character sheet label alignment uses UTF-8 byte length")
@@ -340,7 +349,11 @@ def main():
            "Ignore action not translated")
     expect('angdroid_game_ui_text("Inven:"' in object_ui,
            "Inventory chooser header not translated")
-    expect('format("知識圖鑑：%s", title)' in knowledge_ui,
+    # Separate translated display title from the original English title.
+    expect('const char *display_title = angdroid_game_ui_text(title,' in
+           knowledge_ui
+           and 'format("知識圖鑑：%s", display_title)' in knowledge_ui
+           and 'format("Knowledge - %s", title)' in knowledge_ui,
            "Knowledge browser heading lacks Chinese display text")
     expect('MIN(79, Term->wid)' in knowledge_ui,
            "Knowledge divider must not extend past narrow screen")
@@ -504,8 +517,13 @@ def main():
         mon_msg_zh, re.M))
     expect(len(original_codes) == 55 and original_codes == translated_codes,
            "Missing or extra named monster event translation")
-    expect("get_monster_message_zh_tw(msg->msg_code)" in mon_msg_ui
-           and "get_subject_zh_tw(subject_zh, sizeof(subject_zh)" in mon_msg_ui,
+    # Monster pain messages need the race for their source-specific
+    # flavor, and subject formatting carries count/visibility metadata.
+    expect("get_monster_message_zh_tw(msg->msg_code, msg->race)" in mon_msg_ui
+           and "get_subject_zh_tw(subject_zh, sizeof(subject_zh)," in mon_msg_ui
+           and "msg->race, msg->count," in mon_msg_ui
+           and "(msg->flags & MON_MSG_FLAG_INVISIBLE) != 0" in mon_msg_ui
+           and "(msg->flags & MON_MSG_FLAG_OFFSCREEN) != 0" in mon_msg_ui,
            "Monster message translation and Chinese subjects are not wired")
     expect("angdroid_zh_tw_monster_list_name(race->name)" in mon_msg_ui
            and 'if (!skip_subject(msg->msg_code))' in mon_msg_ui,
@@ -904,9 +922,13 @@ def main():
            'angdroid_knowledge_tried_suffix(' in knowledge_ui and
            'char o_name[160] = "";' in knowledge_ui,
            "Knowledge display must preserve item translations and tried suffix")
+    # Rune names now get a display-only zh-TW title before clipping;
+    # verify the title path and existing metadata column boundaries.
     expect('o_name, col, 45, Term->wid' in knowledge_ui and
            'inscrip, 55, 75, Term->wid' in knowledge_ui and
-           'rune_name(oid), col, 46, Term->wid' in knowledge_ui and
+           'const char *display_name = angdroid_zh_tw_rune_title(' in knowledge_ui and
+           'rune_name(oid), angdroid_zh_tw_enabled(),' in knowledge_ui and
+           'display_name, col, 46, Term->wid' in knowledge_ui and
            'inscrip, 47, Term->wid, Term->wid' in knowledge_ui,
            "Knowledge item/rune entries must stop before metadata columns")
     expect(all(x in knowledge_ui for x in (
