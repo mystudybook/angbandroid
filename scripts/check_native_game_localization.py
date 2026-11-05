@@ -1336,16 +1336,14 @@ def main():
            "Shape effect formatting and unknown fallback must preserve values")
 
     # In-game timed effects: presentation-only, exact canonical notification
-    # messages for the first 19 original status groups. IDs, grade names,
-    # conditions, numeric ranges and parse data must stay in English.
+    # messages from ALL original status groups. IDs, grade names, conditions,
+    # numeric ranges and parsed source data must stay in English.
     timed_display = source(CPP / "angband/player-timed.c", errors)
     timed_header = source(CPP / "angband/zh-tw-timed-messages.h", errors)
     timed_test = source(ROOT / "tests/native/test_timed_messages_locale.c", errors)
     timed_text = source(ROOT / "variant_lib/angband/gamedata/player_timed.txt", errors)
-    timed_names = ("FAST", "SLOW", "BLIND", "PARALYZED", "CONFUSED",
-                   "AFRAID", "IMAGE", "POISONED", "CUT", "STUN", "FOOD",
-                   "PROTEVIL", "INVULN", "HERO", "SHERO", "SHIELD",
-                   "BLESSED", "SINVIS", "SINFRA")
+    timed_names = tuple(line[5:] for line in timed_text.splitlines()
+                        if line.startswith("name:"))
     parsed_timed = {}
     current = None
     for line in timed_text.splitlines():
@@ -1366,14 +1364,18 @@ def main():
 
     timed_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', timed_header)
     timed_source_keys = [s for values in parsed_timed.values() for s in values]
-    expect(len(timed_pairs) == 68 and
-           len(timed_source_keys) == 67 and
-           len(parsed_timed) == 19 and
+    expect(len(timed_pairs) == 149 and
+           len(timed_source_keys) == 151 and
+           len(set(timed_source_keys)) == 148 and
+           len(parsed_timed) == 53 and
+           len({en for en, _ in timed_pairs}) == 149 and
            {en for en, _ in timed_pairs} ==
                 set(timed_source_keys + ["You resist the effect!"]) and
            all(zh.strip() and "%" not in zh and
-               "{" not in zh and "}" not in zh for _, zh in timed_pairs),
-           "Timed status dictionary must match canonical messages without modifying tags")
+               re.findall(r"\{([a-z]+)\}", zh) ==
+                   (["kind"] if "{kind}" in en else [])
+               for en, zh in timed_pairs),
+           "All 53 timed-status groups must match canonical data and preserve object-kind placeholders")
     expect('"zh-tw-timed-messages.h"' in timed_display and
            '"droid.h"' in timed_display and
            all('angdroid_timed_message(' + key + ', angdroid_zh_tw_enabled())'
@@ -1389,8 +1391,11 @@ def main():
            'verify("You are poisoned!", "你中毒了！");' in timed_test and
            'verify("You resist the effect!", "你抵抗了這次效果！");' in timed_test and
            'A brand-new timed effect!' in timed_test and
-           'Your {name} glow{s}!' in timed_test,
-           "Timed status C99 test must cover translated and unknown message keys")
+           'Your {name} glow{s}!' in timed_test and
+           'Your {kind} start{s} to drip with acid!' in timed_test and
+           'Your {kind} {is} covered in frost!' in timed_test and
+           'verify("Your limbs feel more energetic!", "你的四肢變得更加靈活有力！");' in timed_test,
+           "Timed status C99 test must cover all groups and dynamic object-kind tags")
 
     if errors:
         for item in errors:

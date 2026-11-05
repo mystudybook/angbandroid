@@ -1138,3 +1138,21 @@ English fallback, unknown source messages and tagged placeholders remain
 unchanged. Native C99 strict-format tests validate every original message
 and fallback; source audit matches the canonical data keys and enforces
 presentation-only wiring. Full Android gameplay acceptance remains required.
+
+## All canonical player_timed status notifications (2026-11-05)
+
+Extended the previous 19 groups to **all 53 original status groups**.
+The full 151 occurrences of source `grade`/end/increase/decrease messages
+have 148 unique exact English messages. With the separate native
+"You resist the effect!" notification, 149 messages are now covered.
+Additions include all elemental/confusion resistances, amnesia, telepathy,
+stone skin, fear/terror/sprint, safe traps, quick casting, acid/electric/fire/
+cold/poison/evil/demon/vampiric attack buffs, bloodlust, black breath,
+stealth, and free action. The string dictionary retains the dynamically
+expanded `{kind}` object-name tag in translated weapon-boost notifications,
+but omits English-only `{s}` and `{is}` grammatical suffixes to prevent
+stray English text after Chinese item names. The original `print_custom_message()`
+still expands canonical item names and uses the unmodified game rules.
+Source audit now checks all 53 status groups and all 149 unique dictionary
+entries. Tests verify all translations and tagged weapon strings. Android
+APK compilation and in-game visual testing still require local execution.
