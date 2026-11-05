@@ -67,6 +67,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-knowledge-groups.h"
+#include "zh-tw-ego-names.h"
 #include "zh-tw-rune-lore.h"
 #include "zh-tw-terrain-trap.h"
 #include "zh-tw-knowledge-menu.h"
@@ -1834,8 +1835,17 @@ static void display_ego_item(int col, int row, bool cursor, int oid)
 	/* Choose a color */
 	uint8_t attr = curs_attrs[0 != (int)ego->everseen][0 != (int)cursor];
 
-	/* Display the name */
-	c_prt(attr, ego->name, row, col);
+	/* Only the displayed label is translated; keep ego->name canonical.
+	 * Clip to terminal columns, never split a wide Traditional Chinese glyph. */
+	if (Term && col >= 0 && col < Term->wid) {
+		const char *localized = angdroid_zh_tw_enabled()
+			? angdroid_zh_tw_ego_name(ego->name) : NULL;
+		const char *display_name = localized ? localized : ego->name;
+		char clipped[256];
+		angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+			display_name, col, Term->wid, Term->wid);
+		if (clipped[0]) c_prt(attr, clipped, row, col);
+	}
 }
 
 /**
@@ -1852,9 +1862,16 @@ static void desc_ego_fake(int oid)
 	/* List ego flags */
 	tb = object_info_ego(ego);
 
-	textui_textblock_show(tb, area, format("%s %s",
-										   ego_grp_name(default_group_id(oid)),
-										   ego->name));
+	/* The recall title follows the same display-only ego suffix mapping. */
+	{
+		const bool zh_tw = angdroid_zh_tw_enabled();
+		const char *localized = zh_tw
+			? angdroid_zh_tw_ego_name(ego->name) : NULL;
+		const char *display_name = localized ? localized : ego->name;
+		const char *group = angdroid_knowledge_group_text(
+			ego_grp_name(default_group_id(oid)), zh_tw);
+		textui_textblock_show(tb, area, format("%s %s", group, display_name));
+	}
 	textblock_free(tb);
 }
 
