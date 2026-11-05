@@ -459,11 +459,15 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
  * Describe remaining light for refuellable lights
  */
 static size_t obj_desc_light(const struct object *obj, char *buf, size_t max,
-							 size_t end)
+							 size_t end, uint32_t mode)
 {
 	/* Fuelled light sources get number of remaining turns appended */
-	if (tval_is_light(obj) && !of_has(obj->flags, OF_NO_FUEL))
-		strnfcat(buf, max, &end, " (%d turns)", obj->timeout);
+	if (tval_is_light(obj) && !of_has(obj->flags, OF_NO_FUEL)) {
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			strnfcat(buf, max, &end, "（剩餘 %d 回合）", obj->timeout);
+		else
+			strnfcat(buf, max, &end, " (%d turns)", obj->timeout);
+	}
 
 	return end;
 }
@@ -521,14 +525,23 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
 
 	/* Wands and staffs have charges, others may be charging */
 	if (aware && tval_can_have_charges(obj)) {
-		strnfcat(buf, max, &end, " (%d charge%s)", obj->pval,
-				 PLURAL(obj->pval));
+		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+			strnfcat(buf, max, &end, "（剩餘 %d 次充能）", obj->pval);
+		else
+			strnfcat(buf, max, &end, " (%d charge%s)", obj->pval,
+				PLURAL(obj->pval));
 	} else if (obj->timeout > 0) {
-		if (tval_is_rod(obj) && obj->number > 1)
-			strnfcat(buf, max, &end, " (%d charging)", number_charging(obj));
-		else if (tval_is_rod(obj) || obj->activation || obj->effect)
-			/* Artifacts, single rods */
-			strnfcat(buf, max, &end, " (charging)");
+		if (tval_is_rod(obj) && obj->number > 1) {
+			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+				strnfcat(buf, max, &end, "（%d 個充能中）", number_charging(obj));
+			else
+				strnfcat(buf, max, &end, " (%d charging)", number_charging(obj));
+		} else if (tval_is_rod(obj) || obj->activation || obj->effect) {
+			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+				strnfcat(buf, max, &end, "（充能中）");
+			else
+				strnfcat(buf, max, &end, " (charging)");
+		}
 	}
 
 	return end;
@@ -672,7 +685,7 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 		if (tval_is_chest(obj))
 			end = obj_desc_chest(obj, buf, max, end);
 		else if (tval_is_light(obj))
-			end = obj_desc_light(obj, buf, max, end);
+			end = obj_desc_light(obj, buf, max, end, mode);
 
 		end = obj_desc_combat(obj->known, buf, max, end, mode, p);
 	}
