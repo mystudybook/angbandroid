@@ -1340,3 +1340,28 @@ been localized by this patch. Full Android SDK/NDK compilation, emulator
 gameplay, UI-width review, save/export compatibility, and license checks
 remain pending. These translations were verified by inspecting the GitHub
 sources and canonical data; no device build was run in this change.
+
+
+## Visible item names with explicit opt-in (2026-11-05)
+
+`obj-desc.h` now defines `ODESC_ZH_TW` (bit 0x800), an **explicit
+screen-display mode**. The canonical `object_desc()` formatter still builds
+its original English strings for all unflagged calls, including character
+exports and external save paths. Only selected `ui-object.c`,
+`ui-knowledge.c` and `store.c` callsites use this flag.
+
+When an item kind is already known and its identifying flavor does not need
+to be shown, the UI can use an existing 326-entry canonical kind-name
+translation dictionary. The visible prefix handles zero/single/multiple
+stacks without English pluralization; the canonical quantity, object and
+identification flags remain untouched. The UI also translates common
+recharge/fuel/inscription-status labels, without translating user-entered
+inscriptions. For unknown kinds and unrecognized text, the original English
+renderer remains in use.
+
+This is **not full object-name localization**: unidentified flavors, many
+ego/artifact proper names and certain long descriptions remain English.
+No Android build or end-to-end visual/export test was run in this update.
+`tests/test_visible_item_name_localization.py` checks that only intended
+on-screen callsites opt in, the English branch remains present, and the
+canonical translation dictionary is still 326 entries.
