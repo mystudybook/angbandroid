@@ -1113,3 +1113,10 @@ summary. Only the knowledge UI invokes the localized renderer; actual
 shapeshifting behavior, canonical data and English behavior are unchanged.
 Native C99 source/lookup tests are registered, but full NDK/UI gameplay
 validation remains necessary.
+
+A separate host regression extracts the **actual C effect formatter and shape
+renderer** from `effects-info.c`, compiles them with strict C99 and
+`-Werror=format-security` using lightweight engine stubs, and exercises
+Pukel-man/bat/warg/vampire/werewolf descriptions, runtime dice changes,
+unknown subtype fallback, and entirely unknown effect stacks. This test
+runs in `scripts/verify-zh-tw.sh` without an Android SDK.

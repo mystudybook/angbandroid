@@ -1331,6 +1331,7 @@ def main():
            'textblock_append(tb, "%s", translated ? "。\\n" : ".\\n");' in
                 knowledge_ui and
            'test_shape_effect_locale.c' in native_tests and
+           'tests/test_shape_effect_render_source.py' in source(ROOT / "scripts/verify-zh-tw.sh", errors) and
            'new future effect' in effect_locale_test,
            "Shape effect formatting and unknown fallback must preserve values")
 
