@@ -24,6 +24,17 @@ for key in ("identified_item_kind_names", "unidentified_flavor_labels",
 assert a["unidentified_flavor_labels"]["source_total"] == 202
 assert a["artifact_display_names"]["source_total"] == 138
 assert a["ego_item_suffix_names"]["source_total"] == 79
+# Narrative descriptions are a separate corpus from artifact/ego names.
+artifact_lore = a["artifact_flavor_descriptions"]
+ego_lore = a["ego_flavor_descriptions"]
+assert artifact_lore["source_total"] == 138
+assert artifact_lore["translated"] == 43
+assert len(artifact_lore["untranslated"]) == 95
+assert artifact_lore["invalid_keys"] == []
+assert ego_lore["source_total"] == 5
+assert ego_lore["translated"] == 5
+assert ego_lore["untranslated"] == []
+assert ego_lore["invalid_keys"] == []
 assert a["unique_monster_display_names"]["source_total"] == 101
 assert a["unique_monster_canonical_names_unchanged"] == 101
 assert a["monster_flavor_descriptions"]["translated"] == a["monster_flavor_descriptions"]["source_total"]
