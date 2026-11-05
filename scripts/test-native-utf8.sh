@@ -83,6 +83,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_artifact_names_locale"
 "$BUILD_DIR/test_artifact_names_locale"
 
+# Unknown item appearance labels; no canonical item kind change.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_item_flavor_locale.c" \
+    -o "$BUILD_DIR/test_item_flavor_locale"
+"$BUILD_DIR/test_item_flavor_locale"
+
 "$BUILD_DIR/test_item_locale"
 
 # Native UI translations: compile without Android SDK or the game engine.
