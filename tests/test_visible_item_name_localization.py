@@ -94,12 +94,13 @@ class VisibleObjectLocalizationTest(unittest.TestCase):
 
     def test_user_notes_and_unknown_names_remain_safe(self):
         self.assertIn("!(i == 0 && obj->note)", DESCRIBE)
+        self.assertIn("angdroid_zh_tw_item_append_whole(buf, max, &end, label);", DESCRIBE)
         self.assertIn('strnfcat(buf, max, &end, "%s", u[i]);', DESCRIBE)
         self.assertIn('strnfmt(buf, max, "未知物品")', DESCRIBE)
         self.assertIn('strnfmt(buf, max, "an unknown item")', DESCRIBE)
-        self.assertIn('"（剩餘 %d 次充能）"', DESCRIBE)
+        self.assertIn('"（剩餘 ", obj->pval, " 次充能）"', DESCRIBE)
         self.assertIn('"（充能中）"', DESCRIBE)
-        self.assertIn('"（剩餘 %d 回合）"', DESCRIBE)
+        self.assertIn('"（剩餘 ", obj->timeout, " 回合）"', DESCRIBE)
         self.assertIn('" (%d turns)"', DESCRIBE)
 
     def test_item_kind_mapping_is_still_complete(self):

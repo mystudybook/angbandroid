@@ -32,6 +32,7 @@
 #include "zh-tw-scroll-title.h"
 #include "zh-tw-flavored-object.h"
 #include "zh-tw-item-grammar.h"
+#include "zh-tw-item-details.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -500,6 +501,18 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	return end;
 }
 
+/* Only called in the opted-in Chinese screen path. Same engine values and
+ * identification gates are enforced by obj_desc_combat(). */
+static size_t obj_desc_combat_zh_tw(char *buf, size_t max, size_t end,
+        enum angdroid_zh_tw_combat_field field, int first, int second)
+{
+    char detail[96];
+    if (angdroid_zh_tw_item_combat_text(detail, sizeof(detail),
+            field, first, second))
+        angdroid_zh_tw_item_append_whole(buf, max, &end, detail);
+    return end;
+}
+
 /**
  * Is obj armor?
  */
@@ -535,17 +548,27 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 {
 	bool spoil = mode & ODESC_SPOIL ? true : false;
 	int to_h, to_d, to_a;
+	bool zh_tw = (mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled();
 
 	/* Display damage dice if they are known */
 	if (kf_has(obj->kind->kind_flags, KF_SHOW_DICE) &&
 		(!p || (p->obj_k->dd && p->obj_k->ds))) {
-		strnfcat(buf, max, &end, " (%dd%d)", obj->dd, obj->ds);
+		if (zh_tw)
+			end = obj_desc_combat_zh_tw(buf, max, end,
+				ANGDROID_ITEM_DICE, obj->dd, obj->ds);
+		else
+			strnfcat(buf, max, &end, " (%dd%d)", obj->dd, obj->ds);
 	}
 
 	/* Display shooting power as part of the multiplier */
 	if (kf_has(obj->kind->kind_flags, KF_SHOW_MULT)) {
-		strnfcat(buf, max, &end, " (x%d)",
-				 obj->pval + obj->modifiers[OBJ_MOD_MIGHT]);
+		if (zh_tw)
+			end = obj_desc_combat_zh_tw(buf, max, end,
+				ANGDROID_ITEM_MULTIPLIER,
+				obj->pval + obj->modifiers[OBJ_MOD_MIGHT], 0);
+		else
+			strnfcat(buf, max, &end, " (x%d)",
+				obj->pval + obj->modifiers[OBJ_MOD_MIGHT]);
 	}
 
 	/* No more if the object hasn't been assessed */
@@ -563,26 +586,55 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 			|| obj->to_h != to_h)
 			&& !obj->artifact && !obj->ego))) {
 		/* In general show full combat bonuses */
-		strnfcat(buf, max, &end, " (%+d,%+d)", to_h, to_d);
+		if (zh_tw)
+			end = obj_desc_combat_zh_tw(buf, max, end,
+				ANGDROID_ITEM_ATTACK_PAIR, to_h, to_d);
+		else
+			strnfcat(buf, max, &end, " (%+d,%+d)", to_h, to_d);
 	} else if (obj->to_h < 0 && object_has_standard_to_h(obj)) {
 		/* Special treatment for body armor with only a to-hit penalty */
-		strnfcat(buf, max, &end, " (%+d)", obj->to_h);
+		if (zh_tw)
+			end = obj_desc_combat_zh_tw(buf, max, end,
+				ANGDROID_ITEM_HIT, obj->to_h, 0);
+		else
+			strnfcat(buf, max, &end, " (%+d)", obj->to_h);
 	} else if (to_d != 0 && (!p || p->obj_k->to_d)) {
 		/* To-dam rune known only */
-		strnfcat(buf, max, &end, " (%+d)", to_d);
+		if (zh_tw)
+			end = obj_desc_combat_zh_tw(buf, max, end,
+				ANGDROID_ITEM_DAMAGE, to_d, 0);
+		else
+			strnfcat(buf, max, &end, " (%+d)", to_d);
 	} else if (to_h != 0 && (!p || p->obj_k->to_h)) {
 		/* To-hit rune known only */
-		strnfcat(buf, max, &end, " (%+d)", to_h);
+		if (zh_tw)
+			end = obj_desc_combat_zh_tw(buf, max, end,
+				ANGDROID_ITEM_HIT, to_h, 0);
+		else
+			strnfcat(buf, max, &end, " (%+d)", to_h);
 	}
 
 	/* Show armor bonuses */
 	if (!p || p->obj_k->to_a) {
-		if (obj_desc_show_armor(obj, p))
-			strnfcat(buf, max, &end, " [%d,%+d]", obj->ac, to_a);
-		else if (to_a)
-			strnfcat(buf, max, &end, " [%+d]", to_a);
+		if (obj_desc_show_armor(obj, p)) {
+			if (zh_tw)
+				end = obj_desc_combat_zh_tw(buf, max, end,
+					ANGDROID_ITEM_ARMOR_PAIR, obj->ac, to_a);
+			else
+				strnfcat(buf, max, &end, " [%d,%+d]", obj->ac, to_a);
+		} else if (to_a) {
+			if (zh_tw)
+				end = obj_desc_combat_zh_tw(buf, max, end,
+					ANGDROID_ITEM_ARMOR_BONUS, to_a, 0);
+			else
+				strnfcat(buf, max, &end, " [%+d]", to_a);
+		}
 	} else if (obj_desc_show_armor(obj, p)) {
-		strnfcat(buf, max, &end, " [%d]", obj->ac);
+		if (zh_tw)
+			end = obj_desc_combat_zh_tw(buf, max, end,
+				ANGDROID_ITEM_ARMOR, obj->ac, 0);
+		else
+			strnfcat(buf, max, &end, " [%d]", obj->ac);
 	}
 
 	return end;
@@ -597,7 +649,8 @@ static size_t obj_desc_light(const struct object *obj, char *buf, size_t max,
 	/* Fuelled light sources get number of remaining turns appended */
 	if (tval_is_light(obj) && !of_has(obj->flags, OF_NO_FUEL)) {
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-			strnfcat(buf, max, &end, "（剩餘 %d 回合）", obj->timeout);
+			angdroid_zh_tw_item_append_amount(buf, max, &end,
+				"（剩餘 ", obj->timeout, " 回合）");
 		else
 			strnfcat(buf, max, &end, " (%d turns)", obj->timeout);
 	}
@@ -610,7 +663,7 @@ static size_t obj_desc_light(const struct object *obj, char *buf, size_t max,
  * allow numerical bonuses - speed, stealth, etc
  */
 static size_t obj_desc_mods(const struct object *obj, char *buf, size_t max,
-							size_t end)
+							size_t end, uint32_t mode)
 {
 	int i, j, num_mods = 0;
 	int mods[OBJ_MOD_MAX] = { 0 };
@@ -637,6 +690,15 @@ static size_t obj_desc_mods(const struct object *obj, char *buf, size_t max,
 
 	if (!num_mods) return end;
 
+	if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled()) {
+		char localized[192];
+		if (angdroid_zh_tw_item_modifiers_text(localized,
+				sizeof(localized), mods, (size_t)num_mods)) {
+			angdroid_zh_tw_item_append_whole(buf, max, &end, localized);
+			return end;
+		}
+	}
+
 	/* Print the modifiers */
 	strnfcat(buf, max, &end, " <");
 	for (j = 0; j < num_mods; j++) {
@@ -659,19 +721,21 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
 	/* Wands and staffs have charges, others may be charging */
 	if (aware && tval_can_have_charges(obj)) {
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-			strnfcat(buf, max, &end, "（剩餘 %d 次充能）", obj->pval);
+			angdroid_zh_tw_item_append_amount(buf, max, &end,
+				"（剩餘 ", obj->pval, " 次充能）");
 		else
 			strnfcat(buf, max, &end, " (%d charge%s)", obj->pval,
 				PLURAL(obj->pval));
 	} else if (obj->timeout > 0) {
 		if (tval_is_rod(obj) && obj->number > 1) {
 			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-				strnfcat(buf, max, &end, "（%d 個充能中）", number_charging(obj));
+				angdroid_zh_tw_item_append_amount(buf, max, &end,
+					"（", number_charging(obj), " 根充能中）");
 			else
 				strnfcat(buf, max, &end, " (%d charging)", number_charging(obj));
 		} else if (tval_is_rod(obj) || obj->activation || obj->effect) {
 			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-				strnfcat(buf, max, &end, "（充能中）");
+				angdroid_zh_tw_item_append_whole(buf, max, &end, "（充能中）");
 			else
 				strnfcat(buf, max, &end, " (charging)");
 		}
@@ -725,13 +789,17 @@ static size_t obj_desc_inscrip(const struct object *obj, char *buf,
 				else if (streq(label, "tried")) label = "已試用";
 				else if (streq(label, "cursed")) label = "受詛咒";
 				else if (streq(label, "ignore")) label = "忽略";
-				strnfcat(buf, max, &end, "%s", label);
+				angdroid_zh_tw_item_append_whole(buf, max, &end, label);
 			} else {
 				/* User-written inscriptions are never translated. */
 				strnfcat(buf, max, &end, "%s", u[i]);
 			}
-			if (i < n - 1)
-				strnfcat(buf, max, &end, ", ");
+			if (i < n - 1) {
+				if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
+					angdroid_zh_tw_item_append_whole(buf, max, &end, "、");
+				else
+					strnfcat(buf, max, &end, ", ");
+			}
 		}
 
 		strnfcat(buf, max, &end, "}");
@@ -750,14 +818,14 @@ static size_t obj_desc_aware(const struct object *obj, char *buf, size_t max,
 {
 	if (!object_flavor_is_aware(obj)) {
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-			strnfcat(buf, max, &end, " {未見過}");
+			angdroid_zh_tw_item_append_whole(buf, max, &end, " {未見過}");
 		else
 			strnfcat(buf, max, &end, " {unseen}");
 	} else if (!object_runes_known(obj)) {
 		strnfcat(buf, max, &end, " {??}");
 	} else if (obj->known->curses) {
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-			strnfcat(buf, max, &end, " {受詛咒}");
+			angdroid_zh_tw_item_append_whole(buf, max, &end, " {受詛咒}");
 		else
 			strnfcat(buf, max, &end, " {cursed}");
 	}
@@ -847,7 +915,7 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 
 	/* Modifiers, charges, flavour details, inscriptions */
 	if (mode & ODESC_EXTRA) {
-		end = obj_desc_mods(obj->known, buf, max, end);
+		end = obj_desc_mods(obj->known, buf, max, end, mode);
 
 		end = obj_desc_charges(obj, buf, max, end, mode);
 

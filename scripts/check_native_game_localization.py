@@ -410,6 +410,23 @@ def main():
                ROOT / "scripts/verify-zh-tw.sh", errors),
            "Opted-in item classifier/suffix/UTF-8 regression is not wired")
 
+    # Numeric details are display-only; original knowledge gates are retained.
+    detail_header = source(CPP / "angband/zh-tw-item-details.h", errors)
+    detail_test = source(ROOT / "tests/test_item_details_localization.py", errors)
+    expect('"zh-tw-item-details.h"' in obj and
+           "bool zh_tw = (mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled();" in obj and
+           "if (!((obj->notice & OBJ_NOTICE_ASSESSED) || spoil)) return end;" in obj and
+           "obj_desc_mods(obj->known, buf, max, end, mode)" in obj and
+           "angdroid_zh_tw_item_modifiers_text(" in obj and
+           "angdroid_zh_tw_item_append_amount(" in obj and
+           "angdroid_zh_tw_item_append_whole(buf, max, &end, label);" in obj and
+           "test_item_details_locale.c" in native_tests and
+           "test_item_details_localization.py" in source(
+               ROOT / "scripts/verify-zh-tw.sh", errors) and
+           "test_complete_utf8_append_and_no_persistent_changes" in detail_test and
+           "angdroid_zh_tw_item_combat_text" in detail_header,
+           "Combat/modifier/annotation display needs UTF-8 and source gate tests")
+
     # Source-matched appearance grammar only, not hidden item effects.
     flavored_header = source(CPP / "angband/zh-tw-flavored-object.h", errors)
     flavored_types = re.findall(
