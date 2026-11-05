@@ -360,12 +360,11 @@ static void set_obj_names(bool terse, const struct player *p)
 			if (terse) {
 				object_desc(items[i].o_name,
 					sizeof(items[i].o_name), obj,
-					ODESC_PREFIX | ODESC_FULL | ODESC_TERSE,
-					p);
+					ODESC_PREFIX | ODESC_FULL | ODESC_TERSE | ODESC_ZH_TW, p);
 			} else {
 				object_desc(items[i].o_name,
 					sizeof(items[i].o_name), obj,
-					ODESC_PREFIX | ODESC_FULL, p);
+					ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, p);
 			}
 		}
 
@@ -1544,7 +1543,7 @@ void display_object_recall(struct object *obj)
 
 	textblock *tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 
 	clear_from(0);
 	textui_textblock_place(tb, SCREEN_REGION, header_buf);
@@ -1581,7 +1580,7 @@ void display_object_recall_interactive(struct object *obj)
 
 	tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 	textui_textblock_show(tb, SCREEN_REGION, header_buf);
 	textblock_free(tb);
 }
@@ -1609,7 +1608,7 @@ void textui_obj_examine(void)
 	/* Display info */
 	tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL | ODESC_ZH_TW, player);
 
 	textui_textblock_show(tb, local_area, header_buf);
 	textblock_free(tb);
@@ -1662,7 +1661,7 @@ void textui_cmd_ignore_menu(struct object *obj)
 
 		char tmp[70];
 		object_desc(tmp, sizeof(tmp), obj,
-			ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL, player);
+			ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL | ODESC_ZH_TW, player);
 		if (!ignored) {
 			if (angdroid_zh_tw_enabled())
                 strnfmt(out_val, sizeof out_val, "全部忽略 %s", tmp);
