@@ -1040,3 +1040,16 @@ class names are translated using exhaustive source-matched display dictionaries
 explanations remain unchanged. UTF-8 score rows are clipped by terminal
 columns, not arbitrary byte length. Source and independent C99 checks are
 registered; on-device visual validation of small terminals is still required.
+
+
+## Equipment comparison screen instructions (2026-11-05)
+
+The original Angband equipment comparison screen now displays localized
+navigation, quick-filter, selection, help-page, result/status, mouse context
+menu and export success/failure labels. The mapping uses 49 exact English
+keys for deterministic zh-TW display and English fallback. It does not touch
+item property codes, filter values, comparator logic, selection keyboard
+shortcuts or exported file contents. The screen text is clipped by UTF-8
+terminal columns rather than byte counts to support narrow Android displays.
+The C99 bilingual lookup regression includes every pair and unknown/NULL
+fallback. Android NDK/APK UI and touch acceptance remain unverified.

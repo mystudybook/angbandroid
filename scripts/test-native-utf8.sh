@@ -121,6 +121,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_history_score_locale"
 "$BUILD_DIR/test_history_score_locale"
 
+# Original Angband equipment comparison: display instructions and menu labels.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_equip_cmp_locale.c" \
+    -o "$BUILD_DIR/test_equip_cmp_locale"
+"$BUILD_DIR/test_equip_cmp_locale"
+
 # Target selection help only localizes descriptive fragments, not key bindings.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_target_help_locale.c" \
