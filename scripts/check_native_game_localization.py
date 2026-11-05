@@ -1246,6 +1246,47 @@ def main():
            'angdroid_curse_row(&sentinel, 0' in curse_test,
            "Curse CJK columns and bilingual fallback regression must remain")
 
+    # The native race/class ability menu only translates the text rendered
+    # from player_property.txt. All 44 source names/descriptions remain intact.
+    ability_ui = source(CPP / "angband/ui-player-properties.c", errors)
+    ability_header = source(CPP / "angband/zh-tw-player-ability.h", errors)
+    ability_test = source(ROOT / "tests/native/test_player_ability_locale.c", errors)
+    property_source = source(ROOT / "variant_lib/angband/gamedata/player_property.txt", errors)
+    property_entries = []
+    for line in property_source.splitlines():
+        if line.startswith("type:"):
+            property_entries.append({"name": None, "desc": []})
+        elif property_entries and line.startswith("name:"):
+            property_entries[-1]["name"] = line[5:]
+        elif property_entries and line.startswith("desc:"):
+            property_entries[-1]["desc"].append(line[5:])
+    def property_locale_keys(begin, finish):
+        fragment = ability_header.partition(begin)[2].partition(finish)[0]
+        return re.findall(r'\{\s*"([^"]+)",\s*"([^"]+)"\s*\}', fragment)
+    ability_names = property_locale_keys(
+        "static inline const char *angdroid_ability_name(",
+        "static inline const char *angdroid_ability_description(")
+    ability_descs = property_locale_keys(
+        "static inline const char *angdroid_ability_description(", "#endif")
+    expect(len(property_entries) == 44 and
+           len(ability_names) == len(ability_descs) == 44 and
+           [en for en, _ in ability_names] ==
+           [entry["name"] for entry in property_entries] and
+           [en for en, _ in ability_descs] ==
+           ["".join(entry["desc"]) for entry in property_entries] and
+           all(zh.strip() for _, zh in ability_names + ability_descs),
+           "Native player ability translation must exactly match 44 source records")
+    expect('"zh-tw-player-ability.h"' in ability_ui and
+           'angdroid_ability_name(choices[oid].name,' in ability_ui and
+           'angdroid_ability_description(choices[oid].desc,' in ability_ui and
+           'angdroid_menu_copy_columns(clipped, sizeof(clipped), buf,' in ability_ui and
+           'return all_letters_nohjkl[oid];' in ability_ui and
+           'menu_setpriv(&menu, num_abilities, ability_list);' in ability_ui and
+           'text_out_c(COLOUR_L_BLUE, "\\n%s\\n",' in ability_ui and
+           'test_player_ability_locale.c' in native_tests and
+           'Custom Ability' in ability_test,
+           "Player ability render-only locale must preserve keys and ids")
+
     if errors:
         for item in errors:
             print("FAIL:", item)
