@@ -1205,6 +1205,47 @@ def main():
            'Unsupported future label' in cmp_test,
            "Equipment comparison mouse labels and C99 fallback test must remain")
 
+    # Curse selection: preserve canonical curse.txt IDs, selection indices,
+    # strengths and original English unknown fallback (source-matched 27/27).
+    curse_ui = source(CPP / "angband/ui-curse.c", errors)
+    curse_header = source(CPP / "angband/zh-tw-curse.h", errors)
+    curse_test = source(ROOT / "tests/native/test_curse_locale.c", errors)
+    curse_data = source(ROOT / "variant_lib/angband/gamedata/curse.txt", errors)
+    curse_def_names = [line[5:] for line in curse_data.splitlines()
+                       if line.startswith("name:")]
+    curse_def_desc = [line[5:] for line in curse_data.splitlines()
+                      if line.startswith("desc:")]
+    def curse_table_keys(start, finish):
+        fragment = curse_header.partition(start)[2].partition(finish)[0]
+        return re.findall(r'\{\s*"([^"]+)",\s*"([^"]+)"\s*\}', fragment)
+    curse_names = curse_table_keys(
+        "static inline const char *angdroid_curse_name(",
+        "static inline const char *angdroid_curse_description(")
+    curse_descs = curse_table_keys(
+        "static inline const char *angdroid_curse_description(",
+        "static inline void angdroid_curse_row(")
+    expect(len(curse_names) == 27 and len(curse_descs) == 27 and
+           [en for en, _ in curse_names] == curse_def_names and
+           [en for en, _ in curse_descs] == curse_def_desc and
+           len({en for en, _ in curse_names}) == 27 and
+           all(zh.strip() for _, zh in curse_names + curse_descs),
+           "Curse display dictionary must match 27 original curse.txt records")
+    expect('"zh-tw-curse.h"' in curse_ui and
+           'angdroid_curse_row(buf, sizeof(buf), name, power,' in curse_ui and
+           'angdroid_curse_description(original,' in curse_ui and
+           'selection = choice[oid].index;' in curse_ui and
+           'player_knows_curse(player, i)' in curse_ui and
+           'obj->curses[i].power' in curse_ui and
+           'text_out(" %s。\\n", localized);' in curse_ui and
+           'text_out(" %s.\\n", buf);' in curse_ui,
+           "Curse menu localization must not change lore gating or selection")
+    expect('angdroid_menu_copy_columns(clipped, sizeof(clipped), buf,' in curse_ui and
+           'angdroid_utf8_display_columns(m->header)' in curse_ui and
+           'test_curse_locale.c' in native_tests and
+           'unknown curse' in curse_test and
+           'angdroid_curse_row(&sentinel, 0' in curse_test,
+           "Curse CJK columns and bilingual fallback regression must remain")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

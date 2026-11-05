@@ -24,6 +24,9 @@
 #include "ui-curse.h"
 #include "ui-menu.h"
 #include "ui-output.h"
+#include "droid.h"
+#include "zh-tw-curse.h"
+#include "menu-text-fit.h"
 
 static int selection;
 
@@ -40,12 +43,15 @@ static void get_curse_display(struct menu *menu, int oid, bool cursor, int row,
 {
 	struct curse_menu_data *choice = menu_priv(menu);
 	int attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
-	char buf[80];
+	char buf[192], clipped[192];
 	int power = choice[oid].power;
-	char *name = curses[choice[oid].index].name;
+	const char *name = curses[choice[oid].index].name;
 
-	strnfmt(buf, sizeof(buf), "  %s (curse strength %d)", name, power);
-	c_put_str(attr, buf, row, col);
+	angdroid_curse_row(buf, sizeof(buf), name, power,
+		angdroid_zh_tw_enabled());
+	angdroid_menu_copy_columns(clipped, sizeof(clipped), buf,
+		width > 0 ? (size_t)width : 0);
+	c_put_str(attr, clipped, row, col);
 }
 
 /**
@@ -68,6 +74,9 @@ static void curse_menu_browser(int oid, void *data, const region *loc)
 {
 	struct curse_menu_data *choice = data;
 	char buf[80];
+	const char *original = curses[choice[oid].index].desc;
+	const char *localized = angdroid_curse_description(original,
+		angdroid_zh_tw_enabled());
 
 	/* Redirect output to the screen */
 	text_out_hook = text_out_to_screen;
@@ -76,9 +85,13 @@ static void curse_menu_browser(int oid, void *data, const region *loc)
 	text_out_pad = 1;
 
 	Term_gotoxy(loc->col, loc->row + loc->page_rows);
-	my_strcpy(buf, curses[choice[oid].index].desc, sizeof(buf));
-	my_strcap(buf);
-	text_out(" %s.\n", buf);
+	if (localized && localized != original) {
+		text_out(" %s。\n", localized);
+	} else {
+		my_strcpy(buf, original ? original : "", sizeof(buf));
+		my_strcap(buf);
+		text_out(" %s.\n", buf);
+	}
 
 	/* XXX */
 	text_out_pad = 0;
@@ -94,7 +107,7 @@ static int curse_menu(struct object *obj, char *dice_string)
 	struct menu *m = menu_new(MN_SKIN_SCROLL, &menu_f);
 	char header[80];
 	int row;
-	unsigned int length = 0;
+	int length = 0;
 	int i, count = 0;
 	size_t array_size = z_info->curse_max * sizeof(struct curse_menu_data);
 	struct curse_menu_data *available = mem_zalloc(array_size);
@@ -107,7 +120,14 @@ static int curse_menu(struct object *obj, char *dice_string)
 			player_knows_curse(player, i)) {
 			available[count].index = i;
 			available[count].power = obj->curses[i].power;
-			length = MAX(length, strlen(curses[i].name) + 13);
+			{
+				char label[192];
+				angdroid_curse_row(label, sizeof(label),
+					curses[i].name, available[count].power,
+					angdroid_zh_tw_enabled());
+				length = MAX(length,
+					(int)angdroid_utf8_display_columns(label));
+			}
 			count++;
 		}
 	}
@@ -118,9 +138,12 @@ static int curse_menu(struct object *obj, char *dice_string)
 
 	/* Set up the menu */
 	menu_setpriv(m, count, available);
-	my_strcpy(header,
-			  format(" Remove which curse (spell strength %s)?", dice_string),
-			  sizeof(header));
+	if (angdroid_zh_tw_enabled())
+		strnfmt(header, sizeof(header),
+			"要移除哪個詛咒？（法術強度 %s）", dice_string);
+	else
+		strnfmt(header, sizeof(header),
+			" Remove which curse (spell strength %s)?", dice_string);
 	m->header = header;
 	m->selections = all_letters_nohjkl;
 	m->flags = (MN_PVT_TAGS);
@@ -135,7 +158,8 @@ static int curse_menu(struct object *obj, char *dice_string)
 	area.col = (Term->wid - 1 - length) / 2;
 	if (area.col <= 3)
 		area.col = 0;
-	area.width = MAX(length + 1, strlen(m->header));
+	area.width = MAX(1, MIN(Term->wid - area.col,
+		MAX(length + 1, (int)angdroid_utf8_display_columns(m->header))));
 
 	for (row = area.row; row < area.row + area.page_rows; row++)
 		prt("", row, MAX(0, area.col - 1));

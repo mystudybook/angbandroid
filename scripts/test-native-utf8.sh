@@ -127,6 +127,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_equip_cmp_locale"
 "$BUILD_DIR/test_equip_cmp_locale"
 
+# Original Angband curse.txt labels and exact display-only translations.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_curse_locale.c" \
+    -o "$BUILD_DIR/test_curse_locale"
+"$BUILD_DIR/test_curse_locale"
+
 # Target selection help only localizes descriptive fragments, not key bindings.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_target_help_locale.c" \
