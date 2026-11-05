@@ -45,6 +45,8 @@
 #include "ui-input.h"
 
 #include "droid.h"
+#include "zh-tw-player-feedback.h"
+#include "zh-tw-shape-lore.h"
 
 /**
  * Increment to the next or decrement to the preceeding level
@@ -122,7 +124,8 @@ bool player_get_recall_depth(struct player *p)
 			}
 		}
 		if (!level_ok) {
-			msg("You must choose a level you have previously visited.");
+			msg("%s", angdroid_player_feedback("You must choose a level you have previously visited.",
+			angdroid_zh_tw_enabled()));
 		}
 	}
 	p->recall_depth = new;
@@ -224,10 +227,13 @@ void take_hit(struct player *p, int dam, const char *kb_str)
 		if (p->timed[TMD_BLOODLUST]
 			&& (p->chp + p->timed[TMD_BLOODLUST] + p->lev >= 0)) {
 			if (randint0(10)) {
-				msg("Your lust for blood keeps you alive!");
+				msg("%s", angdroid_player_feedback("Your lust for blood keeps you alive!",
+			angdroid_zh_tw_enabled()));
 			} else {
-				msg("So great was his prowess and skill in warfare, the Elves said: ");
-				msg("'The Mormegil cannot be slain, save by mischance.'");
+				msg("%s", angdroid_player_feedback("So great was his prowess and skill in warfare, the Elves said: ",
+			angdroid_zh_tw_enabled()));
+				msg("%s", angdroid_player_feedback("'The Mormegil cannot be slain, save by mischance.'",
+			angdroid_zh_tw_enabled()));
 			}
 		} else {
 			/*
@@ -238,11 +244,13 @@ void take_hit(struct player *p, int dam, const char *kb_str)
 			my_strcpy(p->died_from, kb_str, sizeof(p->died_from));
 
 			if ((p->wizard || OPT(p, cheat_live))
-					&& !get_check("Die? ")) {
+					&& !get_check(angdroid_player_feedback("Die? ",
+						angdroid_zh_tw_enabled()))) {
 				event_signal(EVENT_CHEAT_DEATH);
 			} else {
 				/* Hack -- Note death */
-				msgt(MSG_DEATH, "You die.");
+				msgt(MSG_DEATH, "%s", angdroid_player_feedback("You die.",
+					angdroid_zh_tw_enabled()));
 				event_signal(EVENT_MESSAGE_FLUSH);
 
 				/* No longer a winner */
@@ -264,7 +272,8 @@ void take_hit(struct player *p, int dam, const char *kb_str)
 			bell();
 
 		/* Message */
-		msgt(MSG_HITPOINT_WARN, "*** LOW HITPOINT WARNING! ***");
+		msgt(MSG_HITPOINT_WARN, "%s", angdroid_player_feedback(
+			"*** LOW HITPOINT WARNING! ***", angdroid_zh_tw_enabled()));
 		event_signal(EVENT_MESSAGE_FLUSH);
 	}
 }
@@ -707,7 +716,8 @@ void player_update_light(struct player *p)
 			} else if (obj->timeout == 0) {
 				/* The light is now out */
 				disturb(p);
-				msg("Your light has gone out!");
+				msg("%s", angdroid_player_feedback("Your light has gone out!",
+			angdroid_zh_tw_enabled()));
 
 				/* If it's a torch, now is the time to delete it */
 				if (of_has(obj->flags, OF_BURNS_OUT)) {
@@ -722,7 +732,8 @@ void player_update_light(struct player *p)
 			} else if ((obj->timeout < 50) && (!(obj->timeout % 20))) {
 				/* The light is getting dim */
 				disturb(p);
-				msg("Your light is growing faint.");
+				msg("%s", angdroid_player_feedback("Your light is growing faint.",
+			angdroid_zh_tw_enabled()));
 			}
 		}
 	}
@@ -798,7 +809,8 @@ bool player_attack_random_monster(struct player *p)
 		const struct monster *mon = square_monster(cave, grid);
 		if (mon && !monster_is_camouflaged(mon)) {
 			p->upkeep->energy_use = z_info->move_energy;
-			msg("You angrily lash out at a nearby foe!");
+			msg("%s", angdroid_player_feedback("You angrily lash out at a nearby foe!",
+			angdroid_zh_tw_enabled()));
 			py_attack(p, grid);
 			return true;
 		}
@@ -820,7 +832,8 @@ void player_over_exert(struct player *p, int flag, int chance, int amount)
 		if (randint0(100) < chance) {
 			/* Hack - only permanent with high chance (no-mana casting) */
 			bool perm = (randint0(100) < chance / 2) && (chance >= 50);
-			msg("You have damaged your health!");
+			msg("%s", angdroid_player_feedback("You have damaged your health!",
+			angdroid_zh_tw_enabled()));
 			player_stat_dec(p, STAT_CON, perm);
 		}
 	}
@@ -828,7 +841,8 @@ void player_over_exert(struct player *p, int flag, int chance, int amount)
 	/* Fainting */
 	if (flag & PY_EXERT_FAINT) {
 		if (randint0(100) < chance) {
-			msg("You faint from the effort!");
+			msg("%s", angdroid_player_feedback("You faint from the effort!",
+			angdroid_zh_tw_enabled()));
 
 			/* Bypass free action */
 			(void)player_inc_timed(p, TMD_PARALYZED,
@@ -847,7 +861,8 @@ void player_over_exert(struct player *p, int flag, int chance, int amount)
 	/* Cut damage */
 	if (flag & PY_EXERT_CUT) {
 		if (randint0(100) < chance) {
-			msg("Wounds appear on your body!");
+			msg("%s", angdroid_player_feedback("Wounds appear on your body!",
+			angdroid_zh_tw_enabled()));
 			(void)player_inc_timed(p, TMD_CUT, randint1(amount),
 				true, true, false);
 		}
@@ -872,7 +887,8 @@ void player_over_exert(struct player *p, int flag, int chance, int amount)
 	/* Slowing */
 	if (flag & PY_EXERT_SLOW) {
 		if (randint0(100) < chance) {
-			msg("You feel suddenly lethargic.");
+			msg("%s", angdroid_player_feedback("You feel suddenly lethargic.",
+			angdroid_zh_tw_enabled()));
 			(void)player_inc_timed(p, TMD_SLOW, randint1(amount),
 				true, true, false);
 		}
@@ -889,7 +905,10 @@ void player_over_exert(struct player *p, int flag, int chance, int amount)
 				strnfmt(dam_text, sizeof(dam_text),
 					" (%d)", dam);
 			}
-			msg("You cry out in sudden pain!%s", dam_text);
+			if (angdroid_zh_tw_enabled())
+				msg("你突然痛得大叫！%s", dam_text);
+			else
+				msg("You cry out in sudden pain!%s", dam_text);
 			take_hit(p, dam, "over-exertion");
 		}
 	}
@@ -953,7 +972,9 @@ void player_take_terrain_damage(struct player *p, struct loc grid)
 			strnfmt(dam_text, sizeof(dam_text), " (%d)",
 				dam_reduced);
 		}
-		msg("%s%s", square_feat(cave, grid)->hurt_msg, dam_text);
+		msg("%s%s", angdroid_player_feedback(
+			square_feat(cave, grid)->hurt_msg, angdroid_zh_tw_enabled()),
+			dam_text);
 		inven_damage(p, PROJ_FIRE, dam_taken);
 	}
 	take_hit(p, dam_reduced, square_feat(cave, grid)->die_msg);
@@ -971,7 +992,10 @@ struct player_shape *lookup_player_shape(const char *name)
 		}
 		shape = shape->next;
 	}
-	msg("Could not find %s shape!", name);
+	if (angdroid_zh_tw_enabled())
+		msg("找不到 %s 變身形態！", angdroid_shape_name(name, true));
+	else
+		msg("Could not find %s shape!", name);
 	return NULL;
 }
 
@@ -1000,7 +1024,10 @@ struct player_shape *player_shape_by_idx(int index)
 		}
 		shape = shape->next;
 	}
-	msg("Could not find shape %d!", index);
+	if (angdroid_zh_tw_enabled())
+		msg("找不到編號 %d 的變身形態！", index);
+	else
+		msg("Could not find shape %d!", index);
 	return NULL;
 }
 
@@ -1016,11 +1043,21 @@ struct player_shape *player_shape_by_idx(int index)
 bool player_get_resume_normal_shape(struct player *p, struct command *cmd)
 {
 	if (player_is_shapechanged(p)) {
-		msg("You cannot do this while in %s form.", p->shape->name);
+		if (angdroid_zh_tw_enabled())
+			msg("處於 %s 形態時無法執行這個指令。",
+				angdroid_shape_name(p->shape->name, true));
+		else
+			msg("You cannot do this while in %s form.", p->shape->name);
 		char prompt[100];
-		strnfmt(prompt, sizeof(prompt),
-		        "Change back and %s (y/n) or (r)eturn to normal? ",
-		        cmd_verb(cmd->code));
+		if (angdroid_zh_tw_enabled()) {
+			my_strcpy(prompt,
+				"恢復原本形態並執行此指令？（y/n；r 僅恢復形態）",
+				sizeof(prompt));
+		} else {
+			strnfmt(prompt, sizeof(prompt),
+				"Change back and %s (y/n) or (r)eturn to normal? ",
+				cmd_verb(cmd->code));
+		}
 
 		soft_kbd_flash("${yes_no}");
 
@@ -1045,7 +1082,8 @@ bool player_get_resume_normal_shape(struct player *p, struct command *cmd)
 void player_resume_normal_shape(struct player *p)
 {
 	p->shape = lookup_player_shape("normal");
-	msg("You resume your usual shape.");
+	msg("%s", angdroid_player_feedback("You resume your usual shape.",
+			angdroid_zh_tw_enabled()));
 
 	/* Kill vampire attack */
 	(void) player_clear_timed(p, TMD_ATT_VAMP, true, false);
@@ -1085,21 +1123,24 @@ bool player_can_cast(const struct player *p, bool show_msg)
 {
 	if (!p->class->magic.total_spells) {
 		if (show_msg) {
-			msg("You cannot pray or produce magics.");
+			msg("%s", angdroid_player_feedback("You cannot pray or produce magics.",
+			angdroid_zh_tw_enabled()));
 		}
 		return false;
 	}
 
 	if (p->timed[TMD_BLIND] || no_light(p)) {
 		if (show_msg) {
-			msg("You cannot see!");
+			msg("%s", angdroid_player_feedback("You cannot see!",
+			angdroid_zh_tw_enabled()));
 		}
 		return false;
 	}
 
 	if (p->timed[TMD_CONFUSED]) {
 		if (show_msg) {
-			msg("You are too confused!");
+			msg("%s", angdroid_player_feedback("You are too confused!",
+			angdroid_zh_tw_enabled()));
 		}
 		return false;
 	}
@@ -1145,7 +1186,10 @@ bool player_can_study(const struct player *p, bool show_msg)
 					r = r1;
 				}
 			}
-			msg("You cannot learn any new %s!", buf);
+			if (angdroid_zh_tw_enabled())
+				msg("你目前無法再學習新的法術或祈禱！");
+			else
+				msg("You cannot learn any new %s!", buf);
 		}
 		return false;
 	}
@@ -1164,28 +1208,32 @@ bool player_can_read(const struct player *p, bool show_msg)
 {
 	if (p->timed[TMD_BLIND]) {
 		if (show_msg)
-			msg("You can't see anything.");
+			msg("%s", angdroid_player_feedback("You can't see anything.",
+			angdroid_zh_tw_enabled()));
 
 		return false;
 	}
 
 	if (no_light(p)) {
 		if (show_msg)
-			msg("You have no light to read by.");
+			msg("%s", angdroid_player_feedback("You have no light to read by.",
+			angdroid_zh_tw_enabled()));
 
 		return false;
 	}
 
 	if (p->timed[TMD_CONFUSED]) {
 		if (show_msg)
-			msg("You are too confused to read!");
+			msg("%s", angdroid_player_feedback("You are too confused to read!",
+			angdroid_zh_tw_enabled()));
 
 		return false;
 	}
 
 	if (p->timed[TMD_AMNESIA]) {
 		if (show_msg)
-			msg("You can't remember how to read!");
+			msg("%s", angdroid_player_feedback("You can't remember how to read!",
+			angdroid_zh_tw_enabled()));
 
 		return false;
 	}
@@ -1207,7 +1255,8 @@ bool player_can_fire(struct player *p, bool show_msg)
 	/* Require a usable launcher */
 	if (!obj || !p->state.ammo_tval) {
 		if (show_msg)
-			msg("You have nothing to fire with.");
+			msg("%s", angdroid_player_feedback("You have nothing to fire with.",
+			angdroid_zh_tw_enabled()));
 		return false;
 	}
 
@@ -1230,7 +1279,8 @@ bool player_can_refuel(struct player *p, bool show_msg)
 	}
 
 	if (show_msg) {
-		msg("Your light cannot be refuelled.");
+		msg("%s", angdroid_player_feedback("Your light cannot be refuelled.",
+			angdroid_zh_tw_enabled()));
 	}
 
 	return false;
@@ -1359,12 +1409,14 @@ bool player_confuse_dir(struct player *p, int *dp, bool too)
 
 	/* Running attempts always fail */
 	if (too) {
-		msg("You are too confused.");
+		msg("%s", angdroid_player_feedback("You are too confused.",
+			angdroid_zh_tw_enabled()));
 		return true;
 	}
 
 	if (*dp != dir) {
-		msg("You are confused.");
+		msg("%s", angdroid_player_feedback("You are confused.",
+			angdroid_zh_tw_enabled()));
 		*dp = dir;
 		return true;
 	}
@@ -1597,7 +1649,8 @@ void player_handle_post_move(struct player *p, bool eval_trap,
 	if (square_isshop(cave, p->grid)) {
 		if (player_is_shapechanged(p)) {
 			if (square(cave, p->grid)->feat != FEAT_HOME) {
-				msg("There is a scream and the door slams shut!");
+				msg("%s", angdroid_player_feedback("There is a scream and the door slams shut!",
+			angdroid_zh_tw_enabled()));
 			}
 			return;
 		}
@@ -1688,7 +1741,8 @@ void search(struct player *p)
 
 			/* Secret doors */
 			if (square_issecretdoor(cave, grid)) {
-				msg("You have found a secret door.");
+				msg("%s", angdroid_player_feedback("You have found a secret door.",
+			angdroid_zh_tw_enabled()));
 				place_closed_door(cave, grid);
 				disturb(p);
 			}
@@ -1701,7 +1755,8 @@ void search(struct player *p)
 				}
 
 				if (obj->known->pval != obj->pval) {
-					msg("You have discovered a trap on the chest!");
+					msg("%s", angdroid_player_feedback("You have discovered a trap on the chest!",
+			angdroid_zh_tw_enabled()));
 					obj->known->pval = obj->pval;
 					disturb(p);
 				}

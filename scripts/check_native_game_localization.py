@@ -1560,6 +1560,46 @@ def main():
            'A new monster spell.' in monster_spell_test,
            "Monster spell locale integration must register independent C99 test")
 
+    # Core player warnings, death messages and command prompts remain
+    # presentation-only; savefile causes and user notes are unchanged.
+    player_util_i18n = source(CPP / "angband/player-util.c", errors)
+    misc_i18n = source(CPP / "angband/cmd-misc.c", errors)
+    player_feedback = source(CPP / "angband/zh-tw-player-feedback.h", errors)
+    player_feedback_test = source(ROOT / "tests/native/test_player_feedback_locale.c", errors)
+    terrain_for_player = source(ROOT / "variant_lib/angband/gamedata/terrain.txt", errors)
+    player_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', player_feedback)
+    expect(len(player_pairs) == 39 and
+           len({en for en, _ in player_pairs}) == 39 and
+           'hurt-msg:The lava burns you!' in terrain_for_player and
+           '{ "The lava burns you!", "熔岩灼傷了你！" }' in player_feedback and
+           all(zh.strip() and "%" not in zh for _, zh in player_pairs),
+           "Native player feedback must retain all exact original keys")
+    expect('"zh-tw-player-feedback.h"' in player_util_i18n and
+           '"zh-tw-shape-lore.h"' in player_util_i18n and
+           'angdroid_shape_name(p->shape->name, true)' in player_util_i18n and
+           'angdroid_player_feedback(square_feat(' not in player_util_i18n and
+           'square_feat(cave, grid)->hurt_msg, angdroid_zh_tw_enabled()'
+                in player_util_i18n and
+           'get_check(angdroid_player_feedback("Die? ",' in player_util_i18n and
+           'msg("你突然痛得大叫！%s", dam_text);' in player_util_i18n and
+           'msgt(MSG_DEATH, "%s", angdroid_player_feedback(' in player_util_i18n and
+           'msgt(MSG_HITPOINT_WARN, "%s", angdroid_player_feedback(' in player_util_i18n and
+           'my_strcpy(p->died_from, kb_str, sizeof(p->died_from));' in player_util_i18n and
+           'player_stat_dec(' not in player_util_i18n,
+           "Player event display must retain death, damage and savefile state")
+    expect('"zh-tw-player-feedback.h"' in misc_i18n and
+           'history_add(player, note, HIST_USER_INPUT);' in misc_i18n and
+           'player->noscore |= NOSCORE_WIZARD;' in misc_i18n and
+           'player->noscore |= NOSCORE_BORG;' in misc_i18n and
+           'msg("筆記：%s", tmp);' in misc_i18n and
+           'msg("%s", &note[3]);' in misc_i18n and
+           'get_string(angdroid_player_feedback("Note: ",' in misc_i18n,
+           "Notes and no-score commands retain original history and flags")
+    expect('test_player_feedback_locale.c' in native_tests and
+           'check("You die.", "你死了。");' in player_feedback_test and
+           'unknown future prompt' in player_feedback_test,
+           "Player feedback native bilingual C99 test must be registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

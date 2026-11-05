@@ -29,6 +29,8 @@
 #include "player-history.h"
 #include "obj-util.h"
 #include "target.h"
+#include "droid.h"
+#include "zh-tw-player-feedback.h"
 
 
 /**
@@ -39,12 +41,15 @@ void do_cmd_wizard(void)
 	/* Verify first time */
 	if (!(player->noscore & NOSCORE_WIZARD)) {
 		/* Mention effects */
-		msg("You are about to enter 'wizard' mode for the very first time!");
-		msg("This is a form of cheating, and your game will not be scored!");
+		msg("%s", angdroid_player_feedback("You are about to enter 'wizard' mode for the very first time!",
+			angdroid_zh_tw_enabled()));
+		msg("%s", angdroid_player_feedback("This is a form of cheating, and your game will not be scored!",
+			angdroid_zh_tw_enabled()));
 		event_signal(EVENT_MESSAGE_FLUSH);
 
 		/* Verify request */
-		if (!get_check("Are you sure you want to enter wizard mode? "))
+		if (!get_check(angdroid_player_feedback("Are you sure you want to enter wizard mode? ",
+			angdroid_zh_tw_enabled())))
 			return;
 
 		/* Mark savefile */
@@ -54,10 +59,12 @@ void do_cmd_wizard(void)
 	/* Toggle mode */
 	if (player->wizard) {
 		player->wizard = false;
-		msg("Wizard mode off.");
+		msg("%s", angdroid_player_feedback("Wizard mode off.",
+			angdroid_zh_tw_enabled()));
 	} else {
 		player->wizard = true;
-		msg("Wizard mode on.");
+		msg("%s", angdroid_player_feedback("Wizard mode on.",
+			angdroid_zh_tw_enabled()));
 	}
 
 	/* Update monsters */
@@ -94,7 +101,8 @@ void do_cmd_note(void)
 	my_strcpy(note, "", sizeof(note));
 
 	/* Read a line of input from the user */
-	if (!get_string("Note: ", tmp, sizeof(tmp))) return;
+	if (!get_string(angdroid_player_feedback("Note: ",
+		angdroid_zh_tw_enabled()), tmp, sizeof(tmp))) return;
 
 	/* Ignore empty notes */
 	if (!tmp[0] || (tmp[0] == ' ')) return;
@@ -109,7 +117,16 @@ void do_cmd_note(void)
 		strnfmt(note, sizeof(note), "-- Note: %s", tmp);
 
 	/* Display the note (omitting the "-- " prefix) */
-	msg("%s", &note[3]);
+	if (angdroid_zh_tw_enabled()) {
+		if (strncmp(tmp, "/say ", 5) == 0)
+			msg("%s 說：「%s」", player->full_name, &tmp[5]);
+		else if (strncmp(tmp, "/me", 3) == 0)
+			msg("%s%s", player->full_name, &tmp[3]);
+		else
+			msg("筆記：%s", tmp);
+	} else {
+		msg("%s", &note[3]);
+	}
 
 	/* Add a history entry */
 	history_add(player, note, HIST_USER_INPUT);
@@ -128,12 +145,15 @@ void do_cmd_try_borg(void)
 	if (!(player->noscore & NOSCORE_BORG))
 	{
 		/* Mention effects */
-		msg("You are about to use the dangerous, unsupported, borg commands!");
-		msg("Your machine may crash, and your savefile may become corrupted!");
+		msg("%s", angdroid_player_feedback("You are about to use the dangerous, unsupported, borg commands!",
+			angdroid_zh_tw_enabled()));
+		msg("%s", angdroid_player_feedback("Your machine may crash, and your savefile may become corrupted!",
+			angdroid_zh_tw_enabled()));
 		event_signal(EVENT_MESSAGE_FLUSH);
 
 		/* Verify request */
-		if (!get_check("Are you sure you want to use the borg commands? "))
+		if (!get_check(angdroid_player_feedback("Are you sure you want to use the borg commands? ",
+			angdroid_zh_tw_enabled())))
 			return;
 
 		/* Mark savefile */
