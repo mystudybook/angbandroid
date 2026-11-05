@@ -89,6 +89,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_item_flavor_locale"
 "$BUILD_DIR/test_item_flavor_locale"
 
+# Seven flavored noun phrases: count, identification and UTF-8 safety.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_flavored_object_locale.c" \
+    -o "$BUILD_DIR/test_flavored_object_locale"
+"$BUILD_DIR/test_flavored_object_locale"
+
 # Generated scroll titles: preserve original identifiers and safe CJK boundaries.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_scroll_title_locale.c" \
