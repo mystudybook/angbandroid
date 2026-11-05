@@ -44,6 +44,7 @@
 #include "zh-tw-activations.h"
 #include "zh-tw-curse.h"
 #include "zh-tw-item-abilities.h"
+#include "zh-tw-monsters.h"
 
 /**
  * Describes the number of blows possible for given stat bonuses
@@ -2272,6 +2273,75 @@ static bool describe_origin(textblock *tb, const struct object *obj, bool terse)
 	}
 	if (comma) {
 		my_strcat(name, ",", sizeof(name));
+	}
+
+	/* Only format the already-known item origin for display; keep the
+	 * canonical origin enum, monster data and exported records intact. */
+	if (angdroid_zh_tw_enabled() && origins[origin].args >= 0) {
+		char zh_spot[80];
+		const char *zh_dropper = dropper;
+		const char *found = NULL;
+		bool handled = true;
+
+		if (obj->origin_depth)
+			strnfmt(zh_spot, sizeof(zh_spot), "地城 %d 英呎（第 %d 層）",
+				obj->origin_depth * 50, obj->origin_depth);
+		else
+			my_strcpy(zh_spot, "城鎮", sizeof(zh_spot));
+
+		if (!obj->origin_race) {
+			zh_dropper = "已不可考的怪物";
+		} else if (!unique) {
+			found = angdroid_zh_tw_monster_list_name(dropper);
+			if (found) zh_dropper = found;
+		}
+
+		switch (origin) {
+		case ORIGIN_FLOOR:
+			textblock_append(tb, "在%s的地面上發現", zh_spot); break;
+		case ORIGIN_CHEST:
+			textblock_append(tb, "從%s的寶箱中取得", zh_spot); break;
+		case ORIGIN_SPECIAL:
+			textblock_append(tb, "在%s特殊房間的地面上發現", zh_spot); break;
+		case ORIGIN_PIT:
+			textblock_append(tb, "在%s的怪物坑地面上發現", zh_spot); break;
+		case ORIGIN_VAULT:
+			textblock_append(tb, "在%s的寶庫地面上發現", zh_spot); break;
+		case ORIGIN_LABYRINTH:
+			textblock_append(tb, "在%s的迷宮地面上發現", zh_spot); break;
+		case ORIGIN_CAVERN:
+			textblock_append(tb, "在%s的洞窟地面上發現", zh_spot); break;
+		case ORIGIN_RUBBLE:
+			textblock_append(tb, "在%s的碎石堆下發現", zh_spot); break;
+		case ORIGIN_ACQUIRE:
+			textblock_append(tb, "在%s以魔法取得", zh_spot); break;
+		case ORIGIN_STORE:
+			textblock_append(tb, "從商店購得"); break;
+		case ORIGIN_BIRTH:
+			textblock_append(tb, "家族傳承的物品"); break;
+		case ORIGIN_CHEAT:
+			textblock_append(tb, "由除錯模式建立"); break;
+		case ORIGIN_DROP_UNKNOWN:
+			textblock_append(tb, "由未知怪物在%s掉落", zh_spot); break;
+		case ORIGIN_DROP:
+		case ORIGIN_DROP_SPECIAL:
+		case ORIGIN_DROP_PIT:
+		case ORIGIN_DROP_VAULT:
+		case ORIGIN_DROP_BREED:
+		case ORIGIN_DROP_SUMMON:
+		case ORIGIN_DROP_POLY:
+		case ORIGIN_DROP_MIMIC:
+		case ORIGIN_DROP_WIZARD:
+			textblock_append(tb, "由%s在%s掉落", zh_dropper, zh_spot);
+			break;
+		default:
+			handled = false;
+			break;
+		}
+		if (handled) {
+			textblock_append(tb, "\n\n");
+			return true;
+		}
 	}
 
 	/* Print an appropriate description */
