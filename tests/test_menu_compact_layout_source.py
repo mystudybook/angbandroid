@@ -57,5 +57,9 @@ if "menu->active.width <= 0 || menu->active.page_rows <= 0" not in run:
     raise SystemExit("FAIL: zero-size menu surface can enter input loop")
 if "if (!menu_calc_size(menu))" not in run:
     raise SystemExit("FAIL: resize error is ignored")
+if "menu->preferred_skin == &menu_skin_object" not in run:
+    raise SystemExit("FAIL: rotated object menu cannot recover its stale location")
+if "resized_before_calc = true;" not in run:
+    raise SystemExit("FAIL: resized object menu callback can be repeated")
 
 print("PASS: native menu layout and terminal resize use bounded geometry")

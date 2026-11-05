@@ -984,13 +984,26 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 
 			menu_handle_keypress(menu, &in, &out);
 		} else if (in.type == EVT_RESIZE) {
+			bool resized_before_calc = false;
+			/* Right-aligned object menus can be outside the portrait
+			 * screen after rotation. Rebuild their boundary before exit. */
 			if (!menu_calc_size(menu)) {
-				if (popup)
-					screen_load();
-				in.type = EVT_ESCAPE;
-				return in;
+				int width, height;
+				Term_get_size(&width, &height);
+				if (width > 0 && height > 1 &&
+					menu->preferred_skin == &menu_skin_object &&
+					menu->row_funcs && menu->row_funcs->resize) {
+					menu->row_funcs->resize(menu);
+					resized_before_calc = true;
+				}
+				if (!menu_calc_size(menu)) {
+					if (popup)
+						screen_load();
+					in.type = EVT_ESCAPE;
+					return in;
+				}
 			}
-			if (menu->row_funcs->resize)
+			if (!resized_before_calc && menu->row_funcs->resize)
 				menu->row_funcs->resize(menu);
 		}
 

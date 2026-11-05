@@ -427,6 +427,23 @@ def main():
            "angdroid_zh_tw_item_combat_text" in detail_header,
            "Combat/modifier/annotation display needs UTF-8 and source gate tests")
 
+    # Portrait rotation: item selection region, scrolled quiver footer, and
+    # store help must never overlap active stock rows or invalid touch targets.
+    selection_layout = source(CPP / "angband/item-selection-layout.h", errors)
+    selection_py = source(
+        ROOT / "tests/test_item_selection_rotation_source.py", errors)
+    expect('"item-selection-layout.h"' in object_ui and
+           "angdroid_item_selection_region(width, height," in object_ui and
+           "get_item_action, item_menu_resize };" in object_ui and
+           "angdroid_item_selection_footer_row(local_area->row," in object_ui and
+           "angdroid_item_selection_footer_row(" in selection_layout and
+           "test_item_selection_layout.c" in native_tests and
+           "test_item_selection_rotation_source.py" in source(
+               ROOT / "scripts/verify-zh-tw.sh", errors) and
+           "test_rotated_menu_keeps_click_row_and_footer_separate" in selection_py and
+           "Term->wid >= 70 && Term->hgt >= 16" in store_ui,
+           "Portrait selection and compact shop help need resize regression tests")
+
     # Responsive item-list widths and untranslated shop stock are a coupled
     # regression: stock is opted-in to zh-TW, amounts stay full and unmodified.
     inventory_layout = source(CPP / "angband/object-list-text.h", errors)

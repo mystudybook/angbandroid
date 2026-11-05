@@ -266,7 +266,10 @@ static void store_display_recalc(struct store_context *ctx)
 
 	/* Optional help needs at least a few rows for the item list.
 	 * Keep all terminal Y coordinates valid during Android rotation. */
-	show_help = (ctx->flags & STORE_SHOW_HELP) && hgt >= 10;
+	/* Verbose help can wrap into selectable rows on narrow phones.
+	 * Retain the list and use a bounded, single-line key hint there. */
+	show_help = (ctx->flags & STORE_SHOW_HELP) &&
+		wid >= 70 && hgt >= 16;
 	content_height = show_help ? hgt - 3 : hgt;
 	ctx->scr_places_y[LOC_OWNER] = angdroid_store_safe_row(1, hgt);
 	ctx->scr_places_y[LOC_HEADER] = angdroid_store_safe_row(3, hgt);
@@ -490,14 +493,31 @@ static void store_redraw(struct store_context *ctx)
 	if (ctx->flags & STORE_FRAME_CHANGE) {
 		store_display_frame(ctx);
 
-		if ((ctx->flags & STORE_SHOW_HELP) && Term->hgt >= 10)
+		if ((ctx->flags & STORE_SHOW_HELP) &&
+				Term->wid >= 70 && Term->hgt >= 16) {
 			store_display_help(ctx);
-		else
-			store_put_clipped(COLOUR_WHITE,
-				angdroid_game_ui_text("Press '?' for help.",
-					angdroid_zh_tw_enabled()),
+		} else {
+			const char *hint;
+			if (ctx->flags & STORE_SHOW_HELP) {
+				if (ctx->inspect_only)
+					hint = angdroid_zh_tw_enabled() ?
+						"I 檢視  Esc 返回" : "I inspect  Esc exit";
+				else if (ctx->store->feat == FEAT_HOME)
+					hint = angdroid_zh_tw_enabled() ?
+						"I 檢視  p 取出  d 存放  Esc 返回" :
+						"I inspect  p take  d stash  Esc exit";
+				else
+					hint = angdroid_zh_tw_enabled() ?
+						"I 檢視  p 購買  d 出售  Esc 返回" :
+						"I inspect  p buy  d sell  Esc exit";
+			} else {
+				hint = angdroid_game_ui_text(
+					"Press '?' for help.", angdroid_zh_tw_enabled());
+			}
+			store_put_clipped(COLOUR_WHITE, hint,
 				ctx->scr_places_y[LOC_HELP_PROMPT], 1,
 				MAX(0, layout.width - 1));
+		}
 
 		ctx->flags &= ~STORE_FRAME_CHANGE;
 	}
@@ -1018,7 +1038,10 @@ static int context_menu_store(struct store_context *ctx, const int oid, int mx, 
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt(angdroid_game_ui_text("(Enter to select, ESC) Command:", angdroid_zh_tw_enabled()), 0, 0);
+	prt("", 0, 0);
+	store_put_clipped(COLOUR_WHITE,
+		angdroid_game_ui_text("(Enter to select, ESC) Command:",
+			angdroid_zh_tw_enabled()), 0, 0, Term->wid);
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
@@ -1090,9 +1113,12 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt(angdroid_zh_tw_enabled() ?
-		format("Enter 選取／Esc 返回：%s", header) :
-		format("(Enter to select, ESC) Command for %s:", header), 0, 0);
+	prt("", 0, 0);
+	store_put_clipped(COLOUR_WHITE,
+		angdroid_zh_tw_enabled() ?
+			format("Enter 選取／Esc 返回：%s", header) :
+			format("(Enter to select, ESC) Command for %s:", header),
+		0, 0, Term->wid);
 	selected = menu_dynamic_select_alias(m, 'g', 'p');
 
 	menu_dynamic_free(m);
