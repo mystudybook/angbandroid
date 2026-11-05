@@ -18,6 +18,12 @@ for key in ("identified_item_kind_names", "nonunique_monster_names"):
     assert section["untranslated"] == [], key
     assert section["invalid_keys"] == [], key
 assert a["monster_flavor_descriptions"]["translated"] > 0
+for key in ("activation_effect_descriptions", "object_property_descriptions",
+            "curse_descriptions", "item_origin_labels"):
+    section = a[key]
+    assert section["translated"] == section["source_total"], key
+    assert section["untranslated"] == [], key
+    assert section.get("invalid_keys", []) == [], key
 assert len(report["variants"]["names"]) >= 11
 assert report["status"] == "incomplete"
 # The independent source checker must use a regex word boundary for UNIQUE.
