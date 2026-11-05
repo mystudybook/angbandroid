@@ -25,6 +25,7 @@
 #include "player-calcs.h"
 #include "droid.h"
 #include "zh-tw-monsters.h"
+#include "zh-tw-unique-monsters.h"
 #include "zh-tw-mon-pain.h"
 
 /**
@@ -487,7 +488,7 @@ static const char *get_monster_message_zh_tw(int code,
     }
 }
 
-/* Keep unique proper names and known vs invisible monster identity. */
+/* Display-only unique names; invisible subjects still hide monster identity. */
 static void get_subject_zh_tw(char *buf, size_t buflen,
         struct monster_race *race, int count, bool invisible, bool offscreen)
 {
@@ -496,7 +497,8 @@ static void get_subject_zh_tw(char *buf, size_t buflen,
         if (count == 1) my_strcpy(buf, "它", buflen);
         else strnfmt(buf, buflen, "%d 隻怪物", count);
     } else if (rf_has(race->flags, RF_UNIQUE)) {
-        my_strcpy(buf, race->name, buflen);
+        name = angdroid_zh_tw_unique_monster_name(race->name);
+        my_strcpy(buf, name ? name : race->name, buflen);
     } else {
         name = angdroid_zh_tw_monster_list_name(race->name);
         if (!name) name = race->name;
