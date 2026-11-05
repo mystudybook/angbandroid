@@ -1761,6 +1761,32 @@ def main():
            'pair("Character dump failed!", "角色資料匯出失敗！");' in sheet_test,
            "C99 character sheet regression must remain registered")
 
+    # Inventory feedback must keep original item accounting, labels and
+    # grammar in English while rendering zh-TW messages separately.
+    gear_ui = source(CPP / "angband/obj-gear.c", errors)
+    gear_h = source(CPP / "angband/zh-tw-gear-messages.h", errors)
+    gear_t = source(ROOT / "tests/native/test_gear_messages_locale.c", errors)
+    gear_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', gear_h)
+    expect(len(gear_pairs) == 4 and
+           len({x for x, _ in gear_pairs}) == 4,
+           "Four canonical inventory status labels must remain unique")
+    expect('"zh-tw-gear-messages.h"' in gear_ui and
+           '"droid.h"' in gear_ui and
+           'msg("你還有 %d 次充能可用。", obj->pval);' in gear_ui and
+           'msg("You have %d charge%s remaining."' in gear_ui and
+           'msgt(MSG_WIELD, "你穿戴了 %s（%c）。"' in gear_ui and
+           'msgt(MSG_WIELD, fmt, o_name, gear_to_label(player, wielded));'
+                in gear_ui and
+           'msgt(MSG_WIELD, "你卸下了 %s（%c）。"' in gear_ui and
+           'gear_to_label(player, obj)' in gear_ui and
+           'combine_pack(player)' in gear_ui,
+           "Inventory localization must preserve gear identity and calculations")
+    expect('test_gear_messages_locale.c' in native_tests and
+           'Mushrooms for breakfast!' in gear_t and
+           'Other gear message' in gear_t and
+           'angdroid_gear_message(NULL, 1) == NULL' in gear_t,
+           "Inventory bilingual regression must be registered")
+
     if errors:
         for item in errors:
             print("FAIL:", item)

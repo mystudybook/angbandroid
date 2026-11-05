@@ -175,6 +175,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_shape_lore_locale"
 "$BUILD_DIR/test_shape_lore_locale"
 
+# Inventory and equipment feedback (status messages, both locales).
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_gear_messages_locale.c" \
+    -o "$BUILD_DIR/test_gear_messages_locale"
+"$BUILD_DIR/test_gear_messages_locale"
+
 # Character sheet labels, ratings, prompts and original locale fallback.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_character_sheet_locale.c" \

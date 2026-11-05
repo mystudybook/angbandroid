@@ -1283,3 +1283,15 @@ original column positions. Attack and shot frequency use literal bilingual
 printf format strings, avoiding NDK format-security errors. This does not
 alter character numeric values, keyboard actions, or the canonical English
 character-dump format. C99 bilingual regression and source guard added.
+
+
+## Native inventory/equipment gameplay feedback (2026-11-05)
+
+Localized the original `obj-gear.c` item-damage, inventory remainder,
+charges, mushroom recognition, wield, remove, drop, item combining and pack
+overflow feedback. The actual item names and slot markers continue through
+the original `object_desc()` and `gear_to_label()` APIs; no quantities,
+slot assignments or equipment calculations are changed. English fallback
+remains verbatim, and all changed printf-like messages use literal format
+strings for NDK `-Werror=format-security` compliance. A native C99
+regression checks static translated messages and unknown fallback.
