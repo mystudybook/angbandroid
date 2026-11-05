@@ -382,6 +382,23 @@ def main():
            and "test_ego_names_locale.c" in native_tests
            and 'angdroid_zh_tw_ego_name(NULL) == NULL' in ego_native_test,
            "Ego suffix must remain identified, screen-only and C99 tested")
+    # Random Latin-like scroll titles must remain stable identifiers.
+    scroll_header = source(CPP / "angband/zh-tw-scroll-title.h", errors)
+    scroll_tests = source(ROOT / "tests/test_scroll_title_localization.py", errors)
+    expect('"zh-tw-scroll-title.h"' in obj and
+           "angdroid_zh_tw_scroll_title(buf, max, flavor, false)" in obj and
+           "obj->tval == TV_SCROLL && show_flavor" in obj and
+           "obj->kind->flavor->text, true" in obj and
+           "!obj->artifact && !obj->ego && obj->kind->flavor" in obj and
+           "else if (localized_scroll && aware && !obj->artifact)" in obj and
+           'strnfcat(buf, max, &end, "（%s）",' in obj and
+           "return false;" in scroll_header and
+           "test_scroll_title_locale.c" in native_tests and
+           "test_scroll_title_localization.py" in source(
+               ROOT / "scripts/verify-zh-tw.sh", errors) and
+           "seed_flavor" in scroll_tests,
+           "Random scroll titles must be bilingual and preserve canonical RNG")
+
     expect("if (!easy_know && !kind->aware && kind->flavor)" in obj,
            "Unidentified item flavors must not be disclosed")
     expect("obj_desc_name_format(buf, max, 0, kind->name, NULL, false)" in obj,

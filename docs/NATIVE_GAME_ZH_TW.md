@@ -1535,3 +1535,11 @@ canonical translation dictionary is still 326 entries.
 - Lookup priority remains objects → features → monster bases, without modifying the canonical source, monster flags, input bindings or save data. The upstream `Morgoth` exclusion remains; 55 of 56 source bases can be reached through this lookup.
 - C99 regression tests cover all original pairs and English/mismatch fallback; Python source checker validates source keys. JSON coverage audit now reports `monster_base_symbol_descriptions`.
 - Fixed malformed doubled shell backslashes in the earlier PR #79 C99 test script. This does not replace a local Android debug/NDK or emulator gameplay run.
+
+## Random scroll-title rendering: opaque Latin title inside Chinese UI (2026-11-05)
+
+- Original Angband generates fictional scroll-title identifiers from the Latin-like Markov corpus in `names.txt` under the saved `seed_flavor`. These are **not fixed human-language sentences** and cannot be translated via the existing 202 static flavor-name mappings.
+- For UI opt-in descriptions, an eligible ordinary scroll now appears as `題為「lorem ipsum」的卷軸`; on identifying the scroll, it may display `題為「lorem ipsum」的卷軸（辨識符文）`. In the knowledge list, the unseen title displays as `「lorem ipsum」`. The fictional Latin characters remain deliberately unchanged so scrolls stay distinguishable.
+- The wrapped output requires original double quotes and a short ASCII alphabetic title. Invalid data, English-mode callers, non-opted-in exports, terse/ineligible displays, special artifacts, and other unknown-item flows continue using the existing original representation.
+- Renderer uses no RNG and never mutates `flavor_init()`, `scroll_adj`, `seed_flavor`, `kind->flavor->text`, parser IDs or saved data.
+- Standalone C99 tests cover valid output, unchanged source strings, distinct titles, narrow buffers, malformed source and NULL handling. Python/source-checker tests assert wiring, gating and export/RNG isolation. Full Android NDK build and emulator/real device visual checks remain required.
