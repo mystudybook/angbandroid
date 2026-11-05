@@ -60,6 +60,54 @@ int main(void)
     assert(angdroid_utf8_display_columns(name) == 4);
     assert(angdroid_utf8_display_columns(object_name) == 8);
 
+    /* Reserve optional columns without swallowing item selection labels. */
+    {
+        angdroid_object_list_extras e;
+        int screen, flags;
+        e = angdroid_object_list_fit_extras(20, 12, true, true, true, true);
+        assert(!e.price && !e.fail && !e.recharge && !e.weight);
+        assert(e.reserved == 0);
+        e = angdroid_object_list_fit_extras(21, 12, true, true, true, true);
+        assert(e.price && !e.fail && !e.recharge && !e.weight);
+        assert(e.reserved == 9);
+        e = angdroid_object_list_fit_extras(31, 12, true, true, true, true);
+        assert(e.price && e.fail && !e.recharge && !e.weight);
+        assert(e.reserved == 19);
+        e = angdroid_object_list_fit_extras(40, 12, true, true, true, true);
+        assert(e.price && e.fail && !e.recharge && e.weight);
+        assert(e.reserved == 28);
+        e = angdroid_object_list_fit_extras(50, 12, true, true, true, true);
+        assert(e.price && e.fail && e.recharge && e.weight);
+        assert(e.reserved == 38);
+        e = angdroid_object_list_fit_extras(22, 12, false, false, true, false);
+        assert(!e.price && !e.fail && e.recharge && !e.weight);
+        assert(e.reserved == 10);
+
+        assert(!angdroid_object_list_detail_fits(12, 20, 9, 9));
+        assert(angdroid_object_list_detail_fits(12, 21, 9, 9));
+        assert(!angdroid_object_list_detail_fits(12, 21, 9, 10));
+        assert(!angdroid_object_list_detail_fits(-1, 40, 9, 9));
+        assert(!angdroid_object_list_detail_fits(0, 20, 0, 0));
+        assert(!angdroid_object_list_detail_fits(INT_MAX, 40, 9, 3));
+
+        for (screen = 0; screen <= 160; ++screen) {
+            for (flags = 0; flags < 16; ++flags) {
+                int expected = 0;
+                e = angdroid_object_list_fit_extras(screen, 12,
+                    (flags & 1) != 0, (flags & 2) != 0,
+                    (flags & 4) != 0, (flags & 8) != 0);
+                if (e.price) expected += 9;
+                if (e.fail) expected += 10;
+                if (e.recharge) expected += 10;
+                if (e.weight) expected += 9;
+                assert(e.reserved == expected);
+                assert(e.reserved >= 0);
+                assert(screen < 12 ? e.reserved == 0 :
+                    e.reserved <= screen - 12);
+            }
+        }
+    }
+
     puts("PASS: inventory text remains unchanged and clips by screen cells");
     return 0;
 }
