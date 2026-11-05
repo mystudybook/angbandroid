@@ -198,6 +198,7 @@ def main() -> int:
         for label, title in (
             ("identified_item_kind_names", "Identified item kind names"),
             ("nonunique_monster_names", "Non-unique monster names"),
+            ("unique_monster_display_names", "Unique monster display names"),
             ("monster_flavor_descriptions", "Monster flavor descriptions"),
             ("activation_effect_descriptions", "Activation effect descriptions"),
             ("object_property_descriptions", "Object property descriptions"),
