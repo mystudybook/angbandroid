@@ -68,6 +68,7 @@ def inspect() -> dict:
     monster_names, unique_names = monsters()
     item_translations = entries(CPP / "zh-tw-items.h")
     monster_translations = entries(CPP / "zh-tw-monsters.h")
+    unique_monster_translations = entries(CPP / "zh-tw-unique-monsters.h")
     lore_translations = entries(CPP / "zh-tw-lore.h")
     ui_translations = entries(CPP / "zh-tw-ui.h")
     combat_content = (CPP / "zh-tw-combat.h").read_text(encoding="utf-8")
@@ -129,6 +130,9 @@ def inspect() -> dict:
                 "untranslated": sorted(monster_names - monster_translations.keys()),
                 "invalid_keys": sorted(monster_translations.keys() - monster_names),
             },
+            "unique_monster_display_names": coverage(
+                unique_names, unique_monster_translations
+            ),
             "monster_flavor_descriptions": {
                 "translated": len(lore_translations),
                 "source_total": len(monster_names | unique_names),
@@ -171,10 +175,10 @@ def inspect() -> dict:
         },
         "limitations": [
             "Item names are display-only for identified kinds, not object_desc grammar.",
-            "Monster names are display-only; unique proper names remain canonical.",
-            "Most monster lore and several dynamic event descriptions remain English.",
+            "Regular and unique monster display names are localized, while canonical race data stays English.",
+            "All 623 monster flavor descriptions have translations; other lore sections and dynamic events can remain English.",
             "Activation effects are translated only when the item's effect is known.",
-            "Item names in full inventory descriptions and export text are not uniformly localized.",
+            "Full inventory descriptions can still include untranslated artifact/ego suffixes; exports remain canonical.",
             "The Android device/emulator was not tested by this report.",
             "Other game variants need independent source and resource translation.",
         ],
