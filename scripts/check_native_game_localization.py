@@ -427,6 +427,25 @@ def main():
            "angdroid_zh_tw_item_combat_text" in detail_header,
            "Combat/modifier/annotation display needs UTF-8 and source gate tests")
 
+    # All quantity dialogs share a strict parser: a random letter must
+    # never act as '*'. Retain numeric bounds and translated retry message.
+    qty_ui = source(CPP / "angband/ui-input.c", errors)
+    qty_header = source(CPP / "angband/quantity-input.h", errors)
+    qty_locale = source(CPP / "angband/zh-tw-ui.h", errors)
+    qty_source_tests = source(ROOT / "tests/test_quantity_input_source.py",
+                              errors)
+    expect('"quantity-input.h"' in qty_ui and
+           "angdroid_parse_quantity(buf, max, &amt)" in qty_ui and
+           "INT_MAX - digit" in qty_header and
+           "數量（0-%d，* 代表全部）" in qty_ui and
+           "數量格式無效，請輸入數字或 *（全部）。" in qty_locale and
+           "test_quantity_input.c" in native_tests and
+           "test_quantity_input_source.py" in source(
+               ROOT / "scripts/verify-zh-tw.sh", errors) and
+           "test_invalid_alpha_requires_retry_and_star_is_explicit"
+               in qty_source_tests,
+           "Global quantities must reject arbitrary letter/all aliases")
+
     # Explicit trade approval must not accept native touch converted to Enter.
     shop_confirm_header = source(
         CPP / "angband/store-confirmation-text.h", errors)
