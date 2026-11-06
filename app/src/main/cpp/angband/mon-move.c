@@ -1482,7 +1482,10 @@ static void monster_turn_grab_objects(struct monster *mon, const char *m_name,
 		} else {
 			/* Describe observable situations */
 			if (square_isseen(cave, new) && !ignore_item_ok(player, obj)) {
-				msgt(MSG_DESTROY, "%s crushes %s.", m_name, o_name);
+				if (angdroid_zh_tw_enabled())
+					msgt(MSG_DESTROY, "%s壓碎了%s。", m_name, o_name);
+				else
+					msgt(MSG_DESTROY, "%s crushes %s.", m_name, o_name);
 			}
 
 			/* Delete the object */

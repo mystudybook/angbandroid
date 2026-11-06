@@ -1096,9 +1096,16 @@ static void ranged_helper(struct player *p,	struct object *obj, int dir,
 		taim = distance(grid, target);
 		if (taim > range) {
 			char msg[80];
-			strnfmt(msg, sizeof(msg),
+			/* Display-only warning shared by Fire and Throw. Keep the
+			 * original target distance, confirmation gate and turn cost. */
+			if (angdroid_zh_tw_enabled()) {
+				strnfmt(msg, sizeof(msg),
+					"目標超出射程 %d 格，仍要繼續嗎？ ", taim - range);
+			} else {
+				strnfmt(msg, sizeof(msg),
 					"Target out of range by %d squares. Fire anyway? ",
-				taim - range);
+					taim - range);
+			}
 			if (!get_check(msg)) return;
 		}
 	}

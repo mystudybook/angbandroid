@@ -108,6 +108,7 @@ run_check "Narrow native menu column safety" python3 "$ROOT/tests/test_menu_colu
 run_check "Native checker Python syntax and parser integrity" python3 "$ROOT/tests/test_zh_tw_checker_integrity.py"
 run_check "Current native localization display guards and negative mutations" python3 "$ROOT/tests/test_native_checker_current_display_contracts.py"
 run_check "Native translated message branch scope (dangling else)" python3 "$ROOT/tests/test_native_locale_branch_braces.py"
+run_check "Ranged out-of-range prompt and monster item-crush bilingual feedback" python3 "$ROOT/tests/test_combat_feedback_edge_locale_source.py"
 run_check "Targeting help printf-format security (Clang/GCC)" python3 "$ROOT/tests/test_target_help_printf_security.py"
 run_check "Dynamic shape-change effects C99 renderer" python3 "$ROOT/tests/test_shape_effect_render_source.py"
 run_check "Option descriptions and CJK menu display safety" python3 "$ROOT/tests/test_options_localization_source.py"
