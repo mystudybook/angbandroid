@@ -1,10 +1,8 @@
 package org.rephial.xyangband;
 
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.NumberPicker;
 import android.widget.PopupWindow;
 import android.widget.SeekBar;
@@ -25,14 +23,18 @@ public class QuantityPopup extends PopupWindow
 
     public boolean locked = false;
 
+    /** A dismissed, unconfirmed popup must cancel the pending native prompt. */
+    private boolean resolved = false;
+
     public ViewGroup root = null;
 
     public QuantityPopup(GameActivity p_context, String message,
                          int maxValue, int initialValue) {
         super(p_context);
 
-        setOutsideTouchable(true);
-        setFocusable(false);
+        // Prevent taps or keystrokes passing through to the game while choosing.
+        setOutsideTouchable(false);
+        setFocusable(true);
 
         context = p_context;
 
@@ -64,64 +66,95 @@ public class QuantityPopup extends PopupWindow
 
         button = root.findViewById(R.id.tenButton);
         button.setOnClickListener(this);
+
+        button = root.findViewById(R.id.confirmButton);
+        button.setOnClickListener(this);
+
+        button = root.findViewById(R.id.cancelButton);
+        button.setOnClickListener(this);
+
+        setOnDismissListener(new OnDismissListener() {
+            @Override
+            public void onDismiss() {
+                // Android Back and activity teardown must cancel pending prompt.
+                if (!resolved) {
+                    resolved = true;
+                    StateManager state = context.getStateManager();
+                    state.addKey(state.getKeyEsc());
+                }
+            }
+        });
     }
 
     public void configure(String message, int maxValue, int initialValue)
     {
         locked = true;
+        resolved = false;
+        int limit = Math.max(0, maxValue);
 
-        valuePicker.setMaxValue(maxValue);
-        valuePicker.setValue(initialValue);
+        valuePicker.setMaxValue(limit);
+        valuePicker.setValue(QuantitySliderMath.clamp(initialValue, 0, limit));
+
+        TextView prompt = root.findViewById(R.id.quantityPrompt);
+        prompt.setText(message == null ? "" : message);
 
         Button button = root.findViewById(R.id.allButton);
-        button.setText("" + maxValue);
+        button.setText(context.getString(R.string.quantity_all_with_count, limit));
+        button.setEnabled(limit > 0);
 
         button = root.findViewById(R.id.tenButton);
-        button.setVisibility(maxValue <= 10 ? View.GONE: View.VISIBLE);
+        button.setVisibility(limit <= 10 ? View.GONE : View.VISIBLE);
+
+        button = root.findViewById(R.id.oneButton);
+        button.setEnabled(limit > 0);
+
+        button = root.findViewById(R.id.confirmButton);
+        button.setEnabled(limit > 0);
 
         updateValueBar(valuePicker.getValue());
-
         locked = false;
     }
 
     @Override
     public void onClick(View v) {
-
-        if (locked) return;
-
-        Button button = (Button)v;
-
+        if (locked || resolved) return;
         locked = true;
+        int id = v.getId();
 
-        if (button.getId() == R.id.allButton) {
+        if (id == R.id.cancelButton) {
+            resolved = true;
+            StateManager state = context.getStateManager();
+            state.addKey(state.getKeyEsc());
+            dismiss();
+            locked = false;
+            return;
+        }
+
+        if (id == R.id.allButton) {
             valuePicker.setValue(valuePicker.getMaxValue());
-        }
-
-        if (button.getId() == R.id.oneButton) {
+        } else if (id == R.id.oneButton) {
             valuePicker.setValue(1);
-        }
-
-        if (button.getId() == R.id.tenButton) {
+        } else if (id == R.id.tenButton) {
             valuePicker.setValue(10);
+        } else if (id != R.id.confirmButton) {
+            locked = false;
+            return;
         }
 
-        updateValueBar(valuePicker.getValue());
-
-        sendValue(true);
-
-        locked = false;
-
+        // Only a deliberate button press commits the quantity.
+        resolved = true;
+        sendValue();
         dismiss();
+        locked = false;
     }
 
-    public void sendValue(boolean finish)
+    private void sendValue()
     {
         StateManager state = context.getStateManager();
-
         String str = Integer.toString(valuePicker.getValue());
         List<Integer> list = InputUtils.parseCodeKeys(str);
 
-        // For some variants, go to the right
+        // For some variants, go to the right.
         int keyRight = state.getKeyRightForQuantity();
         if (keyRight > 0) {
             for (int i = 0; i < 15; i++) {
@@ -129,7 +162,7 @@ public class QuantityPopup extends PopupWindow
             }
         }
 
-        // Erase all past input
+        // Replace the native prompt's prefilled quantity.
         for (int i = 0; i < 15; i++) {
             state.addKey(state.getKeyBackspace());
         }
@@ -139,32 +172,25 @@ public class QuantityPopup extends PopupWindow
                 state.addKey(keycode);
             }
         }
-
-        if (finish) state.addKey(state.getKeyEnter());
+        state.addKey(state.getKeyEnter());
     }
 
     @Override
     public void onProgressChanged(SeekBar seekBar,
                                   int progress, boolean fromUser)
     {
-        if (locked) return;
+        if (locked || !fromUser) return;
 
         locked = true;
-
-        int range = valuePicker.getMaxValue() - valuePicker.getMinValue();
-        int value = valuePicker.getMinValue() + progress * range / 100;
-        valuePicker.setValue(value);
-
-        sendValue(false);
-
+        valuePicker.setValue(QuantitySliderMath.valueForProgress(
+                valuePicker.getMinValue(), valuePicker.getMaxValue(), progress));
         locked = false;
     }
 
     public void updateValueBar(int newVal)
     {
-        int range = valuePicker.getMaxValue() - valuePicker.getMinValue();
-        int progress = 100 * newVal / range;
-        valueBar.setProgress(progress);
+        valueBar.setProgress(QuantitySliderMath.progressForValue(
+                valuePicker.getMinValue(), valuePicker.getMaxValue(), newVal));
     }
 
     @Override
@@ -174,12 +200,6 @@ public class QuantityPopup extends PopupWindow
     public void onStopTrackingTouch(SeekBar seekBar) {}
 
     @Override
-    public void dismiss()
-    {
-        super.dismiss();
-    }
-
-    @Override
     public void onValueChange(NumberPicker picker, int oldVal, int newVal)
     {
         if (locked) return;
@@ -187,8 +207,6 @@ public class QuantityPopup extends PopupWindow
         locked = true;
 
         updateValueBar(newVal);
-
-        sendValue(false);
 
         locked = false;
     }
