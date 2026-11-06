@@ -26,6 +26,18 @@ static inline int angdroid_is_wide_text(wchar_t ch, int attr)
 }
 
 /*
+ * Screen prose reserves the final column. Match Term_addch()'s actual
+ * physical-cell consumption for wide CJK characters.
+ */
+static inline int angdroid_screen_text_needs_wrap(
+    int column, int wrap, wchar_t ch, int attr)
+{
+    int span = angdroid_is_wide_text(ch, attr) ? 2 : 1;
+    if (wrap <= 0) return 1;
+    return column + span > wrap - 1;
+}
+
+/*
  * Find a prefix of a NUL-terminated wide string that fits wholly inside
  * a native row. The length argument is in wchar_t units, not UTF-8 bytes.
  * Does not wrap or split an East Asian full-width character at the edge.

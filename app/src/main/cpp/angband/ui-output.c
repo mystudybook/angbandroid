@@ -23,6 +23,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "z-textblock.h"
+#include "../curses/unicode_layout.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -269,7 +270,9 @@ void text_out_to_screen(uint8_t a, const char *str)
 	(void)Term_locate(&x, &y);
 
 	/* Copy to a rewriteable string */
-	text_mbstowcs(buf, str, 1024);
+	/* Leave room for a terminator even if conversion fills the buffer. */
+	text_mbstowcs(buf, str, 1023);
+	buf[1023] = 0;
 	
 	/* Use special wrapping boundary? */
 	if ((text_out_wrap > 0) && (text_out_wrap < wid))
@@ -280,12 +283,13 @@ void text_out_to_screen(uint8_t a, const char *str)
 	/* Process the string */
 	for (s = buf; *s; s++) {
 		wchar_t ch;
+		int span;
 
 		/* Force wrap */
 		if (*s == L'\n') {
 			/* Wrap */
 			x = text_out_indent;
-			y++;
+			if (++y >= h) return;
 
 			/* Clear line, move cursor */
 			Term_erase(x, y, 255);
@@ -298,25 +302,47 @@ void text_out_to_screen(uint8_t a, const char *str)
 
 		/* Clean up the char */
 		ch = (text_iswprint(*s) ? *s : L' ');
+		span = angdroid_is_wide_text(ch, a) ? 2 : 1;
 
-		/* Wrap words as needed */
-		if ((x >= wrap - 1) && (ch != L' ')) {
+		/* Width must be measured in physical columns, not wchar_t count. */
+		if (angdroid_screen_text_needs_wrap(x, wrap, ch, a)) {
+			/* Do not carry a boundary space onto the next row. */
+			if (ch == L' ') {
+				x = text_out_indent;
+				if (++y >= h) return;
+				Term_erase(x, y, 255);
+				x += text_out_pad;
+				Term_gotoxy(x, y);
+				continue;
+			}
 			int i, n = 0;
 
 			int av[256];
 			wchar_t cv[256];
 
 			/* Wrap word */
-			if (x < wrap) {
-				/* Scan existing text */
+			if (span == 1 && x < wrap) {
+				/* Preserve English word wrapping, but never relocate a
+				 * CJK continuation as if it were an ordinary space.
+				 * Term_what() hides the private continuation marker. */
 				for (i = wrap - 2; i >= 0; i--) {
-					/* Grab existing attr/char */
+					int previous_attr;
+					wchar_t previous_char;
 					Term_what(i, y, &av[i], &cv[i]);
-
-					/* Break on space */
+					if (angdroid_is_wide_text(cv[i], av[i])) {
+						n = wrap;
+						break;
+					}
+					if (i > 0) {
+						Term_what(i - 1, y, &previous_attr,
+							&previous_char);
+						if (angdroid_is_wide_text(previous_char,
+								previous_attr)) {
+							n = wrap;
+							break;
+						}
+					}
 					if (cv[i] == L' ') break;
-
-					/* Track current word */
 					n = i;
 				}
 			}
@@ -324,12 +350,13 @@ void text_out_to_screen(uint8_t a, const char *str)
 			/* Special case */
 			if (n == 0) n = wrap;
 
-			/* Clear line */
-			Term_erase(n, y, 255);
+			/* A hard wrap has no trailing word to erase; n == wrap
+			 * may equal the physical width and is not a legal cursor x. */
+			if (n < wrap) Term_erase(n, y, 255);
 
 			/* Wrap */
 			x = text_out_indent;
-			y++;
+			if (++y >= h) return;
 
 			/* Clear line, move cursor */
 			Term_erase(x, y, 255);
@@ -350,8 +377,9 @@ void text_out_to_screen(uint8_t a, const char *str)
 		/* Dump */
 		Term_addch(a, ch);
 
-		/* Advance */
-		if (++x > wrap) x = wrap;
+		/* Match Term_addch()'s wide-character cursor advance. */
+		x += span;
+		if (x > wrap) x = wrap;
 	}
 }
 
