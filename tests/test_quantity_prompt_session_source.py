@@ -65,6 +65,9 @@ class QuantityPromptSessionSourceTest(unittest.TestCase):
         self.assertIn("quantityPromptGate.close();", exit_body)
         self.assertIn("synchronized (quantityPromptGate)", reset_body)
         self.assertIn("synchronized (quantityPromptGate)", exit_body)
+        self.assertIn("activity.dismissQuantityPopupForGameExit();", DIALOG)
+        self.assertIn("public void dismissQuantityPopupForGameExit()", ACTIVITY)
+        self.assertIn("quantPopup.dismissSilently();", ACTIVITY)
 
     def test_quantity_lock_covers_token_and_all_enqueued_keys(self):
         body = STATE.split("public boolean enqueueQuantity(int token, int amount, int max)", 1)[1].split(
