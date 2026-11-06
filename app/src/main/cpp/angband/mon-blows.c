@@ -831,14 +831,15 @@ static void melee_effect_handler_EAT_GOLD(melee_effect_handler_context_t *contex
         /* Let the player know they were robbed */
         msg("%s", angdroid_mon_blow_feedback("Your purse feels lighter.",
 			angdroid_zh_tw_enabled()));
-        if (current_player->au)
+        if (current_player->au) {
             if (angdroid_zh_tw_enabled())
                 msg("%d 枚金幣被偷走了！", gold);
             else
                 msg("%d coins were stolen!", gold);
-        else
+        } else {
             msg("%s", angdroid_mon_blow_feedback("All of your coins were stolen!",
-			angdroid_zh_tw_enabled()));
+                angdroid_zh_tw_enabled()));
+        }
 
         /* While we have gold, put it in objects */
         while (gold > 0) {
