@@ -26,6 +26,12 @@ CC="${CC:-cc}"
 
 "$BUILD_DIR/test_unicode_layout"
 
+# Streamed screen prose uses terminal columns (especially CJK wide glyphs).
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_screen_text_wrap.c" \
+    -o "$BUILD_DIR/test_screen_text_wrap"
+"$BUILD_DIR/test_screen_text_wrap"
+
 # CJK display columns differ from Unicode scalar counts.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_unicode_display.c" \

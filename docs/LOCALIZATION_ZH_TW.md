@@ -394,3 +394,13 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 新增 `tests/native/test_blackguard_spell_descriptions_locale.c`（15 筆×2 種語言顯示＋8 個安全／fallback 檢查，共 **38 項預期 native 斷言**）、`tests/test_blackguard_spell_descriptions_locale_source.py`（解析正式 class.txt，對比全部 163 筆紀錄與 135 組原文配對、25 組關鍵字，並驗證跨職業同名效果）。同步登錄離線 runner。
 - Mage、Druid、Priest、Necromancer、Paladin+Rogue、Ranger 六組原本的 Python 檢查均將完整映射表更新至 135 配對、133 個名稱及 Blackguard 資料；嚴格原文相符與英文回退機制保持不變。
 - 只修改 `app/src/main/cpp/angband/zh-tw-spell-descriptions.h` 的顯示文字和測試／文件，不修改 `class.txt`、遊戲法術效果、職業數據、存檔、施法流程。使用 `[skip ci]` 不觸發 GitHub Actions；本機 C99/Python、Android Gradle／NDK、模擬器及實機的真實執行／窄螢幕換行仍需驗證。
+
+
+## 第 122 批 — 長篇法術說明繁體中文螢幕換行修正
+
+- 找到實際問題：`ui-output.c::text_out_to_screen()` 每讀一個 `wchar_t` 都將本地游標 `x` 加 1，但 `ui-term.c::Term_addch()` 對中、日、韓等雙寬字會消耗兩個實際欄位。修正使用 `angdroid_is_wide_text()` 計算字元寬度及 `angdroid_screen_text_needs_wrap()` 決定是否換行，預留終端最後一欄。
+- 保留原本英文遇到空格回流整個單字的效果；若準備搬移的文字包含 CJK 雙欄字或後續佔位格，則直接換到下一列，不會把半個中文字當成空白搬移。
+- `text_mbstowcs()` 限制為 1023 個字元並強制陣列最後位置 NUL，避免轉換長文字時缺少字串結束符號；輸出超出終端高度時不繼續發出非法列操作。法術說明由第 0 欄起始時，也不再設定非法的 `text_out_indent=-1`。
+- 新增原生 C99 `tests/native/test_screen_text_wrap.c`，測試 9／10／12／16 欄的 CJK、英文、混合數字與換行計算以及保留行尾欄位。新增 `tests/test_spell_screen_wrap_source.py` 檢查實際原始碼是否正確接線，並登錄至 `scripts/test-native-utf8.sh` 和 `scripts/verify-zh-tw.sh`。
+- 限制：當說明超出可見視窗高度時，目前只安全停止輸出，並未實作完整的法術說明捲動檢視。C99／Python、Android Gradle／NDK、模擬器／實機仍須在完整 checkout 執行驗收。
+- 未動到 `class.txt`、163 種職業法術紀錄、翻譯表、法術施放邏輯、角色資料或存檔。`[skip ci]`，不使用 GitHub Actions。
