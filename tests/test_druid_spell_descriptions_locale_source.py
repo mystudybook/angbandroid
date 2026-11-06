@@ -33,12 +33,16 @@ class DruidSpellDescriptionsLocaleSourceTest(unittest.TestCase):
         priest = {(x["name"], x["english"]) for x in RECORDS
                   if x["class"] == "Priest"}
         self.assertEqual(28, len(priest))
-        self.assertEqual(110, len(MAPPED))
-        self.assertEqual(110, len({(n, en) for n, en, zh in MAPPED}))
+        self.assertEqual(115, len(MAPPED))
+        self.assertEqual(115, len({(n, en) for n, en, zh in MAPPED}))
         necromancer = {(x["name"], x["english"]) for x in RECORDS
                        if x["class"] == "Necromancer"}
         self.assertEqual(26, len(necromancer))
-        self.assertEqual(MAGE | DRUID | priest | necromancer,
+        paladin = {(x["name"], x["english"]) for x in RECORDS
+                   if x["class"] == "Paladin"}
+        rogue = {(x["name"], x["english"]) for x in RECORDS
+                 if x["class"] == "Rogue"}
+        self.assertEqual(MAGE | DRUID | priest | necromancer | paladin | rogue,
                          {(n, en) for n, en, zh in MAPPED})
         for name, english, chinese in MAPPED:
             with self.subTest(name=name):
