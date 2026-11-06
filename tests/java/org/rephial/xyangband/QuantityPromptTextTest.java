@@ -24,10 +24,20 @@ public final class QuantityPromptTextTest {
             check(QuantityPromptText.classify(
                             "Quantity (0-" + bound + ", *=all): ", bound),
                     QuantityPromptText.FROM_ZERO_ALL, "FA/Angband default " + bound);
+            check(QuantityPromptText.classify(
+                            "Quantity (0-" + bound + ", '*' or 'a' = all): ", bound),
+                    QuantityPromptText.FROM_ZERO_NPP_ALL, "NPP default " + bound);
+            check(QuantityPromptText.classify("Quantity (0-" + bound + "): ", bound),
+                    QuantityPromptText.FROM_ZERO_SILQ, "Sil-Q default " + bound);
             check(QuantityPromptText.classify("Quantity (1-" + bound + "): ", bound + 1),
                     QuantityPromptText.ORIGINAL, "mismatched bound " + bound);
             check(QuantityPromptText.classify("Quantity (0-" + bound + ", *=all):", bound),
                     QuantityPromptText.ORIGINAL, "spacing must match " + bound);
+            check(QuantityPromptText.classify("Quantity (0-" + bound + "): ", bound + 1),
+                    QuantityPromptText.ORIGINAL, "Sil-Q wrong limit " + bound);
+            check(QuantityPromptText.classify(
+                            "Quantity (0-" + bound + ", '*' or 'a' = all):", bound),
+                    QuantityPromptText.ORIGINAL, "NPP whitespace " + bound);
         }
 
         String[] customPrompts = {
@@ -37,6 +47,8 @@ public final class QuantityPromptTextTest {
             "數量（1～10）：",
             "Quantity (1-999): ",
             "Quantity (0-999, *=all): ",
+            "Quantity (0-999, '*' or 'a' = all): ",
+            "Quantity (0-999): ",
             "quantity (1-10): ",
             "Quantity (1-10): 0",
             "Quantity (1-10): \n",
