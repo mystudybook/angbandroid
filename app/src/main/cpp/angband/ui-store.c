@@ -52,6 +52,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-store-text.h"
+#include "zh-tw-store-names.h"
 #include "zh-tw-store-greetings.h"
 #include "zh-tw-store-hints.h"
 #include "zh-tw-class-titles.h"
@@ -385,7 +386,10 @@ static void store_display_frame(struct store_context *ctx)
 			angdroid_game_ui_text("Home Inventory", angdroid_zh_tw_enabled()),
 			header_row, 1, layout.name_cols);
 	} else {
-		const char *store_name = f_info[store->feat].name;
+		/* Only translate the visible summary. Keep f_info feature names,
+		 * shop identifiers, and the store's price limit unchanged. */
+		const char *store_name = angdroid_store_display_name(
+			f_info[store->feat].name, angdroid_zh_tw_enabled());
 		const char *owner_name = proprietor->name;
 		size_t owner_cols = angdroid_utf8_display_columns(owner_name);
 		size_t summary_cols;
