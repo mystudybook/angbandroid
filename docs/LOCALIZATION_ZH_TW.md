@@ -183,3 +183,13 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - Android 數量視窗對 NPP 的 `Quantity (0-N, '*' or 'a' = all): ` 和 Sil-Q 的 `Quantity (0-N): ` 新增精確原文字串及數量上限匹配，並提供各自繁中顯示資源。核心英文輸入文字及解析規則不變；自訂商店、裝備或任務提示不會被任意改寫。
 - Sil-Q 既有「非數字表示全部」、NPPAngband 的 `*`／字母代表全部、數量上下限與重複命令行為均保留。NPP 0.5.4 並未使用數量 popup start callback，本批不任意替它加入 end。
 - 已增加 `tests/test_variant_quantity_session_source.py`、JDK `QuantityPromptTextTest` 正反比對案例，並整合 `scripts/verify-zh-tw.sh`。這些測試不等於完整 APK／NDK 或模擬器、實機驗證。未使用 GitHub Actions。
+
+
+## NPPAngband 0.5.4 數量視窗生命週期與繁中化（第 97 批）
+
+- 0.5.4 先前提供一般軟鍵盤與數量字串，但**沒有**呼叫原生 `Term_control_quantity` 開始事件；因此 Android 數量選擇視窗無法使用。現在僅在原有 `max != 1` 且沒有 `command_arg` 的互動輸入路徑送出 start，並在成功或 Esc 取消後送出 `TERM_CONTROL_QUANTITY: "end"`，保護前一數量 session 的未讀取按鍵。
+- 將 `soft_kbd_linger("0123456789*")` 換成 Android 可辨識的 `${quant}*` 標記：設定開啟 popup 時顯示 Android 數量視窗；關閉 popup 時仍可顯示既有數量軟鍵與 `*`。**不修改**原生數量解析（`*`／英文字母代表全部）、上限、一般鍵盤輸入或存檔。
+- NPP 0.5.4 取消輸入時原本可能遺留 `[ALL]` 快捷鍵；現在取消分支也執行 `button_kill('a')` 與 `EVENT_MOUSEBUTTONS`，而正常結束仍沿用原清理。
+- 0.5.4 與 7.1.0 使用相同的原生 `Quantity (0-N, '*' or 'a' = all): ` 格式，因此直接重用第 96 批的精確比對與繁中 `quantity_prompt_npp_all` 資源，不建立多餘翻譯，也不翻譯自訂商店／裝備問題。
+- Python `tests/test_variant_quantity_session_source.py` 擴大涵蓋 0.5.4 的開始／完成／取消與臨時按鍵清理；已由 `scripts/verify-zh-tw.sh` 呼叫。尚未聲稱 Android APK／NDK 完整編譯或模擬器／實機已通過。
+- **NPPAngband 0.4.1 限制**：原生檔案目前使用 `Term_control_android` 私有回呼，且 CMake 未整合與新版相同的 `droid.c` 控制橋接；不應直接複製第 97 批新增的 `Term_control_quantity` 呼叫而不先修復連結及控制協定。下一輪需要獨立評估。
