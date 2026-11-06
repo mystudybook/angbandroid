@@ -34,6 +34,7 @@
 #include "zh-tw-ui.h"
 #include "zh-tw-magic.h"
 #include "zh-tw-spell-names.h"
+#include "zh-tw-spell-descriptions.h"
 #include "zh-tw-projection-terms.h"
 #include "../curses/unicode_display.h"
 
@@ -165,7 +166,9 @@ static void spell_menu_browser(int oid, void *data, const region *loc)
 
 		Term_gotoxy(loc->col, loc->row + loc->page_rows);
 		/* Spell description */
-		text_out("\n%s", spell->text);
+		/* Localize the view only, preserving canonical spell data. */
+		text_out("\n%s", angdroid_zh_tw_spell_description(
+			spell->name, spell->text, angdroid_zh_tw_enabled()));
 
 		/* To summarize average damage, count the damaging effects */
 		int num_damaging = 0;

@@ -78,6 +78,7 @@ run_check "Scroll, food, potion, generic use and refuel translated with item rem
 run_check "Object use-effect message translations and cancellation/charge rollback" python3 "$ROOT/tests/test_item_use_effect_messages_source.py"
 run_check "Activation and artifact dynamic templates, name rendering and rollback" python3 "$ROOT/tests/test_activation_messages_locale_source.py"
 run_check "Spell effect summary labels, radius, length, projection and UTF-8" python3 "$ROOT/tests/test_spell_effect_info_locale_source.py"
+run_check "Mage spell detailed descriptions and exact original text" python3 "$ROOT/tests/test_spell_descriptions_locale_source.py"
 run_check "Android quantity popup confirmation / localization wiring" python3 "$ROOT/tests/test_quantity_popup_source.py"
 run_check "Atomic Android quantity sequence and queue isolation" python3 "$ROOT/tests/test_quantity_queue_source.py"
 run_check "Native quantity session lifetime and asynchronous stale popup guards" python3 "$ROOT/tests/test_quantity_prompt_session_source.py"

@@ -330,3 +330,11 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - **數值與英文模式相容**：半徑／長度的 `printf` 模板保留 `%d`，英文模式原樣顯示；未知、空及 NULL 值安全回傳，原本重複效果折疊與數值計算完全不變。
 - **法術瀏覽**：平均傷害的傷害屬性使用既有 55 種投射屬性中文詞彙表；將 UI 的提示暫存緩衝區加大，並於繪圖前以 `angdroid_utf8_clip_columns()` 按顯示欄寬截取摘要，避免中文字被切成半個 UTF-8 字元。`spell->text` 的原始長篇英文敘述仍未改動，屬下一階段工作。
 - **回歸測試**：新增 `tests/native/test_spell_effect_info_locale.c`，GCC、Clang 嚴格 C99 獨立測試各 31 項通過；新增 `tests/test_spell_effect_info_locale_source.py`，以原始 `list-effects.h` 驗證全部七種分類鍵值、格式 `%d` 不變、顯示層接線、投射屬性與安全裁切，接入 `scripts/test-native-utf8.sh` 及 `scripts/verify-zh-tw.sh`。完整 Python 套件、Android NDK/Gradle 及模擬器／實機仍待本機驗證。此批使用 `[skip ci]`，不運行 GitHub Actions。
+
+## 第 115 批 — 原版法師（Mage）30 種法術詳細說明繁體中文化
+
+- **真實來源與覆蓋範圍**：`variant_lib/angband/gamedata/class.txt` 共有 163 筆職業法術，法師有 30 筆、30 種不重複名稱；其中 7 種法術也在 Rogue 出現且原英文描述完全相同，因此會自然共用已翻譯的內容。其他職業尚未翻譯的說明安全保留英文，不宣稱全部 163 筆完成。
+- **資料不可變**：`ui-spell.c::spell_menu_browser()` 原本直接 `text_out("\\n%s", spell->text)`，現在只在文字顯示前執行 `angdroid_zh_tw_spell_description(spell->name, spell->text, angdroid_zh_tw_enabled())`。翻譯表逐筆核對法術英文名稱與 `class.txt` 所有 `desc:` 行串接後的精確英文內容，僅兩者都符合才回傳繁中。英文模式、更新後描述、未知法術與 NULL 都保留原樣。
+- **遊戲效果保持不變**：不修改 `class.txt`、`spell->text`、法術索引、MP、失敗率、骰子、隨機數、瞄準取消、施法回合或存檔資料；保留法術瀏覽原有平均傷害資訊、非施法閱讀操作與文字輸出方式。
+- **輸出與小螢幕注意事項**：仍使用 `text_out_to_screen` 的原生換行路徑，未擅自修改終端機的寬字元換行機制。實際手機窄螢幕的換行、捲動與中文顯示仍需 emulator/實機驗證。
+- **驗證**：新增 `tests/native/test_spell_descriptions_locale.c` 對 30 組中英文字串、原文回退進行純 C99 測試（預期共 66 assertions），新增 `tests/test_spell_descriptions_locale_source.py` 直接解析官方 `class.txt`，比對 30 條精確映射、7 條 Rogue 共用描述，驗證顯示層接線、數值資訊與英文字串回退，分別納入 `scripts/test-native-utf8.sh` 與 `scripts/verify-zh-tw.sh`。以上測試已註冊但完整執行、Android NDK/Gradle 及實機測試仍待本機完成；本批不使用 GitHub Actions（`[skip ci]`）。
