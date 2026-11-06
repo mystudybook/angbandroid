@@ -1488,14 +1488,18 @@ static int prompt_for_easy_filter(struct equippable_summary *s, bool apply_not)
 static void display_object_comparison(const struct equippable_summary *s,
 		const struct player *p)
 {
-	char hbuf[120];
+	/* The on-screen detail can contain multi-byte Chinese item names.
+	 * Keep canonical short_name and exported comparison rows untouched. */
+	char hbuf[256];
+	uint32_t description_mode = ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL |
+		(angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0);
 	textblock *tb0;
 	region local_area = { 0, 0, 0, 0 };
 
 	assert(s->isel0 >= 0 && s->isel0 < s->nitems);
 	tb0 = object_info(s->items[s->isel0].obj, OINFO_NONE);
 	object_desc(hbuf, sizeof(hbuf), s->items[s->isel0].obj,
-		ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL, p);
+		description_mode, p);
 	if (s->isel1 != -1 && s->isel1 != s->isel0) {
 		textblock *tb1 = textblock_new();
 		textblock *tb2;
@@ -1504,13 +1508,15 @@ static void display_object_comparison(const struct equippable_summary *s,
 		textblock_append(tb1, "%s\n", hbuf);
 		textblock_append_textblock(tb1, tb0);
 		object_desc(hbuf, sizeof(hbuf), s->items[s->isel1].obj,
-			ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL, p);
+			description_mode, p);
 		textblock_append(tb1, "\n%s\n", hbuf);
 		tb2 = object_info(s->items[s->isel1].obj, OINFO_NONE);
 		textblock_append_textblock(tb1, tb2);
 		textblock_free(tb2);
 
-		textui_textblock_show(tb1, local_area, "Object comparison");
+		textui_textblock_show(tb1, local_area,
+			angdroid_equip_cmp_text("Object comparison",
+				angdroid_zh_tw_enabled()));
 		textblock_free(tb1);
 	} else {
 		textui_textblock_show(tb0, local_area, hbuf);

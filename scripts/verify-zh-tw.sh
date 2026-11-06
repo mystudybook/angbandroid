@@ -54,6 +54,7 @@ run_check "Rotated item-selection and compact shop prompts" python3 "$ROOT/tests
 run_check "UI-only item name localization and export isolation" python3 "$ROOT/tests/test_visible_item_name_localization.py"
 run_check "Known-item classifiers and translated artifact/ego grammar" python3 "$ROOT/tests/test_item_name_grammar_localization.py"
 run_check "Equipment combat and inscription UTF-8 safety" python3 "$ROOT/tests/test_item_details_localization.py"
+run_check "Equipment comparison two-item detail zh-TW isolation" python3 "$ROOT/tests/test_equipment_comparison_detail_locale_source.py"
 run_check "Flavored noun grammar and awareness isolation" python3 "$ROOT/tests/test_flavored_object_localization.py"
 run_check "Generated scroll title display and RNG isolation" python3 "$ROOT/tests/test_scroll_title_localization.py"
 run_check "Item lore and character export isolation" python3 "$ROOT/tests/test_item_story_localization.py"
