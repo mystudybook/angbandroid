@@ -351,6 +351,9 @@
     <string name="adv_button_keymap_action">按鍵對應動作：</string>
     <string name="adv_button_always_visible">保持顯示</string>
     <string name="quantity_all">全部</string>
+    <string name="quantity_all_with_count">全部（%1$d）</string>
+    <string name="quantity_confirm">確認數量</string>
+    <string name="quantity_cancel">取消</string>
     <string name="opacity_opaque">不透明</string>
 
     <!-- Floating button editor labels; internal action strings remain unchanged. -->
