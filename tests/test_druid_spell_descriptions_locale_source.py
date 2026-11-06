@@ -33,8 +33,8 @@ class DruidSpellDescriptionsLocaleSourceTest(unittest.TestCase):
         priest = {(x["name"], x["english"]) for x in RECORDS
                   if x["class"] == "Priest"}
         self.assertEqual(28, len(priest))
-        self.assertEqual(115, len(MAPPED))
-        self.assertEqual(115, len({(n, en) for n, en, zh in MAPPED}))
+        self.assertEqual(120, len(MAPPED))
+        self.assertEqual(120, len({(n, en) for n, en, zh in MAPPED}))
         necromancer = {(x["name"], x["english"]) for x in RECORDS
                        if x["class"] == "Necromancer"}
         self.assertEqual(26, len(necromancer))
@@ -42,7 +42,11 @@ class DruidSpellDescriptionsLocaleSourceTest(unittest.TestCase):
                    if x["class"] == "Paladin"}
         rogue = {(x["name"], x["english"]) for x in RECORDS
                  if x["class"] == "Rogue"}
-        self.assertEqual(MAGE | DRUID | priest | necromancer | paladin | rogue,
+        ranger = {(x["name"], x["english"]) for x in RECORDS
+                  if x["class"] == "Ranger"}
+        self.assertEqual(11, len(ranger))
+        self.assertEqual(MAGE | DRUID | priest | necromancer
+                         | paladin | rogue | ranger,
                          {(n, en) for n, en, zh in MAPPED})
         for name, english, chinese in MAPPED:
             with self.subTest(name=name):
@@ -60,8 +64,12 @@ class DruidSpellDescriptionsLocaleSourceTest(unittest.TestCase):
         self.assertEqual({"Herbal Curing"}, shared - exact)
         self.assertIn("well-nourished", druid["Herbal Curing"])
         self.assertNotIn("well-nourished", RANGER["Herbal Curing"])
-        self.assertNotIn(("Herbal Curing", RANGER["Herbal Curing"]),
-                         {(n, en) for n, en, zh in MAPPED})
+        mapped = {(n, en): zh for n, en, zh in MAPPED}
+        druid_herbs = mapped["Herbal Curing", druid["Herbal Curing"]]
+        ranger_herbs = mapped["Herbal Curing", RANGER["Herbal Curing"]]
+        self.assertNotEqual(druid_herbs, ranger_herbs)
+        self.assertIn("營養", druid_herbs)
+        self.assertNotIn("營養", ranger_herbs)
 
     def test_sensitive_warning_and_numeric_translation(self):
         zh = {n: text for n, en, text in MAPPED if (n, en) in DRUID}
@@ -94,7 +102,8 @@ class DruidSpellDescriptionsLocaleSourceTest(unittest.TestCase):
         self.assertEqual(27, len(rows))
         self.assertEqual({(n, en, zh) for n, en, zh in MAPPED
                           if (n, en) in DRUID}, set(rows))
-        self.assertIn("ranger_herbs, 1) == ranger_herbs", NATIVE)
+        self.assertIn("ranger_herbs, 1),", NATIVE)
+        self.assertIn("druid_herbs, 1)) != 0", NATIVE)
         self.assertIn("tests/native/test_druid_spell_descriptions_locale.c", RUNNER)
         self.assertIn("tests/test_druid_spell_descriptions_locale_source.py", VERIFY)
 

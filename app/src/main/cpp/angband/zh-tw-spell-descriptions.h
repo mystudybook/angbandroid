@@ -1,4 +1,4 @@
-/* Original Angband Mage, Druid, Priest, Necromancer, Paladin and Rogue class.txt spell descriptions, translated for UI only.
+/* Original Angband Mage, Druid, Priest, Necromancer, Paladin, Rogue and Ranger class.txt spell descriptions, translated for UI only.
  * Match both canonical spell name AND original descriptive text: unrelated
  * variants / updated spell rules must fall back to English, not show stale
  * instructions.  Do not change class.txt, spell data, or saved game records.
@@ -141,6 +141,13 @@ static inline const char *angdroid_zh_tw_spell_description(
         { "Object Detection", "Detects all objects in the immediate area.", "偵測附近的所有物品。" },
         { "Detect Stairs", "Detects all stairs in a wide area.", "偵測較大範圍內的所有樓梯。" },
         { "Hit and Run", "Prepares you to teleport a short distance after stealing from a monster.", "準備在從怪物身上偷竊後，立即短距離傳送。" },
+
+        /* Ranger Herbal Curing differs from Druid: match exact full text. */
+        { "Herbal Curing", "Cures all cuts, poison, stunning and black breath.", "治癒所有割傷、中毒、暈眩與黑色吐息。" },
+        { "Cover Tracks", "Prevents you from leaving scent for monsters to track you by for a level-dependent duration.", "在隨角色等級變化的一段時間內，不再留下可供怪物追蹤的氣味。" },
+        { "Create Arrows", "Allows the player to turn a staff into a stack of arrows, with quality depending on staff level and player level.", "將一根法杖轉化為一疊箭矢，箭矢品質取決於法杖等級及角色等級。" },
+        { "Decoy", "Leaves a magical decoy that looks and sounds like the player.", "留下一個外觀與聲音都像玩家本人的魔法誘餌。" },
+        { "Brand Ammunition", "Brands one stack of ammunition with fire, cold, or poison (selected at random) and at the same time attempts to improve the to-hit bonus and the to-dam bonus of the same ammunition.  The spell has no effect if the ammunition is already branded, has a slay, is broken, or is cursed.", "為一疊彈藥隨機附加火焰、寒冷或毒素屬性，同時嘗試提高這疊彈藥的命中與傷害加值。若彈藥已有元素附魔、帶有對特定怪物的剋制效果、已損壞或受到詛咒，這個法術就不會生效。" },
     };
     size_t i;
     if (!english || !zh_tw || !name) return english;

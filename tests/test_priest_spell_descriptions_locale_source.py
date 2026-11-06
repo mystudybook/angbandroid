@@ -31,9 +31,9 @@ class PriestSpellDescriptionsLocaleSourceTest(unittest.TestCase):
         self.assertEqual(30, len(MAGE))
         self.assertEqual(27, len(DRUID))
         self.assertEqual(28, len(PRIEST))
-        self.assertEqual(115, len(MAPPED))
-        self.assertEqual(115, len({(n, en) for n, en, zh in MAPPED}))
-        self.assertEqual(114, len({name for name, en, zh in MAPPED}))
+        self.assertEqual(120, len(MAPPED))
+        self.assertEqual(120, len({(n, en) for n, en, zh in MAPPED}))
+        self.assertEqual(118, len({name for name, en, zh in MAPPED}))
         necromancer = {(x["name"], x["english"]) for x in SPELLS
                        if x["class"] == "Necromancer"}
         self.assertEqual(26, len(necromancer))
@@ -41,8 +41,10 @@ class PriestSpellDescriptionsLocaleSourceTest(unittest.TestCase):
                           if x["class"] == "Paladin"}
         rogue_spells = {(x["name"], x["english"]) for x in SPELLS
                         if x["class"] == "Rogue"}
+        ranger_spells = {(x["name"], x["english"]) for x in SPELLS
+                         if x["class"] == "Ranger"}
         self.assertEqual(MAGE | DRUID | PRIEST | necromancer
-                         | paladin_spells | rogue_spells,
+                         | paladin_spells | rogue_spells | ranger_spells,
                          {(n, en) for n, en, zh in MAPPED})
         for n, en, zh in MAPPED:
             with self.subTest(spell=n):
@@ -60,8 +62,10 @@ class PriestSpellDescriptionsLocaleSourceTest(unittest.TestCase):
         self.assertEqual({"Heroism"}, shared - same)
         self.assertIn("character level 20", priest["Heroism"])
         self.assertIn("character level 15", PALADIN["Heroism"])
-        self.assertNotIn(("Heroism", PALADIN["Heroism"]),
-                         {(n, en) for n, en, zh in MAPPED})
+        mapped = {(n, en): zh for n, en, zh in MAPPED}
+        self.assertIn(("Heroism", PALADIN["Heroism"]), mapped)
+        self.assertNotEqual(mapped["Heroism", priest["Heroism"]],
+                            mapped["Heroism", PALADIN["Heroism"]])
 
     def test_prayer_warnings_and_numeric_values(self):
         zh = {n: text for n, en, text in MAPPED if (n, en) in PRIEST}

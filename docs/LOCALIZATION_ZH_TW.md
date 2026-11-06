@@ -376,3 +376,12 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 新增 `tests/test_paladin_rogue_spell_descriptions_locale_source.py`，直接解析原始資料，檢查 Paladin 15 個同名之中 14 個完全相同＋一個 `Heroism` 不同，及 Rogue 7 個共用＋3 個獨有，並檢驗新的五組說明與原文逐字對應。
 - 調整 Druid、Priest、Necromancer 既有 Python 檢查，避免因翻譯表成長至 115 筆與 `Heroism` 出現兩個不同原文時誤報。沒有修改遊戲規則、`class.txt`、法術效果、存檔或施法指令。
 - 已註冊兩個測試至 `scripts/test-native-utf8.sh` 與 `scripts/verify-zh-tw.sh`；本批禁止 GitHub Actions、Commit 採 `[skip ci]`。原始碼靜態核對不代表完整 Python/C99、Android Gradle/NDK、emulator 與實機驗證已執行。
+
+
+## 第 120 批 — 遊俠 Ranger 的 11 種法術詳細說明完整繁體中文化
+
+- 對照 `variant_lib/angband/gamedata/class.txt`：Ranger 共 11 種法術，其中 6 種與 Druid 完整說明相同而可共用；補上另 5 組 `Herbal Curing`、`Cover Tracks`、`Create Arrows`、`Decoy`、`Brand Ammunition`。合計 120 組精確原文對照、118 個不同名稱；前七種職業合計 148 筆紀錄完整涵蓋，Blackguard 15 種待下一批。
+- 重要差異：Druid `Herbal Curing` 除了治癒狀態還會補充營養，Ranger 不會。舊 Druid native/source 測試此前要求 Ranger 的版本回退英文；這批兩者都有正確獨立繁體中文版本，已同步修改原本的回退斷言，並新增互不混用的比較。
+- `Brand Ammunition` 保留火焰／寒冷／毒素隨機附加與命中／傷害強化，以及附魔、剋制、損壞、詛咒四種不生效情況。箭矢品質依法杖等級和角色等級決定；掩蓋蹤跡可避免留下氣味追蹤。
+- 新增 Ranger 11 組原文資料 Native C99 測試（預期 30 項斷言），新增來源 Python 測試，並登錄既有 scripts 驗證流程。前面 Druid/Priest/Necromancer/Paladin+Rogue 測試更新 120 組配對／118 名稱與 Rangers 全覆蓋；另修正 Priest 測試過時的「Paladin Heroism 尚未翻譯」假設。
+- 僅改 `zh-tw-spell-descriptions.h` 與相關測試／文件，保留原文完整比對、防止不同職業同名效果誤譯；不修改原始法術資料、角色、戰鬥、存檔。Commit `[skip ci]`，不使用 GitHub Actions。C99/Python、Gradle/NDK、模擬器／實機仍需本機驗證。
