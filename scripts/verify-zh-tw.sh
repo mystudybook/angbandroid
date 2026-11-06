@@ -60,6 +60,7 @@ run_check "Item lore and character export isolation" python3 "$ROOT/tests/test_i
 run_check "Ego knowledge names, clipping and recall titles" python3 "$ROOT/tests/test_ego_knowledge_screen.py"
 run_check "Symbol query tval and terrain display-only translation" python3 "$ROOT/tests/test_symbol_query_localization.py"
 run_check "Store columns on narrow/rotated terminals" python3 "$ROOT/tests/test_store_column_layout_source.py"
+run_check "Canonical shop title and inscription confirmation zh-TW safety" python3 "$ROOT/tests/test_store_inscription_locale_source.py"
 run_check "Dynamic store Buy alias and popup text safety" python3 "$ROOT/tests/test_menu_dynamic_choice_source.py"
 run_check "Dynamic popup placement on tiny terminals" python3 "$ROOT/tests/test_menu_popup_layout_source.py"
 run_check "Store purchase cancel and stock-index safety" python3 "$ROOT/tests/test_store_stock_guard_source.py"
