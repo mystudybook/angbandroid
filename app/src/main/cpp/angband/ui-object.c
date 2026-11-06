@@ -1865,8 +1865,10 @@ void textui_cmd_ignore(void)
 	struct object *obj;
 
 	/* Get an item */
-	const char *q = "Ignore which item? ";
-	const char *s = "You have nothing to ignore.";
+	const char *q = angdroid_game_ui_text(
+		"Ignore which item? ", angdroid_zh_tw_enabled());
+	const char *s = angdroid_game_ui_text(
+		"You have nothing to ignore.", angdroid_zh_tw_enabled());
 	if (!get_item(&obj, q, s, CMD_IGNORE, NULL,
 				  USE_INVEN | USE_QUIVER | USE_EQUIP | USE_FLOOR))
 		return;

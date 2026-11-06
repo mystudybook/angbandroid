@@ -89,6 +89,7 @@ run_check "Dynamic shape-change effects C99 renderer" python3 "$ROOT/tests/test_
 run_check "Option descriptions and CJK menu display safety" python3 "$ROOT/tests/test_options_localization_source.py"
 run_check "Ignore menus, subwindow labels and color editor translations" python3 "$ROOT/tests/test_ignore_options_localization_source.py"
 run_check "Dynamic quality-ignore and screen export zh-TW prompts" python3 "$ROOT/tests/test_ignore_quality_export_source.py"
+run_check "Version screen and ignore-item picker bilingual UI guards" python3 "$ROOT/tests/test_version_ignore_pick_source.py"
 run_check "Activation, curse and item-property translation source coverage" python3 "$ROOT/tests/test_activation_effects_coverage.py"
 run_check "Activation, curse and item-property C99 smoke compilation" sh "$ROOT/scripts/test-activation-effects-locale.sh"
 run_check "Native Angband game zh-TW text isolation" python3 "$ROOT/scripts/check_native_game_localization.py"

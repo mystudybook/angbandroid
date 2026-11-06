@@ -51,6 +51,7 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"(Up/down or ESCAPE to exit.)", "（上下鍵捲動，Esc 離開）"},
         {"(Press any key to continue.)", "（按任意鍵繼續）"},
         {"Type '?' for help.", "按 ? 查看說明。"},
+        {"Version information", "遊戲版本資訊"},
         /* Screen export prompts only; H/F keys and output files stay native. */
         {"Dump as (H)TML or (F)orum text? ", "匯出格式：H HTML／F 論壇文字？ "},
         {"Include monster list? ", "要包含怪物清單嗎？ "},
@@ -505,6 +506,8 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"This item only", "只忽略這件物品"},
         {"Unignore this item", "不再忽略這件物品"},
         {"(Enter to select, ESC) Ignore:", "Enter 選取忽略方式／Esc 返回："},
+        {"Ignore which item? ", "要忽略哪件物品？ "},
+        {"You have nothing to ignore.", "沒有可以忽略的物品。"},
         {"Drop which item?", "要丟棄哪件物品？"},
         {"You have nothing to drop.", "你沒有可以丟棄的物品。"},
         {"Replace which ring? ", "要替換哪枚戒指？ "},
