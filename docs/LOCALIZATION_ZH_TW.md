@@ -202,3 +202,11 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - **快速鍵與 popup 模式**：在原本 `inkey()` 的主畫面等待輸入前呼叫 `soft_kbd_flush()`，並在 keymap 早退時清除非持續鍵盤；數量輸入用 `${quant}`，於 Android 設定開啟 popup 時隱藏暫時的數字快速鍵，關閉時仍展開為 `0123456789`。成功或取消後強制清理暫時軟鍵。
 - **避免錯誤中文提示**：0.4.1 和 Sil-Q 原文都是 `Quantity (0-N): `，但 0.4.1 只有**英文字母**代表全部，Sil-Q 則是**非數字**代表全部。純 Java 分類器增加 NPP041 專用辨識參數，`QuantityPopup` 由目前 Plugin 決定翻譯，因此不會誤用 Sil-Q 的文字；自訂的任務／商店提示及英文原始命令不更動。
 - **驗證界線**：新增 `tests/test_npp041_quantity_bridge.py`，檢查 CMake、callback 符號、原生 session、繁中資源、舊數量規則，並以 host C99 單獨編譯真實 `Term_control` 函式及共用 `droid.c` 的控制邏輯。擴充 `QuantityPromptTextTest`，將兩項檢查納入 `scripts/verify-zh-tw.sh`。這**不能取代**完整 Android Gradle／NDK shared library 連結、模擬器或實機驗收。未使用 GitHub Actions。
+
+
+## 第 99 批 — 背包、裝備子視窗與數字欄位繁體中文
+
+- **原生 Angband 4.2.5 物品列表**：將背包／裝備／商店物品清單中原本顯示的 `au` 金額、`fail` 失敗率（已知與未鑑定）、充能失敗率與 `lb` 重量，用繁體中文的「金」「失敗」「磅」顯示。每欄仍由既有 `object_list_put_detail()` 判斷完整數字能否放入原本的 **9／10 個終端格**，超寬數值一律不輸出半截數字／半個中文字。英文介面維持原字串。
+- **背包與箭袋**：背包子視窗的 `Burden … lb` 改為「負重 … 磅（剩餘／超出 … 磅）」；處理 `remaining == INT_MIN` 時不再呼叫可能溢位的 `abs(INT_MIN)`。裝備子視窗的 `In quiver` 只在繪製時顯示「箭袋內」，保留資料中的英文 `In quiver` 哨兵字串，避免更動 `set_obj_names()` 的判斷、實際欄位索引或物品資料。箭袋欄位 `Slot n` 以「格 n」顯示；子視窗中彈藥數量改為「箭袋：N 支彈藥」，與既有主要物品選單一致。
+- **安全設計**：新增純 C99 的 `inventory-list-display.h`，文字緩衝區不足會返回失敗並清空輸出；超出預留欄位的整段數字會由原有版面函式略過。確認選取標籤、`object_desc()`、`get_item()`、購物／出售／存放／取出交易命令與存檔格式都沒有更動。
+- **回歸驗證**：`tests/native/test_inventory_list_display.c` 測試中英數字、固定終端欄寬、狹窄緩衝區、超長整數、過重與 `INT_MIN`；在 `scripts/test-native-utf8.sh` 使用 host C99 編譯。`tests/test_inventory_list_locale_source.py` 檢查 source-only 顯示、原本的辨識哨兵、物品選擇與商店指令均不變，納入 `scripts/verify-zh-tw.sh`。這些測試不代表 APK／NDK 或模擬器實機已完整驗收；不使用 GitHub Actions。
