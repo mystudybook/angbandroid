@@ -29,9 +29,14 @@ class DruidSpellDescriptionsLocaleSourceTest(unittest.TestCase):
         self.assertEqual(30, len(MAGE))
         self.assertEqual(27, len(DRUID))
         self.assertTrue(MAGE.isdisjoint(DRUID))
-        self.assertEqual(57, len(MAPPED))
-        self.assertEqual(57, len({(n, en) for n, en, zh in MAPPED}))
-        self.assertEqual(MAGE | DRUID, {(n, en) for n, en, zh in MAPPED})
+        # Dictionary now includes the original Priest spells as well.
+        priest = {(x["name"], x["english"]) for x in RECORDS
+                  if x["class"] == "Priest"}
+        self.assertEqual(28, len(priest))
+        self.assertEqual(85, len(MAPPED))
+        self.assertEqual(85, len({(n, en) for n, en, zh in MAPPED}))
+        self.assertEqual(MAGE | DRUID | priest,
+                         {(n, en) for n, en, zh in MAPPED})
         for name, english, chinese in MAPPED:
             with self.subTest(name=name):
                 self.assertTrue(english.strip() and chinese.strip())

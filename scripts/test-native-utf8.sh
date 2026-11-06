@@ -175,6 +175,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_druid_spell_descriptions_locale"
 "$BUILD_DIR/test_druid_spell_descriptions_locale"
 
+# Priest prayer descriptions, including the Paladin Heroism level difference.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_priest_spell_descriptions_locale.c" \
+    -o "$BUILD_DIR/test_priest_spell_descriptions_locale"
+"$BUILD_DIR/test_priest_spell_descriptions_locale"
+
 # Knowledge categories are display-only and must measure UTF-8 glyph cells.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_knowledge_groups_locale.c" \
