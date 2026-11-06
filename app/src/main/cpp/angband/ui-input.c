@@ -52,6 +52,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "quantity-input.h"
+#include "confirmation-prompt-display.h"
 #include "../curses/unicode_display.h"
 
 static bool inkey_xtra;
@@ -1223,14 +1224,12 @@ static int textui_get_quantity(const char *prompt, int max)
 static bool textui_get_check(const char *prompt)
 {
 	ui_event ke;
+	char buf[256];
 
-	char buf[80];
-
-	/*
-	 * Hack -- Build a "useful" prompt; do this first so prompts built by
-	 * format() won't run afoul of event_signal()'s side effects.
-	 */
-	strnfmt(buf, 78, "%.70s[y/n] ", prompt);
+	/* Compose before EVENT_MESSAGE_FLUSH: prompts may refer to format()
+	 * static storage. Limit by terminal display cells, not UTF-8 bytes. */
+	angdroid_confirmation_prompt_display(buf, sizeof(buf), prompt,
+		"[y/n] ", Term && Term->wid > 0 ? (size_t)Term->wid : 0);
 
 	/* Paranoia */
 	event_signal(EVENT_MESSAGE_FLUSH);
@@ -1273,13 +1272,17 @@ static bool textui_get_check(const char *prompt)
 char get_char(const char *prompt, const char *options, size_t len, char fallback)
 {
 	struct keypress key;
-	char buf[80];
+	char buf[256];
+	char suffix[96];
 
 	/* Paranoia */
 	event_signal(EVENT_MESSAGE_FLUSH);
 
-	/* Hack -- Build a "useful" prompt */
-	strnfmt(buf, 78, "%.70s[%s] ", prompt, options);
+	/* Preserve existing option keys, but do not cut a multibyte name
+	 * halfway through when fitting the prompt on a small phone. */
+	strnfmt(suffix, sizeof(suffix), "[%s] ", options);
+	angdroid_confirmation_prompt_display(buf, sizeof(buf), prompt,
+		suffix, Term && Term->wid > 0 ? (size_t)Term->wid : 0);
 
 	/* Prompt for it */
 	prt(buf, 0, 0);

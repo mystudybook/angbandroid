@@ -184,6 +184,32 @@ int main(void)
                   "仍要嘗試嗎？ ") == 0);
     assert(strcmp(angdroid_game_ui_text("Inscribe which item?", 1),
                   "要為哪件物品刻字？") == 0);
+    /* Display-only wear/unequip/!t prompt language; keep key semantics. */
+    assert(strcmp(angdroid_game_ui_text("Wear or wield which item?", 1),
+                  "要穿戴或裝備哪件物品？") == 0);
+    assert(strcmp(angdroid_game_ui_text("Wear or wield which item?", 0),
+                  "Wear or wield which item?") == 0);
+    assert(strcmp(angdroid_game_ui_text("You have nothing to wear or wield.", 1),
+                  "沒有可以穿戴或裝備的物品。") == 0);
+    assert(strcmp(angdroid_game_ui_text("You have nothing to wear or wield.", 0),
+                  "You have nothing to wear or wield.") == 0);
+    assert(strcmp(angdroid_game_ui_text("Take off or unwield which item?", 1),
+                  "要卸下哪件裝備？") == 0);
+    assert(strcmp(angdroid_game_ui_text("Take off or unwield which item?", 0),
+                  "Take off or unwield which item?") == 0);
+    assert(strcmp(angdroid_game_ui_text("You have nothing to take off or unwield.", 1),
+                  "沒有可以卸下的裝備。") == 0);
+    assert(strcmp(angdroid_game_ui_text("You have nothing to take off or unwield.", 0),
+                  "You have nothing to take off or unwield.") == 0);
+    assert(strcmp(angdroid_game_ui_text("Really take off %s? ", 1),
+                  "確定卸下 %s 嗎？ ") == 0);
+    assert(strcmp(angdroid_game_ui_text("Really take off %s? ", 0),
+                  "Really take off %s? ") == 0);
+    assert(strcmp(angdroid_game_ui_text("Inscribing %s.", 1),
+                  "正在為 %s 刻字。") == 0);
+    assert(strcmp(angdroid_game_ui_text("Inscribing %s.", 0),
+                  "Inscribing %s.") == 0);
+
     assert(strcmp(angdroid_game_ui_text("That wand has no charges.", 0),
                   "That wand has no charges.") == 0);
     assert(strcmp(angdroid_game_ui_text("You cannot browse that.", 1),
