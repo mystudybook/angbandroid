@@ -29,6 +29,7 @@
 #include "monster.h"
 #include "obj-curse.h"
 #include "obj-desc.h"
+#include "droid.h"
 #include "obj-gear.h"
 #include "obj-ignore.h"
 #include "obj-knowledge.h"
@@ -1051,12 +1052,14 @@ bool recharge_timeout(struct object *obj)
 bool verify_object(const char *prompt, const struct object *obj,
 		const struct player *p)
 {
-	char o_name[80];
+	char o_name[256];
 
-	char out_val[160];
+	char out_val[384];
 
-	/* Describe */
-	object_desc(o_name, sizeof(o_name), obj, ODESC_PREFIX | ODESC_FULL, p);
+	/* Describe only for screen confirmation. Display-only zh-TW names
+	 * must not change item identity, inscriptions, saves or game rules. */
+	object_desc(o_name, sizeof(o_name), obj,
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, p);
 
 	/* Prompt */
 	strnfmt(out_val, sizeof(out_val), "%s %s? ", prompt, o_name);

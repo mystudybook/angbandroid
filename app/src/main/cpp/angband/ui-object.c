@@ -52,6 +52,7 @@
 #include "ui-prefs.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-inscription-confirm.h"
 #include "object-list-text.h"
 #include "inventory-list-display.h"
 #include "item-selection-layout.h"
@@ -738,7 +739,12 @@ bool get_item_allow(const struct object *obj, unsigned char ch, cmd_code cmd,
 		if (!verb)
 			verb = "do that with";
 
-		strnfmt(prompt_buf, sizeof(prompt_buf), "Really %s", verb);
+		/* Translate only the display prefix. Unknown or custom action
+		 * verbs retain their original English warning. Do not change the
+		 * inscription checks, confirmation count, or selected object. */
+		if (!angdroid_inscription_confirm_prefix(prompt_buf,
+				sizeof(prompt_buf), verb, angdroid_zh_tw_enabled()))
+			strnfmt(prompt_buf, sizeof(prompt_buf), "Really %s", verb);
 
 		/* Prompt for confirmation n times */
 		while (n--) {
