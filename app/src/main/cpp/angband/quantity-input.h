@@ -32,4 +32,18 @@ static inline bool angdroid_parse_quantity(const char *input, int max, int *amou
     *amount = value > max ? max : value;
     return true;
 }
+
+/* The interactive quantity dialog remembers the last valid default. The
+ * base parser intentionally clears its output on failure, so parse into a
+ * temporary value and commit only once validation succeeds. This must never
+ * reinterpret a malformed quantity as zero or as the entire stack. */
+static inline bool angdroid_parse_quantity_preserving_default(
+    const char *input, int max, int *amount)
+{
+    int parsed = 0;
+    if (!amount || !angdroid_parse_quantity(input, max, &parsed))
+        return false;
+    *amount = parsed;
+    return true;
+}
 #endif
