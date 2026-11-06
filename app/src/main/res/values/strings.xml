@@ -501,6 +501,9 @@
     <string name="adv_button_keymap_action">Keymap action:</string>
     <string name="adv_button_always_visible">Always visible</string>
     <string name="quantity_all">All</string>
+    <string name="quantity_all_with_count">All (%1$d)</string>
+    <string name="quantity_confirm">Confirm</string>
+    <string name="quantity_cancel">Cancel</string>
     <string name="opacity_opaque">Opaque</string>
 
     <!-- Floating button editor labels; internal action strings remain unchanged. -->
