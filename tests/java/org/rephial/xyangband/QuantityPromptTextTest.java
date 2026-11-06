@@ -29,12 +29,18 @@ public final class QuantityPromptTextTest {
                     QuantityPromptText.FROM_ZERO_NPP_ALL, "NPP default " + bound);
             check(QuantityPromptText.classify("Quantity (0-" + bound + "): ", bound),
                     QuantityPromptText.FROM_ZERO_SILQ, "Sil-Q default " + bound);
+            check(QuantityPromptText.classify("Quantity (0-" + bound + "): ", bound, true),
+                    QuantityPromptText.FROM_ZERO_NPP041, "NPP041 default " + bound);
+            check(QuantityPromptText.classify("Quantity (0-" + bound + "): ", bound, false),
+                    QuantityPromptText.FROM_ZERO_SILQ, "Sil-Q explicit context " + bound);
             check(QuantityPromptText.classify("Quantity (1-" + bound + "): ", bound + 1),
                     QuantityPromptText.ORIGINAL, "mismatched bound " + bound);
             check(QuantityPromptText.classify("Quantity (0-" + bound + ", *=all):", bound),
                     QuantityPromptText.ORIGINAL, "spacing must match " + bound);
             check(QuantityPromptText.classify("Quantity (0-" + bound + "): ", bound + 1),
                     QuantityPromptText.ORIGINAL, "Sil-Q wrong limit " + bound);
+            check(QuantityPromptText.classify("Quantity (0-" + bound + "): ", bound + 1, true),
+                    QuantityPromptText.ORIGINAL, "NPP041 wrong limit " + bound);
             check(QuantityPromptText.classify(
                             "Quantity (0-" + bound + ", '*' or 'a' = all):", bound),
                     QuantityPromptText.ORIGINAL, "NPP whitespace " + bound);
@@ -64,6 +70,12 @@ public final class QuantityPromptTextTest {
                         "Quantity (0-" + Integer.MAX_VALUE + ", *=all): ",
                         Integer.MAX_VALUE),
                 QuantityPromptText.FROM_ZERO_ALL, "32-bit all");
+        check(QuantityPromptText.classify(
+                        "Quantity (0-" + Integer.MAX_VALUE + "): ",
+                        Integer.MAX_VALUE, true),
+                QuantityPromptText.FROM_ZERO_NPP041, "32-bit NPP041");
+        check(QuantityPromptText.classify(null, 10, true),
+                QuantityPromptText.ORIGINAL, "null with NPP041 context");
         System.out.println("PASS: quantity prompt localization recognition (" + checks + " checks)");
     }
 }
