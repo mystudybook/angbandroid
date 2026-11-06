@@ -184,7 +184,7 @@ static inline int angdroid_spell_menu_confirm_touch(
         return 1;
     }
     if (*armed_oid == oid && *armed_at_ms != 0 && now_ms != 0 &&
-            now_ms >= *armed_at_ms &&
+            now_ms > *armed_at_ms &&
             now_ms - *armed_at_ms <=
                 ANGDROID_SPELL_TOUCH_CONFIRM_WINDOW_MS) {
         angdroid_spell_menu_cancel_touch(armed_oid, armed_at_ms);

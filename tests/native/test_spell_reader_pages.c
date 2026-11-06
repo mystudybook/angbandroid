@@ -165,6 +165,16 @@ int main(void)
         CHECK(angdroid_spell_menu_confirm_touch(
             &armed, &at, 0, 0, UINT64_C(3000)));
         CHECK(armed == -1 && at == 0);
+        /* Two callbacks in the very same millisecond must not appear
+         * to be two separate intentional taps. */
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 0, 0, UINT64_C(3500)));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 0, 0, UINT64_C(3500)));
+        CHECK(armed == 0 && at == UINT64_C(3500));
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 0, 0, UINT64_C(3501)));
+        CHECK(armed == -1 && at == 0);
         CHECK(!angdroid_spell_menu_confirm_touch(
             &armed, &at, 0, 0, UINT64_C(4000)));
         CHECK(armed == 0 && at == UINT64_C(4000));

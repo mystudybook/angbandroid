@@ -145,7 +145,7 @@ class FullSpellReaderSourceTest(unittest.TestCase):
         self.assertIn("uint64_t now_ms)", PAGES)
         self.assertIn("if (browse) {", PAGES)
         self.assertIn("*armed_oid == oid && *armed_at_ms != 0 && now_ms != 0", PAGES)
-        self.assertIn("now_ms >= *armed_at_ms", PAGES)
+        self.assertIn("now_ms > *armed_at_ms", PAGES)
         self.assertIn("now_ms - *armed_at_ms <=", PAGES)
         self.assertIn("ANGDROID_SPELL_TOUCH_CONFIRM_WINDOW_MS", PAGES)
         self.assertIn("*armed_oid = oid;", PAGES)
