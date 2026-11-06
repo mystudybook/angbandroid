@@ -34,6 +34,7 @@ class QuantityPromptSessionSourceTest(unittest.TestCase):
         self.assertIn("GameActivity.TERM_CONTROL_QUANTITY", body)
         self.assertIn('"end".equals(body)', body)
         self.assertIn("quantityPromptGate.close()", body)
+        self.assertIn("this.keyBuffer.setQuantityToken(ended ? 0 : quantityToken)", body)
         self.assertIn("quantityPromptGate.open()", body)
         self.assertIn("msg.arg2 = quantityToken;", body)
         self.assertLess(body.index("quantityPromptGate.close()"),
@@ -75,9 +76,9 @@ class QuantityPromptSessionSourceTest(unittest.TestCase):
         )[0]
         self.assertIn("synchronized (quantityPromptGate)", body)
         self.assertIn("quantityPromptGate.isActive(token)", body)
-        self.assertIn("this.keyBuffer.addRawSequence(keys);", body)
+        self.assertIn("this.keyBuffer.addRawSequence(keys, token)", body)
         self.assertIn("quantityPromptGate.resolve(token);", body)
-        self.assertIn("this.keyBuffer.addRawSequence(new int[] { key });", body)
+        self.assertIn("this.keyBuffer.addRawSequence(new int[] { key }, token)", body)
         self.assertNotIn("clearKeys();", body)
         self.assertIn("if (!isActive(token)) return false;", GATE)
         self.assertIn("active = 0;", GATE)
