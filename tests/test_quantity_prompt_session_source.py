@@ -50,6 +50,8 @@ class QuantityPromptSessionSourceTest(unittest.TestCase):
         self.assertIn('"end".equals(msg)', ACTIVITY)
         self.assertIn("quantPopup.getSessionToken() == quantityToken", ACTIVITY)
         self.assertIn("quantPopup.dismissSilently();", ACTIVITY)
+        self.assertIn("quantPopup = new QuantityPopup(this, message, maxValue, initialValue,", ACTIVITY)
+        self.assertNotIn("quantPopup.configure(", ACTIVITY)
         self.assertIn("runQuantityPopup(matcher.group(3), maxValue, initialValue,", ACTIVITY)
 
     def test_quantity_lock_covers_token_and_all_enqueued_keys(self):
