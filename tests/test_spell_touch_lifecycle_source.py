@@ -90,6 +90,12 @@ class SpellTouchLifecycleSourceTest(unittest.TestCase):
                         handler.index("angdroid_spell_menu_confirm_touch("))
         self.assertIn("d->selected_spell = d->spells[oid];", handler)
         self.assertEqual(1, handler.count("d->selected_spell = d->spells[oid];"))
+        # Revalidate before assigning the spell after the two-tap helper.
+        self.assertEqual(2, handler.count("spell_menu_sync_touch_epoch(d)"))
+        self.assertLess(handler.index("angdroid_spell_menu_confirm_touch("),
+                        handler.rindex("if (spell_menu_sync_touch_epoch(d)) return true;"))
+        self.assertLess(handler.rindex("if (spell_menu_sync_touch_epoch(d)) return true;"),
+                        handler.index("d->selected_spell = d->spells[oid];"))
         browser = SPELL.split("static void spell_menu_browser(", 1)[1].split(
             "static const menu_iter", 1
         )[0]
@@ -104,6 +110,14 @@ class SpellTouchLifecycleSourceTest(unittest.TestCase):
                       HEADER)
         self.assertIn("/* onPause */", C_TEST)
         self.assertIn("/* onResume */", C_TEST)
+
+    def test_spell_menu_header_preserves_display_column_alignment(self):
+        self.assertIn("angdroid_spell_menu_header(angdroid_zh_tw_enabled())", SPELL)
+        self.assertIn("angdroid_spell_menu_header(int zh_tw)", HEADER)
+        self.assertIn("法術名稱                         等 魔力 失敗 資訊", HEADER)
+        self.assertIn("Name                             Lv Mana Fail Info", HEADER)
+        self.assertIn("angdroid_utf8_display_columns(spell_header_zh) == 50", C_TEST)
+        self.assertIn("onPause races with tap", C_TEST)
 
     def test_tests_registered_without_github_actions(self):
         self.assertIn("InputLifecycleEpoch.java", JAVA_RUNNER)
