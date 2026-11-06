@@ -1908,6 +1908,36 @@ def main():
                 in projection_test,
            "Projection environment bilingual C99 cases must be registered")
 
+    # Inventory destruction, artifact immunity and floor object messages are
+    # translated at output only; original English formats remain unchanged.
+    object_verb_header = projection_header.partition(
+        "static inline const char *angdroid_project_object_destroy_verb(")[2]
+    object_verb_pairs = re.findall(
+        r'\{ "([^"]+)", "([^"]+)" \}',
+        object_verb_header.partition("return english;\n}")[0])
+    expect(len(object_verb_pairs) == 8 and
+           len({en for en, _ in object_verb_pairs}) == 8 and
+           all(en and zh and "%" not in zh for en, zh in object_verb_pairs) and
+           'angdroid_project_inventory_scope(int total, int affected)' in
+                projection_header,
+           "Projection object verb translations and stack labels must be exact")
+    expect('msgt(MSG_DESTROY, "你的%s（%c）%s%s！",' in item_projection and
+           'msgt(MSG_DESTROY, "%sour %s (%c) %s %s!",' in item_projection and
+           'angdroid_project_inventory_scope(obj->number, amt)' in item_projection and
+           'msg("「%s」沒有受到影響！", o_name);' in item_projection and
+           'msg("The %s %s unaffected!", o_name,' in item_projection and
+           'msgt(MSG_DESTROY, "「%s」%s！", o_name,' in item_projection and
+           'msgt(MSG_DESTROY, "The %s %s!", o_name, note_kill);' in item_projection and
+           'angdroid_project_object_destroy_verb(note_kill, true)' in item_projection and
+           'VERB_AGREEMENT(obj->number, "is", "are")' in item_projection and
+           'gear_object_for_use(p, obj, amt,' in item_projection and
+           'square_delete_object(cave, grid, obj, true, true);' in item_projection,
+           "Item projection original damage, protection, English and deletion logic")
+    expect('verify(angdroid_project_object_destroy_verb, "shatters", "碎裂了");'
+                in projection_test and
+           'angdroid_project_inventory_scope(4, 1)' in projection_test,
+           "Object destruction C99 verb and inventory count checks must be registered")
+
     expect('"droid.h"' in projection_monster and
            all(format_string in projection_monster for format_string in
                ('%s 試圖施法，但失敗了。', '%s 被擊退了。',
