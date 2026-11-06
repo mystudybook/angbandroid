@@ -34,6 +34,11 @@ public class NativeWrapper {
 		return AppLanguageContext.usesTraditionalChinese(state.context);
 	}
 
+	/** Read only from the native game thread through the cached JNI bridge. */
+	int getInputLifecycleEpoch() {
+		return state.getInputLifecycleEpoch();
+	}
+
 	public NativeWrapper(StateManager s) {
 		state = s;
 		lockWithTimer = new LockWithTimer(500);

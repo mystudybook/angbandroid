@@ -59,6 +59,7 @@ struct spell_menu_data {
 	/* -1 = no pending tap; a touch must explicitly arm its row. */
 	int touch_pending_oid;
 	uint64_t touch_pending_at_ms;
+	int touch_lifecycle_epoch;
 };
 
 
@@ -273,6 +274,16 @@ static void spell_menu_relayout(struct menu *m)
     (void)menu_layout(m, &bounds);
 }
 
+/* Observe UI lifecycle changes outside the gameplay input FIFO. A check
+ * before an event also closes the race between menu redraw and key input. */
+static bool spell_menu_sync_touch_epoch(struct spell_menu_data *d)
+{
+    int epoch = angdroid_input_lifecycle_epoch();
+
+    return angdroid_spell_menu_touch_epoch_changed(&d->touch_pending_oid,
+        &d->touch_pending_at_ms, &d->touch_lifecycle_epoch, epoch);
+}
+
 /* Use elapsed monotonic time, not wall-clock time: a handset's clock
  * can be manually changed while a spell selection is open. Android
  * minSdk 22 supports clock_gettime(CLOCK_MONOTONIC). A failed read gives
@@ -293,8 +304,11 @@ static uint64_t spell_menu_monotonic_ms(void)
 static bool spell_menu_handler(struct menu *m, const ui_event *e, int oid)
 {
     struct spell_menu_data *d = menu_priv(m);
+    bool lifecycle_changed = spell_menu_sync_touch_epoch(d);
 
     if (e->type == EVT_MOUSE) {
+        /* Even a queued click must not confirm a spell after a transition. */
+        if (lifecycle_changed) return true;
         /* menu_select() has already moved m->cursor for this tap.
          * Never arm a header, outside or back-button touch. */
         if (!angdroid_spell_menu_touch_selectable(
@@ -351,6 +365,8 @@ static bool spell_menu_handler(struct menu *m, const ui_event *e, int oid)
 static void spell_menu_browser(int oid, void *data, const region *loc)
 {
 	struct spell_menu_data *d = data;
+	/* Redraw can observe a lifecycle transition before the next tap. */
+	(void)spell_menu_sync_touch_epoch(d);
 	/* Arrow/key navigation away from an armed touch cancels that tap. */
 	if (d->touch_pending_oid >= 0 && d->touch_pending_oid != oid)
 		angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,
@@ -452,6 +468,7 @@ static struct menu *spell_menu_new(const struct object *obj,
 	d->selected_spell = -1;
 	angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,
 	    &d->touch_pending_at_ms);
+	d->touch_lifecycle_epoch = angdroid_input_lifecycle_epoch();
 	d->browse = false;
 	d->show_description = show_description;
 

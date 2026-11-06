@@ -36,6 +36,10 @@ extern void android_debug(const char *msg);
 /* Display locale only; set once from Java during native game startup. */
 extern int angdroid_zh_tw_enabled(void);
 
+/* Observe lifecycle transitions without adding or draining native keys.
+ * Negative values mean unavailable; spell confirmation fails shut. */
+extern int angdroid_input_lifecycle_epoch(void);
+
 extern void strdeldup(char *str);
 
 extern void feed_keymap(const char *buf);
