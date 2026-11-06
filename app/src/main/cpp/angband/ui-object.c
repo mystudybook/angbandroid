@@ -481,14 +481,26 @@ static void show_obj_list(olist_detail_t mode)
 		show_obj(i, row, col, false, mode, Term->wid - col);
 
 	/* For the inventory: print the quiver count */
-	if (mode & OLIST_QUIVER) {
+	if ((mode & OLIST_QUIVER) && z_info->quiver_slot_size > 0) {
 		int count, j;
 		int quiver_slots = (player->upkeep->quiver_cnt + z_info->quiver_slot_size - 1) / z_info->quiver_slot_size;
 
 		/* Quiver may take multiple lines */
 		for (j = 0; j < quiver_slots; j++, i++) {
 			const char *fmt = "in Quiver: %d missile%s";
-			char letter = all_letters_nohjkl[in_term ? i - 1 : i];
+			int index = in_term ? i - 1 : i;
+			int line = row + i;
+			int field_col = col + 3;
+			char letter;
+			char visible[sizeof(tmp_val)];
+
+			/* This is a disabled informational footer, not an item row.
+			 * Never draw off-screen or read a quiver key past its table. */
+			if (line < 0 || line >= Term->hgt || col < 0 ||
+				col + 3 > Term->wid || index < 0 ||
+				index >= (int)strlen(all_letters_nohjkl))
+				break;
+			letter = all_letters_nohjkl[index];
 
 			/* Number of missiles in this "slot" */
 			if (j == quiver_slots - 1)
@@ -509,7 +521,12 @@ static void show_obj_list(olist_detail_t mode)
 			else
 				strnfmt(tmp_val, sizeof(tmp_val), fmt, count,
 					count == 1 ? "" : "s");
-			c_put_str(COLOUR_L_UMBER, tmp_val, row + i, col + 3);
+			if (field_col < Term->wid) {
+				angdroid_menu_copy_columns(visible, sizeof(visible), tmp_val,
+					(size_t)(Term->wid - field_col));
+				if (visible[0])
+					c_put_str(COLOUR_L_UMBER, visible, line, field_col);
+			}
 		}
 	}
 
