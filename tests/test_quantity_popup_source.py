@@ -16,8 +16,10 @@ ANDROID = "{http://schemas.android.com/apk/res/android}"
 
 class QuantityPopupSourceTest(unittest.TestCase):
     def test_quantity_changes_do_not_commit(self):
-        self.assertEqual(1, POPUP.count("sendValue();"))
-        self.assertIn("state.addKey(state.getKeyEnter());", POPUP)
+        self.assertEqual(1, POPUP.count("if (sendValue())"))
+        self.assertIn("state.enqueueQuantity(", POPUP)
+        self.assertNotIn("state.addKey(state.getKeyEnter());", POPUP)
+        self.assertNotIn("state.addKey(state.getKeyBackspace());", POPUP)
         for name, suffix in (
             ("onProgressChanged", "public void updateValueBar"),
             ("onValueChange", None),
@@ -27,6 +29,7 @@ class QuantityPopupSourceTest(unittest.TestCase):
                 block = block.split(suffix, 1)[0]
             self.assertNotIn("sendValue(", block)
         self.assertIn("if (locked || !fromUser) return;", POPUP)
+        self.assertIn("if (sendValue()) {\n            resolved = true;", POPUP)
 
     def test_explicit_cancel_and_dismiss(self):
         self.assertIn("setFocusable(true);", POPUP)
