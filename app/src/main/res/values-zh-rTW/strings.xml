@@ -353,6 +353,8 @@
     <string name="quantity_all">全部</string>
     <string name="quantity_prompt_from_one">選擇數量（1～%1$d）：</string>
     <string name="quantity_prompt_from_zero_all">選擇數量（0～%1$d，* 表示全部）：</string>
+    <string name="quantity_prompt_npp_all">選擇數量（0～%1$d，* 或 a 表示全部）：</string>
+    <string name="quantity_prompt_silq">選擇數量（0～%1$d，非數字表示全部）：</string>
     <string name="quantity_all_with_count">全部（%1$d）</string>
     <string name="quantity_confirm">確認數量</string>
     <string name="quantity_cancel">取消</string>
