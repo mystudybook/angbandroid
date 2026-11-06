@@ -191,7 +191,7 @@ void do_cmd_inscribe(struct command *cmd)
 	const char *str;
 
 	char prompt[1024];
-	char o_name[80];
+	char o_name[256];
 
 	if (!player_get_resume_normal_shape(player, cmd)) {
 		return;
@@ -206,12 +206,11 @@ void do_cmd_inscribe(struct command *cmd)
 		return;
 
 	/* Form prompt */
-	object_desc(o_name, sizeof(o_name), obj, ODESC_PREFIX | ODESC_FULL,
+	object_desc(o_name, sizeof(o_name), obj, ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW,
 		player);
-	if (angdroid_zh_tw_enabled())
-        strnfmt(prompt, sizeof prompt, "正在為 %s 刻字。", o_name);
-    else
-        strnfmt(prompt, sizeof prompt, "Inscribing %s.", o_name);
+	strnfmt(prompt, sizeof prompt,
+		angdroid_game_ui_text("Inscribing %s.",
+			angdroid_zh_tw_enabled()), o_name);
 
 	if (cmd_get_string(cmd, "inscription", &str,
 			quark_str(obj->note) /* Default */,
@@ -258,8 +257,8 @@ void do_cmd_takeoff(struct command *cmd)
 
 	/* Get arguments */
 	if (cmd_get_item(cmd, "item", &obj,
-			/* Prompt */ "Take off or unwield which item?",
-			/* Error  */ "You have nothing to take off or unwield.",
+			/* Prompt */ angdroid_game_ui_text("Take off or unwield which item?", angdroid_zh_tw_enabled()),
+			/* Error  */ angdroid_game_ui_text("You have nothing to take off or unwield.", angdroid_zh_tw_enabled()),
 			/* Filter */ obj_can_takeoff,
 			/* Choice */ USE_EQUIP) != CMD_OK)
 		return;
@@ -277,7 +276,7 @@ void do_cmd_takeoff(struct command *cmd)
 void do_cmd_wield(struct command *cmd)
 {
 	struct object *equip_obj;
-	char o_name[80];
+	char o_name[256];
 	const char *act;
 
 	unsigned n;
@@ -291,8 +290,8 @@ void do_cmd_wield(struct command *cmd)
 
 	/* Get arguments */
 	if (cmd_get_item(cmd, "item", &obj,
-			/* Prompt */ "Wear or wield which item?",
-			/* Error  */ "You have nothing to wear or wield.",
+			/* Prompt */ angdroid_game_ui_text("Wear or wield which item?", angdroid_zh_tw_enabled()),
+			/* Error  */ angdroid_game_ui_text("You have nothing to wear or wield.", angdroid_zh_tw_enabled()),
 			/* Filter */ obj_can_wear,
 			/* Choice */ USE_INVEN | USE_FLOOR | USE_QUIVER) != CMD_OK)
 		return;
@@ -326,7 +325,7 @@ void do_cmd_wield(struct command *cmd)
 
 	/* Prevent wielding into a stickied slot */
 	if (!obj_can_takeoff(equip_obj)) {
-		object_desc(o_name, sizeof(o_name), equip_obj, ODESC_BASE,
+		object_desc(o_name, sizeof(o_name), equip_obj, ODESC_BASE | ODESC_ZH_TW,
 			player);
 		if (angdroid_zh_tw_enabled())
             msg("你無法卸下目前裝備的 %s。", o_name);
@@ -341,17 +340,17 @@ void do_cmd_wield(struct command *cmd)
 	while (n--) {
 		/* Prompt */
 		object_desc(o_name, sizeof(o_name), equip_obj,
-			ODESC_PREFIX | ODESC_FULL, player);
+			ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 		
 		/* Forget it */
-		if (!get_check(angdroid_zh_tw_enabled() ?
-			format("真的要卸下 %s 嗎？ ", o_name) :
-			format("Really take off %s? ", o_name))) return;
+		if (!get_check(format(angdroid_game_ui_text(
+			"Really take off %s? ", angdroid_zh_tw_enabled()),
+			o_name))) return;
 	}
 
 	/* Describe the object */
 	object_desc(o_name, sizeof(o_name), equip_obj,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 
 	/* Took off weapon */
 	if (slot_type_is(player, slot, EQUIP_WEAPON))
