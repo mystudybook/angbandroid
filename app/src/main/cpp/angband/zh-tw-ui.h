@@ -634,6 +634,10 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {" dead", " 已擊敗"},
         {"alive", "存活"},
         {"Inscribed", "刻字"},
+        /* Glyph editor and autoinscription dialogs: captions only. */
+        {"(up to 5 hex digits):", "Unicode 十六進位（1～5 位）："},
+        {"Invalid Unicode code point.", "Unicode 字元碼無效，請輸入合法字元。"},
+        {"Inscribe with: ", "刻上文字："},
         /* Knowledge browser footer, display-only shortcut descriptions. */
         {", 'c' to copy", "，c 複製"},
         {", 'c', 'p' to paste", "，c 複製／p 貼上"},

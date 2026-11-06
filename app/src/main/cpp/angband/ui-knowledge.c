@@ -66,6 +66,7 @@
 
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "knowledge-glyph-codepoint.h"
 #include "zh-tw-knowledge-groups.h"
 #include "zh-tw-ego-names.h"
 #include "zh-tw-rune-lore.h"
@@ -652,18 +653,23 @@ static bool glyph_command(ui_event ke, bool *glyph_picker_ptr,
 	    case 'I':
 	    {
 		    if (*glyph_picker_ptr) {
-			    char code_point[6];
-			    bool res = false;
-	
-			    /* Ask the user for a code point */
-			    Term_gotoxy(col, row + height/2 + 2);
-			    res = get_string("(up to 5 hex digits):", code_point, 5);
-	
-			    /* Process input */
-			    if (res) {
-				    unsigned long int point = strtoul(code_point,
-													  (char **)NULL, 16);
-				    *cur_char_ptr = (wchar_t) point;
+			    char code_point[6] = "";
+			    uint32_t point;
+
+			    /* Get exactly up to five hex digits plus NUL; keep
+			     * cancellation separate from invalid input. */
+			    Term_gotoxy(col, row + height / 2 + 2);
+			    if (get_string(angdroid_game_ui_text(
+					    "(up to 5 hex digits):", angdroid_zh_tw_enabled()),
+					    code_point, sizeof(code_point))) {
+				    if (!angdroid_knowledge_parse_glyph_hex(code_point,
+						    &point)) {
+					    msg("%s", angdroid_game_ui_text(
+						    "Invalid Unicode code point.",
+						    angdroid_zh_tw_enabled()));
+					    return true;
+				    }
+				    *cur_char_ptr = (wchar_t)point;
 				    return true;
 			    }
 		    }
@@ -2192,7 +2198,8 @@ static void o_xtra_act(struct keypress ch, int oid)
 		screen_save();
 
 		/* Prompt */
-		prt(angdroid_zh_tw_enabled() ? "刻上文字：" : "Inscribe with: ", 0, 0);
+		prt(angdroid_game_ui_text("Inscribe with: ",
+			angdroid_zh_tw_enabled()), 0, 0);
 
 		/* Default note */
 		if (k->note_aware || k->note_unaware)
@@ -2369,7 +2376,8 @@ static void rune_xtra_act(struct keypress ch, int oid)
 		screen_save();
 
 		/* Prompt */
-		prt(angdroid_zh_tw_enabled() ? "刻上文字：" : "Inscribe with: ", 0, 0);
+		prt(angdroid_game_ui_text("Inscribe with: ",
+			angdroid_zh_tw_enabled()), 0, 0);
 
 		/* Default note */
 		if (rune_note(oid))

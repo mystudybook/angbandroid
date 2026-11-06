@@ -151,6 +151,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_knowledge_column_text"
 "$BUILD_DIR/test_knowledge_column_text"
 
+# Glyph editor strict Unicode input and bilingual rune/object inscriptions.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_knowledge_glyph_codepoint.c" \
+    -o "$BUILD_DIR/test_knowledge_glyph_codepoint"
+"$BUILD_DIR/test_knowledge_glyph_codepoint"
+
 # Native rune detail names/grammar are presentation-only; guard NDK fmt.
 "$CC" -std=c99 -Wall -Wextra -Werror -Wformat -Werror=format-security -pedantic \
     "$ROOT/tests/native/test_rune_lore_locale.c" \
