@@ -322,3 +322,11 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - **名稱與文法安全**：中文模板保留原生 `{name}` 展開，並一律把該標記放在句首，避免舊版 `print_custom_message()` 名稱填充覆蓋前綴文字；中文模板不含英文 `{kind}`／`{s}`／`{is}` 單複數標記。原有 `print_custom_message()` 的英文占位詞處理保留；只在繁中顯示模式為物品描述額外加入 `ODESC_ZH_TW`，讓可被玩家辨識的神器名稱用繁體中文呈現，不使用 `ODESC_SPOIL` 或修改任何鑑定結果。
 - **操作／費用維持不變**：`do_cmd_activate()` 的冷卻檢查與正常形態檢查、`use_aux()` 的瞄準取消早退、`check_devices()`、`effect_do()`、原本的地面物品充能暫扣及回復分支、回合耗時和 `activation_message(obj, player)` 先後順序均未改。此批只是語言輸出路徑；尚未實際在 Android 遊戲中完成操作驗收。
 - **回歸測試**：新增 `tests/native/test_activation_message_locale.c`（50 個模板的中英文、無效標記、未知字串、NULL 安全）與 `tests/test_activation_messages_locale_source.py`（資料驅動檢查 48+5=53 筆原始訊息／50 種模板、唯一性、中文文法占位詞、原生展開器接線和取消／充能不變）。分別接入 `scripts/test-native-utf8.sh`、`scripts/verify-zh-tw.sh`。全部 GitHub 提交附 `[skip ci]`，不使用 GitHub Actions。完整 Android Gradle／NDK、模擬器／實機測試及原生整合驗收仍須在本機執行。
+
+
+## 第 114 批 — 法術效果數值摘要與傷害屬性繁體中文化
+
+- **法術摘要的真實缺口**：`player-spell.c::spell_effect_append_value_info()` 顯示用的 `effect_info()` 鍵值（`hurt`、`heal`、`dam`、`dur`、`power`、`range`、`blows`）及 `random`、`rad`、`len` 仍為英文。新增純 C99 的 `zh-tw-spell-effect-info.h`，只在組合玩家看得到的摘要時翻譯。整個效果資料、法術 ID、骰子與 RNG、傷害分類使用的原始英文 `effect_info()` 均不修改。
+- **數值與英文模式相容**：半徑／長度的 `printf` 模板保留 `%d`，英文模式原樣顯示；未知、空及 NULL 值安全回傳，原本重複效果折疊與數值計算完全不變。
+- **法術瀏覽**：平均傷害的傷害屬性使用既有 55 種投射屬性中文詞彙表；將 UI 的提示暫存緩衝區加大，並於繪圖前以 `angdroid_utf8_clip_columns()` 按顯示欄寬截取摘要，避免中文字被切成半個 UTF-8 字元。`spell->text` 的原始長篇英文敘述仍未改動，屬下一階段工作。
+- **回歸測試**：新增 `tests/native/test_spell_effect_info_locale.c`，GCC、Clang 嚴格 C99 獨立測試各 31 項通過；新增 `tests/test_spell_effect_info_locale_source.py`，以原始 `list-effects.h` 驗證全部七種分類鍵值、格式 `%d` 不變、顯示層接線、投射屬性與安全裁切，接入 `scripts/test-native-utf8.sh` 及 `scripts/verify-zh-tw.sh`。完整 Python 套件、Android NDK/Gradle 及模擬器／實機仍待本機驗證。此批使用 `[skip ci]`，不運行 GitHub Actions。

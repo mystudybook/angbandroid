@@ -30,6 +30,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-spell-names.h"
+#include "zh-tw-spell-effect-info.h"
 #include "player-timed.h"
 #include "player-util.h"
 #include "project.h"
@@ -619,6 +620,9 @@ static void spell_effect_append_value_info(const struct effect *effect,
 
 	type = effect_info(effect);
 	if (type == NULL) return;
+	/* Translate the display label, never effect_info() game data. */
+	type = angdroid_zh_tw_spell_effect_info(type,
+		angdroid_zh_tw_enabled());
 
 	if (effect->dice != NULL) {
 		dice_roll(effect->dice, &rv);
@@ -638,17 +642,22 @@ static void spell_effect_append_value_info(const struct effect *effect,
 		case EF_TELEPORT:
 			/* m_bonus means it's a weird random thing */
 			if (rv.m_bonus) {
-				my_strcpy(special, "random", sizeof(special));
+				my_strcpy(special, angdroid_zh_tw_spell_effect_info("random",
+					angdroid_zh_tw_enabled()), sizeof(special));
 			}
 			break;
 		case EF_SPHERE:
 			/* Append radius */
 			if (effect->radius) {
 				int rad = effect->radius;
-				strnfmt(special, sizeof(special), ", rad %d",
+				strnfmt(special, sizeof(special),
+					angdroid_zh_tw_spell_effect_info(", rad %d",
+						angdroid_zh_tw_enabled()),
 					rad);
 			} else {
-				my_strcpy(special, ", rad 2", sizeof(special));
+				my_strcpy(special,
+					angdroid_zh_tw_spell_effect_info(", rad 2",
+						angdroid_zh_tw_enabled()), sizeof(special));
 			}
 			break;
 		case EF_BALL:
@@ -658,16 +667,22 @@ static void spell_effect_append_value_info(const struct effect *effect,
 				if (effect->other) {
 					rad += player->lev / effect->other;
 				}
-				strnfmt(special, sizeof(special), ", rad %d",
+				strnfmt(special, sizeof(special),
+					angdroid_zh_tw_spell_effect_info(", rad %d",
+						angdroid_zh_tw_enabled()),
 					rad);
 			} else {
-				my_strcpy(special, "rad 2", sizeof(special));
+				my_strcpy(special,
+					angdroid_zh_tw_spell_effect_info("rad 2",
+						angdroid_zh_tw_enabled()), sizeof(special));
 			}
 			break;
 		case EF_STRIKE:
 			/* Append radius */
 			if (effect->radius) {
-				strnfmt(special, sizeof(special), ", rad %d",
+				strnfmt(special, sizeof(special),
+					angdroid_zh_tw_spell_effect_info(", rad %d",
+						angdroid_zh_tw_enabled()),
 					effect->radius);
 			}
 			break;
@@ -678,7 +693,9 @@ static void spell_effect_append_value_info(const struct effect *effect,
 				beam_len += player->lev / effect->other;
 				beam_len = MIN(beam_len, z_info->max_range);
 			}
-			strnfmt(special, sizeof(special), ", len %d", beam_len);
+			strnfmt(special, sizeof(special),
+					angdroid_zh_tw_spell_effect_info(", len %d",
+						angdroid_zh_tw_enabled()), beam_len);
 			break;
 		}
 		case EF_SWARM:

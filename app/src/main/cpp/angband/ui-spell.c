@@ -34,6 +34,7 @@
 #include "zh-tw-ui.h"
 #include "zh-tw-magic.h"
 #include "zh-tw-spell-names.h"
+#include "zh-tw-projection-terms.h"
 #include "../curses/unicode_display.h"
 
 
@@ -73,8 +74,8 @@ static void spell_menu_display(struct menu *m, int oid, bool cursor,
 	int spell_index = d->spells[oid];
 	const struct class_spell *spell = spell_by_index(player, spell_index);
 
-	char help[30];
-	char out[80];
+	char help[192];
+	char out[256];
 
 	int attr;
 	const char *illegible = NULL;
@@ -95,6 +96,8 @@ static void spell_menu_display(struct menu *m, int oid, bool cursor,
 		if (player->spell_flags[spell_index] & PY_SPELL_WORKED) {
 			/* Get extra info */
 			get_spell_info(spell_index, help, sizeof(help));
+			/* Clip by terminal columns, not UTF-8 bytes. */
+			angdroid_utf8_clip_columns(help, 22);
 			comment = help;
 			attr = COLOUR_WHITE;
 		} else {
@@ -193,7 +196,8 @@ static void spell_menu_browser(int oid, void *data, const region *loc)
 						text_out("%s", angdroid_zh_tw_enabled() ? " 與" : " and");
 					}
 					text_out_c(COLOUR_L_GREEN, " %d", effect_avg_damage(e, shared_dice));
-					const char *projection = effect_projection(e);
+					const char *projection = angdroid_projection_description(
+						effect_projection(e), angdroid_zh_tw_enabled());
 					if (strlen(projection) > 0) {
 						text_out(" %s", projection);
 					}
