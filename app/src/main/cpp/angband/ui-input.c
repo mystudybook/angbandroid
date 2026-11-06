@@ -1174,6 +1174,7 @@ static bool textui_get_string(const char *prompt, char *buf, size_t len)
 static int textui_get_quantity(const char *prompt, int max)
 {
 	int amt = 1;
+	int result = 0;
 
 	if (max <= 0) return 0;
 	if (max == 1) return 1;
@@ -1193,14 +1194,20 @@ static int textui_get_quantity(const char *prompt, int max)
 		 * Esc continues to cancel and a numeric value above max clamps. */
 		while (true) {
 			strnfmt(buf, sizeof(buf), "%d", amt);
-			if (!get_string(prompt, buf, sizeof(buf))) return 0;
-			if (angdroid_parse_quantity(buf, max, &amt)) break;
+			if (!get_string(prompt, buf, sizeof(buf))) break;
+			if (angdroid_parse_quantity(buf, max, &amt)) {
+				result = amt;
+				break;
+			}
 			msg("%s", angdroid_game_ui_text(
 				"Invalid quantity. Enter a number or * for all.",
 				angdroid_zh_tw_enabled()));
 		}
 	}
-	return amt;
+	/* End the Android popup even when the player used the normal keyboard,
+	 * pressed Esc, or supplied a valid quantity after retrying. */
+	Term_control(TERM_CONTROL_QUANTITY, "end");
+	return result;
 }
 
 /**
