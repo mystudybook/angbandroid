@@ -313,6 +313,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_mon_blow_feedback_locale"
 "$BUILD_DIR/test_mon_blow_feedback_locale"
 
+# Original monster action templates and resistance saving-throw messages.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_mon_blow_actions_locale.c" \
+    -o "$BUILD_DIR/test_mon_blow_actions_locale"
+"$BUILD_DIR/test_mon_blow_actions_locale"
+
 # Monster mimic, theft and spawning feedback.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_monster_events_locale.c" \
