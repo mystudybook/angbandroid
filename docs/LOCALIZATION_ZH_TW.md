@@ -480,3 +480,24 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - UI 提示改為繁中「**2 秒內觸控同列兩次確認**」、英文 `Tap same row twice within 2s`，延用原本的 UTF-8 顯示欄裁切，窄螢幕不覆蓋法術列表。未更改 `ui-menu.c` 的所有選單事件派送，也不更動遊戲法術資料、施法計算、角色存檔或所有 135 筆翻譯表。
 - `tests/native/test_spell_reader_pages.c` 更新第 127 批觸控確認測試：同列 2000ms 可確認、2001ms 不可確認、逾時重新準備、換列重計、時間 0／倒退／逼近 `UINT64_MAX`、瀏覽模式與安全清除。仍使用既有 `scripts/test-native-utf8.sh`。同步更新 `tests/test_spell_reader_source.py` 驗證 C99 時鐘來源、欄位、時間計算及全部清除路徑，避免過時的舊 helper 簽名斷言造成誤判。
 - 靜態來源比對與隔離 C99 測試不能取代完整 Android 專案、模擬器或實機驗收；請在手機確認「點一次 → 等待超過 2 秒 → 再點相同法術」**不能施法**，必須在時限內再點第三下才確認；正常連續兩下、換列、瀏覽及鍵盤操作保持正常。不使用 GitHub Actions；commit `[skip ci]`。
+
+
+## 第 130 批 — Android 背景／前景及焦點切換的殘留抬手事件保護
+
+- 審查 `TermView.java`、`ScreenTapGuard.java` 與 `GameActivity.java` 的實際生命週期後發現：`TermView.onPause()` 原本只送出 `SaveGame` 並停止長按／方向鍵重複計時器，**沒有清除手勢追蹤**。同時 `ScreenTapGuard.finish()` 若 `screenGesture=false`，會直接接受 `ACTION_UP`，即使沒有對應的 `ACTION_DOWN`；背景返回、對話框失焦、取消後補送抬手以及重複釋放都有可能進入舊的 `lastView.executeAction()`，造成無意義的原生滑鼠事件。
+- `ScreenTapGuard` 新增 `activeGesture`，由每次 `begin()` 設為有效；`finish()` **必須先見過真正的 ACTION_DOWN**，否則不接受畫面／虛擬按鈕的孤立 ACTION_UP。成功或拒絕結束時都透過 `abortGesture()` 清理全部旗標，避免一次點擊重複送出兩次；對一般 overlay／D-pad，仍只要有效 `begin(false)` + `finish(false)` 即能正常操作。
+- `TermView.onPause()` 先取消手勢、停止 timer，再透過原本的 `GameThread.Request.SaveGame` 儲存遊戲。對照既有 `KeyBuffer.signalSave()`：儲存訊號會清掉尚未被 native 消費的鍵盤／滑鼠輸入，然後送出儲存 marker；本批**不另行清空 KeyBuffer**，避免破壞儲存或其他插件的輸入機制。
+- `TermView.onResume()` 在恢復前要求新手勢一定要有新的 ACTION_DOWN；`onWindowFocusChanged(false)` 也取消目前手勢並停止重複操作，用於沒有觸發 Activity pause 的通知欄／對話框切換。`ACTION_CANCEL` 現在直接結束 ScreenView 和 overlay 的舊手勢，不再留下有活動狀態的 overlay 按鍵。
+- 保留第 127–129 批的法術列**同列兩次、2 秒內**確認，以及原有 `?`、`]`、鍵盤選取和選單返回行為；沒有修改全域 `ui-menu.c`、原版法術計算、163 筆法術紀錄、135 組繁中說明配對或存檔格式。
+- 新增 `tests/java/org/rephial/xyangband/ScreenTapGuardTest.java` **16 項回歸斷言**，現在總計 **34 項**，由 `scripts/test-terminal-unicode.sh` 執行；測試涵蓋無 DOWN 的 UP、背景／焦點失去／恢復、overlay 釋放、重複 UP、取消後新手勢。**JDK 21 `javac -Xlint:all -Werror` 實際編譯並執行全部 34 項通過**，且兩份 Java source 的 `git hash-object` 與 GitHub Blob SHA 完全一致。
+- `tests/test_screen_tap_guard_source.py` 增加生命週期和 `ACTION_CANCEL` 來源契約檢查（如取消／停止先於儲存、正常虛擬控制不被阻擋、`KeyBuffer.signalSave()` 的原有 FIFO 清理順序），原本已透過 `scripts/verify-zh-tw.sh` 註冊。
+- **驗證限制**：目前只實際執行純 Java helper 測試；完整 `TermView` Android 編譯、離線套件整體、NDK／Gradle、emulator、實機與 Android 在背景時本地 native 法術選單已經準備的第一下觸控狀態，仍須端到端驗收。本批不宣稱 Java 層手勢取消可清除所有 C 層已記錄的第一次點擊。沒有使用 GitHub Actions，commit `[skip ci]`。
+
+### 第 130 批本機驗收指令
+
+```bash
+git pull --ff-only origin master
+sh scripts/verify-zh-tw.sh --android zh-tw-validation-130.log
+```
+
+手動驗證：先按下遊戲畫面但尚未抬手就切到背景／通知欄、再返回並抬手，不得產生滑鼠點擊；一般點擊仍應可選法術、需要合法的同列第二下才確認；連續快速切換、畫面取消、右下角快捷選單、D-pad 長按及方向鍵重複都須確認。

@@ -2795,10 +2795,11 @@ public class TermView extends View implements OnGestureListener {
 				return true;
 			}
 		} else if (maskedAction == MotionEvent.ACTION_CANCEL) {
-			if (screenTapGuard.cancelScreenGesture()) {
-				stopTimers();
-				return true;
-			}
+			/* ACTION_CANCEL is terminal even for an overlay gesture.
+			 * Do not accept an ACTION_UP that arrives after cancellation. */
+			screenTapGuard.abortGesture();
+			stopTimers();
+			return true;
 		}
 		if (screenTapGuard.isCancelled()) {
 			if (maskedAction == MotionEvent.ACTION_UP) {
@@ -3853,19 +3854,29 @@ public class TermView extends View implements OnGestureListener {
 	}
 
 	public void onResume() {
+		/* A resumed app must require a fresh ACTION_DOWN before any tap. */
+		screenTapGuard.abortGesture();
 		Log.d("Angband", "Termview.onResume()");
 		//vibrate = Preferences.getVibrate();
 	}
 
+	@Override
+	public void onWindowFocusChanged(boolean hasWindowFocus) {
+		super.onWindowFocusChanged(hasWindowFocus);
+		if (!hasWindowFocus) {
+			/* Notification shade/dialog focus loss may not pause the Activity. */
+			screenTapGuard.abortGesture();
+			stopTimers();
+		}
+	}
+
 	public void onPause() {
-		//Log.d("Angband","Termview.onPause()");
-		// this is the only guaranteed safe place to save state
-		// according to SDK docs
-		state.gameThread.send(GameThread.Request.SaveGame);
-
-		flashText = "";
-
+		/* Abort touches and repeats BEFORE the save request clears the
+		 * queued native input. An old ACTION_UP must not be replayed. */
+		screenTapGuard.abortGesture();
 		stopTimers();
+		state.gameThread.send(GameThread.Request.SaveGame);
+		flashText = "";
 	}
 
 	public static int directionKeyFromIndex(int idx)

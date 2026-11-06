@@ -52,15 +52,66 @@ class ScreenTapGuardSourceTest(unittest.TestCase):
                         resize.index('Log.d("Angband", "onSizeChanged");'))
 
     def test_helper_preserves_virtual_controls(self):
-        self.assertIn("if (!screenGesture) return false;", GUARD)
-        self.assertIn("boolean accept = !screenGesture ||", GUARD)
-        self.assertIn("(!cancelled && releasedOnScreen);", GUARD)
+        self.assertIn("private boolean activeGesture;", GUARD)
+        self.assertIn("activeGesture = true;", GUARD)
+        self.assertIn("if (!activeGesture || !screenGesture) return false;", GUARD)
+        self.assertIn("boolean accept = activeGesture &&", GUARD)
+        self.assertIn("(!screenGesture || (!cancelled && releasedOnScreen));",
+                      GUARD)
         self.assertIn("screenGesture = onScreen;", GUARD)
         self.assertIn("cancelled = false;", GUARD)
-        self.assertIn("screenGesture && cancelled", GUARD)
+        self.assertIn("activeGesture && screenGesture && cancelled", GUARD)
+        self.assertIn("activeGesture = false;", GUARD)
         self.assertIn("screenGesture = false;", GUARD)
         self.assertIn("void begin(boolean onScreen)", GUARD)
+        self.assertIn("void abortGesture()", GUARD)
         self.assertIn("boolean finish(boolean releasedOnScreen)", GUARD)
+        self.assertIn("abortGesture();", GUARD)
+
+    def test_pause_resume_and_focus_loss_cancel_before_saving(self):
+        lifecycle = JAVA.split("public void onResume() {", 1)[1]
+        lifecycle = lifecycle.split(
+            "public static int directionKeyFromIndex(int idx)", 1)[0]
+        self.assertIn("screenTapGuard.abortGesture();", lifecycle)
+        self.assertIn("public void onWindowFocusChanged(boolean hasWindowFocus)",
+                      lifecycle)
+        focus = lifecycle.split("public void onWindowFocusChanged(", 1)[1]
+        focus = focus.split("public void onPause() {", 1)[0]
+        self.assertIn("super.onWindowFocusChanged(hasWindowFocus);", focus)
+        self.assertIn("if (!hasWindowFocus) {", focus)
+        self.assertIn("screenTapGuard.abortGesture();", focus)
+        self.assertIn("stopTimers();", focus)
+
+        pause = lifecycle.split("public void onPause() {", 1)[1]
+        self.assertLess(pause.index("screenTapGuard.abortGesture();"),
+                        pause.index("stopTimers();"))
+        self.assertLess(pause.index("stopTimers();"),
+                        pause.index(
+                            "state.gameThread.send(GameThread.Request.SaveGame);"))
+        # Saving already clears the native input queue; do not change the
+        # global queue or drop unrelated game input at resume.
+        KEYBUFFER = (ROOT / "app/src/main/java/org/rephial/xyangband/KeyBuffer.java"
+                     ).read_text(encoding="utf-8")
+        saved = KEYBUFFER.split("public void signalSave() {", 1)[1]
+        saved = saved.split("public void addSpecialCommand(", 1)[0]
+        self.assertLess(saved.index("keybuffer.clear();"),
+                        saved.index("keybuffer.offer(-1);"))
+        self.assertNotIn("state.clearKeys();", lifecycle)
+
+    def test_cancel_aborts_any_gesture_and_rejects_orphan_release(self):
+        event = JAVA.split("public boolean onTouchEvent(MotionEvent me)", 1)[1]
+        event = event.split("public boolean onScroll(", 1)[0]
+        cancelled = event.split(
+            "} else if (maskedAction == MotionEvent.ACTION_CANCEL) {", 1)[1]
+        cancelled = cancelled.split("if (screenTapGuard.isCancelled())", 1)[0]
+        self.assertIn("screenTapGuard.abortGesture();", cancelled)
+        self.assertIn("stopTimers();", cancelled)
+        self.assertIn("return true;", cancelled)
+        self.assertIn("!screenTapGuard.finish(", event)
+        self.assertLess(event.index("!screenTapGuard.finish("),
+                        event.index("// Display quick settings"))
+        self.assertIn("void abortGesture()", GUARD)
+        self.assertIn("boolean accept = activeGesture &&", GUARD)
 
     def test_java_regressions_and_offline_registration(self):
         for token in (
@@ -72,6 +123,14 @@ class ScreenTapGuardSourceTest(unittest.TestCase):
             "D-pad/overlay release unaffected",
             "long press up not also a single tap",
             "new down clears stale cancelled touch",
+            "orphan screen release rejected",
+            "orphan overlay release rejected",
+            "release after pause rejected",
+            "release after focus loss rejected",
+            "release after resume still rejected",
+            "overlay release after pause rejected",
+            "duplicate ACTION_UP not a second tap",
+            "fresh down after cancellation works",
         ):
             with self.subTest(token=token):
                 self.assertIn(token, TEST)

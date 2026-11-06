@@ -8,30 +8,39 @@ package org.rephial.xyangband;
  * Virtual D-pad and other overlays retain their existing repeat behavior.
  */
 final class ScreenTapGuard {
+    private boolean activeGesture;
     private boolean screenGesture;
     private boolean cancelled;
 
     void begin(boolean onScreen) {
+        activeGesture = true;
         screenGesture = onScreen;
         cancelled = false;
     }
 
     /** Mark the current screen gesture as no longer a valid single tap. */
     boolean cancelScreenGesture() {
-        if (!screenGesture) return false;
+        if (!activeGesture || !screenGesture) return false;
         cancelled = true;
         return true;
     }
 
     boolean isCancelled() {
-        return screenGesture && cancelled;
+        return activeGesture && screenGesture && cancelled;
     }
 
-    /** Called on the final ACTION_UP, before any mouse press or shortcut. */
-    boolean finish(boolean releasedOnScreen) {
-        boolean accept = !screenGesture || (!cancelled && releasedOnScreen);
+    /** End a pending gesture without emitting a mouse/keyboard action. */
+    void abortGesture() {
+        activeGesture = false;
         screenGesture = false;
         cancelled = false;
+    }
+
+    /** Reject orphan ACTION_UP events that have no preceding ACTION_DOWN. */
+    boolean finish(boolean releasedOnScreen) {
+        boolean accept = activeGesture &&
+            (!screenGesture || (!cancelled && releasedOnScreen));
+        abortGesture();
         return accept;
     }
 }
