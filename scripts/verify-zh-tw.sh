@@ -51,6 +51,7 @@ run_check "Finite invalid-row menu navigation" python3 "$ROOT/tests/test_menu_na
 run_check "Inventory and equipment UTF-8 display safety" python3 "$ROOT/tests/test_object_list_text_source.py"
 run_check "Inventory and equipment bilingual captions and selection invariants" python3 "$ROOT/tests/test_inventory_list_locale_source.py"
 run_check "Rotated item-selection and compact shop prompts" python3 "$ROOT/tests/test_item_selection_rotation_source.py"
+run_check "Knowledge glyph strict Unicode input and bilingual autoinscriptions" python3 "$ROOT/tests/test_knowledge_glyph_codepoint_locale_source.py"
 run_check "Item picker numeric quiver tag, localized cancel hint and CJK recall titles" python3 "$ROOT/tests/test_item_picker_tag_locale_source.py"
 run_check "UI-only item name localization and export isolation" python3 "$ROOT/tests/test_visible_item_name_localization.py"
 run_check "Known-item classifiers and translated artifact/ego grammar" python3 "$ROOT/tests/test_item_name_grammar_localization.py"
