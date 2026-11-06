@@ -13,6 +13,8 @@ static inline const char *angdroid_equip_cmp_text(const char *english,
     static const struct angdroid_equip_cmp_pair labels[] = {
         { "Sorry, could not display.  Press any key.", "無法顯示，請按任意鍵。" },
         { "Object comparison", "裝備比較" },
+        { "Tap a row to select; tap again to confirm", "點選物品列以選取，再點一次確認" },
+        { "No items to examine", "沒有可查看的裝備。" },
         { "[k/up, j/down, p/PgUp, n/PgDn to move; ? for help; ESC to exit]", "k／↑、j／↓、p／PgUp、n／PgDn 移動；? 說明；Esc 離開" },
         { "[k/up, j/down, p/PgUp, n/PgDn to move; return to accept]", "k／↑、j／↓、p／PgUp、n／PgDn 移動；Enter 確認" },
         { "No items; use q, !, c, or R to change filter", "沒有符合的物品；按 q、!、c 或 R 調整篩選" },

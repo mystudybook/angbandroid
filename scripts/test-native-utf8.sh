@@ -283,6 +283,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_equip_cmp_tiny_terminal"
 "$BUILD_DIR/test_equip_cmp_tiny_terminal"
 
+# Equipment comparison: touch mapping, empty lists and resized selection.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_equip_cmp_touch_guard.c" \
+    -o "$BUILD_DIR/test_equip_cmp_touch_guard"
+"$BUILD_DIR/test_equip_cmp_touch_guard"
+
 # Original Angband curse.txt labels and exact display-only translations.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_curse_locale.c" \

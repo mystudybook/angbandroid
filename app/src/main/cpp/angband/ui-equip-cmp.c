@@ -36,6 +36,7 @@
 #include "zh-tw-ego-names.h"
 #include "equip-compare-name-display.h"
 #include "equip-compare-state-guard.h"
+#include "equip-compare-touch-guard.h"
 #include "menu-text-fit.h"
 #include "ui-event.h"
 #include "ui-input.h"
@@ -391,6 +392,10 @@ void equip_cmp_display(void)
 					istate == EQUIP_CMP_MENU_BAIL, the_summary != NULL) &&
 					the_summary->nfilt == 0) {
 				equip_cmp_print_label("No items; use q, !, c, or R to change filter", 0, 0);
+			} else if (istate == EQUIP_CMP_MENU_SEL0 ||
+					istate == EQUIP_CMP_MENU_SEL1) {
+				equip_cmp_print_label(
+					"Tap a row to select; tap again to confirm", 0, 0);
 			} else if (!states[istate].clear) {
 				prt("", 0, 0);
 			}
@@ -530,6 +535,7 @@ static int handle_input_equip_cmp_general(ui_event in, int istate,
 	static const char *trans_msg_save_ok = "Successfully saved to file";
 	static const char *trans_msg_save_bad = "Failed to save to file!";
 	static const char *trans_msg_sel0 = "Select first item to examine";
+	static const char *trans_msg_no_items = "No items to examine";
 	int action = ACT_CTX_EQUIPCMP_NONE;
 	int result = EQUIP_CMP_MENU_SAME_PAGE;
 	int ilast;
@@ -873,7 +879,14 @@ static int handle_input_equip_cmp_general(ui_event in, int istate,
 		break;
 
 	case ACT_CTX_EQUIPCMP_START_SELECT:
-		/* Select an item or two to examine. */
+		/* Filtering may leave no items. Do not enter a selection state
+		 * that would later access sorted_indices[0] or assert. */
+		if (!angdroid_equip_cmp_selection_valid(s->ifirst, s->nfilt) ||
+				s->npage <= 0) {
+			s->dlg_trans_msg = trans_msg_no_items;
+			result = EQUIP_CMP_MENU_NEW_PAGE;
+			break;
+		}
 		s->work_sel = s->ifirst;
 		s->dlg_trans_msg = trans_msg_sel0;
 		result = EQUIP_CMP_MENU_SEL0;
@@ -1050,77 +1063,76 @@ static int handle_input_equip_cmp_select(ui_event in, int istate,
 	} else if (in.type == EVT_MOUSE) {
 		if (in.mouse.button == 2) {
 			action = ACT_CTX_EQUIPCMP_SELECT_ESCAPE;
-		} else if (in.mouse.y >= s->irow_combined_equip + 1
-				&& in.mouse.y < s->irow_combined_equip + 1
-				+ s->npage) {
-			/*
-			 * Mark that row as the new selection, or, if it is
-			 * already selected, accept it.
-			 */
-			int new_sel = (in.mouse.y - s->irow_combined_equip - 1)
-				* s->indinc + s->ifirst;
-
-			if (s->work_sel == new_sel) {
-				action = ACT_CTX_EQUIPCMP_SELECT_ACCEPT;
-			} else {
-				s->work_sel = new_sel;
-			}
 		} else {
-			/* Display a context menu for the other actions. */
-			char *labels = string_make(lower_case);
-			struct menu *m = menu_dynamic_new();
+			int new_sel;
+			/* A tap must be inside both the real terminal grid and the
+			 * current sorted/filtered page before changing selection. */
+			if (Term && angdroid_equip_cmp_touch_index(
+					in.mouse.x, in.mouse.y, Term->wid, Term->hgt,
+					s->irow_combined_equip + 1, s->npage,
+					s->ifirst, s->indinc, s->nfilt, &new_sel)) {
+				if (s->work_sel == new_sel)
+					action = ACT_CTX_EQUIPCMP_SELECT_ACCEPT;
+				else
+					s->work_sel = new_sel;
+			} else if (Term && angdroid_equip_cmp_label_region_valid(
+					Term->wid, Term->hgt, in.mouse.y, in.mouse.x)) {
+				/* Out-of-row taps retain the original action menu. */
+				char *labels = string_make(lower_case);
+				struct menu *m = menu_dynamic_new();
 
-			m->selections = labels;
-			if ((s->indinc < 0 && s->work_sel > 0)
-					|| (s->indinc >= 0
-					&& s->work_sel < s->nfilt - 1)) {
-				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to next page",
-				angdroid_zh_tw_enabled()),
-					'n', ACT_CTX_EQUIPCMP_SELECT_NEXT_PAGE,
-					labels);
+				m->selections = labels;
+				if ((s->indinc < 0 && s->work_sel > 0)
+						|| (s->indinc >= 0
+						&& s->work_sel < s->nfilt - 1)) {
+					menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to next page",
+					angdroid_zh_tw_enabled()),
+						'n', ACT_CTX_EQUIPCMP_SELECT_NEXT_PAGE,
+						labels);
+				}
+				if ((s->indinc > 0 && s->work_sel > 0)
+						|| (s->indinc <= 0
+						&& s->work_sel < s->nfilt - 1)) {
+					menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to previous page",
+					angdroid_zh_tw_enabled()),
+						'p', ACT_CTX_EQUIPCMP_SELECT_PREV_PAGE,
+						labels);
+				}
+				if ((s->indinc < 0 && s->work_sel > 0)
+						|| (s->indinc >= 0
+						&& s->work_sel < s->nfilt - 1)) {
+					menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to next line",
+					angdroid_zh_tw_enabled()),
+						'N', ACT_CTX_EQUIPCMP_SELECT_NEXT_LINE,
+						labels);
+				}
+				if ((s->indinc > 0 && s->work_sel > 0)
+						|| (s->indinc <= 0
+						&& s->work_sel < s->nfilt - 1)) {
+					menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to previous line",
+					angdroid_zh_tw_enabled()),
+						'P', ACT_CTX_EQUIPCMP_SELECT_PREV_LINE,
+						labels);
+				}
+				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Skip selection",
+					angdroid_zh_tw_enabled()), 's',
+					ACT_CTX_EQUIPCMP_SELECT_SKIP, labels);
+				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Help",
+					angdroid_zh_tw_enabled()), '?',
+					ACT_CTX_EQUIPCMP_SELECT_HELP, labels);
+
+				screen_save();
+
+				menu_dynamic_calc_location(m, in.mouse.x, in.mouse.y);
+				region_erase_bordered(&m->boundary);
+
+				action =  menu_dynamic_select(m);
+
+				screen_load();
+
+				menu_dynamic_free(m);
+				string_free(labels);
 			}
-			if ((s->indinc > 0 && s->work_sel > 0)
-					|| (s->indinc <= 0
-					&& s->work_sel < s->nfilt - 1)) {
-				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to previous page",
-				angdroid_zh_tw_enabled()),
-					'p', ACT_CTX_EQUIPCMP_SELECT_PREV_PAGE,
-					labels);
-			}
-			if ((s->indinc < 0 && s->work_sel > 0)
-					|| (s->indinc >= 0
-					&& s->work_sel < s->nfilt - 1)) {
-				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to next line",
-				angdroid_zh_tw_enabled()),
-					'N', ACT_CTX_EQUIPCMP_SELECT_NEXT_LINE,
-					labels);
-			}
-			if ((s->indinc > 0 && s->work_sel > 0)
-					|| (s->indinc <= 0
-					&& s->work_sel < s->nfilt - 1)) {
-				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to previous line",
-				angdroid_zh_tw_enabled()),
-					'P', ACT_CTX_EQUIPCMP_SELECT_PREV_LINE,
-					labels);
-			}
-			menu_dynamic_add_label(m, angdroid_equip_cmp_text("Skip selection",
-				angdroid_zh_tw_enabled()), 's',
-				ACT_CTX_EQUIPCMP_SELECT_SKIP, labels);
-			menu_dynamic_add_label(m, angdroid_equip_cmp_text("Help",
-				angdroid_zh_tw_enabled()), '?',
-				ACT_CTX_EQUIPCMP_SELECT_HELP, labels);
-
-			screen_save();
-
-			menu_dynamic_calc_location(m, in.mouse.x, in.mouse.y);
-			region_erase_bordered(&m->boundary);
-
-			action =  menu_dynamic_select(m);
-
-			screen_load();
-
-			menu_dynamic_free(m);
-			string_free(labels);
 		}
 	}
 
@@ -1262,7 +1274,15 @@ static int handle_input_equip_cmp_select(ui_event in, int istate,
 		break;
 
 	case ACT_CTX_EQUIPCMP_SELECT_ACCEPT:
-		assert(s->work_sel >= 0 && s->work_sel < s->nfilt);
+		/* A stale selection after resize/filtering is not an object ID.
+		 * Cancel rather than reading an invalid sorted_indices slot. */
+		if (!angdroid_equip_cmp_selection_valid(s->work_sel, s->nfilt)) {
+			s->isel0 = -1;
+			s->isel1 = -1;
+			s->work_sel = -1;
+			result = EQUIP_CMP_MENU_NEW_PAGE;
+			break;
+		}
 		if (istate == EQUIP_CMP_MENU_SEL0) {
 			s->isel0 = s->sorted_indices[s->work_sel];
 			s->dlg_trans_msg = trans_msg_sel1;
@@ -2307,6 +2327,11 @@ static int reconfigure_for_term_if_necessary(bool update_names,
 				(int)strlen(s->items[i].short_name);
 		}
 	}
+	/* Clamp the selected filtered index to this newly visible page.
+	 * Reversed order and an invalid/empty page are also accounted for. */
+	if (update_names && !result && s->work_sel != -1)
+		s->work_sel = angdroid_equip_cmp_clamp_visible_selection(
+			s->work_sel, s->ifirst, s->npage, s->indinc, s->nfilt);
 	s->nshortnm = length;
 
 	s->term_ncol = ncol;
