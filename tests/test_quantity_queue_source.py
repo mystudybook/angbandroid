@@ -14,12 +14,12 @@ STORE = (ROOT / "app/src/main/cpp/angband/ui-store.c").read_text(encoding="utf-8
 
 class QuantityQueueSourceTest(unittest.TestCase):
     def test_raw_sequence_enqueued_under_one_lock(self):
-        body = BUFFER.split("public void addRawSequence(int[] keys) {", 1)[1].split(
+        body = BUFFER.split("public boolean addRawSequence(int[] keys, int token) {", 1)[1].split(
             "\n\tpublic void performCenterTap(", 1
         )[0]
         self.assertIn("synchronized (keybuffer)", body)
-        self.assertIn("for (int key : keys)", body)
-        self.assertIn("keybuffer.offer(key);", body)
+        self.assertIn("keybuffer.offerSequence(keys, token)", body)
+        self.assertIn("return true;", body)
         self.assertIn("wakeUp();", body)
         self.assertNotIn("keybuffer.clear()", body)
         self.assertNotIn("add(key)", body)
@@ -43,7 +43,7 @@ class QuantityQueueSourceTest(unittest.TestCase):
         self.assertIn("getKeyBackspace()", body)
         self.assertIn("getKeyEnter()", body)
         self.assertIn("if (keys == null) return false;", body)
-        self.assertIn("this.keyBuffer.addRawSequence(keys);", body)
+        self.assertIn("this.keyBuffer.addRawSequence(keys, token)", body)
         self.assertIn("quantityPromptGate.isActive(token)", body)
         self.assertIn("quantityPromptGate.resolve(token)", body)
         self.assertNotIn("clearKeys()", body)
