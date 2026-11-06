@@ -1877,6 +1877,50 @@ def main():
            'verify("All of your coins were stolen!", "你的金幣全被偷走了！");' in blow_test,
            "Monster melee bilingual host C99 regression must be registered")
 
+    # Both canonical variants' monster blow method action texts are localized
+    # at display time; game data, random selection, tags and damage stay intact.
+    blow_actions = source(CPP / "angband/zh-tw-mon-blow-actions.h", errors)
+    blow_actions_test = source(
+        ROOT / "tests/native/test_mon_blow_actions_locale.c", errors)
+    action_section = blow_actions.partition(
+        "static inline const char *angdroid_mon_blow_action_template(")[2]
+    action_section = action_section.partition(
+        "static inline const char *angdroid_mon_blow_save_feedback(")[0]
+    action_pairs = re.findall(
+        r'\{ "((?:\\.|[^"])*)", "((?:\\.|[^"])*)" \}', action_section)
+    canonical_action_keys = set()
+    for variant in ("angband", "faangband"):
+        method_data = source(ROOT /
+            ("variant_lib/" + variant + "/gamedata/blow_methods.txt"), errors)
+        canonical_action_keys.update(
+            line[4:] for line in method_data.splitlines()
+            if line.startswith("act:"))
+    expect(len(action_pairs) == 65 and
+           len({en for en, _ in action_pairs}) == 65 and
+           canonical_action_keys == {en for en, _ in action_pairs} and
+           all(zh and "%" not in zh for en, zh in action_pairs),
+           "Monster blow selected action translations must cover both variants")
+    expect('monster_blow_method_action_render(' in blow_ui and
+           'return monster_blow_method_action_render(method, midx, NULL);' in blow_ui and
+           'int choice = randint0(method->num_messages);' in blow_ui and
+           'in_cursor = angdroid_mon_blow_action_template(msg->act_msg,' in blow_ui and
+           'if (translated) *translated = zh_action;' in blow_ui and
+           'blow_tag_lookup(tag)' in blow_ui and
+           'msgt(method->msgt, "%s%s%s（%d）", m_name, act,' in blow_ui and
+           'msgt(method->msgt, "%s %s%s (%d)", m_name, act,' in blow_ui and
+           'msgt(method->msgt, "%s%s%s", m_name, act, fullstop);' in blow_ui and
+           'msgt(method->msgt, "%s %s%s", m_name, act, fullstop);' in blow_ui and
+           'msg("%s", angdroid_mon_blow_save_feedback(save_msg,' in blow_ui and
+           'OF_PROT_FEAR, true, "You stand your ground!"' in blow_ui and
+           'OF_FREE_ACT, true, "You resist the effects!"' in blow_ui,
+           "Monster blow display must preserve RNG, English and saving throw logic")
+    expect('test_mon_blow_actions_locale.c' in native_tests and
+           'verify(angdroid_mon_blow_save_feedback, "You stand your ground!",'
+                in blow_actions_test and
+           'verify(angdroid_mon_blow_save_feedback, "You resist the effects!",'
+                in blow_actions_test,
+           "Monster blow C99 action and save cases must be registered")
+
     # Gameplay projection feedback and monster attacks are translated only
     # at display sinks, preserving the original damage and status calculations.
     projection_player = source(CPP / "angband/project-player.c", errors)

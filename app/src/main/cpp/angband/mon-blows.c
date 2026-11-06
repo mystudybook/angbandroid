@@ -42,6 +42,7 @@
 #include "project.h"
 #include "droid.h"
 #include "zh-tw-mon-blow-feedback.h"
+#include "zh-tw-mon-blow-actions.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -73,7 +74,8 @@ static blow_tag_t blow_tag_lookup(const char *tag)
  * We fill in the monster name and/or pronoun where necessary in
  * the message to replace instances of {name} or {pronoun}.
  */
-char *monster_blow_method_action(const struct blow_method *method, int midx)
+static char *monster_blow_method_action_render(const struct blow_method *method,
+	int midx, bool *translated)
 {
 	const char punct[] = ".!?;:,'";
 	char buf[1024] = "\0";
@@ -96,7 +98,11 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 	while (choice--) {
 		msg = msg->next;
 	}
-	in_cursor = msg->act_msg;
+	/* Display-only locale selection before target-tag interpolation. */
+	in_cursor = angdroid_mon_blow_action_template(msg->act_msg,
+		angdroid_zh_tw_enabled());
+	bool zh_action = in_cursor != msg->act_msg;
+	if (translated) *translated = zh_action;
 
 	/* Add info to the message */
 	next = strchr(in_cursor, '{');
@@ -120,7 +126,7 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 					if (midx > 0) {
 						int mdesc_mode = MDESC_TARG;
 
-						if (!strchr(punct, *in_cursor)) {
+						if (!zh_action && !strchr(punct, *in_cursor)) {
 							mdesc_mode |= MDESC_COMMA;
 						}
 						monster_desc(m_name,
@@ -129,7 +135,8 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 						strnfcat(buf, sizeof(buf),
 							&end, "%s", m_name);
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "you");
+						strnfcat(buf, sizeof(buf), &end,
+							zh_action ? "你" : "you");
 					}
 					break;
 				}
@@ -141,15 +148,18 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 							MDESC_TARG | MDESC_POSS);
 						strnfcat(buf, sizeof(buf), &end, "%s", m_name);
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "your");
+						strnfcat(buf, sizeof(buf), &end,
+							zh_action ? "你的" : "your");
 					}
 					break;
 				}
 				case BLOW_TAG_HAS: {
 					if (midx > 0) {
-						strnfcat(buf, sizeof(buf), &end, "has");
+						strnfcat(buf, sizeof(buf), &end,
+							zh_action ? "有" : "has");
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "have");
+						strnfcat(buf, sizeof(buf), &end,
+							zh_action ? "有" : "have");
 					}
 					break;
 				}
@@ -167,6 +177,12 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 	}
 	strnfcat(buf, 1024, &end, "%s", in_cursor);
 	return string_make(buf);
+}
+
+/* Preserve the original public API for any other native callers. */
+char *monster_blow_method_action(const struct blow_method *method, int midx)
+{
+	return monster_blow_method_action_render(method, midx, NULL);
 }
 
 /**
@@ -196,19 +212,30 @@ int blow_index(const char *name)
 static void display_blow_message_vs_player(const struct blow_method *method,
 		const char *m_name, struct player *p, int damage)
 {
-	char *act = monster_blow_method_action(method, -1);
+	bool zh_action = false;
+	char *act = monster_blow_method_action_render(method, -1, &zh_action);
 
 	if (act) {
-		const char *fullstop = ".";
+		const char *fullstop = zh_action ? "。" : ".";
 
-		if (suffix(act, "'") || suffix(act, "!")) {
+		if (zh_action) {
+			if (suffix(act, "！") || suffix(act, "？") ||
+				suffix(act, "。") || suffix(act, "」")) fullstop = "";
+		} else if (suffix(act, "'") || suffix(act, "!")) {
 			fullstop = "";
 		}
 		if (damage > 0 && OPT(p, show_damage)) {
-			msgt(method->msgt, "%s %s%s (%d)", m_name, act,
-				fullstop, damage);
+			if (zh_action)
+				msgt(method->msgt, "%s%s%s（%d）", m_name, act,
+					fullstop, damage);
+			else
+				msgt(method->msgt, "%s %s%s (%d)", m_name, act,
+					fullstop, damage);
 		} else {
-			msgt(method->msgt, "%s %s%s", m_name, act, fullstop);
+			if (zh_action)
+				msgt(method->msgt, "%s%s%s", m_name, act, fullstop);
+			else
+				msgt(method->msgt, "%s %s%s", m_name, act, fullstop);
 		}
 		string_free(act);
 	} else if (damage > 0 && OPT(p, show_damage)) {
@@ -230,15 +257,22 @@ static void display_blow_message_vs_player(const struct blow_method *method,
 static void display_blow_message_vs_monster(const struct blow_method *method,
 		const char *m_name, int t_idx)
 {
-	char *act = monster_blow_method_action(method, t_idx);
+	bool zh_action = false;
+	char *act = monster_blow_method_action_render(method, t_idx, &zh_action);
 
 	if (act) {
-		const char *fullstop = ".";
+		const char *fullstop = zh_action ? "。" : ".";
 
-		if (suffix(act, "'") || suffix(act, "!")) {
+		if (zh_action) {
+			if (suffix(act, "！") || suffix(act, "？") ||
+				suffix(act, "。") || suffix(act, "」")) fullstop = "";
+		} else if (suffix(act, "'") || suffix(act, "!")) {
 			fullstop = "";
 		}
-		msgt(method->msgt, "%s %s%s", m_name, act, fullstop);
+		if (zh_action)
+			msgt(method->msgt, "%s%s%s", m_name, act, fullstop);
+		else
+			msgt(method->msgt, "%s %s%s", m_name, act, fullstop);
 		string_free(act);
 	}
 }
@@ -558,7 +592,8 @@ static void melee_effect_timed(melee_effect_handler_context_t *context,
 	} else if (save && randint0(100) < context->p->state.skills[SKILL_SAVE]) {
 		/* Attempt a saving throw if desired. */
 		if (save_msg != NULL) {
-			msg("%s", save_msg);
+			msg("%s", angdroid_mon_blow_save_feedback(save_msg,
+				angdroid_zh_tw_enabled()));
 		}
 		context->obvious = true;
 	} else {
