@@ -29,6 +29,7 @@
 #include "zh-tw-ui.h"
 #include "zh-tw-magic.h"
 #include "zh-tw-item-use-messages.h"
+#include "zh-tw-activation-messages.h"
 #include "obj-gear.h"
 #include "obj-ignore.h"
 #include "obj-info.h"
@@ -146,7 +147,11 @@ static void activation_message(struct object *obj, const struct player *p)
 	} else {
 		message = obj->activation->message;
 	}
-	print_custom_message(obj, message, MSG_GENERIC, p);
+	/* Translate the source template before native {name} expansion.
+	 * The original formatter still handles object identity and grammar. */
+	print_custom_message(obj,
+		angdroid_zh_tw_activation_message(message,
+			angdroid_zh_tw_enabled()), MSG_GENERIC, p);
 }
 
 
