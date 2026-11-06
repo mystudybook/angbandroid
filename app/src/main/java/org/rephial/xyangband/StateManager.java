@@ -412,6 +412,19 @@ public class StateManager {
 		return Plugins.getKeyRightForQuantity(currentPlugin);
 	}
 
+	/**
+	 * Keep the right/backspace/digits/Enter response together in the
+	 * shared key queue. The native game remains the quantity authority.
+	 */
+	public boolean enqueueQuantity(int amount, int max) {
+		int[] keys = QuantityInputSequence.forQuantity(
+			amount, max, getKeyRightForQuantity(),
+			getKeyBackspace(), getKeyEnter());
+		if (keys == null || this.keyBuffer == null) return false;
+		this.keyBuffer.addRawSequence(keys);
+		return true;
+	}
+
 	public void clearKeys() {
 		if (this.keyBuffer != null)
 			this.keyBuffer.clear();
