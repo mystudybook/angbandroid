@@ -1850,7 +1850,7 @@ def main():
     projection_test = source(ROOT / "tests/native/test_projection_feedback_locale.c", errors)
     projection_data = source(ROOT / "variant_lib/angband/gamedata/projection.txt", errors)
     function_sections = (
-        ("angdroid_project_feedback(", 19),
+        ("angdroid_project_feedback(", 30),
         ("angdroid_project_stat(", 5),
         ("angdroid_project_blind_term(", 12),
     )
@@ -1880,6 +1880,34 @@ def main():
            'msg("You take %d damage.", reduced);' in projection_player and
            'msg("You take an extra %d damage.", xtra);' in projection_player,
            "Projection gameplay sinks must use safe locale formatting")
+    # Terrain, player knockback and chest-unlock projection messages are
+    # translated only at visible message sinks; terrain, movement, loot,
+    # disarming and monster state branches must remain untouched.
+    terrain_projection = source(CPP / "angband/project-feat.c", errors)
+    monster_projection = source(CPP / "angband/project-mon.c", errors)
+    item_projection = source(CPP / "angband/project-obj.c", errors)
+    for projection_source, expected_sinks in (
+            (terrain_projection, 10), (monster_projection, 2),
+            (item_projection, 1)):
+        expect('"droid.h"' in projection_source and
+               '"zh-tw-projection-feedback.h"' in projection_source and
+               projection_source.count(
+                   'msg("%s", angdroid_project_feedback(') == expected_sinks,
+               "Projection terrain/knockback/chest display sinks must stay localized")
+    expect('square_destroy_rubble(cave, grid);' in terrain_projection and
+           'square_destroy_door(cave, grid);' in terrain_projection and
+           'square_disable_trap(cave, grid);' in terrain_projection and
+           'square_unlock_door(cave, grid);' in terrain_projection and
+           'monster_swap(grid, next);' in monster_projection and
+           'sqinfo_off(square(cave, grid)->info, SQUARE_PROJECT);' in
+               monster_projection and
+           'unlock_chest((struct object * const)context->obj);' in item_projection,
+           "Projection locale must not change terrain, movement or chest rules")
+    expect('verify(angdroid_project_feedback, "Click!", "喀噠！");' in projection_test
+           and 'verify(angdroid_project_feedback, "You are thrown into molten lava!",'
+                in projection_test,
+           "Projection environment bilingual C99 cases must be registered")
+
     expect('"droid.h"' in projection_monster and
            all(format_string in projection_monster for format_string in
                ('%s 試圖施法，但失敗了。', '%s 被擊退了。',

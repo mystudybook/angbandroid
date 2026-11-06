@@ -28,6 +28,8 @@
 #include "project.h"
 #include "source.h"
 #include "trap.h"
+#include "droid.h"
+#include "zh-tw-projection-feedback.h"
 
 
 /**
@@ -101,7 +103,8 @@ static void project_feature_handler_KILL_WALL(project_feature_handler_context_t 
 	if (square_isrubble(cave, grid)) {
 		/* Message */
 		if (square_isseen(cave, grid)) {
-			msg("The rubble turns into mud!");
+			msg("%s", angdroid_project_feedback("The rubble turns into mud!",
+					angdroid_zh_tw_enabled()));
 			context->obvious = true;
 
 			/* Forget the wall */
@@ -119,14 +122,16 @@ static void project_feature_handler_KILL_WALL(project_feature_handler_context_t 
 					&& !ignore_item_ok(player,
 					square_object(cave, grid))
 					&& square_isseen(cave, grid)) {
-				msg("There was something buried in the rubble!");
+				msg("%s", angdroid_project_feedback("There was something buried in the rubble!",
+					angdroid_zh_tw_enabled()));
 				context->obvious = true;
 			}
 		}
 	} else if (square_isdoor(cave, grid)) {
 		/* Hack -- special message */
 		if (square_isseen(cave, grid)) {
-			msg("The door turns into mud!");
+			msg("%s", angdroid_project_feedback("The door turns into mud!",
+					angdroid_zh_tw_enabled()));
 			context->obvious = true;
 
 			/* Forget the wall */
@@ -138,8 +143,10 @@ static void project_feature_handler_KILL_WALL(project_feature_handler_context_t 
 	} else if (square_hasgoldvein(cave, grid)) {
 		/* Message */
 		if (square_isseen(cave, grid)) {
-			msg("The vein turns into mud!");
-			msg("You have found something!");
+			msg("%s", angdroid_project_feedback("The vein turns into mud!",
+					angdroid_zh_tw_enabled()));
+			msg("%s", angdroid_project_feedback("You have found something!",
+					angdroid_zh_tw_enabled()));
 			context->obvious = true;
 
 			/* Forget the wall */
@@ -154,7 +161,8 @@ static void project_feature_handler_KILL_WALL(project_feature_handler_context_t 
 	} else if (square_ismagma(cave, grid) || square_isquartz(cave, grid)) {
 		/* Message */
 		if (square_isseen(cave, grid)) {
-			msg("The vein turns into mud!");
+			msg("%s", angdroid_project_feedback("The vein turns into mud!",
+					angdroid_zh_tw_enabled()));
 			context->obvious = true;
 
 			/* Forget the wall */
@@ -166,7 +174,8 @@ static void project_feature_handler_KILL_WALL(project_feature_handler_context_t 
 	} else if (square_isgranite(cave, grid)) {
 		/* Message */
 		if (square_isseen(cave, grid)) {
-			msg("The wall turns into mud!");
+			msg("%s", angdroid_project_feedback("The wall turns into mud!",
+					angdroid_zh_tw_enabled()));
 			context->obvious = true;
 
 			/* Forget the wall */
@@ -194,7 +203,8 @@ static void project_feature_handler_KILL_DOOR(project_feature_handler_context_t 
 		/* Check line of sight */
 		if (square_isview(cave, grid)) {
 			/* Message */
-			msg("There is a bright flash of light!");
+			msg("%s", angdroid_project_feedback("There is a bright flash of light!",
+					angdroid_zh_tw_enabled()));
 			context->obvious = true;
 
 			/* Visibility change */
@@ -230,7 +240,8 @@ static void project_feature_handler_KILL_TRAP(project_feature_handler_context_t 
 	if (square_isdisarmabletrap(cave, grid)) {
 		/* Check if visible */
 		if (square_isseen(cave, grid)) {
-			msg("The trap seizes up.");
+			msg("%s", angdroid_project_feedback("The trap seizes up.",
+					angdroid_zh_tw_enabled()));
 			context->obvious = true;
 		}
 
@@ -242,7 +253,8 @@ static void project_feature_handler_KILL_TRAP(project_feature_handler_context_t 
 
 		/* Check line of sound; approximated with square_isview() */
 		if (square_isview(cave, grid)) {
-			msg("Click!");
+			msg("%s", angdroid_project_feedback("Click!",
+					angdroid_zh_tw_enabled()));
 			context->obvious = true;
 		}
 	}

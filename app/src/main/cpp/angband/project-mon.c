@@ -33,6 +33,8 @@
 #include "player-util.h"
 #include "project.h"
 #include "source.h"
+#include "droid.h"
+#include "zh-tw-projection-feedback.h"
 
 
 /**
@@ -200,7 +202,8 @@ void thrust_away(struct loc centre, struct loc target, int grids_away)
 				else if (d == (8 + first_d - 1)) {
 					/* Message for player. */
 					if (square(cave, grid)->mon < 0)
-						msg("You come to rest next to a wall.");
+						msg("%s", angdroid_project_feedback("You come to rest next to a wall.",
+					angdroid_zh_tw_enabled()));
 					i = grids_away;
 				}
 			} else {
@@ -223,7 +226,8 @@ void thrust_away(struct loc centre, struct loc target, int grids_away)
 	/* Some special messages or effects for player or monster. */
 	if (square_isfiery(cave, grid)) {
 		if (square(cave, grid)->mon < 0) {
-			msg("You are thrown into molten lava!");
+			msg("%s", angdroid_project_feedback("You are thrown into molten lava!",
+					angdroid_zh_tw_enabled()));
 		}
 	}
 
