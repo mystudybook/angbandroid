@@ -39,6 +39,7 @@
 #include "ui-context.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "menu-text-fit.h"
 #include "ui-game.h"
 #include "ui-input.h"
 #include "ui-keymap.h"
@@ -652,7 +653,9 @@ int context_menu_object(struct object *obj)
 	region r;
 	int selected;
 	char *labels;
-	char header[120];
+	char header[256];
+	char prompt_text[512];
+	char prompt_visible[512];
 
 	textblock *tb;
 	region area = { 0, 0, 0, 0 };
@@ -661,12 +664,13 @@ int context_menu_object(struct object *obj)
 	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
 	unsigned char cmdkey;
 
-	m = menu_dynamic_new();
-	if (!m || !obj)
+	/* The normal inventory caller exits when we return 0. Never enter a
+	 * selection menu with an invalid object or an unusably small screen. */
+	if (!obj || !Term || Term->wid < 8 || Term->hgt < 4)
 		return 0;
-
-	object_desc(header, sizeof(header), obj, ODESC_PREFIX | ODESC_BASE,
-		player);
+	m = menu_dynamic_new();
+	if (!m)
+		return 0;
 
 	labels = string_make(lower_case);
 	m->selections = labels;
@@ -765,31 +769,36 @@ int context_menu_object(struct object *obj)
 	ADD_LABEL( (object_is_ignored(obj) ? "Unignore" : "Ignore"), CMD_IGNORE,
 			   MN_ROW_VALID);
 
-	/* work out display region */
-	r.width = (int)menu_dynamic_longest_entry(m) + 3 + 2; /* +3 for tag,
-														   * 2 for pad */
-	r.col = Term->wid - r.width - 1;
-	r.row = 1;
-	r.page_rows = m->count;
-
+	/* Dynamic menu layout already caps CJK display-cell widths and
+	 * page height. The old arithmetic could create a negative column
+	 * when Chinese labels were wider than a portrait terminal. */
+	menu_dynamic_calc_location(m, Term->wid - 1, -1);
+	r = m->boundary;
 	area.width = -(r.width + 2);
 
 	/* Hack -- no flush needed */
 	msg_flag = false;
 	screen_save();
 
-	/* Display info */
+	/* Item lore remains knowledge-gated. For narrow terminals, skip
+	 * the side panel if there are not enough columns to display it. */
 	tb = object_info(obj, OINFO_NONE);
-	object_desc(header, sizeof(header), obj, ODESC_PREFIX | ODESC_FULL,
-		player);
-
-	textui_textblock_place(tb, area, format("%s", header));
+	object_desc(header, sizeof(header), obj,
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
+	if (Term->wid - r.width >= 14)
+		textui_textblock_place(tb, area, format("%s", header));
 	textblock_free(tb);
 
-	menu_layout(m, &r);
 	region_erase_bordered(&r);
 
-	prt(format("(Enter to select, ESC) Command for %s:", header), 0, 0);
+	/* Use the existing bilingual prompt template. Clip the complete
+	 * UTF-8 glyphs by terminal cells, never by bytes. */
+	strnfmt(prompt_text, sizeof(prompt_text),
+		angdroid_game_ui_text("(Enter to select, ESC) Command for %s:",
+			angdroid_zh_tw_enabled()), header);
+	angdroid_menu_copy_columns(prompt_visible, sizeof(prompt_visible),
+		prompt_text, (size_t)Term->wid);
+	prt(prompt_visible, 0, 0);
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
@@ -797,8 +806,8 @@ int context_menu_object(struct object *obj)
 
 	screen_load();
 
-	cmdkey = cmd_lookup_key(selected, mode);
-
+	/* A canceled menu returns -1; inspect/drop-all use pseudo commands
+	 * outside cmd_code. Do not index the keymap for those values. */
 	switch (selected) {
 		case -1:
 			/* User cancelled the menu. */
@@ -809,7 +818,7 @@ int context_menu_object(struct object *obj)
 			/* Display info */
 			tb = object_info(obj, OINFO_NONE);
 			object_desc(header, sizeof(header), obj,
-				ODESC_PREFIX | ODESC_FULL, player);
+				ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 
 			textui_textblock_show(tb, area, format("%s", header));
 			textblock_free(tb);
@@ -846,6 +855,9 @@ int context_menu_object(struct object *obj)
 		case CMD_ACTIVATE:
 		case CMD_FIRE:
 		case CMD_USE:
+			/* Only real command values can be passed to the keymap.
+			 * The pseudo inspect/drop-all values never reach here. */
+			cmdkey = cmd_lookup_key(selected, mode);
 			/* Check for inscriptions that trigger confirmation. */
 			allowed = key_confirm_command(cmdkey) &&
 				get_item_allow(obj, cmdkey, selected, false);
