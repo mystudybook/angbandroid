@@ -29,6 +29,17 @@ static inline const char *angdroid_project_feedback(const char *english, int zh_
         { "Your mind is dulled.", "你的思緒變得遲鈍。" },
         { "Your energy is sapped!", "你的精力被抽走了！" },
         { "Gravity warps around you.", "你周圍的重力發生扭曲。" },
+        { "The rubble turns into mud!", "碎石堆化成了泥漿！" },
+        { "There was something buried in the rubble!", "碎石堆裡原來埋著東西！" },
+        { "The door turns into mud!", "門化成了泥漿！" },
+        { "The vein turns into mud!", "礦脈化成了泥漿！" },
+        { "You have found something!", "你發現了某樣東西！" },
+        { "The wall turns into mud!", "牆壁化成了泥漿！" },
+        { "There is a bright flash of light!", "一道耀眼的光芒閃過！" },
+        { "The trap seizes up.", "陷阱卡住不動了。" },
+        { "Click!", "喀噠！" },
+        { "You come to rest next to a wall.", "你在牆邊停了下來。" },
+        { "You are thrown into molten lava!", "你被拋進滾燙的熔岩中！" },
         { "You're not as powerful as you used to be...", "你感覺自己不再像以前那麼強大……" },
     };
     size_t i;

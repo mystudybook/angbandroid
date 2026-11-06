@@ -30,6 +30,8 @@
 #include "player-calcs.h"
 #include "project.h"
 #include "source.h"
+#include "droid.h"
+#include "zh-tw-projection-feedback.h"
 
 
 /**
@@ -363,7 +365,8 @@ static void project_object_handler_KILL_TRAP(project_object_handler_context_t *c
 		if (context->obj->known
 				&& !ignore_item_ok(player, context->obj)) {
 			context->obj->known->pval = context->obj->pval;
-			msg("Click!");
+			msg("%s", angdroid_project_feedback("Click!",
+					angdroid_zh_tw_enabled()));
 			context->obvious = true;
 		}
 	}
