@@ -33,8 +33,8 @@ int main(void)
     CHECK(p == strlen("中文法術"));
     CHECK(angdroid_spell_reader_line_count("中文法術", 5) == 2);
 
-    p = one(mixed, 0, 5, "A中");
-    p = one(mixed, p, 5, "文B");
+    p = one(mixed, 0, 5, "A中文");
+    p = one(mixed, p, 5, "B");
     CHECK(p == strlen(mixed));
     CHECK(angdroid_spell_reader_line_count(mixed, 5) == 2);
 
