@@ -338,3 +338,12 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - **遊戲效果保持不變**：不修改 `class.txt`、`spell->text`、法術索引、MP、失敗率、骰子、隨機數、瞄準取消、施法回合或存檔資料；保留法術瀏覽原有平均傷害資訊、非施法閱讀操作與文字輸出方式。
 - **輸出與小螢幕注意事項**：仍使用 `text_out_to_screen` 的原生換行路徑，未擅自修改終端機的寬字元換行機制。實際手機窄螢幕的換行、捲動與中文顯示仍需 emulator/實機驗證。
 - **驗證**：新增 `tests/native/test_spell_descriptions_locale.c` 對 30 組中英文字串、原文回退進行純 C99 測試（預期共 66 assertions），新增 `tests/test_spell_descriptions_locale_source.py` 直接解析官方 `class.txt`，比對 30 條精確映射、7 條 Rogue 共用描述，驗證顯示層接線、數值資訊與英文字串回退，分別納入 `scripts/test-native-utf8.sh` 與 `scripts/verify-zh-tw.sh`。以上測試已註冊但完整執行、Android NDK/Gradle 及實機測試仍待本機完成；本批不使用 GitHub Actions（`[skip ci]`）。
+
+
+## 第 116 批 — 德魯伊 27 種法術詳細說明繁體中文化
+
+- 對照 `variant_lib/angband/gamedata/class.txt` 的全部 27 種 Druid 法術，為 `zh-tw-spell-descriptions.h` 補上完整原始英文＋繁體中文對照，既有 Mage 30 種維持原樣。累計 57 種原文對照；不修改遊戲資料、法術消耗、角色狀態、隨機判定或存檔。
+- Druid 和 Ranger 共用 7 種法術名稱：其中 6 種原始文字完全相同，可以共用翻譯。獨立保護 Herbal Curing：Ranger 的描述不包含額外的營養恢復，不能套用 Druid 版本的文字；未知描述仍回退英文。
+- 數值與危險警告逐項保留：狐狸變身不能使用物品、未指定目標的閃電會擊中玩家、地震在城鎮無效且不會摧毀神器、各種半徑/回合/傷害數字與流星爆炸範圍均保持原文資訊。
+- 新增 `tests/native/test_druid_spell_descriptions_locale.c`（27×2+8=62 個預期斷言）與 `tests/test_druid_spell_descriptions_locale_source.py`，同步修正既有 Mage Python 驗證，只針對 Mage 30 組進行核對，讓表格安全擴增。註冊到 `scripts/test-native-utf8.sh`、`scripts/verify-zh-tw.sh`。
+- 原始文字的精確匹配、英文回退機制、遊戲效果與 `ui-spell.c` 顯示接線不改；完整 Native/Python、Android Gradle/NDK、模擬器與實機仍需本機驗證，且未執行 GitHub Actions（`[skip ci]`）。
