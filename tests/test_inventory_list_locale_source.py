@@ -55,6 +55,13 @@ class InventoryListLocaleSourceTest(unittest.TestCase):
         self.assertIn("player->upkeep->total_weight, diff, angdroid_zh_tw_enabled()", UI)
         self.assertIn("angdroid_inventory_slot_text(buf, sizeof(buf), i,", UI)
         self.assertIn('strnfmt(tmp_val, sizeof(tmp_val), "箭袋：%d 支彈藥", count);', UI)
+        # Footer must stop when rotated/tiny terminals have no row or label.
+        self.assertIn("if ((mode & OLIST_QUIVER) && z_info->quiver_slot_size > 0)", UI)
+        self.assertIn("index >= (int)strlen(all_letters_nohjkl)", UI)
+        self.assertIn("line < 0 || line >= Term->hgt", UI)
+        self.assertIn("col + 3 > Term->wid", UI)
+        self.assertIn("angdroid_menu_copy_columns(visible, sizeof(visible), tmp_val,", UI)
+        self.assertIn("c_put_str(COLOUR_L_UMBER, visible, line, field_col);", UI)
         self.assertIn("if (in_term) {", UI)
         self.assertIn("build_obj_list(player->body.count - 1, NULL, tester, mode);", UI)
         self.assertIn("build_obj_list(last_slot, player->upkeep->quiver, tester, mode);", UI)
