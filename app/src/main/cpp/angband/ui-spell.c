@@ -37,6 +37,7 @@
 #include "zh-tw-spell-descriptions.h"
 #include "zh-tw-projection-terms.h"
 #include "../curses/unicode_display.h"
+#include "zh-tw-spell-reader-pages.h"
 
 
 /**
@@ -128,6 +129,97 @@ static void spell_menu_display(struct menu *m, int oid, bool cursor,
 	c_prt(attr, illegible ? illegible : out, row, col);
 }
 
+/* Open full description in a separate paged reader.
+ * Does not replace the spell menu's arrow or letter-key behaviors. */
+static void spell_menu_show_full_description(const struct class_spell *spell)
+{
+    bool zh;
+    const char *description, *name;
+    size_t first = 0;
+    if (!spell) return;
+    zh = angdroid_zh_tw_enabled();
+    description = angdroid_zh_tw_spell_description(spell->name,
+        spell->text, zh);
+    name = angdroid_zh_tw_spell_name(spell->name, zh);
+    if (!description) return;
+
+    screen_save();
+    while (true) {
+        int width, height;
+        size_t columns, visible, total, row = 0, start = 0, next;
+        char line[1024];
+        ui_event in;
+        Term_get_size(&width, &height);
+        if (width < 4 || height < 4) break;
+        columns = (size_t)(width - 1);
+        visible = (size_t)(height - 2);
+        total = angdroid_spell_reader_line_count(description, columns);
+        first = angdroid_spell_reader_clamp_scroll(first, total, visible);
+
+        Term_clear();
+        prt(name, 0, 0);
+        while (row < first + visible &&
+            angdroid_spell_reader_next_line(description, start, columns,
+                line, sizeof(line), &next)) {
+            if (row >= first)
+                c_prt(COLOUR_WHITE, line, (int)(row - first) + 1, 0);
+            start = next;
+            ++row;
+        }
+        if (zh)
+            prt(format("第 %d/%d 行 ↑↓捲動 PgUp/PgDn翻頁 Esc返回",
+                (int)(first + (total > 0)), (int)total), height - 1, 0);
+        else
+            prt(format("Line %d/%d Arrows scroll PgUp/PgDn page Esc back",
+                (int)(first + (total > 0)), (int)total), height - 1, 0);
+
+        in = inkey_ex();
+        if (in.type == EVT_RESIZE) continue;
+        if (in.type == EVT_MOUSE) {
+            /* Tap the title to exit; upper/lower page to go back/forward. */
+            if (in.mouse.y == 0) break;
+            if (in.mouse.y < height / 2)
+                first = angdroid_spell_reader_page_up(first, visible);
+            else
+                first = angdroid_spell_reader_page_down(first, total, visible);
+            continue;
+        }
+        if (in.type != EVT_KBRD) continue;
+        switch (in.key.code) {
+            case ESCAPE:
+            case 'q':
+            case 'Q':
+                screen_load();
+                return;
+            case KC_HOME:
+                first = 0;
+                break;
+            case KC_END:
+                first = angdroid_spell_reader_clamp_scroll(total, total, visible);
+                break;
+            case ARROW_UP:
+            case 'k':
+                if (first > 0) --first;
+                break;
+            case ARROW_DOWN:
+            case 'j':
+                first = angdroid_spell_reader_clamp_scroll(first + 1, total, visible);
+                break;
+            case KC_PGUP:
+            case '[':
+                first = angdroid_spell_reader_page_up(first, visible);
+                break;
+            case KC_PGDOWN:
+            case ' ':
+            case KC_ENTER:
+            case ']':
+                first = angdroid_spell_reader_page_down(first, total, visible);
+                break;
+        }
+    }
+    screen_load();
+}
+
 /**
  * Handle an event on a menu row.
  */
@@ -142,6 +234,13 @@ static bool spell_menu_handler(struct menu *m, const ui_event *e, int oid)
 	else if (e->type == EVT_KBRD) {
 		if (e->key.code == '?') {
 			d->show_description = !d->show_description;
+			return true;
+		}
+		if (e->key.code == ']') {
+			const struct class_spell *spell = spell_by_index(player,
+				d->spells[oid]);
+			spell_menu_show_full_description(spell);
+			return true;
 		}
 	}
 
@@ -261,7 +360,8 @@ static struct menu *spell_menu_new(const struct object *obj,
 	m->flags = MN_CASELESS_TAGS;
 	m->selections = all_letters_nohjkl;
 	m->browse_hook = spell_menu_browser;
-	m->cmd_keys = "?";
+	/* Separate reader command without modifying spell tag selection. */
+	m->cmd_keys = "?]";
 
 	/* Set size */
 	loc.page_rows = d->n_spells + 1;
@@ -294,11 +394,11 @@ static int spell_menu_select(struct menu *m, const char *noun, const char *verb)
 
 	/* Format, capitalise and display */
 	if (angdroid_zh_tw_enabled()) {
-        strnfmt(buf, sizeof buf, "選擇%s（%s）？按 ? 切換說明",
+        strnfmt(buf, sizeof buf, "選擇%s（%s）？? 切換說明、] 閱讀全文",
             angdroid_zh_tw_magic_term(noun, true),
             angdroid_zh_tw_magic_term(verb, true));
     } else {
-        strnfmt(buf, sizeof buf, "%s which %s? ('?' to toggle description)",
+        strnfmt(buf, sizeof buf, "%s which %s? ('?' toggle, ']' read all)",
                 verb, noun);
         my_strcap(buf);
     }
@@ -321,10 +421,10 @@ static void spell_menu_browse(struct menu *m, const char *noun)
 
 	region_erase_bordered(&m->active);
 	if (angdroid_zh_tw_enabled())
-        prt(format("瀏覽%s（按 ? 切換說明）",
+        prt(format("瀏覽%s（? 切換說明、] 閱讀全文）",
             angdroid_zh_tw_magic_term(noun, true)), 0, 0);
     else
-        prt(format("Browsing %ss. ('?' to toggle description)", noun), 0, 0);
+        prt(format("Browsing %ss. ('?' toggle, ']' read all)", noun), 0, 0);
 
 	d->browse = true;
 	menu_select(m, 0, true);
