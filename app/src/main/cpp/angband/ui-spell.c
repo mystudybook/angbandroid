@@ -15,6 +15,10 @@
  *    and not for profit purposes provided that this copyright and statement
  *    are included in all such copies.  Other copyrights may also apply.
  */
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#include <time.h>
 #include "angband.h"
 #include "cave.h"
 #include "cmds.h"
@@ -54,6 +58,7 @@ struct spell_menu_data {
 	int selected_spell;
 	/* -1 = no pending tap; a touch must explicitly arm its row. */
 	int touch_pending_oid;
+	uint64_t touch_pending_at_ms;
 };
 
 
@@ -257,7 +262,8 @@ static void spell_menu_relayout(struct menu *m)
     struct spell_menu_data *d = menu_priv(m);
 
     /* Rotation or returning from the reader cancels an old confirmation. */
-    d->touch_pending_oid = -1;
+    angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,
+        &d->touch_pending_at_ms);
     Term_get_size(&width, &height);
     menu_width = angdroid_spell_reader_menu_width(width);
     bounds.col = -menu_width;
@@ -265,6 +271,20 @@ static void spell_menu_relayout(struct menu *m)
     bounds.width = menu_width;
     bounds.page_rows = m->count + 1;
     (void)menu_layout(m, &bounds);
+}
+
+/* Use elapsed monotonic time, not wall-clock time: a handset's clock
+ * can be manually changed while a spell selection is open. Android
+ * minSdk 22 supports clock_gettime(CLOCK_MONOTONIC). A failed read gives
+ * zero, which can never confirm a cast. */
+static uint64_t spell_menu_monotonic_ms(void)
+{
+    struct timespec ts;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0 || ts.tv_sec < 0)
+        return 0;
+    return (uint64_t)ts.tv_sec * UINT64_C(1000) +
+        (uint64_t)ts.tv_nsec / UINT64_C(1000000);
 }
 
 /**
@@ -280,20 +300,24 @@ static bool spell_menu_handler(struct menu *m, const ui_event *e, int oid)
         if (!angdroid_spell_menu_touch_selectable(
                 region_inside(&m->active, e), e->mouse.button, oid) ||
                 oid >= d->n_spells) {
-            d->touch_pending_oid = -1;
+            angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,
+                &d->touch_pending_at_ms);
             return false;
         }
         /* Casting/studying needs two intentional touches of the SAME
          * spell. Browsing is harmless and remains a single touch. */
         if (!angdroid_spell_menu_confirm_touch(
-                &d->touch_pending_oid, oid, d->browse))
+                &d->touch_pending_oid, &d->touch_pending_at_ms,
+                oid, d->browse, spell_menu_monotonic_ms()))
             return true;
     } else if (e->type == EVT_SELECT) {
         /* Enter and letter tags still perform the original single-step
          * selection: only touch interactions require confirmation. */
-        d->touch_pending_oid = -1;
+        angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,
+            &d->touch_pending_at_ms);
     } else if (e->type == EVT_KBRD) {
-        d->touch_pending_oid = -1;
+        angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,
+            &d->touch_pending_at_ms);
         if (e->key.code == '?') {
             d->show_description = !d->show_description;
             return true;
@@ -309,7 +333,8 @@ static bool spell_menu_handler(struct menu *m, const ui_event *e, int oid)
         }
         return false;
     } else {
-        d->touch_pending_oid = -1;
+        angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,
+            &d->touch_pending_at_ms);
         return false;
     }
 
@@ -328,7 +353,8 @@ static void spell_menu_browser(int oid, void *data, const region *loc)
 	struct spell_menu_data *d = data;
 	/* Arrow/key navigation away from an armed touch cancels that tap. */
 	if (d->touch_pending_oid >= 0 && d->touch_pending_oid != oid)
-		d->touch_pending_oid = -1;
+		angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,
+		    &d->touch_pending_at_ms);
 	int spell_index = d->spells[oid];
 	const struct class_spell *spell = spell_by_index(player, spell_index);
 
@@ -424,7 +450,8 @@ static struct menu *spell_menu_new(const struct object *obj,
 	/* Copy across private data */
 	d->is_valid = is_valid;
 	d->selected_spell = -1;
-	d->touch_pending_oid = -1;
+	angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,
+	    &d->touch_pending_at_ms);
 	d->browse = false;
 	d->show_description = show_description;
 
@@ -468,11 +495,11 @@ static int spell_menu_select(struct menu *m, const char *noun, const char *verb)
 
 	/* Format, capitalise and display */
 	if (angdroid_zh_tw_enabled()) {
-        strnfmt(buf, sizeof buf, "選擇%s（%s）？觸控同列兩次確認；? 說明 ] 全文",
+        strnfmt(buf, sizeof buf, "選擇%s（%s）？2 秒內觸控同列兩次確認；? 說明 ] 全文",
             angdroid_zh_tw_magic_term(noun, true),
             angdroid_zh_tw_magic_term(verb, true));
     } else {
-        strnfmt(buf, sizeof buf, "%s which %s? Tap row twice; ? help, ] full",
+        strnfmt(buf, sizeof buf, "%s which %s? Tap same row twice within 2s; ? help, ] full",
                 verb, noun);
         my_strcap(buf);
     }
@@ -504,7 +531,8 @@ static void spell_menu_browse(struct menu *m, const char *noun)
         prt(format("Browsing %ss. ('?' toggle, ']' read all)", noun), 0, 0);
 
 	d->browse = true;
-	d->touch_pending_oid = -1;
+	angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,
+	    &d->touch_pending_at_ms);
 	menu_select(m, 0, true);
 
 	screen_load();

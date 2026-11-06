@@ -118,10 +118,11 @@ class FullSpellReaderSourceTest(unittest.TestCase):
         self.assertIn("e->mouse.button, oid)", handler)
         self.assertIn("oid >= d->n_spells", handler)
         self.assertIn("angdroid_spell_menu_confirm_touch(", handler)
-        self.assertIn("&d->touch_pending_oid, oid, d->browse", handler)
+        self.assertIn("&d->touch_pending_oid, &d->touch_pending_at_ms,", handler)
+        self.assertIn("oid, d->browse, spell_menu_monotonic_ms()", handler)
         self.assertIn("else if (e->type == EVT_SELECT) {", handler)
         self.assertIn("else if (e->type == EVT_KBRD) {", handler)
-        self.assertIn("d->touch_pending_oid = -1;", handler)
+        self.assertIn("angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,", handler)
         self.assertIn("if (oid < 0 || oid >= d->n_spells) return false;", handler)
         self.assertIn("d->selected_spell = d->spells[oid];", handler)
         self.assertIn("return d->browse ? true : false;", handler)
@@ -138,30 +139,57 @@ class FullSpellReaderSourceTest(unittest.TestCase):
 
     def test_two_taps_required_for_casting_and_studying(self):
         self.assertIn("static inline int angdroid_spell_menu_confirm_touch(", PAGES)
+        self.assertIn("static inline void angdroid_spell_menu_cancel_touch(", PAGES)
+        self.assertIn("ANGDROID_SPELL_TOUCH_CONFIRM_WINDOW_MS UINT64_C(2000)", PAGES)
+        self.assertIn("uint64_t *armed_at_ms, int oid, int browse,", PAGES)
+        self.assertIn("uint64_t now_ms)", PAGES)
         self.assertIn("if (browse) {", PAGES)
-        self.assertIn("if (*armed_oid != oid) {", PAGES)
+        self.assertIn("*armed_oid == oid && *armed_at_ms != 0 && now_ms != 0", PAGES)
+        self.assertIn("now_ms >= *armed_at_ms", PAGES)
+        self.assertIn("now_ms - *armed_at_ms <=", PAGES)
+        self.assertIn("ANGDROID_SPELL_TOUCH_CONFIRM_WINDOW_MS", PAGES)
         self.assertIn("*armed_oid = oid;", PAGES)
-        self.assertIn("*armed_oid = -1;", PAGES)
-        self.assertIn("if (!armed_oid || oid < 0) return 0;", PAGES)
+        self.assertIn("*armed_at_ms = now_ms;", PAGES)
+        self.assertIn("if (!armed_oid || !armed_at_ms) return 0;", PAGES)
+        self.assertIn("angdroid_spell_menu_cancel_touch(armed_oid, armed_at_ms);",
+                      PAGES)
 
         handler = SPELL.split("static bool spell_menu_handler(", 1)[1]
         handler = handler.split("static void spell_menu_browser(", 1)[0]
         self.assertIn("if (!angdroid_spell_menu_confirm_touch(", handler)
+        self.assertIn("&d->touch_pending_oid, &d->touch_pending_at_ms,", handler)
+        self.assertIn("oid, d->browse, spell_menu_monotonic_ms()", handler)
         self.assertIn("return true;", handler)
         self.assertEqual(1, handler.count("d->selected_spell = d->spells[oid];"))
-        self.assertIn("d->touch_pending_oid = -1;", SPELL)
-        self.assertIn("if (d->touch_pending_oid >= 0 && d->touch_pending_oid != oid)", SPELL)
+        self.assertIn("uint64_t touch_pending_at_ms;", SPELL)
+        self.assertIn("angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,",
+                      SPELL)
+        self.assertIn("if (d->touch_pending_oid >= 0 && d->touch_pending_oid != oid)",
+                      SPELL)
         self.assertIn("spell_menu_relayout\t/* reflow menu", SPELL)
         self.assertIn("d->browse = true;", SPELL)
-        self.assertIn("d->touch_pending_oid = -1;", SPELL)
+        self.assertIn("m->selections = all_letters_nohjkl;", SPELL)
         self.assertNotIn("m->flags = MN_CASELESS_TAGS | MN_DBL_TAP", SPELL)
-        self.assertIn("觸控同列兩次確認", SPELL)
-        self.assertIn("Tap row twice", SPELL)
+        self.assertIn("2 秒內觸控同列兩次確認", SPELL)
+        self.assertIn("Tap same row twice within 2s", SPELL)
         self.assertIn("char buf[192];", SPELL)
-        self.assertIn("angdroid_utf8_clip_columns(buf, (size_t)(Term->wid - 1));", SPELL)
+        self.assertIn("angdroid_utf8_clip_columns(buf, (size_t)(Term->wid - 1));",
+                      SPELL)
 
-        # The Java terminal sends one mouse press for each completed tap,
-        # not separate mouse events for both ACTION_DOWN and ACTION_UP.
+        # C99 must use a monotonic millisecond clock, not time(NULL),
+        # clock() (process CPU time), or adjustable gettimeofday().
+        self.assertIn("#define _POSIX_C_SOURCE 200809L", SPELL)
+        self.assertIn("#include <time.h>", SPELL)
+        self.assertIn("clock_gettime(CLOCK_MONOTONIC, &ts)", SPELL)
+        self.assertIn("(uint64_t)ts.tv_nsec / UINT64_C(1000000)", SPELL)
+        self.assertIn("if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0", SPELL)
+        self.assertNotIn("gettimeofday(", SPELL)
+        self.assertNotIn("time(NULL)", SPELL)
+        BUILD = (ROOT / "app/build.gradle").read_text(encoding="utf-8")
+        self.assertIn("minSdk = 22", BUILD)
+
+        # The Android terminal delivers a single mouse press after
+        # ACTION_UP; keyboard Enter and spell-letter tags remain unchanged.
         JAVA = (ROOT / "app/src/main/java/org/rephial/xyangband/TermView.java").read_text(
             encoding="utf-8")
         self.assertIn("public boolean onSingleTapUp(MotionEvent event)", JAVA)
@@ -169,14 +197,30 @@ class FullSpellReaderSourceTest(unittest.TestCase):
         self.assertIn("state.addMousePress(p.y, p.x, 1, 0);", JAVA)
 
         for phrase in (
-            "angdroid_spell_menu_confirm_touch(&armed, 0, 0)",
-            "angdroid_spell_menu_confirm_touch(&armed, 3, 0)",
-            "angdroid_spell_menu_confirm_touch(&armed, 2, 1)",
-            "angdroid_spell_menu_confirm_touch(NULL, 4, 0)",
-            "armed = -1;",
+            "ANGDROID_SPELL_TOUCH_CONFIRM_WINDOW_MS == UINT64_C(2000)",
+            "UINT64_C(3000)",
+            "UINT64_C(6001)",
+            "UINT64_C(4999)",
+            "UINT64_MAX",
+            "angdroid_spell_menu_cancel_touch(&armed, &at)",
+            "angdroid_spell_menu_confirm_touch(",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, NATIVE)
+
+    def test_timeout_does_not_lose_existing_keyboard_behavior(self):
+        handler = SPELL.split("static bool spell_menu_handler(", 1)[1]
+        handler = handler.split("static void spell_menu_browser(", 1)[0]
+        self.assertIn("else if (e->type == EVT_SELECT) {", handler)
+        self.assertIn("else if (e->type == EVT_KBRD) {", handler)
+        self.assertIn("d->selected_spell = d->spells[oid];", handler)
+        self.assertIn("return d->browse ? true : false;", handler)
+        self.assertIn("if (e->key.code == ']')", handler)
+        self.assertIn("if (e->key.code == '?')", handler)
+        self.assertIn("spell_menu_relayout(m);", handler)
+        self.assertIn("angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,",
+                      handler)
+        self.assertEqual(1, handler.count("d->selected_spell = d->spells[oid];"))
 
     def test_native_cases_are_registered(self):
         for phrase in ("A中文B", "Mana Storm hits.", "Alpha  Beta",

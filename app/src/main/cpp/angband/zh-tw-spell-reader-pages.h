@@ -152,25 +152,49 @@ static inline int angdroid_spell_menu_touch_selectable(
 }
 
 
-/* Casting and study actions should not be committed by a stray single tap.
- * The first tap arms the precise spell row; only a second tap on that same
- * row confirms. Browsing is harmless and remains one tap. This also avoids
- * MN_DBL_TAP's corner case where a tap on the initially highlighted row
- * counts as confirmation even though there was no preceding touch. */
-static inline int angdroid_spell_menu_confirm_touch(
-    int *armed_oid, int oid, int browse)
+/* A deliberately generous window for confirming a spell by touch.
+ * Longer gaps must NEVER commit a stale spell or study selection. */
+#define ANGDROID_SPELL_TOUCH_CONFIRM_WINDOW_MS UINT64_C(2000)
+
+/* Keep the selected row and its monotonic timestamp in sync whenever the
+ * menu changes, the reader opens, or a gesture is cancelled. */
+static inline void angdroid_spell_menu_cancel_touch(
+    int *armed_oid, uint64_t *armed_at_ms)
 {
-    if (!armed_oid || oid < 0) return 0;
-    if (browse) {
-        *armed_oid = -1;
-        return 1;
-    }
-    if (*armed_oid != oid) {
-        *armed_oid = oid;
+    if (armed_oid) *armed_oid = -1;
+    if (armed_at_ms) *armed_at_ms = 0;
+}
+
+/* This display-only eligibility check never changes a character or casts a
+ * spell. First tap arms the row. Only a second tap on the SAME row within
+ * two monotonic seconds confirms. A stale, backward, or unavailable clock
+ * rearms the row rather than confirming a previously highlighted spell.
+ * Browsing stays single tap, and keyboard selection is handled separately. */
+static inline int angdroid_spell_menu_confirm_touch(
+    int *armed_oid, uint64_t *armed_at_ms, int oid, int browse,
+    uint64_t now_ms)
+{
+    if (!armed_oid || !armed_at_ms) return 0;
+    if (oid < 0) {
+        angdroid_spell_menu_cancel_touch(armed_oid, armed_at_ms);
         return 0;
     }
-    *armed_oid = -1;
-    return 1;
+    if (browse) {
+        angdroid_spell_menu_cancel_touch(armed_oid, armed_at_ms);
+        return 1;
+    }
+    if (*armed_oid == oid && *armed_at_ms != 0 && now_ms != 0 &&
+            now_ms >= *armed_at_ms &&
+            now_ms - *armed_at_ms <=
+                ANGDROID_SPELL_TOUCH_CONFIRM_WINDOW_MS) {
+        angdroid_spell_menu_cancel_touch(armed_oid, armed_at_ms);
+        return 1;
+    }
+    /* Wrong row, elapsed window, clock rollback or clock failure:
+     * this touch is ONLY a new first tap, never a cast. */
+    *armed_oid = oid;
+    *armed_at_ms = now_ms;
+    return 0;
 }
 
 #endif
