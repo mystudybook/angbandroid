@@ -226,6 +226,7 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"Confirm writing to %s? ", "確定寫入 %s 嗎？ "},
         {"Replace existing file? ", "確定覆寫現有檔案嗎？ "},
         {"Saving as %s.", "正在儲存為 %s。"},
+        {"Repeat: %d", "重複次數：%d"},
         {"[Press any key to continue]", "按任意鍵繼續"},
         {"Direction or <click> (Escape to cancel)? ", "請選擇方向或點擊（Esc 取消）："},
         {"Are you sure? ", "確定嗎？ "},
