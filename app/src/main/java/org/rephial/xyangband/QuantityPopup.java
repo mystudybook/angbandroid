@@ -106,7 +106,20 @@ public class QuantityPopup extends PopupWindow
         valuePicker.setValue(QuantitySliderMath.clamp(initialValue, 0, limit));
 
         TextView prompt = root.findViewById(R.id.quantityPrompt);
-        prompt.setText(message == null ? "" : message);
+        // Only rewrite exact generic native prompts. Keep store-specific or
+        // other game-specific instructions untouched (including their keys).
+        String promptText = message == null ? "" : message;
+        switch (QuantityPromptText.classify(promptText, limit)) {
+            case QuantityPromptText.FROM_ONE:
+                promptText = context.getString(R.string.quantity_prompt_from_one, limit);
+                break;
+            case QuantityPromptText.FROM_ZERO_ALL:
+                promptText = context.getString(R.string.quantity_prompt_from_zero_all, limit);
+                break;
+            default:
+                break;
+        }
+        prompt.setText(promptText);
 
         Button button = root.findViewById(R.id.allButton);
         button.setText(context.getString(R.string.quantity_all_with_count, limit));
