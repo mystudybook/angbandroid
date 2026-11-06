@@ -58,6 +58,7 @@ public class AngbandDialog {
 			state.gameThread.send(GameThread.Request.StartGame);
 			break;
 		case OnGameExit: // angband is exiting
+			activity.dismissQuantityPopupForGameExit();
 			state.gameThread.send(GameThread.Request.OnGameExit);
 			break;
 		case Toast: 
