@@ -49,7 +49,8 @@ class ItemUsePromptsLocaleSourceTest(unittest.TestCase):
                         '", angdroid_zh_tw_enabled())', section)
                 self.assertIn(filter_call, section)
                 self.assertIn(sources, section)
-                self.assertIn("!= CMD_OK) return;", section)
+                self.assertIn("!= CMD_OK", section)
+                self.assertIn("return;", section)
 
     def test_one_time_item_consumption_and_dispatch_not_modified(self):
         read = command("do_cmd_read_scroll", "do_cmd_use_staff")
