@@ -313,3 +313,12 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - **審查取消和充能的真正流程**：`use_aux()` 的瞄準取消 `cmd_get_target(..., &dir) != CMD_OK` 本來就會在 `check_devices()`、`effect_do()` 和充能扣除之前返回；這次保留。地面物品在 `effect_do()` 前暫扣的單次使用數量／魔杖或法杖充能／魔棒冷卻，在 `!used` 時也有原本的回復分支，沒有改成「取消仍扣一次」。原本成功使用、失敗嘗試、首次辨識取得知識、消耗道具、回合花費的判定均保持一致。這項程式檢查不是實機端到端驗收。
 - **離線驗證**：新增 `tests/native/test_item_use_effect_messages.c`，測試 16 個中英訊息、未知字串和 NULL 回退，加入 `scripts/test-native-utf8.sh`；新增 `tests/test_item_use_effect_messages_source.py`，會直接從 `object.txt` 抽取原始 `msg:`／`vis-msg:`，驗證 20 筆／16 種全部覆蓋、無重複，以及原本瞄準取消、地面充能復原、失明限制與 `effect_do()` 分支未變，加入 `scripts/verify-zh-tw.sh`。
 - **Host 已實際執行**：把 GitHub 新增的 C99 helper 及 native test 逐位元組重建到獨立目錄並以 `git hash-object` 核對 Blob SHA（`bb1451ba5c2a7e6bb42207166d1e6151a33bf4a2`、`19868619161fed3c6a740d16e5a403a80be3f3a2`）。以 GCC、Clang 的嚴格 C99 `-Wall -Wextra -Werror -pedantic` 搭配 AddressSanitizer／UndefinedBehaviorSanitizer 執行，**各 69 個斷言全部通過**。尚未在完整專案環境執行新 Python 測試、Android NDK／Gradle 或模擬器／實機；不能將獨立測試視為完整 APK 驗收。GitHub commits 均含 `[skip ci]`，不使用 GitHub Actions。
+
+
+## 第 113 批 — 神器啟動的動態訊息、物品名稱與英文動詞標記繁中化
+
+- **找出原本的訊息產生鏈**：`cmd-obj.c::activation_message()` 原本從 `obj->activation->message` 取出訊息；若神器有 `obj->artifact->alt_msg` 則先採用神器專屬版本，再交由 `obj-util.c::print_custom_message()` 展開 `{name}`／`{kind}`／`{s}`／`{is}`。原先這些模板全是英文，因此即使其他道具效果已中文化，神器啟動仍會顯示英文文字。
+- **只翻譯正式資料中的模板**：從 `variant_lib/angband/gamedata/activation.txt` 找到 **48 筆 msg**，從 `artifact.txt` 找到 **5 筆神器專屬 msg**，去重共 **50 種動態訊息**。新建 `zh-tw-activation-messages.h`，所有 50 種都按原始英文逐字匹配並提供繁體中文；未收錄的新訊息、英文模式及 NULL 都回退至原文／NULL。沒有修改 `activation.txt`、`artifact.txt`、神器 ID、效果、冷卻或遊戲存檔。
+- **名稱與文法安全**：中文模板保留原生 `{name}` 展開，並一律把該標記放在句首，避免舊版 `print_custom_message()` 名稱填充覆蓋前綴文字；中文模板不含英文 `{kind}`／`{s}`／`{is}` 單複數標記。原有 `print_custom_message()` 的英文占位詞處理保留；只在繁中顯示模式為物品描述額外加入 `ODESC_ZH_TW`，讓可被玩家辨識的神器名稱用繁體中文呈現，不使用 `ODESC_SPOIL` 或修改任何鑑定結果。
+- **操作／費用維持不變**：`do_cmd_activate()` 的冷卻檢查與正常形態檢查、`use_aux()` 的瞄準取消早退、`check_devices()`、`effect_do()`、原本的地面物品充能暫扣及回復分支、回合耗時和 `activation_message(obj, player)` 先後順序均未改。此批只是語言輸出路徑；尚未實際在 Android 遊戲中完成操作驗收。
+- **回歸測試**：新增 `tests/native/test_activation_message_locale.c`（50 個模板的中英文、無效標記、未知字串、NULL 安全）與 `tests/test_activation_messages_locale_source.py`（資料驅動檢查 48+5=53 筆原始訊息／50 種模板、唯一性、中文文法占位詞、原生展開器接線和取消／充能不變）。分別接入 `scripts/test-native-utf8.sh`、`scripts/verify-zh-tw.sh`。全部 GitHub 提交附 `[skip ci]`，不使用 GitHub Actions。完整 Android Gradle／NDK、模擬器／實機測試及原生整合驗收仍須在本機執行。

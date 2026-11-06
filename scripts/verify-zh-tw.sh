@@ -76,6 +76,7 @@ run_check "Object context menu bilingual CJK layout and safe quantity retry stat
 run_check "Gear wear/remove bilingual prompts and UTF-8-safe confirmation" python3 "$ROOT/tests/test_gear_confirmation_locale_source.py"
 run_check "Scroll, food, potion, generic use and refuel translated with item remainder safety" python3 "$ROOT/tests/test_item_use_prompts_locale_source.py"
 run_check "Object use-effect message translations and cancellation/charge rollback" python3 "$ROOT/tests/test_item_use_effect_messages_source.py"
+run_check "Activation and artifact dynamic templates, name rendering and rollback" python3 "$ROOT/tests/test_activation_messages_locale_source.py"
 run_check "Android quantity popup confirmation / localization wiring" python3 "$ROOT/tests/test_quantity_popup_source.py"
 run_check "Atomic Android quantity sequence and queue isolation" python3 "$ROOT/tests/test_quantity_queue_source.py"
 run_check "Native quantity session lifetime and asynchronous stale popup guards" python3 "$ROOT/tests/test_quantity_prompt_session_source.py"
