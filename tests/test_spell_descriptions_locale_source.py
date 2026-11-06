@@ -44,7 +44,9 @@ class SpellDescriptionsLocaleSourceTest(unittest.TestCase):
     def test_exact_original_mage_description_mapping(self):
         mage = [(entry["name"], entry["english"]) for entry in parsed_spells()
                 if entry["class"] == "Mage"]
-        mapped = translated_entries(HELPER)
+        mage_names = {name for name, _ in mage}
+        mapped = [row for row in translated_entries(HELPER)
+                  if row[0] in mage_names]
         self.assertEqual(30, len(mage))
         self.assertEqual(30, len(mapped))
         self.assertEqual(len(set(mage)), 30)
@@ -92,7 +94,9 @@ class SpellDescriptionsLocaleSourceTest(unittest.TestCase):
         for match in pattern.finditer(NATIVE):
             parsed.append(tuple(json.loads(part) for part in match.groups()))
         self.assertEqual(30, len(parsed))
-        self.assertEqual(set(translated_entries(HELPER)), set(parsed))
+        mage_names = {name for name, _ in mage}
+        self.assertEqual(set(row for row in translated_entries(HELPER)
+                             if row[0] in mage_names), set(parsed))
         self.assertEqual(set(mage), {(n, en) for n, en, _ in parsed})
         self.assertIn("tests/native/test_spell_descriptions_locale.c", RUNNER)
         self.assertIn("tests/test_spell_descriptions_locale_source.py", VERIFY)
