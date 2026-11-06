@@ -61,7 +61,7 @@ int main(void)
       checks += 2;
     }
     check_locale("(up to 5 hex digits):",
-                 "輸入 Unicode 字元碼（最多 5 位十六進位）：");
+                 "Unicode 十六進位（1～5 位）：");
     check_locale("Invalid Unicode code point.",
                  "Unicode 字元碼無效，請輸入合法字元。");
     check_locale("Inscribe with: ", "刻上文字：");
