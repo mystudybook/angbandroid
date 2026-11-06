@@ -10,6 +10,8 @@ final class QuantityPromptText {
     static final int ORIGINAL = 0;
     static final int FROM_ONE = 1;
     static final int FROM_ZERO_ALL = 2;
+    static final int FROM_ZERO_NPP_ALL = 3;
+    static final int FROM_ZERO_SILQ = 4;
 
     private QuantityPromptText() { }
 
@@ -17,6 +19,9 @@ final class QuantityPromptText {
         if (prompt == null || max <= 0) return ORIGINAL;
         if (prompt.equals("Quantity (1-" + max + "): ")) return FROM_ONE;
         if (prompt.equals("Quantity (0-" + max + ", *=all): ")) return FROM_ZERO_ALL;
+        if (prompt.equals("Quantity (0-" + max + ", '*' or 'a' = all): "))
+            return FROM_ZERO_NPP_ALL;
+        if (prompt.equals("Quantity (0-" + max + "): ")) return FROM_ZERO_SILQ;
         return ORIGINAL;
     }
 }
