@@ -40,7 +40,7 @@ public class AngbandDialog {
 
 		switch (Action.convert(msg.what)) {
 		case ControlMsg:
-			activity.controlMsg(msg.arg1, (String)msg.obj);
+			activity.controlMsg(msg.arg1, (String)msg.obj, msg.arg2);
 			break;
 		case OpenContextMenu: // display context menu
 			activity.openContextMenu();
