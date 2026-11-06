@@ -28,6 +28,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-magic.h"
+#include "zh-tw-item-use-messages.h"
 #include "obj-gear.h"
 #include "obj-ignore.h"
 #include "obj-info.h"
@@ -513,9 +514,14 @@ static void use_aux(struct command *cmd, struct object *obj, enum use use,
 			msgt(snd, "%s", angdroid_game_ui_text("You activate it.", angdroid_zh_tw_enabled()));
 			activation_message(obj, player);
 		} else if (obj->kind->effect_msg) {
-			msgt(snd, "%s", obj->kind->effect_msg);
+			/* Translate only the displayed effect text. The kind's
+			 * canonical game-data message remains unchanged. */
+			msgt(snd, "%s", angdroid_zh_tw_item_use_message(
+				obj->kind->effect_msg, angdroid_zh_tw_enabled()));
 		} else if (obj->kind->vis_msg && !player->timed[TMD_BLIND]) {
-			msgt(snd, "%s", obj->kind->vis_msg);
+			/* Keep the original blindness check and sound category. */
+			msgt(snd, "%s", angdroid_zh_tw_item_use_message(
+				obj->kind->vis_msg, angdroid_zh_tw_enabled()));
 		} else {
 			/* Make a noise! */
 			sound(snd);
