@@ -33,6 +33,9 @@ public class StateManager {
 	/* keybuffer */
 	private KeyBuffer keyBuffer = null;
 
+	/** Native quantity prompt tokens, updated immediately on the game thread. */
+	private final QuantityPromptGate quantityPromptGate = new QuantityPromptGate();
+
 	/* native angband library interface */
 	public NativeWrapper nativew = null;
 
@@ -416,13 +419,37 @@ public class StateManager {
 	 * Keep the right/backspace/digits/Enter response together in the
 	 * shared key queue. The native game remains the quantity authority.
 	 */
-	public boolean enqueueQuantity(int amount, int max) {
-		int[] keys = QuantityInputSequence.forQuantity(
-			amount, max, getKeyRightForQuantity(),
-			getKeyBackspace(), getKeyEnter());
-		if (keys == null || this.keyBuffer == null) return false;
-		this.keyBuffer.addRawSequence(keys);
-		return true;
+	public boolean isQuantityPromptActive(int token) {
+		synchronized (quantityPromptGate) {
+			return quantityPromptGate.isActive(token);
+		}
+	}
+
+	public boolean enqueueQuantity(int token, int amount, int max) {
+		synchronized (quantityPromptGate) {
+			if (!quantityPromptGate.isActive(token) || this.keyBuffer == null)
+				return false;
+			int[] keys = QuantityInputSequence.forQuantity(
+				amount, max, getKeyRightForQuantity(),
+				getKeyBackspace(), getKeyEnter());
+			if (keys == null) return false;
+			this.keyBuffer.addRawSequence(keys);
+			quantityPromptGate.resolve(token);
+			return true;
+		}
+	}
+
+	/** A stale popup cannot inject Escape into the next game screen. */
+	public boolean cancelQuantity(int token) {
+		synchronized (quantityPromptGate) {
+			if (!quantityPromptGate.isActive(token) || this.keyBuffer == null)
+				return false;
+			int key = getKeyEsc();
+			if (key <= 0) return false;
+			this.keyBuffer.addRawSequence(new int[] { key });
+			quantityPromptGate.resolve(token);
+			return true;
+		}
 	}
 
 	public void clearKeys() {
@@ -430,14 +457,28 @@ public class StateManager {
 			this.keyBuffer.clear();
 	}
 	public void resetKeyBuffer() {
-		this.keyBuffer = new KeyBuffer(this);
+		/* The previous game instance can no longer accept an old popup. */
+		synchronized (quantityPromptGate) {
+			quantityPromptGate.close();
+			this.keyBuffer = new KeyBuffer(this);
+		}
 	}
 
 	public void controlMsg(int type, String body)
 	{
+		int quantityToken = 0;
+		if (type == GameActivity.TERM_CONTROL_QUANTITY) {
+			/* Handle start/end on the native callback thread, before the
+			 * asynchronous UI message can become stale. */
+			synchronized (quantityPromptGate) {
+				quantityToken = "end".equals(body) ?
+					quantityPromptGate.close() : quantityPromptGate.open();
+			}
+		}
 		Message msg = Message.obtain();
 		msg.what = AngbandDialog.Action.ControlMsg.ordinal();
 		msg.arg1 = type;
+		msg.arg2 = quantityToken;
 		msg.obj = body;
 		handler.sendMessage(msg);
 	}
@@ -504,8 +545,12 @@ public class StateManager {
 			this.keyBuffer.addDirection(k);
 	}
 	public void signalGameExit() {
-		if (this.keyBuffer != null)
-			this.keyBuffer.signalGameExit();
+		/* Prevent an old UI callback from adding input to a dying game. */
+		synchronized (quantityPromptGate) {
+			quantityPromptGate.close();
+			if (this.keyBuffer != null)
+				this.keyBuffer.signalGameExit();
+		}
 	}
 	public boolean getSignalGameExit() {
 		if (this.keyBuffer != null)

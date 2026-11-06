@@ -141,3 +141,16 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 排隊前驗證 0 至 max 的範圍、整數及必要的原生按鍵編碼；若驗證失敗，不會把視窗標記成確認成功。取消／Back 仍只送出 Esc。
 - **限制：** 原子排入只保證整組按鍵無法被其他排入操作插開，**不會**清掉當時已在佇列的按鍵，也無法保證原生遊戲此刻仍停留在數量輸入狀態。清空共用 queue 可能破壞儲存／退出等訊號，因此未採用。仍需 Android 模擬器／實機確認快速連點、跨畫面與多遊戲核心互動。
 - 純 JDK 測試 `tests/java/org/rephial/xyangband/QuantityInputSequenceTest.java`，由 `sh scripts/test-quantity-popup.sh` 執行；Python 原始碼檢查 `python3 tests/test_quantity_queue_source.py` 已加入 `scripts/verify-zh-tw.sh`。未使用 GitHub Actions。
+
+
+## 原生數量視窗生命週期同步（第 93 批）
+
+原生 Angband 的 `textui_get_quantity()` 在有效輸入、重填後有效輸入、Esc 取消時都會送出明確的 `TERM_CONTROL_QUANTITY = "end"`，避免原生遊戲已離開數量欄而 Android 仍保留可操作的視窗。數量上限 ≤ 1 時原本就不會開啟視窗，無須送結束通知。
+
+- 在原生 callback 執行緒同步處理每次 start/end，指派不同的 `QuantityPromptGate` token，然後以 `Message.arg2` 將 token 傳給 Android 主執行緒。已過期的 start 通知不再開視窗；延遲到達的 end 通知只會關閉其所屬視窗。
+- `QuantityPopup` 的「確認數量」、1／10／全部、取消、返回與程式關閉行為都攜帶 session token；`StateManager` 在同一個 token 鎖內檢查有效性並寫入 `KeyBuffer`，無效操作不會送入 Enter／Esc。 每次原生提示皆建立**新的 Android PopupWindow**，避免舊視窗延遲的 dismiss callback 被綁到新 token。
+- 遊戲執行緒退出或重設按鍵佇列時也會將原有 token 作廢，防止跨遊戲／重新啟動後的舊視窗繼續寫入新的佇列。 收到 `OnGameExit` 時，Android 同時以靜默方式關閉殘留視窗。
+- 若玩家透過原生遊戲鍵盤自行完成數量輸入，結束通知只關閉 Android 視窗，**不會**再補送 Esc；Activity 暫停時仍維持原本取消目前輸入的策略。
+- 原有按鍵佇列不會被清空。**本批仍不能撤銷已經排入、但尚未由原生遊戲讀取的按鍵**；若希望避免這類殘留，後續需要具有 session 標籤的佇列項目與原生消費端驗證。也未變更商店價格、背包資料、存檔或遊戲玩法。
+- 此次原生 `"end"` 通知只新增於**主要 Angband 核心**；其他獨立 variant 仍有 Android token 的「單次確認／取消」保護，但尚未全面加入其原生提示結束事件，需分別審查。
+- 離線驗證：`sh scripts/test-quantity-popup.sh` (新增 `QuantityPromptGateTest`)，`python3 tests/test_quantity_prompt_session_source.py`，以及 `sh scripts/verify-zh-tw.sh --android zh-tw-validation-93.log`。最後的完整 Android 編譯、模擬器／實機操作仍須在具備 SDK 的環境驗證。本批不使用 GitHub Actions。

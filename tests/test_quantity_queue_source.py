@@ -32,18 +32,20 @@ class QuantityQueueSourceTest(unittest.TestCase):
         self.assertNotIn("getKeyEnter()", POPUP)
         self.assertIn("if (locked || resolved) return;", POPUP)
         self.assertIn("id == R.id.cancelButton", POPUP)
-        self.assertIn("state.addKey(state.getKeyEsc());", POPUP)
+        self.assertIn("state.cancelQuantity(sessionToken);", POPUP)
 
     def test_state_routes_validated_sequence_atomically(self):
-        body = STATE.split("public boolean enqueueQuantity(int amount, int max) {", 1)[1].split(
+        body = STATE.split("public boolean enqueueQuantity(int token, int amount, int max) {", 1)[1].split(
             "\n\tpublic void clearKeys(", 1
         )[0]
         self.assertIn("QuantityInputSequence.forQuantity(", body)
         self.assertIn("getKeyRightForQuantity()", body)
         self.assertIn("getKeyBackspace()", body)
         self.assertIn("getKeyEnter()", body)
-        self.assertIn("if (keys == null || this.keyBuffer == null) return false;", body)
+        self.assertIn("if (keys == null) return false;", body)
         self.assertIn("this.keyBuffer.addRawSequence(keys);", body)
+        self.assertIn("quantityPromptGate.isActive(token)", body)
+        self.assertIn("quantityPromptGate.resolve(token)", body)
         self.assertNotIn("clearKeys()", body)
 
     def test_native_quantity_and_store_guards_unchanged(self):

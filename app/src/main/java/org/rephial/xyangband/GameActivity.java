@@ -247,31 +247,41 @@ public class GameActivity extends LocalizedActivity {
 		}
 	}
 
-	public void runQuantityPopup(String message, int maxValue, int initialValue)
-	{
-		if (term != null && maxValue > 0 && Preferences.getQuantityPopupEnabled()) {
-			if (quantPopup == null) {
-				quantPopup = new QuantityPopup(this, message, maxValue, initialValue);
-			}
-			else {
-				if (quantPopup.isShowing()) return;
-				quantPopup.configure(message, maxValue, initialValue);
-			}
-			int gravity = Gravity.RIGHT | Gravity.TOP;
-			int pad = (int)GxUtils.toDips(this,20);
-			quantPopup.root.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), 
-				MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-			int y = term.getHeight()
-				- quantPopup.root.getMeasuredHeight()
-				- term.getVerticalGap()
-				- pad;
-			int x = term.getRightGap();
-			//log("term h: " + term.getHeight());
-			//log("root h: " + quantPopup.root.getMeasuredHeight());
-			//log("vgap: " + term.getVerticalGap());
-			//log("y: " + y);
-			quantPopup.showAtLocation(term, gravity, x, y);
+	/** Dispose a popup when its native game has exited; never send Esc. */
+	public void dismissQuantityPopupForGameExit() {
+		if (quantPopup != null) {
+			quantPopup.dismissSilently();
+			quantPopup = null;
 		}
+	}
+
+	public void runQuantityPopup(String message, int maxValue, int initialValue,
+			int quantityToken)
+	{
+		/* The native game may already have ended this prompt before its
+		 * asynchronous Android UI notification was delivered. */
+		if (term == null || maxValue <= 0 ||
+				!Preferences.getQuantityPopupEnabled() ||
+				!state.isQuantityPromptActive(quantityToken)) return;
+
+		if (quantPopup != null && quantPopup.isShowing()) {
+			if (quantPopup.getSessionToken() == quantityToken) return;
+			quantPopup.dismissSilently();
+		}
+		/* Never rebind an old window's dismiss callback to a new token.
+		 * A fresh popup also avoids late dismissals canceling a new prompt. */
+		quantPopup = new QuantityPopup(this, message, maxValue, initialValue,
+			quantityToken);
+		int gravity = Gravity.RIGHT | Gravity.TOP;
+		int pad = (int)GxUtils.toDips(this, 20);
+		quantPopup.root.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
+			MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
+		int y = term.getHeight()
+			- quantPopup.root.getMeasuredHeight()
+			- term.getVerticalGap()
+			- pad;
+		int x = term.getRightGap();
+		quantPopup.showAtLocation(term, gravity, x, y);
 	}
 
 	@Override
@@ -360,6 +370,11 @@ public class GameActivity extends LocalizedActivity {
 
 	public void controlMsg(int what, String msg)
 	{
+		controlMsg(what, msg, 0);
+	}
+
+	public void controlMsg(int what, String msg, int quantityToken)
+	{
 		if (what == TERM_CONTROL_LIST_KEYS) {
 			setFastKeys(msg);
 		}
@@ -375,18 +390,28 @@ public class GameActivity extends LocalizedActivity {
 		if (what == TERM_CONTROL_SHOW_CURSOR) {
 			// Nothing
 		}
-		if (what == TERM_CONTROL_QUANTITY && term != null) {
-			Pattern pattern = Pattern.compile("(\\d+):(\\d+):(.+)");
-			Matcher matcher = pattern.matcher(msg);
-			if (matcher.matches()) {
-				try {
-					int maxValue = Integer.parseInt(matcher.group(1));
-					int initialValue = Integer.parseInt(matcher.group(2));
-					if (maxValue > 0) {
-						runQuantityPopup(matcher.group(3), maxValue, initialValue);
+		if (what == TERM_CONTROL_QUANTITY) {
+			if ("end".equals(msg)) {
+				/* Only close the corresponding popup. A delayed old end
+				 * must not dismiss a newly opened quantity prompt. */
+				if (quantPopup != null && quantPopup.isShowing() &&
+						quantPopup.getSessionToken() == quantityToken) {
+					quantPopup.dismissSilently();
+				}
+			} else if (term != null && state.isQuantityPromptActive(quantityToken)) {
+				Pattern pattern = Pattern.compile("(\\d+):(\\d+):(.+)");
+				Matcher matcher = pattern.matcher(msg);
+				if (matcher.matches()) {
+					try {
+						int maxValue = Integer.parseInt(matcher.group(1));
+						int initialValue = Integer.parseInt(matcher.group(2));
+						if (maxValue > 0) {
+							runQuantityPopup(matcher.group(3), maxValue, initialValue,
+								quantityToken);
+						}
+					} catch (NumberFormatException ex) {
+						Log.w("Angband", "Ignoring invalid quantity popup bounds", ex);
 					}
-				} catch (NumberFormatException ex) {
-					Log.w("Angband", "Ignoring invalid quantity popup bounds", ex);
 				}
 			}
 		}
