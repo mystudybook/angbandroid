@@ -52,6 +52,13 @@ class NativeLocaleBranchBracesTest(unittest.TestCase):
             "%s%s%s。", "%s %s %s.",
         )
 
+    def test_monster_crush_message_only_when_visible_and_not_ignored(self):
+        self.assert_scoped_locale_choice(
+            "mon-move.c",
+            "square_isseen(cave, new) && !ignore_item_ok(player, obj)",
+            "%s壓碎了%s。", "%s crushes %s.",
+        )
+
     def test_blind_summoning_message_only_for_blind_player(self):
         self.assert_scoped_locale_choice(
             "effect-handler-general.c", "count && player->timed[TMD_BLIND]",
