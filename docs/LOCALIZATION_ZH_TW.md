@@ -357,3 +357,12 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - `tests/test_druid_spell_descriptions_locale_source.py` 已更新為支持 85 筆新表，持續檢查原先 27 筆 Druid、30 筆 Mage 與 Ranger 的 Herbal Curing 差異；原有 Mage 回歸測試無需更動。
 - 新增 `tests/native/test_priest_spell_descriptions_locale.c`（28×2+8 = **64 項預期斷言**）與 `tests/test_priest_spell_descriptions_locale_source.py`，並註冊到 `scripts/test-native-utf8.sh`、`scripts/verify-zh-tw.sh`。
 - 完整 C99/Python、Android Gradle/NDK、模擬器、實機測試仍須本機執行，並以 `[skip ci]` 避免使用 GitHub Actions。
+
+
+## 第 118 批 — 死靈法師 26 種法術詳細說明繁體中文化
+
+- 直接讀取 `variant_lib/angband/gamedata/class.txt`：Necromancer 共 **26 種法術**，與 Priest 共用 `Sense Invisible` 的相同完整原文，因此只需新增 **25 組**對照資料，翻譯表由 85 增至 **110 個唯一法術名稱**，完整涵蓋 Mage 30、Druid 27、Priest 28、Necromancer 26（計 111 筆職業法術紀錄）。雙條件完全匹配法術原名和官方完整英文說明；未匹配情況依然回退英文。
+- 針對危險副作用保留具體資訊：`Crush` 只瞬殺生命值低於角色等級四倍的怪物且會傷害玩家；`Grond's Blow` 半徑 15 格、失明 10+1d10 回合並以**抗失明或抗黑暗**減免，城鎮無效；`Power Sacrifice` 以 50 HP 換 50 MP；`Vampire Form` 犧牲**目前生命值的一半**並有暫時撕咬吸血效果；`Curse` 付出 100 HP；`Bat Form` 無法使用物品；`Sleep Evil` 需留意**抵抗混亂**的怪物不受影響；`Command` 保留 d/m/r 原始指令字母。
+- 沒有修改 `class.txt` 或任何角色/怪物/魔法效果邏輯，所有字串只在既有 `ui-spell.c` 顯示層套用。英語模式及原文異動仍保留英文。
+- 新增 `tests/native/test_necromancer_spell_descriptions_locale.c`（26×2+6 = **58 項預期 C99 斷言**）、`tests/test_necromancer_spell_descriptions_locale_source.py`（核對 110 組原文、共用法術無重複、21 組副作用關鍵字、完整 C99 對照）。修正既有 Druid/Priest 資料測試的固定表格數量，仍保持完整覆蓋，並註冊兩個新測試至既有離線腳本。
+- 本批不使用 GitHub Actions，commit 包含 `[skip ci]`；只有 GitHub 原始碼靜態檢查可在連線端驗證，完整 Python/C99、Android NDK/Gradle、emulator/實機的窄螢幕與遊戲行為測試仍待本機執行。
