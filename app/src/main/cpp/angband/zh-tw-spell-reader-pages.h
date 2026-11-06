@@ -91,4 +91,44 @@ static inline size_t angdroid_spell_reader_page_up(
     return first < visible ? 0 : first - visible;
 }
 
+/* Find the visual row containing a byte offset from the original description.
+ * On device rotation this preserves the same sentence rather than reusing an
+ * obsolete row number from the old terminal width. */
+static inline size_t angdroid_spell_reader_line_for_offset(
+    const char *text, size_t columns, size_t offset)
+{
+    char line[1024];
+    size_t start = 0, next, row = 0;
+    if (!text || columns < 2) return 0;
+    while (angdroid_spell_reader_next_line(text, start, columns,
+            line, sizeof(line), &next)) {
+        if (next <= start || offset < next) return row;
+        start = next;
+        ++row;
+    }
+    return row > 0 ? row - 1 : 0;
+}
+
+/* Handle taps only inside the actual terminal view. The title and footer
+ * both close the reader; upper/lower text areas scroll in opposite directions.
+ * A touch outside the terminal must not inadvertently turn a page. */
+enum angdroid_spell_reader_tap {
+    ANGDROID_SPELL_READER_TAP_IGNORE = 0,
+    ANGDROID_SPELL_READER_TAP_BACK = 1,
+    ANGDROID_SPELL_READER_TAP_UP = 2,
+    ANGDROID_SPELL_READER_TAP_DOWN = 3
+};
+
+static inline int angdroid_spell_reader_tap_action(
+    int x, int y, int width, int height)
+{
+    if (width < 4 || height < 4 || x < 0 || y < 0 ||
+        x >= width || y >= height)
+        return ANGDROID_SPELL_READER_TAP_IGNORE;
+    if (y == 0 || y == height - 1)
+        return ANGDROID_SPELL_READER_TAP_BACK;
+    return y < height / 2 ? ANGDROID_SPELL_READER_TAP_UP
+        : ANGDROID_SPELL_READER_TAP_DOWN;
+}
+
 #endif
