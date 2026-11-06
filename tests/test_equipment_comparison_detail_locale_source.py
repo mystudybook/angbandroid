@@ -31,7 +31,7 @@ class EquipmentComparisonDetailLocaleSourceTest(unittest.TestCase):
         self.assertIn('return english;', LABELS)
 
     def test_two_item_details_use_localized_item_descriptions_only_on_screen(self):
-        details = SOURCE.split(
+        details = SOURCE.rsplit(
             "static void display_object_comparison(", 1)[1].split(
             "\n\nstatic bool dump_to_file(", 1)[0]
         self.assertIn("char hbuf[256];", details)
