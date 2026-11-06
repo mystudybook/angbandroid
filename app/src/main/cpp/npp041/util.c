@@ -9,6 +9,7 @@
  */
 
 #include "angband.h"
+#include "droid.h"
 
 
 
@@ -1947,6 +1948,9 @@ char inkey(void)
 	/* Hack -- Use the "inkey_next" pointer */
 	if (inkey_next && *inkey_next && !inkey_xtra)
 	{
+		/* A keymap owns input now; no unrelated soft keys should linger. */
+		soft_kbd_clear(false);
+
 		/* Get next character, and advance */
 		ch = *inkey_next++;
 
@@ -2004,6 +2008,9 @@ char inkey(void)
 	/* Hack -- Activate main screen */
 	Term_activate(term_screen);
 
+	/* Publish pending quantity keys only for interactive reads.
+	 * In Android popup mode, setFastKeys() suppresses the ${quant} keys. */
+	if (!inkey_scan) soft_kbd_flush();
 
 	/* Get a key */
 	while (!ch)
@@ -3698,8 +3705,20 @@ s16b get_quantity(cptr prompt, int max)
 		/* Build the default */
 		sprintf(buf, "%d", amt);
 
+		/* Only an actual interactive prompt owns a quantity session;
+		 * command_arg / repeat / max=1 paths must not open one. */
+		Term_control_quantity(prompt, max, amt);
+		soft_kbd_linger("${quant}");
+
 		/* Ask for a quantity */
-		if (!get_string(prompt, buf, 7)) return (0);
+		if (!get_string(prompt, buf, 7)) {
+			soft_kbd_clear(true);
+			Term_control(TERM_CONTROL_QUANTITY, "end");
+			return (0);
+		}
+
+		soft_kbd_clear(true);
+		Term_control(TERM_CONTROL_QUANTITY, "end");
 
 		/* Extract a number */
 		amt = atoi(buf);
