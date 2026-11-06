@@ -53,6 +53,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "object-list-text.h"
+#include "inventory-list-display.h"
 #include "item-selection-layout.h"
 
 /**
@@ -182,6 +183,7 @@ static void show_obj(int obj_num, int row, int col, bool cursor,
 	char equip_label[sizeof(items[obj_num].equip_label)];
 	char name[sizeof(items[obj_num].o_name)];
 	struct object *obj = items[obj_num].object;
+	const char *display_label = items[obj_num].label;
 	bool show_label = mode & (OLIST_WINDOW | OLIST_DEATH) ? true : false;
 	size_t available = angdroid_object_list_cell_budget(ex_offset, row_width);
 	size_t label_size, equip_label_size;
@@ -192,10 +194,15 @@ static void show_obj(int obj_num, int row, int col, bool cursor,
 	/* If we have no label then we won't display anything */
 	if (!items[obj_num].label[0]) return;
 
+	/* Keep the original "In quiver" marker for set_obj_names(); translate
+	 * only the rendered label, never the list's internal sentinel. */
+	if (!obj && streq(display_label, "In quiver") && angdroid_zh_tw_enabled())
+		display_label = "箭袋內";
+
 	/* Display text from local buffers; never truncate the saved item name.
 	 * Width and position are physical terminal cells, not UTF-8 bytes. */
 	label_size = angdroid_menu_copy_columns(label, sizeof(label),
-		show_label ? items[obj_num].label : "", available);
+		show_label ? display_label : "", available);
 	equip_label_size = angdroid_menu_copy_columns(equip_label,
 		sizeof(equip_label), items[obj_num].equip_label,
 		available - label_size);
@@ -237,7 +244,8 @@ static void show_obj(int obj_num, int row, int col, bool cursor,
 		struct store *store = store_at(cave, player->grid);
 		if (store) {
 			int price = price_item(store, obj, true, obj->number);
-			strnfmt(buf, sizeof(buf), "%6d au", price);
+			angdroid_inventory_detail_text(buf, sizeof(buf),
+				ANGDROID_INVEN_PRICE, price, 0, angdroid_zh_tw_enabled());
 			object_list_put_detail(buf, row + obj_num, col,
 				ex_offset_ctr, row_width, 9);
 		}
@@ -247,10 +255,9 @@ static void show_obj(int obj_num, int row, int col, bool cursor,
 	if (mode & OLIST_FAIL) {
 		if (obj_can_fail(obj)) {
 			int fail = (9 + get_use_device_chance(obj)) / 10;
-			if (object_effect_is_known(obj))
-				strnfmt(buf, sizeof(buf), "%4d%% fail", fail);
-			else
-				my_strcpy(buf, "    ? fail", sizeof(buf));
+			angdroid_inventory_detail_text(buf, sizeof(buf),
+				object_effect_is_known(obj) ? ANGDROID_INVEN_DEVICE_FAIL :
+				ANGDROID_INVEN_DEVICE_UNKNOWN, fail, 0, angdroid_zh_tw_enabled());
 			object_list_put_detail(buf, row + obj_num, col,
 				ex_offset_ctr, row_width, 10);
 		}
@@ -260,11 +267,10 @@ static void show_obj(int obj_num, int row, int col, bool cursor,
 	if (mode & OLIST_RECHARGE) {
 		int fail = 1000 / recharge_failure_chance(
 			obj, player->upkeep->recharge_pow);
-		if (object_effect_is_known(obj))
-			strnfmt(buf, sizeof(buf), "%2d.%1d%% fail",
-				fail / 10, fail % 10);
-		else
-			my_strcpy(buf, "    ? fail", sizeof(buf));
+		angdroid_inventory_detail_text(buf, sizeof(buf),
+			object_effect_is_known(obj) ? ANGDROID_INVEN_RECHARGE_FAIL :
+			ANGDROID_INVEN_DEVICE_UNKNOWN, fail / 10, fail % 10,
+			angdroid_zh_tw_enabled());
 		object_list_put_detail(buf, row + obj_num, col,
 			ex_offset_ctr, row_width, 10);
 		ex_offset_ctr += 10;
@@ -272,7 +278,9 @@ static void show_obj(int obj_num, int row, int col, bool cursor,
 
 	if (mode & OLIST_WEIGHT) {
 		int weight = obj->number * object_weight_one(obj);
-		strnfmt(buf, sizeof(buf), "%4d.%1d lb", weight / 10, weight % 10);
+		angdroid_inventory_detail_text(buf, sizeof(buf),
+			ANGDROID_INVEN_WEIGHT, weight / 10, weight % 10,
+			angdroid_zh_tw_enabled());
 		object_list_put_detail(buf, row + obj_num, col,
 			ex_offset_ctr, row_width, 9);
 	}
@@ -358,7 +366,8 @@ static void build_obj_list(int last, struct object **list, item_tester tester,
 			my_strcpy(items[num_obj].equip_label, buf,
 					  sizeof(items[num_obj].equip_label));
 		} else if ((in_term || dead) && quiver) {
-			strnfmt(buf, sizeof(buf), "Slot %-9d: ", i);
+			angdroid_inventory_slot_text(buf, sizeof(buf), i,
+				angdroid_zh_tw_enabled());
 			my_strcpy(items[num_obj].equip_label, buf,
 					  sizeof(items[num_obj].equip_label));
 		} else {
@@ -495,7 +504,10 @@ static void show_obj_list(olist_detail_t mode)
 			c_put_str(COLOUR_SLATE, tmp_val, row + i, col);
 
 			/* Print the count */
-			strnfmt(tmp_val, sizeof(tmp_val), fmt, count,
+			if (angdroid_zh_tw_enabled())
+				strnfmt(tmp_val, sizeof(tmp_val), "箭袋：%d 支彈藥", count);
+			else
+				strnfmt(tmp_val, sizeof(tmp_val), fmt, count,
 					count == 1 ? "" : "s");
 			c_put_str(COLOUR_L_UMBER, tmp_val, row + i, col + 3);
 		}
@@ -528,12 +540,12 @@ void show_inven(int mode, item_tester tester)
 
 	/* Include burden for term windows */
 	if (in_term) {
-		strnfmt(items[num_obj].label, sizeof(items[num_obj].label),
-		        "Burden %d.%d lb (%d.%d lb %s) ",
-		        player->upkeep->total_weight / 10,
-				player->upkeep->total_weight % 10,
-		        abs(diff) / 10, abs(diff) % 10,
-		        (diff < 0 ? "overweight" : "remaining"));
+		if (!angdroid_inventory_burden_text(items[num_obj].label,
+				sizeof(items[num_obj].label),
+				player->upkeep->total_weight, diff, angdroid_zh_tw_enabled()))
+			my_strcpy(items[num_obj].label,
+				angdroid_zh_tw_enabled() ? "負重" : "Burden",
+				sizeof(items[num_obj].label));
 
 		items[num_obj].object = NULL;
 		num_obj++;
@@ -599,6 +611,7 @@ void show_equip(int mode, item_tester tester)
 	if (in_term) {
 		int last_slot = -1;
 
+		/* Stored marker must stay English for set_obj_names(). */
 		strnfmt(items[num_obj].label, sizeof(items[num_obj].label),
 				"In quiver");
 		items[num_obj].object = NULL;
