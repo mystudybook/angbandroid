@@ -232,3 +232,10 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - **忽略物品選擇**：`textui_cmd_ignore()` 的 `Ignore which item?` 改成「要忽略哪件物品？」；`You have nothing to ignore.` 改為「沒有可以忽略的物品。」。這兩個字串只經 `angdroid_game_ui_text()` 進行顯示端翻譯，英文模式仍用原字串。`get_item` 的 `CMD_IGNORE`、物品來源 `USE_INVEN | USE_QUIVER | USE_EQUIP | USE_FLOOR`、取消時的早退、品質忽略選單與存檔均不變。
 - **避免數量視窗回歸**：商店已在舊批次完成的買入／取出數量提示保持原狀；`textui_get_quantity()` 的 `Term_control_quantity`／`"end"` 生命週期不修改，以免不必要地干擾 Android 的原生數量 Popup。
 - **離線回歸測試**：新增 `tests/native/test_version_header_text.c`，對中／英文、NULL、格式字元、字元邊界（48 與 49 bytes）、過長版本號與 0 容量進行 host C99 檢查；已納入 `scripts/test-native-utf8.sh`。新增 `tests/test_version_ignore_pick_source.py` 驗證中文對應、版本／版權資料、忽略操作與數量 Popup 的安全邊界；已納入 `scripts/verify-zh-tw.sh`。本批未使用 GitHub Actions；獨立 C99 測試不能取代完整 Gradle／NDK／Android 模擬器或實機驗收。
+
+
+## 第 103 批 — 裝備比較詳細視窗中的兩件物品中文化
+
+- **修復原版裝備比較的漏譯**：`ui-equip-cmp.c` 的 `display_object_comparison()` 原本在選取第一件／第二件物品後，兩件物品的詳細標題仍以英文 `object_desc(..., ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL)` 顯示，而且雙物品畫面標題固定為 `Object comparison`。現在兩個物品名稱都可依當前語言附加 `ODESC_ZH_TW`；雙物品視窗標題使用既有 `angdroid_equip_cmp_text()` 顯示「裝備比較」，英文則維持 `Object comparison`。保留既有 `object_info(..., OINFO_NONE)`、兩個 `textblock` 的釋放和已辨識物品的知識限制；**不使用 `ODESC_SPOIL`，不可將未鑑定資訊顯示出來**。
+- **UTF-8 與資料隔離**：詳細資訊表頭緩衝區由 120 提升到 256 bytes，降低中文物品名稱因多位元組而遭截斷的風險。`set_short_name()`、原版 `short_name`、`cmp_by_short_name()`、`Term_putstr()` 的比較清單、裝備來源篩選、選取索引以及 `append_to_file()` 匯出原理都**沒有更動**，讓顯示語言不影響項目排序／檔案內容或物品 ID。
+- **離線測試**：在既有 `tests/native/test_equip_cmp_locale.c` 增加「Object comparison → 裝備比較」的雙語／未知標籤檢查；既有 `scripts/test-native-utf8.sh` 已執行該 C99 檢查。新增 `tests/test_equipment_comparison_detail_locale_source.py`，逐項檢查雙物品 `ODESC_ZH_TW`、`OINFO_NONE`、雙語視窗標題、英文 fallback、核心比較排序與匯出保持不變，並接入 `scripts/verify-zh-tw.sh`。未使用 GitHub Actions；Android APK／NDK 與真實遊玩切換測試仍需 SDK／裝置驗證。
