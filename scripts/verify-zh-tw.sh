@@ -110,6 +110,7 @@ run_check "Current native localization display guards and negative mutations" py
 run_check "Native translated message branch scope (dangling else)" python3 "$ROOT/tests/test_native_locale_branch_braces.py"
 run_check "Native projection terrain, knockback, and chest feedback zh-TW" python3 "$ROOT/tests/test_projection_terrain_feedback_locale_source.py"
 run_check "Object projection damage, immunity and destruction zh-TW" python3 "$ROOT/tests/test_projection_item_feedback_locale_source.py"
+run_check "Native monster elemental attacks, life drain and theft zh-TW" python3 "$ROOT/tests/test_mon_blow_feedback_locale_source.py"
 run_check "Ranged out-of-range prompt and monster item-crush bilingual feedback" python3 "$ROOT/tests/test_combat_feedback_edge_locale_source.py"
 run_check "Targeting help printf-format security (Clang/GCC)" python3 "$ROOT/tests/test_target_help_printf_security.py"
 run_check "Dynamic shape-change effects C99 renderer" python3 "$ROOT/tests/test_shape_effect_render_source.py"

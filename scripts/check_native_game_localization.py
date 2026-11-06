@@ -1842,6 +1842,41 @@ def main():
            'verify("Your limbs feel more energetic!", "你的四肢變得更加靈活有力！");' in timed_test,
            "Timed status C99 test must cover all groups and dynamic object-kind tags")
 
+    # Monster melee effects (not attack decision logic): fixed messages use
+    # exact-match bilingual lookup, dynamic messages use literal C format strings.
+    blow_ui = source(CPP / "angband/mon-blows.c", errors)
+    blow_header = source(CPP / "angband/zh-tw-mon-blow-feedback.h", errors)
+    blow_test = source(ROOT / "tests/native/test_mon_blow_feedback_locale.c", errors)
+    blow_entries = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', blow_header)
+    expect(len(blow_entries) == 13 and
+           len({en for en, _ in blow_entries}) == 13 and
+           all(zh.strip() and "%" not in zh for _, zh in blow_entries) and
+           all('verify("' + en + '", "' + zh + '");' in blow_test
+               for en, zh in blow_entries),
+           "Monster melee fixed-message map and C99 cases must match")
+    expect('"droid.h"' in blow_ui and
+           '"zh-tw-mon-blow-feedback.h"' in blow_ui and
+           blow_ui.count('angdroid_mon_blow_feedback(') == 13 and
+           'msgt(method->msgt, "你受到 %d 點傷害。", damage);' in blow_ui and
+           'msgt(method->msgt, "You take %d damage.", damage);' in blow_ui and
+           'msg("%d 枚金幣被偷走了！", gold);' in blow_ui and
+           'msg("%d coins were stolen!", gold);' in blow_ui and
+           'if (current_player->au) {' in blow_ui and
+           'msg("%s試圖偷走你的%s%s，但失敗了。", m_name,' in blow_ui and
+           'msg("%s tries to steal %s %s, but fails.", m_name,' in blow_ui and
+           'msg("你的%s%s（%c）被偷走了！",' in blow_ui and
+           'msg("%s %s (%c) was stolen!",' in blow_ui and
+           'msg("你的%s（%c）被吃掉了！", o_name,' in blow_ui and
+           'msg("你的一件%s（%c）被吃掉了！", o_name,' in blow_ui and
+           'gear_object_for_use(context->p, obj, 1,' in blow_ui and
+           'player_exp_lose(context->p, d / 10, false);' in blow_ui and
+           'player_exp_lose(context->p, d, false);' in blow_ui,
+           "Monster melee messages must keep original damage, stealing, and life drain")
+    expect('test_mon_blow_feedback_locale.c' in native_tests and
+           'verify("You are covered in acid!", "酸液濺滿了你的全身！");' in blow_test and
+           'verify("All of your coins were stolen!", "你的金幣全被偷走了！");' in blow_test,
+           "Monster melee bilingual host C99 regression must be registered")
+
     # Gameplay projection feedback and monster attacks are translated only
     # at display sinks, preserving the original damage and status calculations.
     projection_player = source(CPP / "angband/project-player.c", errors)

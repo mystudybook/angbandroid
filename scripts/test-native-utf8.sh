@@ -307,6 +307,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_projection_feedback_locale"
 "$BUILD_DIR/test_projection_feedback_locale"
 
+# Monster melee damage, elemental effects, theft and pack events.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_mon_blow_feedback_locale.c" \
+    -o "$BUILD_DIR/test_mon_blow_feedback_locale"
+"$BUILD_DIR/test_mon_blow_feedback_locale"
+
 # Monster mimic, theft and spawning feedback.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_monster_events_locale.c" \
