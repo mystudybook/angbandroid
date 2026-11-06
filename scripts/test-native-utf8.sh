@@ -397,6 +397,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_ignore_quality_action_locale"
 "$BUILD_DIR/test_ignore_quality_action_locale"
 
+# Native bilingual version title and complete UTF-8 buffer boundary.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_version_header_text.c" \
+    -o "$BUILD_DIR/test_version_header_text"
+"$BUILD_DIR/test_version_header_text"
+
 # Rotated item selection and scroll-safe quiver footer coordinates.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_item_selection_layout.c" \
