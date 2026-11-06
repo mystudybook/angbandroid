@@ -433,7 +433,9 @@ public class StateManager {
 				amount, max, getKeyRightForQuantity(),
 				getKeyBackspace(), getKeyEnter());
 			if (keys == null) return false;
-			this.keyBuffer.addRawSequence(keys);
+			if (!this.keyBuffer.addRawSequence(keys, token)) return false;
+			/* Resolve the UI exactly once, but retain queued native keys
+			 * until the game sends its end event. */
 			quantityPromptGate.resolve(token);
 			return true;
 		}
@@ -446,7 +448,8 @@ public class StateManager {
 				return false;
 			int key = getKeyEsc();
 			if (key <= 0) return false;
-			this.keyBuffer.addRawSequence(new int[] { key });
+			if (!this.keyBuffer.addRawSequence(new int[] { key }, token))
+				return false;
 			quantityPromptGate.resolve(token);
 			return true;
 		}
@@ -460,6 +463,7 @@ public class StateManager {
 		/* The previous game instance can no longer accept an old popup. */
 		synchronized (quantityPromptGate) {
 			quantityPromptGate.close();
+			if (this.keyBuffer != null) this.keyBuffer.setQuantityToken(0);
 			this.keyBuffer = new KeyBuffer(this);
 		}
 	}
@@ -471,8 +475,13 @@ public class StateManager {
 			/* Handle start/end on the native callback thread, before the
 			 * asynchronous UI message can become stale. */
 			synchronized (quantityPromptGate) {
-				quantityToken = "end".equals(body) ?
+				boolean ended = "end".equals(body);
+				quantityToken = ended ?
 					quantityPromptGate.close() : quantityPromptGate.open();
+				/* Retain a submitted batch until native finishes reading it.
+				 * Never confuse UI resolve() with native prompt completion. */
+				if (this.keyBuffer != null)
+					this.keyBuffer.setQuantityToken(ended ? 0 : quantityToken);
 			}
 		}
 		Message msg = Message.obtain();
@@ -548,8 +557,10 @@ public class StateManager {
 		/* Prevent an old UI callback from adding input to a dying game. */
 		synchronized (quantityPromptGate) {
 			quantityPromptGate.close();
-			if (this.keyBuffer != null)
+			if (this.keyBuffer != null) {
+				this.keyBuffer.setQuantityToken(0);
 				this.keyBuffer.signalGameExit();
+			}
 		}
 	}
 	public boolean getSignalGameExit() {
