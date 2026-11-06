@@ -105,6 +105,7 @@ public class TermView extends View implements OnGestureListener {
 
 	Handler timerHandler;
 	private FloatingView lastView = null;
+	private final ScreenTapGuard screenTapGuard = new ScreenTapGuard();
 	private int currentMode = 0;
 	private Point lastLocation = null;
 	private long lastRefresh = 0;
@@ -368,6 +369,8 @@ public class TermView extends View implements OnGestureListener {
 				savedTime = currTime;
 
 				if (msg.what == LONG_PRESS) {
+					/* The release after a screen long-press is not another tap. */
+					screenTapGuard.cancelScreenGesture();
 					currentMode = LONG_PRESS;
 					lastView.executeLongPress(null);
 				}
@@ -2775,6 +2778,41 @@ public class TermView extends View implements OnGestureListener {
 
 	@Override
 	public boolean onTouchEvent(MotionEvent me) {
+		final int maskedAction = me.getActionMasked();
+
+		/* Only the plain terminal ScreenView sends raw mouse clicks to
+		 * Angband's spell menu. A second pointer or cancelled gesture must
+		 * never become the last single tap that confirms a spell. Do not
+		 * change the virtual D-pad/overlay touch and repeat semantics. */
+		if (maskedAction == MotionEvent.ACTION_DOWN) {
+			screenTapGuard.begin(
+				getViewByXY(me.getY(), me.getX()) instanceof ScreenView);
+		} else if (maskedAction == MotionEvent.ACTION_POINTER_DOWN ||
+				maskedAction == MotionEvent.ACTION_POINTER_UP ||
+				me.getPointerCount() > 1) {
+			if (screenTapGuard.cancelScreenGesture()) {
+				stopTimers();
+				return true;
+			}
+		} else if (maskedAction == MotionEvent.ACTION_CANCEL) {
+			if (screenTapGuard.cancelScreenGesture()) {
+				stopTimers();
+				return true;
+			}
+		}
+		if (screenTapGuard.isCancelled()) {
+			if (maskedAction == MotionEvent.ACTION_UP) {
+				screenTapGuard.finish(false);
+				stopTimers();
+			}
+			return true;
+		}
+		if (maskedAction == MotionEvent.ACTION_UP &&
+				!screenTapGuard.finish(
+					getViewByXY(me.getY(), me.getX()) instanceof ScreenView)) {
+			stopTimers();
+			return true;
+		}
 
 		// Display quick settings (bottom left corner)
 		if (me.getAction() == MotionEvent.ACTION_UP &&
@@ -3081,6 +3119,8 @@ public class TermView extends View implements OnGestureListener {
 
 	@Override
 	protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+		/* The up event after rotation must not confirm an old spell tap. */
+		screenTapGuard.cancelScreenGesture();
 		Log.d("Angband", "onSizeChanged");
 		super.onSizeChanged(w, h, oldw, oldh);
 		handler.sendEmptyMessage(AngbandDialog.Action.StartGame.ordinal());
