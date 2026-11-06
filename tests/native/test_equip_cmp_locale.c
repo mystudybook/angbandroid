@@ -14,6 +14,8 @@ int main(void)
 {
     check("Sorry, could not display.  Press any key.", "無法顯示，請按任意鍵。");
     check("Object comparison", "裝備比較");
+    check("Tap a row to select; tap again to confirm", "點選物品列以選取，再點一次確認");
+    check("No items to examine", "沒有可查看的裝備。");
     check("[k/up, j/down, p/PgUp, n/PgDn to move; ? for help; ESC to exit]", "k／↑、j／↓、p／PgUp、n／PgDn 移動；? 說明；Esc 離開");
     check("[k/up, j/down, p/PgUp, n/PgDn to move; return to accept]", "k／↑、j／↓、p／PgUp、n／PgDn 移動；Enter 確認");
     check("No items; use q, !, c, or R to change filter", "沒有符合的物品；按 q、!、c 或 R 調整篩選");
