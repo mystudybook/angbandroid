@@ -153,6 +153,60 @@ int main(void)
     CHECK(!angdroid_spell_menu_touch_selectable(0, 0, -1));
     CHECK(angdroid_spell_menu_touch_selectable(1, 0, 0));
 
+    /* A keyboard-casting menu must NOT commit on one Android tap,
+     * even when the tapped row was already highlighted by default. */
+    {
+        int armed = -1;
+        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 0, 0));
+        CHECK(armed == 0);
+        CHECK(angdroid_spell_menu_confirm_touch(&armed, 0, 0));
+        CHECK(armed == -1);
+        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 0, 0));
+        CHECK(armed == 0);
+        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 3, 0));
+        CHECK(armed == 3);
+        CHECK(angdroid_spell_menu_confirm_touch(&armed, 3, 0));
+        CHECK(armed == -1);
+    }
+
+    /* Browsing must continue to respond to a single harmless tap.
+     * A previously armed cast must also be cancelled when browsing. */
+    {
+        int armed = 7;
+        CHECK(angdroid_spell_menu_confirm_touch(&armed, 2, 1));
+        CHECK(armed == -1);
+        CHECK(angdroid_spell_menu_confirm_touch(&armed, 2, 1));
+        CHECK(armed == -1);
+    }
+
+    /* Invalid rows and null state never produce a confirmed action. */
+    {
+        int armed = 4;
+        CHECK(!angdroid_spell_menu_confirm_touch(NULL, 4, 0));
+        CHECK(!angdroid_spell_menu_confirm_touch(&armed, -1, 0));
+        CHECK(armed == 4);
+        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 9, 0));
+        CHECK(armed == 9);
+        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 10, 0));
+        CHECK(armed == 10);
+        CHECK(angdroid_spell_menu_confirm_touch(&armed, 10, 0));
+        CHECK(armed == -1);
+    }
+
+    /* Simulation of a reader exit, rotation, header tap or keyboard
+     * navigation: the UI explicitly resets an armed row to -1. */
+    {
+        int armed = -1;
+        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 5, 0));
+        CHECK(armed == 5);
+        armed = -1;
+        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 5, 0));
+        CHECK(armed == 5);
+        armed = -1;
+        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 5, 0));
+        CHECK(armed == 5);
+    }
+
     printf("PASS: UTF-8 spell reader pages (%d assertions)\n", checks);
     return 0;
 }

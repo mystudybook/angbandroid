@@ -112,11 +112,16 @@ class FullSpellReaderSourceTest(unittest.TestCase):
 
         handler = SPELL.split("static bool spell_menu_handler(", 1)[1]
         handler = handler.split("static void spell_menu_browser(", 1)[0]
-        self.assertIn("if (e->type == EVT_SELECT ||", handler)
-        self.assertIn("(e->type == EVT_MOUSE &&", handler)
+        self.assertIn("if (e->type == EVT_MOUSE) {", handler)
         self.assertIn("angdroid_spell_menu_touch_selectable(", handler)
         self.assertIn("region_inside(&m->active, e)", handler)
         self.assertIn("e->mouse.button, oid)", handler)
+        self.assertIn("oid >= d->n_spells", handler)
+        self.assertIn("angdroid_spell_menu_confirm_touch(", handler)
+        self.assertIn("&d->touch_pending_oid, oid, d->browse", handler)
+        self.assertIn("else if (e->type == EVT_SELECT) {", handler)
+        self.assertIn("else if (e->type == EVT_KBRD) {", handler)
+        self.assertIn("d->touch_pending_oid = -1;", handler)
         self.assertIn("if (oid < 0 || oid >= d->n_spells) return false;", handler)
         self.assertIn("d->selected_spell = d->spells[oid];", handler)
         self.assertIn("return d->browse ? true : false;", handler)
@@ -130,6 +135,48 @@ class FullSpellReaderSourceTest(unittest.TestCase):
         self.assertIn("!angdroid_spell_menu_touch_selectable(0, 1, 4)", NATIVE)
         self.assertIn("!angdroid_spell_menu_touch_selectable(1, 2, 5)", NATIVE)
         self.assertIn("!angdroid_spell_menu_touch_selectable(1, 1, -1)", NATIVE)
+
+    def test_two_taps_required_for_casting_and_studying(self):
+        self.assertIn("static inline int angdroid_spell_menu_confirm_touch(", PAGES)
+        self.assertIn("if (browse) {", PAGES)
+        self.assertIn("if (*armed_oid != oid) {", PAGES)
+        self.assertIn("*armed_oid = oid;", PAGES)
+        self.assertIn("*armed_oid = -1;", PAGES)
+        self.assertIn("if (!armed_oid || oid < 0) return 0;", PAGES)
+
+        handler = SPELL.split("static bool spell_menu_handler(", 1)[1]
+        handler = handler.split("static void spell_menu_browser(", 1)[0]
+        self.assertIn("if (!angdroid_spell_menu_confirm_touch(", handler)
+        self.assertIn("return true;", handler)
+        self.assertEqual(1, handler.count("d->selected_spell = d->spells[oid];"))
+        self.assertIn("d->touch_pending_oid = -1;", SPELL)
+        self.assertIn("if (d->touch_pending_oid >= 0 && d->touch_pending_oid != oid)", SPELL)
+        self.assertIn("spell_menu_relayout\t/* reflow menu", SPELL)
+        self.assertIn("d->browse = true;", SPELL)
+        self.assertIn("d->touch_pending_oid = -1;", SPELL)
+        self.assertNotIn("m->flags = MN_CASELESS_TAGS | MN_DBL_TAP", SPELL)
+        self.assertIn("觸控同列兩次確認", SPELL)
+        self.assertIn("Tap row twice", SPELL)
+        self.assertIn("char buf[192];", SPELL)
+        self.assertIn("angdroid_utf8_clip_columns(buf, (size_t)(Term->wid - 1));", SPELL)
+
+        # The Java terminal sends one mouse press for each completed tap,
+        # not separate mouse events for both ACTION_DOWN and ACTION_UP.
+        JAVA = (ROOT / "app/src/main/java/org/rephial/xyangband/TermView.java").read_text(
+            encoding="utf-8")
+        self.assertIn("public boolean onSingleTapUp(MotionEvent event)", JAVA)
+        self.assertIn("sendMousePress(y, x);", JAVA)
+        self.assertIn("state.addMousePress(p.y, p.x, 1, 0);", JAVA)
+
+        for phrase in (
+            "angdroid_spell_menu_confirm_touch(&armed, 0, 0)",
+            "angdroid_spell_menu_confirm_touch(&armed, 3, 0)",
+            "angdroid_spell_menu_confirm_touch(&armed, 2, 1)",
+            "angdroid_spell_menu_confirm_touch(NULL, 4, 0)",
+            "armed = -1;",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, NATIVE)
 
     def test_native_cases_are_registered(self):
         for phrase in ("A中文B", "Mana Storm hits.", "Alpha  Beta",
