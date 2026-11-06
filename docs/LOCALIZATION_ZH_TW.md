@@ -148,7 +148,7 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 原生 Angband 的 `textui_get_quantity()` 在有效輸入、重填後有效輸入、Esc 取消時都會送出明確的 `TERM_CONTROL_QUANTITY = "end"`，避免原生遊戲已離開數量欄而 Android 仍保留可操作的視窗。數量上限 ≤ 1 時原本就不會開啟視窗，無須送結束通知。
 
 - 在原生 callback 執行緒同步處理每次 start/end，指派不同的 `QuantityPromptGate` token，然後以 `Message.arg2` 將 token 傳給 Android 主執行緒。已過期的 start 通知不再開視窗；延遲到達的 end 通知只會關閉其所屬視窗。
-- `QuantityPopup` 的「確認數量」、1／10／全部、取消、返回與程式關閉行為都攜帶 session token；`StateManager` 在同一個 token 鎖內檢查有效性並寫入 `KeyBuffer`，無效操作不會送入 Enter／Esc。
+- `QuantityPopup` 的「確認數量」、1／10／全部、取消、返回與程式關閉行為都攜帶 session token；`StateManager` 在同一個 token 鎖內檢查有效性並寫入 `KeyBuffer`，無效操作不會送入 Enter／Esc。 每次原生提示皆建立**新的 Android PopupWindow**，避免舊視窗延遲的 dismiss callback 被綁到新 token。
 - 若玩家透過原生遊戲鍵盤自行完成數量輸入，結束通知只關閉 Android 視窗，**不會**再補送 Esc；Activity 暫停時仍維持原本取消目前輸入的策略。
 - 原有按鍵佇列不會被清空。**本批仍不能撤銷已經排入、但尚未由原生遊戲讀取的按鍵**；若希望避免這類殘留，後續需要具有 session 標籤的佇列項目與原生消費端驗證。也未變更商店價格、背包資料、存檔或遊戲玩法。
 - 此次原生 `"end"` 通知只新增於**主要 Angband 核心**；其他獨立 variant 仍有 Android token 的「單次確認／取消」保護，但尚未全面加入其原生提示結束事件，需分別審查。
