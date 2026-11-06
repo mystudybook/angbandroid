@@ -1056,7 +1056,7 @@ void do_cmd_refill(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			angdroid_game_ui_text("Refuel with with fuel source? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("Refuel with which fuel source? ", angdroid_zh_tw_enabled()),
 			angdroid_game_ui_text("You have nothing you can refuel with.", angdroid_zh_tw_enabled()),
 			obj_can_refill,
 			USE_INVEN | USE_FLOOR | USE_QUIVER) != CMD_OK) return;
