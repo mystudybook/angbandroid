@@ -19,7 +19,15 @@ class QuantityInputSourceTest(unittest.TestCase):
     def test_invalid_alpha_requires_retry_and_star_is_explicit(self):
         body = self.body()
         self.assertIn('#include "quantity-input.h"', UI)
-        self.assertIn("angdroid_parse_quantity(buf, max, &amt)", body)
+        self.assertIn(
+            "angdroid_parse_quantity_preserving_default(", body)
+        self.assertIn("buf, max, &amt", body)
+        self.assertIn("angdroid_parse_quantity(input, max, &parsed)", PARSER)
+        self.assertIn("if (!amount || !angdroid_parse_quantity(", PARSER)
+        self.assertIn("*amount = parsed;", PARSER)
+        self.assertLess(PARSER.index("if (!amount || !angdroid_parse_quantity("),
+                        PARSER.index("*amount = parsed;"))
+        self.assertNotIn("angdroid_parse_quantity(buf, max, &amt)", body)
         self.assertIn("while (true)", body)
         self.assertIn("if (!get_string(prompt, buf, sizeof(buf))) break;", body)
         self.assertIn("if (*p == '*')", PARSER)
