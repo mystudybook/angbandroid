@@ -2748,15 +2748,25 @@ s16b get_quantity(cptr prompt, int max)
 		/* Build the default */
 		strnfmt(buf, sizeof(buf), "%d", amt);
 
-		soft_kbd_linger("0123456789*");
+		/* Keep the Android quantity popup tied to this native prompt. */
+		Term_control_quantity(prompt, max, amt);
+
+		/* Use the quantity control on Android, but retain * as a key hint
+		 * when the popup has been disabled in settings. */
+		soft_kbd_linger("${quant}*");
 
 		/* Ask for a quantity */
 		if (!get_string(prompt, buf, 7)) {
 			soft_kbd_clear(true);
+			Term_control(TERM_CONTROL_QUANTITY, "end");
+			/* Esc must also remove the temporary [ALL] button. */
+			button_kill('a');
+			event_signal(EVENT_MOUSEBUTTONS);
 			return (0);
 		}
 
 		soft_kbd_clear(true);
+		Term_control(TERM_CONTROL_QUANTITY, "end");
 
 		/* Extract a number */
 		amt = atoi(buf);
