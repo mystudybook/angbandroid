@@ -324,6 +324,9 @@ static bool spell_menu_handler(struct menu *m, const ui_event *e, int oid)
                 &d->touch_pending_oid, &d->touch_pending_at_ms,
                 oid, d->browse, spell_menu_monotonic_ms()))
             return true;
+        /* A pause/focus loss can arrive after the first epoch read while
+         * the second tap is being processed. Never commit that stale tap. */
+        if (spell_menu_sync_touch_epoch(d)) return true;
     } else if (e->type == EVT_SELECT) {
         /* Enter and letter tags still perform the original single-step
          * selection: only touch interactions require confirmation. */
@@ -475,7 +478,7 @@ static struct menu *spell_menu_new(const struct object *obj,
 	menu_setpriv(m, d->n_spells, d);
 
 	/* Set flags */
-	m->header = "Name                             Lv Mana Fail Info";
+	m->header = angdroid_spell_menu_header(angdroid_zh_tw_enabled());
 	m->flags = MN_CASELESS_TAGS;
 	m->selections = all_letters_nohjkl;
 	m->browse_hook = spell_menu_browser;
