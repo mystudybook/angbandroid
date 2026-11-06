@@ -154,3 +154,13 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 原有按鍵佇列不會被清空。**本批仍不能撤銷已經排入、但尚未由原生遊戲讀取的按鍵**；若希望避免這類殘留，後續需要具有 session 標籤的佇列項目與原生消費端驗證。也未變更商店價格、背包資料、存檔或遊戲玩法。
 - 此次原生 `"end"` 通知只新增於**主要 Angband 核心**；其他獨立 variant 仍有 Android token 的「單次確認／取消」保護，但尚未全面加入其原生提示結束事件，需分別審查。
 - 離線驗證：`sh scripts/test-quantity-popup.sh` (新增 `QuantityPromptGateTest`)，`python3 tests/test_quantity_prompt_session_source.py`，以及 `sh scripts/verify-zh-tw.sh --android zh-tw-validation-93.log`。最後的完整 Android 編譯、模擬器／實機操作仍須在具備 SDK 的環境驗證。本批不使用 GitHub Actions。
+
+
+## 數量佇列 session 標記與 FAangband 結束事件（第 94 批）
+
+- 新增純 Java `QuantityKeyQueue` 作為 `KeyBuffer` 的 FIFO 容器。一般輸入、巨集 delimiters（-200）、存檔訊號（-1）都帶 **token 0**；Android 數量對話框產生的數字、Backspace、Enter 及 Esc 才帶上原生提示的 token。
+- `QuantityPromptGate.resolve()` 僅禁止 UI 重複確認或取消，**不立即丟棄**已提交的數量按鍵。只有原生下一次 `TERM_CONTROL_QUANTITY` start／end、遊戲退出或輸入佇列重設時，才更新佇列 token 並移除舊的數量按鍵。原生遊戲已經讀取的按鍵不可能撤銷；尚未讀取的過期輸入則會被丟棄。
+- `KeyBuffer.get(v)` 在原有 `keybuffer` 鎖內依序讀取有效按鍵；遇到過期 token 會跳過；blocking 模式繼續等待新有效輸入，保留遊戲停止特殊鍵優先處理、一般快捷鍵和既有 save 覆寫行為。更換 token 不會粗暴清空正常鍵或巨集內容。
+- FAangband 的 `textui_get_quantity()` 現在在成功與 Esc 取消時均送出 `TERM_CONTROL_QUANTITY: "end"`，使舊 popup 和過期數量按鍵能立即失效。**FAangband 的既有數量解析（如字母代表全部）仍照舊**，本輪只修正原生 Android 控制事件，不改其數量運算及角色／存檔資料。
+- **注意：** 其他獨立 native variant 仍須逐一核實其 `Term_control_quantity` 用法、原生終了事件和返回流程。本批的 FIFO 保護會阻止上一個 session 的殘留數量序列流入下一個 session，但**無法判別先前排入的普通按鍵是否也已過時**；消費端已讀走的按鍵也不能回溯。這不是整體遊戲交易的原子化。
+- 離線測試：`QuantityKeyQueueTest.java` 對 FIFO、原生通知、只移除 tagged keys、巨集／存檔、連續切換與部分消費進行純 JDK 測試；`test_quantity_tagged_queue_source.py` 驗證 Java 串接與 FAangband 原生程式碼。均納入 `scripts/verify-zh-tw.sh`，不需 GitHub Actions。完整 APK／NDK 編譯及 Android 模擬器／實機驗證仍需本機進行。
