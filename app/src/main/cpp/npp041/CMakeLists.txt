@@ -23,6 +23,7 @@ add_library( # Sets the name of the library.
       # Provides a relative path to your source file(s).
       main-android.c
       ../curses/curses.c
+      ../curses/droid.c
 
       birth.c
       cave.c
