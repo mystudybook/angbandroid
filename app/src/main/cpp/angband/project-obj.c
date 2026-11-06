@@ -138,12 +138,12 @@ int inven_damage(struct player *p, int type, int cperc)
 					ODESC_BASE, p);
 
 				/* Message: display only, preserving original amount and slot. */
-			if (angdroid_zh_tw_enabled()) {
-				msgt(MSG_DESTROY, "你的%s（%c）%s%s！", o_name,
-					gear_to_label(p, obj),
-					angdroid_project_inventory_scope(obj->number, amt),
-					damage ? "受損了" : "被摧毀了");
-			} else {
+				if (angdroid_zh_tw_enabled()) {
+					msgt(MSG_DESTROY, "你的%s（%c）%s%s！", o_name,
+						gear_to_label(p, obj),
+						angdroid_project_inventory_scope(obj->number, amt),
+						damage ? "受損了" : "被摧毀了");
+				} else {
 					msgt(MSG_DESTROY, "%sour %s (%c) %s %s!",
 					           ((obj->number > 1) ?
 					            ((amt == obj->number) ? "All of y" :
@@ -151,7 +151,7 @@ int inven_damage(struct player *p, int type, int cperc)
 					           o_name, gear_to_label(p, obj),
 					           ((amt > 1) ? "were" : "was"),
 						   (damage ? "damaged" : "destroyed"));
-			}
+				}
 
 				/* Damage already done? */
 				if (damage)
