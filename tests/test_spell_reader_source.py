@@ -69,6 +69,34 @@ class FullSpellReaderSourceTest(unittest.TestCase):
         self.assertIn("memcpy(out, text + start, end - start);", PAGES)
         self.assertIn("out[end - start] = '\\0';", PAGES)
 
+    def test_modal_exit_and_parent_menu_relayout(self):
+        # The nested reader consumes EVT_RESIZE: the parent menu_select()
+        # never sees it, so a fresh menu_layout() is required upon return.
+        self.assertIn("static void spell_menu_relayout(struct menu *m)", SPELL)
+        self.assertIn("Term_get_size(&width, &height);", SPELL)
+        self.assertIn("menu_width = angdroid_spell_reader_menu_width(width);", SPELL)
+        self.assertIn("bounds.col = -menu_width;", SPELL)
+        self.assertIn("bounds.page_rows = m->count + 1;", SPELL)
+        self.assertIn("(void)menu_layout(m, &bounds);", SPELL)
+        self.assertIn("spell_menu_show_full_description(spell);", SPELL)
+        self.assertIn("spell_menu_relayout(m);", SPELL)
+        self.assertEqual(2, SPELL.count("spell_menu_relayout(m);"))
+        self.assertIn("angdroid_spell_reader_menu_width", PAGES)
+        self.assertIn("terminal_width <= 15", PAGES)
+        self.assertIn("terminal_width - 15 < 80", PAGES)
+        self.assertIn("angdroid_spell_reader_menu_width(95) == 80", NATIVE)
+        self.assertIn("angdroid_spell_reader_menu_width(20) == 5", NATIVE)
+
+        # A single screen-save/screen-load pair for every reader path.
+        modal = SPELL.split("static void spell_menu_show_full_description", 1)[1]
+        modal = modal.split("static void spell_menu_relayout", 1)[0]
+        self.assertEqual(1, modal.count("screen_save();"))
+        self.assertEqual(1, modal.count("screen_load();"))
+        self.assertIn("while (!finished)", modal)
+        self.assertIn("finished = true;", modal)
+        self.assertNotIn("return;", modal.split("screen_save();", 1)[1])
+        self.assertNotIn("m->cursor =", modal)
+
     def test_native_cases_are_registered(self):
         for phrase in ("A中文B", "Mana Storm hits.", "Alpha  Beta",
                        "甲\\n\\n乙", "angdroid_spell_reader_page_down",

@@ -425,3 +425,13 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 在 `tests/native/test_spell_reader_pages.c` 追加 **21 項 C99 預期斷言**，測試寬度不同時相同字元位元組位置的行號轉換、超過文末偏移、有效／無效觸控、標題／底部退出及極窄尺寸；擴充 `tests/test_spell_reader_source.py` 確認實際 UI 事件有使用相同的純函式、提示字串有依 Unicode 顯示欄裁切，以及舊選單的施法／選擇鍵依然未動。
 - 原有 Native/Python 驗證腳本會自動執行這兩個既有測試，不新增 GitHub Actions。沒有修改 `class.txt`、163 筆法術原始紀錄、135 組翻譯對照、法術耗魔／成功率／傷害、角色資料或存檔。
 - GitHub 源碼靜態核對不代表完整 Android／NDK／模擬器或實機驗收；請在本機執行 `sh scripts/verify-zh-tw.sh --android zh-tw-validation-124.log`，實際確認開啟長文、捲動一半後旋轉、點上／下半部與標題／底部返回，以及返回後正常選擇和施放法術。
+
+
+## 第 125 批 — 法術全文閱讀器反覆開關與旋轉後的選單狀態
+
+- 審核發現**真正的事件遞送問題**：在 `ui-spell.c::spell_menu_show_full_description()` 裡收到的 `EVT_RESIZE` 被閱讀器自行處理，外層 `ui-menu.c::menu_select()` 沒機會收到，因此法術選單在返回後可能沿用旋轉前的 `menu->active` 區域／欄寬，造成選單跑位、裁切與下一次觸控座標錯誤。
+- 新增 `spell_menu_relayout(struct menu *m)`，在閱讀器退出後**無論有沒有旋轉都從目前 `Term_get_size()` 重新建立完整 `region` 並呼叫 `menu_layout()`**，保留原本 `m->cursor`、`selected_spell`、法術清單及施法狀態。原本的法術選單首次建立也改用同一個排版函式，避免新建與退出後採用不同計算。
+- 將原本 `MIN/MAX(Term->wid - 15, 80)` 的寬度計算抽出為純 C99 `angdroid_spell_reader_menu_width()`：終端寬度不足 16 欄時回傳 0，其他情況保留 15 欄旁邊空間、最大不超過 80 欄。回到選單時不會重用橫螢幕舊寬度。
+- 閱讀器原本 Esc／q 提前呼叫 `screen_load()` 並 `return`，其他出口在結尾恢復畫面。改為唯一 `screen_save()`／`screen_load()` 配對：任何正常結束（鍵盤、點標題、轉向遇過小終端、觸控底部）都走同一個還原出口，避免未來修改遺漏恢復。
+- `tests/native/test_spell_reader_pages.c` 新增 15 項 C99 預期斷言，驗證 0／15／16／20／40／94／95／96／500 欄的合法選單寬度，以及直橫直反覆尺寸變化時重新計算的結果。`tests/test_spell_reader_source.py` 新增來源測試，確認 `menu_layout()` 在閱讀器返回後一定呼叫、選單首次建立與返回使用同一函式、原始選單選擇結果不被修改，以及閱讀器的畫面儲存／還原各一處、無存檔後的提早 return。
+- **尚待驗收**：需在真實 Android NDK／Gradle 編譯及 emulator／實機上反覆開啟、翻頁、旋轉、關閉、選取／施放法術，確認頁面／遊戲狀態一致。GitHub 靜態程式碼核對不表示實機行為或完整本機測試已通過；本批提交使用 `[skip ci]`，不執行 GitHub Actions。

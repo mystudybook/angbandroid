@@ -137,6 +137,7 @@ static void spell_menu_show_full_description(const struct class_spell *spell)
     const char *description, *name;
     size_t first = 0, saved_offset = 0;
     bool reflow = false;
+    bool finished = false;
     if (!spell) return;
     zh = angdroid_zh_tw_enabled();
     description = angdroid_zh_tw_spell_description(spell->name,
@@ -145,7 +146,7 @@ static void spell_menu_show_full_description(const struct class_spell *spell)
     if (!description) return;
 
     screen_save();
-    while (true) {
+    while (!finished) {
         int width, height;
         size_t columns, visible, total, row = 0, start = 0, next;
         size_t top_offset = 0;
@@ -212,8 +213,8 @@ static void spell_menu_show_full_description(const struct class_spell *spell)
             case ESCAPE:
             case 'q':
             case 'Q':
-                screen_load();
-                return;
+                finished = true;
+                break;
             case KC_HOME:
                 first = 0;
                 break;
@@ -243,6 +244,24 @@ static void spell_menu_show_full_description(const struct class_spell *spell)
     screen_load();
 }
 
+/* Menu callbacks can consume EVT_RESIZE while a nested reader is open.
+ * The outer menu_select() then never sees that event and keeps the old
+ * active region. Rebuild from the CURRENT terminal dimensions whenever
+ * the reader closes; keep m->cursor and selected_spell unchanged. */
+static void spell_menu_relayout(struct menu *m)
+{
+    int width, height, menu_width;
+    region bounds;
+
+    Term_get_size(&width, &height);
+    menu_width = angdroid_spell_reader_menu_width(width);
+    bounds.col = -menu_width;
+    bounds.row = 1;
+    bounds.width = menu_width;
+    bounds.page_rows = m->count + 1;
+    (void)menu_layout(m, &bounds);
+}
+
 /**
  * Handle an event on a menu row.
  */
@@ -263,6 +282,8 @@ static bool spell_menu_handler(struct menu *m, const ui_event *e, int oid)
 			const struct class_spell *spell = spell_by_index(player,
 				d->spells[oid]);
 			spell_menu_show_full_description(spell);
+			/* The reader may have consumed a resize event. */
+			spell_menu_relayout(m);
 			return true;
 		}
 	}
@@ -357,9 +378,7 @@ static struct menu *spell_menu_new(const struct object *obj,
 {
 	struct menu *m = menu_new(MN_SKIN_SCROLL, &spell_menu_iter);
 	struct spell_menu_data *d = mem_alloc(sizeof *d);
-	size_t width = MAX(0, MIN(Term->wid - 15, 80));
 
-	region loc = { 0 - width, 1, width, -99 };
 
 	/* collect spells from object */
 	d->n_spells = spell_collect_from_book(player, obj, &d->spells);
@@ -386,9 +405,8 @@ static struct menu *spell_menu_new(const struct object *obj,
 	/* Separate reader command without modifying spell tag selection. */
 	m->cmd_keys = "?]";
 
-	/* Set size */
-	loc.page_rows = d->n_spells + 1;
-	menu_layout(m, &loc);
+	/* Match the same layout calculation on creation and on return. */
+	spell_menu_relayout(m);
 
 	return m;
 }
