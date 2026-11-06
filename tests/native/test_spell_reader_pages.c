@@ -27,6 +27,20 @@ int main(void)
     size_t next = 0;
     const char *mixed = "A中文B";
     const char *words = "Mana Storm hits.";
+    const char *spell_header_en = angdroid_spell_menu_header(0);
+    const char *spell_header_zh = angdroid_spell_menu_header(1);
+
+    /* Display-only zh-TW header: 50 cells with the same numeric columns. */
+    CHECK(strcmp(spell_header_en,
+        "Name                             Lv Mana Fail Info") == 0);
+    CHECK(strcmp(spell_header_zh,
+        "法術名稱                         等 魔力 失敗 資訊") == 0);
+    CHECK(angdroid_utf8_display_columns(spell_header_en) == 50);
+    CHECK(angdroid_utf8_display_columns(spell_header_zh) == 50);
+    CHECK(angdroid_utf8_display_columns("法術名稱                         ") == 33);
+    CHECK(angdroid_utf8_display_columns("法術名稱                         等 ") == 36);
+    CHECK(angdroid_utf8_display_columns("法術名稱                         等 魔力 ") == 41);
+    CHECK(angdroid_utf8_display_columns("法術名稱                         等 魔力 失敗 ") == 46);
 
     p = one("中文法術", 0, 5, "中文");
     p = one("中文法術", p, 5, "法術");
@@ -310,6 +324,30 @@ int main(void)
         CHECK(!angdroid_spell_menu_touch_epoch_changed(
             &armed, &at, &known_epoch, 6));
         CHECK(known_epoch == 6);
+    }
+
+    /* Transition arriving between confirmation and assignment: reject
+     * the just-confirmed second tap, even if the first poll was unchanged. */
+    {
+        int armed = -1, known_epoch = 40;
+        uint64_t at = 0;
+        CHECK(!angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, &known_epoch, 40));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 3, 0, UINT64_C(1000)));
+        CHECK(!angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, &known_epoch, 40));
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 3, 0, UINT64_C(1100)));
+        CHECK(armed == -1 && at == 0);
+        CHECK(angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, &known_epoch, 41)); /* onPause races with tap */
+        CHECK(known_epoch == 41 && armed == -1 && at == 0);
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 3, 0, UINT64_C(1200)));
+        CHECK(armed == 3 && at == UINT64_C(1200));
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 3, 0, UINT64_C(1300)));
     }
 
     /* A JNI failure must fail closed; no pending spell may survive. */
