@@ -700,10 +700,13 @@ static void use_aux(struct command *cmd, struct object *obj, enum use use,
 			 * Describe what's left of single use items or newly
 			 * identified items of all kinds.
 			 */
-			char name[80];
+			/* This message is displayed after using an item; describe
+			 * only the remaining, normally knowable object appearance. */
+			char name[256];
 
 			object_desc(name, sizeof(name), work_obj,
 				ODESC_PREFIX | ODESC_FULL | ODESC_ALTNUM |
+				ODESC_ZH_TW |
 				((number + ((used && use == USE_SINGLE) ?
 				-1 : 0)) << 16), player);
 			if (from_floor) {
@@ -775,8 +778,8 @@ void do_cmd_read_scroll(struct command *cmd)
 
 	/* Get the scroll */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Read which scroll? ",
-			"You have no scrolls to read.",
+			angdroid_game_ui_text("Read which scroll? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no scrolls to read.", angdroid_zh_tw_enabled()),
 			tval_is_scroll,
 			USE_INVEN | USE_FLOOR) != CMD_OK) return;
 
@@ -896,8 +899,8 @@ void do_cmd_eat_food(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Eat which food? ",
-			"You have no food to eat.",
+			angdroid_game_ui_text("Eat which food? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no food to eat.", angdroid_zh_tw_enabled()),
 			tval_is_edible,
 			USE_INVEN | USE_FLOOR) != CMD_OK) return;
 
@@ -917,8 +920,8 @@ void do_cmd_quaff_potion(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Quaff which potion? ",
-			"You have no potions from which to quaff.",
+			angdroid_game_ui_text("Quaff which potion? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no potions from which to quaff.", angdroid_zh_tw_enabled()),
 			tval_is_potion,
 			USE_INVEN | USE_FLOOR) != CMD_OK) return;
 
@@ -938,8 +941,8 @@ void do_cmd_use(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Use which item? ",
-			"You have no items to use.",
+			angdroid_game_ui_text("Use which item? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no items to use.", angdroid_zh_tw_enabled()),
 			obj_is_useable,
 			USE_EQUIP | USE_INVEN | USE_QUIVER | USE_FLOOR | SHOW_FAIL | QUIVER_TAGS | SHOW_FAIL) != CMD_OK)
 		return;
