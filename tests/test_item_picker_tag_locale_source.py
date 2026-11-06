@@ -10,6 +10,8 @@ LABELS = (CPP / "zh-tw-ui.h").read_text(encoding="utf-8")
 GUARD = (CPP / "item-picker-tag-guard.h").read_text(encoding="utf-8")
 NATIVE = (ROOT / "tests/native/test_item_picker_tag_guard.c").read_text(
     encoding="utf-8")
+NATIVE_LOCALE = (ROOT / "tests/native/test_item_picker_cancel_locale.c").read_text(
+    encoding="utf-8")
 NATIVE_RUNNER = (ROOT / "scripts/test-native-utf8.sh").read_text(
     encoding="utf-8")
 
@@ -39,6 +41,9 @@ class ItemPickerTagLocaleSourceTest(unittest.TestCase):
         self.assertIn("test_tag(255, 10, -1)", NATIVE)
         self.assertIn("test_tag('9', 10, 9)", NATIVE)
         self.assertIn("tests/native/test_item_picker_tag_guard.c", NATIVE_RUNNER)
+        self.assertIn("tests/native/test_item_picker_cancel_locale.c", NATIVE_RUNNER)
+        self.assertIn('angdroid_game_ui_text(" ESC", 1)', NATIVE_LOCALE)
+        self.assertIn('" Esc 取消"', NATIVE_LOCALE)
 
     def test_picker_escape_hint_is_display_only_bilingual(self):
         menu = UI.split("static void menu_header(void)", 1)[1].split(
