@@ -277,6 +277,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_equip_cmp_name_display"
 "$BUILD_DIR/test_equip_cmp_name_display"
 
+# Equipment compare BAIL state and tiny/rotated terminal coordinate guards.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_equip_cmp_tiny_terminal.c" \
+    -o "$BUILD_DIR/test_equip_cmp_tiny_terminal"
+"$BUILD_DIR/test_equip_cmp_tiny_terminal"
+
 # Original Angband curse.txt labels and exact display-only translations.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_curse_locale.c" \

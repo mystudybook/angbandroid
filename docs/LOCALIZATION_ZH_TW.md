@@ -247,3 +247,11 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - **維持裝備認知規則**：玩家已知的神器／特殊詞綴使用 `angdroid_zh_tw_artifact_name`／`angdroid_zh_tw_ego_name` 對照，遇到未知名稱回退英文；兩者沿用原本「顯示名稱尾部」的簡稱風格。普通裝備在畫面上使用 `object_desc(..., ODESC_COMBAT | ODESC_SINGULAR | ODESC_TERSE | ODESC_ZH_TW)`，不使用 `ODESC_SPOIL`，未知物品仍遵守原有的鑑定與外觀限制。清單的英文 `set_short_name()`、物品資料與儲存格式一概不變。
 - **避免切壞 UTF-8、擠壓屬性欄位或留下殘字**：新增純 C99 `equip-compare-name-display.h`，重用 `angdroid_menu_copy_columns`、`angdroid_utf8_display_columns`、`angdroid_utf8_skip_columns`，依手機終端機**顯示欄數**（而非 UTF-8 bytes）裁切，再以空白填滿固定欄寬，避免前次較長中文留下殘字。繪製中文字串時使用 `Term_putstr(..., -1, ...)` 讓終端系統依 Unicode 字元數輸出；若格式化失敗則回退原本英文清單。原生 CJK 欄寬與文字流仍以共用的 `unicode_display.h` 為準。
 - **測試**：新增 `tests/native/test_equip_cmp_name_display.c`，測試純中英字串、寬字元邊界、神器／詞綴類尾部保留、前綴裁切、補空白、損壞 UTF-8、NULL 和極小 buffer，接入 `scripts/test-native-utf8.sh`。新增 `tests/test_equip_cmp_name_display_source.py` 核對純顯示翻譯、未鑑定資訊保護、原名排序／匯出不變與畫面／檔案呼叫參數差異，接入 `scripts/verify-zh-tw.sh`。本批不使用 GitHub Actions；Android NDK／Gradle 與模擬器／實機仍需本機驗收。
+
+
+## 第 105 批 — 裝備比較在極窄螢幕／初始化失敗時的安全性
+
+- **實際發現的原生缺陷**：`initialize_summary()` 在終端高度太低或寬度不足時，可能在 `reconfigure_for_term_if_necessary()` 提前回傳，尚未執行 `filter_items()`／`sort_items()`；原先 `equip_cmp_display()` 的 `EQUIP_CMP_MENU_BAIL` 分支卻會繼續讀取 `the_summary->nfilt`，而首次配置 `mem_alloc` 時它未被初始化，存在未定義讀取與顯示錯誤「沒有符合的物品」的風險。本批在初始摘要中明確設定 `nfilt=0`，並使 `BAIL` 狀態**不讀取** `dlg_trans_msg`／`nfilt`，只顯示原有失敗提示，讓使用者按鍵返回。
+- **終端格網保護**：`equip_cmp_print_label()` 在輸出中文及一般提示之前，現在檢查 `Term` 是否存在、終端寬高是否有效、`row/col` 是否在合法範圍內。避免旋轉期間 `hgt-1` 變成 `-1` 或寬度為 0 時繼續呼叫 `prt()`；有效情況仍使用既有 `angdroid_menu_copy_columns()`，完整裁切繁中 UTF-8，不改選單原本按鍵。
+- **狀態與匯出不變**：新增獨立 C99 `equip-compare-state-guard.h`；沒有修改 `display_page(the_summary, player, true)`、檔案匯出 `display_page(s_for_file, player, false)`、排序、裝備篩選或任何存檔格式。正常有物品／無物品狀態與原版互動維持一致。
+- **回歸測試**：新增 `tests/native/test_equip_cmp_tiny_terminal.c`（初始／失敗狀態、0×0、1×1、視窗上下邊界、無效座標、螢幕縮放）到 `scripts/test-native-utf8.sh`；新增 `tests/test_equip_cmp_tiny_terminal_source.py` 檢查實際初始化順序、失敗路徑、UTF-8 安全裁切及匯出隔離，註冊到 `scripts/verify-zh-tw.sh`。所有提交包含 `[skip ci]`，不使用 GitHub Actions。獨立原生測試不能取代 Android NDK／Gradle 與 Android 模擬器／實機在旋轉或切換視窗時的驗收。
