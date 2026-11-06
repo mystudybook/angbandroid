@@ -57,6 +57,7 @@
 #include "object-list-text.h"
 #include "inventory-list-display.h"
 #include "item-selection-layout.h"
+#include "item-picker-tag-guard.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -682,7 +683,7 @@ static item_tester tester_m;
 static region area = { 20, 1, -1, -2 };
 static struct object *selection;
 static const char *prompt;
-static char header[80];
+static char header[288];
 static int i1, i2;
 static int e1, e2;
 static int q1, q2;
@@ -779,8 +780,11 @@ static bool get_tag(struct object **tagged_obj, char tag, cmd_code cmd,
 
 	/* (f)ire is handled differently from all others, due to the quiver */
 	if (quiver_tags) {
-		i = tag - '0';
-		if (player->upkeep->quiver[i]) {
+		/* Only @0 .. @9 within the current quiver size are valid
+		 * array indexes. Other tags can still match item inscriptions. */
+		i = angdroid_item_picker_quiver_index((unsigned char)tag,
+			z_info->quiver_size);
+		if (i >= 0 && player->upkeep->quiver[i]) {
 			*tagged_obj = player->upkeep->quiver[i];
 			return true;
 		}
@@ -844,8 +848,8 @@ static bool get_tag(struct object **tagged_obj, char tag, cmd_code cmd,
  */
 static void menu_header(void)
 {
-	char tmp_val[75];
-	char out_val[75];
+	char tmp_val[80];
+	char out_val[256];
 
 	bool use_inven = ((item_mode & USE_INVEN) ? true : false);
 	bool use_equip = ((item_mode & USE_EQUIP) ? true : false);
@@ -988,7 +992,8 @@ static void menu_header(void)
 	}
 
 	/* Finish the header */
-	my_strcat(out_val, " ESC", sizeof(out_val));
+	my_strcat(out_val, angdroid_game_ui_text(" ESC",
+		angdroid_zh_tw_enabled()), sizeof(out_val));
 
 	/* Build the header */
 	strnfmt(header, sizeof(header), "(%s)", out_val);
@@ -1635,7 +1640,8 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
  */
 void display_object_recall(struct object *obj)
 {
-	char header_buf[120];
+	/* Leave room for full multibyte zh-TW item names in recall titles. */
+	char header_buf[256];
 
 	textblock *tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
@@ -1669,7 +1675,8 @@ void display_object_kind_recall(struct object_kind *kind)
  */
 void display_object_recall_interactive(struct object *obj)
 {
-	char header_buf[120];
+	/* Leave room for full multibyte zh-TW item names in recall titles. */
+	char header_buf[256];
 	textblock *tb;
 
 	event_signal(EVENT_MESSAGE_FLUSH);
@@ -1686,7 +1693,8 @@ void display_object_recall_interactive(struct object *obj)
  */
 void textui_obj_examine(void)
 {
-	char header_buf[120];
+	/* Leave room for full multibyte zh-TW item names in recall titles. */
+	char header_buf[256];
 
 	textblock *tb;
 	region local_area = { 0, 0, 0, 0 };
