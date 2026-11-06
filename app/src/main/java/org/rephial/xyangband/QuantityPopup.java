@@ -109,7 +109,10 @@ public class QuantityPopup extends PopupWindow
         // Only rewrite exact generic native prompts. Keep store-specific or
         // other game-specific instructions untouched (including their keys).
         String promptText = message == null ? "" : message;
-        switch (QuantityPromptText.classify(promptText, limit)) {
+        StateManager state = context.getStateManager();
+        boolean isNpp041 = state != null
+                && state.currentPlugin == Plugins.Plugin.npp041;
+        switch (QuantityPromptText.classify(promptText, limit, isNpp041)) {
             case QuantityPromptText.FROM_ONE:
                 promptText = context.getString(R.string.quantity_prompt_from_one, limit);
                 break;
@@ -121,6 +124,9 @@ public class QuantityPopup extends PopupWindow
                 break;
             case QuantityPromptText.FROM_ZERO_SILQ:
                 promptText = context.getString(R.string.quantity_prompt_silq, limit);
+                break;
+            case QuantityPromptText.FROM_ZERO_NPP041:
+                promptText = context.getString(R.string.quantity_prompt_npp041, limit);
                 break;
             default:
                 break;

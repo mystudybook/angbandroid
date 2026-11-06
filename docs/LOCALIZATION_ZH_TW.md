@@ -193,3 +193,12 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 0.5.4 與 7.1.0 使用相同的原生 `Quantity (0-N, '*' or 'a' = all): ` 格式，因此直接重用第 96 批的精確比對與繁中 `quantity_prompt_npp_all` 資源，不建立多餘翻譯，也不翻譯自訂商店／裝備問題。
 - Python `tests/test_variant_quantity_session_source.py` 擴大涵蓋 0.5.4 的開始／完成／取消與臨時按鍵清理；已由 `scripts/verify-zh-tw.sh` 呼叫。尚未聲稱 Android APK／NDK 完整編譯或模擬器／實機已通過。
 - **NPPAngband 0.4.1 限制**：原生檔案目前使用 `Term_control_android` 私有回呼，且 CMake 未整合與新版相同的 `droid.c` 控制橋接；不應直接複製第 97 批新增的 `Term_control_quantity` 呼叫而不先修復連結及控制協定。下一輪需要獨立評估。
+
+
+## NPPAngband 0.4.1 Android 控制橋接及數量中文化（第 98 批）
+
+- **控制橋接**：0.4.1 原本只有 `static Term_control_android()`，`CMakeLists.txt` 沒有編譯 `../curses/droid.c`，不能直接使用其他核心的 `Term_control_quantity`。現在透過 `droid.h` 將舊 callback 對外命名為 `Term_control`（仍保留原本的 `IN_THE_DUNGEON` context／`HAS_KEYMAP_PACK` 邏輯），並把共用 `droid.c` 納入 **npp041** native library。原有游標控制改走同一個 `Term_control` 函式。
+- **原生數量 session**：只在 `max != 1 && allow_quantity`、未由 `command_arg` 或 `ALLOW_REPEAT` 決定數量的互動路徑送出 `Term_control_quantity(prompt,max,amt)`；成功或 Esc 取消都會在提示結束時送出 `TERM_CONTROL_QUANTITY: "end"`。既有的字母「全部」、`atoi`、上下限及重複指令操作不變。
+- **快速鍵與 popup 模式**：在原本 `inkey()` 的主畫面等待輸入前呼叫 `soft_kbd_flush()`，並在 keymap 早退時清除非持續鍵盤；數量輸入用 `${quant}`，於 Android 設定開啟 popup 時隱藏暫時的數字快速鍵，關閉時仍展開為 `0123456789`。成功或取消後強制清理暫時軟鍵。
+- **避免錯誤中文提示**：0.4.1 和 Sil-Q 原文都是 `Quantity (0-N): `，但 0.4.1 只有**英文字母**代表全部，Sil-Q 則是**非數字**代表全部。純 Java 分類器增加 NPP041 專用辨識參數，`QuantityPopup` 由目前 Plugin 決定翻譯，因此不會誤用 Sil-Q 的文字；自訂的任務／商店提示及英文原始命令不更動。
+- **驗證界線**：新增 `tests/test_npp041_quantity_bridge.py`，檢查 CMake、callback 符號、原生 session、繁中資源、舊數量規則，並以 host C99 單獨編譯真實 `Term_control` 函式及共用 `droid.c` 的控制邏輯。擴充 `QuantityPromptTextTest`，將兩項檢查納入 `scripts/verify-zh-tw.sh`。這**不能取代**完整 Android Gradle／NDK shared library 連結、模擬器或實機驗收。未使用 GitHub Actions。
