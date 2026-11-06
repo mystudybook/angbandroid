@@ -54,6 +54,18 @@ class QuantityPromptSessionSourceTest(unittest.TestCase):
         self.assertNotIn("quantPopup.configure(", ACTIVITY)
         self.assertIn("runQuantityPopup(matcher.group(3), maxValue, initialValue,", ACTIVITY)
 
+    def test_game_restart_and_exit_invalidate_old_popup(self):
+        reset_body = STATE.split("public void resetKeyBuffer()", 1)[1].split(
+            "\n\tpublic void controlMsg(", 1
+        )[0]
+        exit_body = STATE.split("public void signalGameExit()", 1)[1].split(
+            "\n\tpublic boolean getSignalGameExit()", 1
+        )[0]
+        self.assertIn("quantityPromptGate.close();", reset_body)
+        self.assertIn("quantityPromptGate.close();", exit_body)
+        self.assertIn("synchronized (quantityPromptGate)", reset_body)
+        self.assertIn("synchronized (quantityPromptGate)", exit_body)
+
     def test_quantity_lock_covers_token_and_all_enqueued_keys(self):
         body = STATE.split("public boolean enqueueQuantity(int token, int amount, int max)", 1)[1].split(
             "\n\tpublic void clearKeys()", 1
