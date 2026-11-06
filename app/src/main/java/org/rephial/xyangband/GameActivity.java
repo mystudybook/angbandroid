@@ -249,7 +249,7 @@ public class GameActivity extends LocalizedActivity {
 
 	public void runQuantityPopup(String message, int maxValue, int initialValue)
 	{
-		if (term != null && Preferences.getQuantityPopupEnabled()) {
+		if (term != null && maxValue > 0 && Preferences.getQuantityPopupEnabled()) {
 			if (quantPopup == null) {
 				quantPopup = new QuantityPopup(this, message, maxValue, initialValue);
 			}
@@ -379,10 +379,15 @@ public class GameActivity extends LocalizedActivity {
 			Pattern pattern = Pattern.compile("(\\d+):(\\d+):(.+)");
 			Matcher matcher = pattern.matcher(msg);
 			if (matcher.matches()) {
-				int maxValue = Integer.parseInt(matcher.group(1));
-				int initialValue = Integer.parseInt(matcher.group(2));
-				String msg2 = matcher.group(3);
-				runQuantityPopup(msg2, maxValue, initialValue);
+				try {
+					int maxValue = Integer.parseInt(matcher.group(1));
+					int initialValue = Integer.parseInt(matcher.group(2));
+					if (maxValue > 0) {
+						runQuantityPopup(matcher.group(3), maxValue, initialValue);
+					}
+				} catch (NumberFormatException ex) {
+					Log.w("Angband", "Ignoring invalid quantity popup bounds", ex);
+				}
 			}
 		}
 	}
@@ -1047,6 +1052,9 @@ public class GameActivity extends LocalizedActivity {
 
 		clearKeyTimer();
 
+		if (quantPopup != null && quantPopup.isShowing()) {
+			quantPopup.dismiss();
+		}
 		setFastKeysAux("");
 
 		term.onPause();
