@@ -21,6 +21,25 @@ int main(void)
         { "You feel your head clear.", "你感覺頭腦恢復了清晰。" },
         { "You feel your head clear somewhat.", "你感覺頭腦稍微清醒了些。" },
         { "Nothing happens.", "什麼事也沒發生。" },
+        { "Enchant which item? ", "要為哪件物品附魔？ " },
+        { "You have nothing to enchant.", "你沒有可以附魔的物品。" },
+        { "Uncurse which item? ", "要解除哪件物品的詛咒？ " },
+        { "You have no curses to remove.", "你沒有可以解除的詛咒。" },
+        { "Identify which item? ", "要鑑定哪件物品？ " },
+        { "You have nothing to identify.", "你沒有需要鑑定的物品。" },
+        { "Recharge which item? ", "要為哪件物品重新充能？ " },
+        { "You have nothing to recharge.", "你沒有可以重新充能的物品。" },
+        { "Brand which kind of ammunition? ", "要為哪種彈藥附加屬性？ " },
+        { "You have nothing to brand.", "你沒有可以附加屬性的彈藥。" },
+        { "Brand which bolts? ", "要為哪一組弩矢附加屬性？ " },
+        { "You have no bolts to brand.", "你沒有可附加屬性的弩矢。" },
+        { "Make arrows from which staff? ", "要用哪根木杖製作箭矢？ " },
+        { "You have no staff to use.", "你沒有可用來製箭的木杖。" },
+        { "Drain charges from which item? ", "要從哪件物品汲取充能？ " },
+        { "You have nothing to drain charges from.", "你沒有可以汲取充能的物品。" },
+        { "Are you sure you want to descend? ", "確定要下到更深的樓層嗎？ " },
+        { "Set recall depth to current depth? ", "要將下次回返深度設為目前樓層嗎？ " },
+        { "Word of Recall is already active.  Do you want to cancel it? ", "回返法術已啟動，要取消嗎？ " },
         { "The air about you becomes charged...", "你周圍的空氣開始充滿能量……" },
         { "A tension leaves the air around you...", "你感覺周圍空氣中的緊繃感消失了……" },
         { "The world changes!", "世界發生了變化！" },
@@ -79,7 +98,7 @@ int main(void)
         { "You sink through the floor.", "你穿過地板向下沉去。" },
     };
     size_t i;
-    assert(sizeof(cases) / sizeof(cases[0]) == 71);
+    assert(sizeof(cases) / sizeof(cases[0]) == 90);
     for (i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
         const char *zh = angdroid_general_effect_message(cases[i].en, 1);
         assert(zh && strcmp(zh, cases[i].zh) == 0);
@@ -90,6 +109,6 @@ int main(void)
         assert(angdroid_general_effect_message(unknown, 1) == unknown);
         assert(angdroid_general_effect_message(NULL, 1) == NULL);
     }
-    puts("PASS: 71 generic effect feedback labels, fallback and NULL handling");
+    puts("PASS: 90 generic effect messages and prompts, fallback and NULL handling");
     return 0;
 }

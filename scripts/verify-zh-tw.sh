@@ -77,6 +77,7 @@ run_check "Strict global quantity parsing and Chinese retry" python3 "$ROOT/test
 run_check "Object context menu bilingual CJK layout and safe quantity retry state" python3 "$ROOT/tests/test_item_context_quantity_locale_source.py"
 run_check "Gear wear/remove bilingual prompts and UTF-8-safe confirmation" python3 "$ROOT/tests/test_gear_confirmation_locale_source.py"
 run_check "Scroll, food, potion, generic use and refuel translated with item remainder safety" python3 "$ROOT/tests/test_item_use_prompts_locale_source.py"
+run_check "Native enchant, uncurse, recall and item-effect prompts in zh-TW" python3 "$ROOT/tests/test_general_effect_prompts_locale_source.py"
 run_check "Object use-effect message translations and cancellation/charge rollback" python3 "$ROOT/tests/test_item_use_effect_messages_source.py"
 run_check "Activation and artifact dynamic templates, name rendering and rollback" python3 "$ROOT/tests/test_activation_messages_locale_source.py"
 run_check "Spell effect summary labels, radius, length, projection and UTF-8" python3 "$ROOT/tests/test_spell_effect_info_locale_source.py"
