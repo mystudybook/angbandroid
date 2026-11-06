@@ -445,3 +445,16 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 對有效選取一律只寫入一次 `d->selected_spell = d->spells[oid]`；瀏覽模式 `d->browse` 仍回傳 true 以繼續瀏覽，選擇／施法模式則回傳 false，讓外層同一次 `EVT_SELECT` **正常返回而不重複執行 row handler**。原本鍵盤法術標籤、Enter、Esc、`?`、`]` 完整說明、旋轉後選單重新排版均保留。
 - 在現有 Native C99 `tests/native/test_spell_reader_pages.c` 加入 **12 項**法術列觸控資格斷言（有效內部座標、不同法術索引、外部與標題、右鍵返回、無效選取索引）。`tests/test_spell_reader_source.py` 新增來源驗證，檢查 `ui-menu.c` 更新游標後原樣派送 `EVT_MOUSE`、防重複呼叫、`ui-spell.c` 新的單次選取邏輯及非法觸控排除。沿用現有 `scripts/test-native-utf8.sh` 和 `scripts/verify-zh-tw.sh`，沒有新增 GitHub Actions。
 - 本批程式碼靜態核對與局部 C99 測試的通過不等於真實 Android 觸控或施法已驗收。仍需在 Android emulator／實機檢查：點不同法術列是否選到點擊目標、僅執行一次施法、清單外點擊不選取、選完能返回、閱讀器 `]`／旋轉操作無回歸。
+
+
+## 第 127 批 — 防止手機快速連點與單次誤施法：觸控雙擊確認
+
+- 針對第 126 批的法術觸控選取進一步核對：`ui-menu.c` 雖提供 `MN_DBL_TAP`，但法術選單的 `m->flags` 只有 `MN_CASELESS_TAGS`，因此**一次有效觸控就會結束選擇/施法選單**。直接套用 `MN_DBL_TAP` 仍存在「點到原本已反白的法術就直接確認」的例外，無法保證第一下永不施法。
+- 本批只在 `ui-spell.c` 的法術選單增加 `touch_pending_oid` 與 C99 無引擎依賴的 `angdroid_spell_menu_confirm_touch()`。施法、學習等會離開選單的模式，**第一次觸控只標記該法術、第二次連續點擊同一列才真正寫入 `selected_spell`**；點另一個法術則重新開始確認。純瀏覽模式仍可一次觸控選列，鍵盤 Enter／字母選取仍是原版單次確認。
+- 不依賴原始游標是否已在該列，所以即使初次打開時第一個法術已反白，也不能靠單次觸控就施放。第一次點擊走既有 `menu_select()` 的「事件已處理」分支，第二次確認則只寫入**一次** `selected_spell` 並讓外層單次 `EVT_SELECT` 結束選單，保留全域 `touch_select_dispatched` 的防重複機制。
+- 若觸控無效、點選單外／標題、使用其他鍵盤命令（例如 `?` 與 `]`）、離開全文閱讀器、旋轉裝置，或用方向鍵移到別列，會**取消前一次觸控確認**。後者利用既有每次選單重畫都呼叫的 `spell_menu_browser()` 偵測游標位置差異；另把 `spell_menu_relayout()` 註冊為法術選單自己的 resize callback，在重排時清除待確認狀態。原本的畫面儲存/還原與 135 組法術說明表不變。
+- 施法選擇提示會顯示「**觸控同列兩次確認**」，英文顯示 `Tap row twice`，以免玩家誤以為第一次點擊沒有反應。手機 `TermView.java::onSingleTapUp()` 的事件會在完成一次點擊時呼叫 `sendMousePress()`，不會把 ACTION_DOWN/ACTION_UP 當兩次獨立遊戲觸控。
+- 既有 Native C99 `tests/native/test_spell_reader_pages.c` 新增 **29 個直接 CHECK**，覆蓋初始已反白、同列兩次確認、更換列、瀏覽單次觸控、NULL/非法列、明確取消後不能繼續前次確認。既有 Python `tests/test_spell_reader_source.py` 新增 `test_two_taps_required_for_casting_and_studying`，檢查 UI 事件與原生函式一致、真正 Android 單擊事件來源，並更新第 126 批已不適用的「一次觸控即寫入」靜態斷言。
+- 本批不修改 `ui-menu.c` 的通用事件分派，避免影響商店、背包或其他選單；不修改法術效果、遊戲規則、原文翻譯與存檔。完整 Android NDK/Gradle、模擬器/實機操作（尤其第二次點擊同一列才施法）仍待本機驗證。不使用 GitHub Actions，commit `[skip ci]`。
+
+- 第 127 批同時把選擇提示緩衝區從 80 bytes 擴為 **192 bytes**，在 `prt()` 顯示前以 `angdroid_utf8_clip_columns()` 限制到手機終端欄寬，避免新增的雙擊說明被 UTF-8 位元組截斷或跨行覆蓋法術選單。

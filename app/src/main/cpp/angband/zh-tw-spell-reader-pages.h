@@ -151,4 +151,26 @@ static inline int angdroid_spell_menu_touch_selectable(
     return inside_active && button != 2 && oid >= 0;
 }
 
+
+/* Casting and study actions should not be committed by a stray single tap.
+ * The first tap arms the precise spell row; only a second tap on that same
+ * row confirms. Browsing is harmless and remains one tap. This also avoids
+ * MN_DBL_TAP's corner case where a tap on the initially highlighted row
+ * counts as confirmation even though there was no preceding touch. */
+static inline int angdroid_spell_menu_confirm_touch(
+    int *armed_oid, int oid, int browse)
+{
+    if (!armed_oid || oid < 0) return 0;
+    if (browse) {
+        *armed_oid = -1;
+        return 1;
+    }
+    if (*armed_oid != oid) {
+        *armed_oid = oid;
+        return 0;
+    }
+    *armed_oid = -1;
+    return 1;
+}
+
 #endif
