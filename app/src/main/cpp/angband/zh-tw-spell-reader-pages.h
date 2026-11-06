@@ -140,4 +140,15 @@ static inline int angdroid_spell_reader_menu_width(int terminal_width)
     return terminal_width - 15 < 80 ? terminal_width - 15 : 80;
 }
 
+/* menu_select() sends an active-row tap as the original EVT_MOUSE after
+ * menu_handle_mouse() has moved its cursor, rather than as EVT_SELECT.
+ * An outside/header tap is also offered to the row handler as EVT_MOUSE:
+ * only a valid, in-bounds primary selection may select or cast a spell.
+ * Mouse button 2 is the existing menu 'back' gesture. */
+static inline int angdroid_spell_menu_touch_selectable(
+    int inside_active, int button, int oid)
+{
+    return inside_active && button != 2 && oid >= 0;
+}
+
 #endif

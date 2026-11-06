@@ -269,7 +269,16 @@ static bool spell_menu_handler(struct menu *m, const ui_event *e, int oid)
 {
 	struct spell_menu_data *d = menu_priv(m);
 
-	if (e->type == EVT_SELECT) {
+	/* The menu's active-row touch path passes the raw EVT_MOUSE after
+	 * updating m->cursor.  A keyboard selection instead arrives as
+	 * EVT_SELECT.  Treat both as a single selection; never accept mouse
+	 * gestures outside the active rows (including the header/back area).
+	 * A cast returns false to bubble the one EVT_SELECT to menu_select(). */
+	if (e->type == EVT_SELECT ||
+		(e->type == EVT_MOUSE &&
+		angdroid_spell_menu_touch_selectable(
+			region_inside(&m->active, e), e->mouse.button, oid))) {
+		if (oid < 0 || oid >= d->n_spells) return false;
 		d->selected_spell = d->spells[oid];
 		return d->browse ? true : false;
 	}
