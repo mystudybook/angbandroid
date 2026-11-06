@@ -1164,13 +1164,19 @@ static int textui_get_quantity(const char *prompt, int max)
 		soft_kbd_linger("${quant}*");
 
 		/* Ask for a quantity */
-		if (!get_string(prompt, buf, 7)) return (0);
+		if (!get_string(prompt, buf, 7)) {
+			Term_control(TERM_CONTROL_QUANTITY, "end");
+			return (0);
+		}
 
 		/* Extract a number */
 		amt = atoi(buf);
 
 		/* A star or letter means "all" */
 		if ((buf[0] == '*') || isalpha((unsigned char)buf[0])) amt = max;
+
+		/* Native quantity input finished: close only its Android popup. */
+		Term_control(TERM_CONTROL_QUANTITY, "end");
 	}
 
 	/* Enforce the maximum */
