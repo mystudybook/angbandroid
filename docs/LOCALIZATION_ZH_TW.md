@@ -224,3 +224,11 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - **物品忽略選單**：原版 Angband 的品質忽略對話框曾留下 `All bad Rings`、`All non-artifact Bows` 等英文動態選項；現在透過 `zh-tw-ignore-quality-action.h` 使用既有 `angdroid_game_ui_text()` 的「劣質／普通／優良／非神器」與各種物品類型翻譯，顯示成「忽略所有劣質戒指」等完整的繁體中文。以純 C99 的 `snprintf` 檢查容量；若不認識任一品質或物品分類（例如其他版本或 MOD），則**整句**保留英文，避免一半中文一半英文；緩衝區不足時顯示原有「依品質忽略物品」通用標題，不輸出不完整的 UTF-8。原有的 `IGNORE_THIS_QUALITY`、物品分類、品質閾值、選取鍵、`ignore_level[ignore_type] = ignore_value` 和存檔內容不變。
 - **畫面匯出**：`ui-command.c` 的 `Dump as (H)TML or (F)orum text?` 改成「匯出格式：H HTML／F 論壇文字？」、`Include monster list?` 改成「要包含怪物清單嗎？」；失敗通知改成「畫面匯出失敗。」、成功則顯示「畫面已匯出為 HTML／論壇文字格式。」。設定為英文時仍顯示原文，原本的 `h`／`f` 按鍵、`dump.html`／`dump.txt`、`dump.prf`、怪物清單選項與真正輸出的 HTML/文字內容**沒有修改**。
 - **測試**：新增 `tests/native/test_ignore_quality_action_locale.c`（以 C99 編譯兩種語言、已知與未知類型、NULL、超短緩衝區及匯出提示），納入 `scripts/test-native-utf8.sh`；新增 `tests/test_ignore_quality_export_source.py` 核對 `list-ignore-types.h`、`obj-ignore.c`、`zh-tw-ui.h` 的全部現有分類與品質名稱，檢查玩家操作、品質 ID、匯出按鍵及檔名未變，納入 `scripts/verify-zh-tw.sh`。未使用 GitHub Actions。獨立／原始碼檢查不能取代完整 Android NDK／Gradle 或模擬器／實機驗收。
+
+
+## 第 102 批 — 遊戲版本畫面與忽略物品選擇提示中文化
+
+- **遊戲版本畫面**：原版 Angband `ui-command.c` 的動態標題 `You are playing <buildver>. Type '?' for more info.` 現在顯示為「正在遊玩 <buildver>。按 ? 查看詳細資訊。」；英文模式保留原文、真實 `buildver`／`copyright` 資料不更動。新增純 C99 `zh-tw-version-header.h`，以 `snprintf` 產生完整字串並驗證緩衝容量，避免截斷 UTF-8 中文碼點。螢幕表頭緩衝區擴為 256 bytes；極長版本號無法完整放入時，只顯示「遊戲版本資訊」或英文「Version information」，不顯示部分版本字串。
+- **忽略物品選擇**：`textui_cmd_ignore()` 的 `Ignore which item?` 改成「要忽略哪件物品？」；`You have nothing to ignore.` 改為「沒有可以忽略的物品。」。這兩個字串只經 `angdroid_game_ui_text()` 進行顯示端翻譯，英文模式仍用原字串。`get_item` 的 `CMD_IGNORE`、物品來源 `USE_INVEN | USE_QUIVER | USE_EQUIP | USE_FLOOR`、取消時的早退、品質忽略選單與存檔均不變。
+- **避免數量視窗回歸**：商店已在舊批次完成的買入／取出數量提示保持原狀；`textui_get_quantity()` 的 `Term_control_quantity`／`"end"` 生命週期不修改，以免不必要地干擾 Android 的原生數量 Popup。
+- **離線回歸測試**：新增 `tests/native/test_version_header_text.c`，對中／英文、NULL、格式字元、字元邊界（48 與 49 bytes）、過長版本號與 0 容量進行 host C99 檢查；已納入 `scripts/test-native-utf8.sh`。新增 `tests/test_version_ignore_pick_source.py` 驗證中文對應、版本／版權資料、忽略操作與數量 Popup 的安全邊界；已納入 `scripts/verify-zh-tw.sh`。本批未使用 GitHub Actions；獨立 C99 測試不能取代完整 Gradle／NDK／Android 模擬器或實機驗收。
