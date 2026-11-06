@@ -10,7 +10,8 @@ int main(void)
 {
     char output[256];
     char tiny[5] = "old";
-    char exact[57];
+    char exact[48];
+    char fits[49];
     char long_name[300];
     int checks = 0;
 
@@ -42,6 +43,9 @@ int main(void)
                                          "4.2.5", true));
     assert(exact[0] == '\0');
     ++checks;
+    assert(angdroid_version_header_text(fits, sizeof(fits), "4.2.5", true));
+    assert(strcmp(fits, "正在遊玩 4.2.5。按 ? 查看詳細資訊。") == 0);
+    ++checks;
 
     memset(long_name, 'X', sizeof(long_name));
     long_name[sizeof(long_name) - 1] = '\0';
@@ -52,6 +56,6 @@ int main(void)
     ++checks;
     assert(!angdroid_version_header_text(output, 0, "4.2.5", true));
     ++checks;
-    puts("PASS: bilingual bounded version header (10 cases)");
+    puts("PASS: bilingual bounded version header (11 cases)");
     return 0;
 }
