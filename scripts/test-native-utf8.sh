@@ -391,6 +391,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_inventory_list_display"
 "$BUILD_DIR/test_inventory_list_display"
 
+# Dynamic quality-ignore labels and screen-export prompts: both locales.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_ignore_quality_action_locale.c" \
+    -o "$BUILD_DIR/test_ignore_quality_action_locale"
+"$BUILD_DIR/test_ignore_quality_action_locale"
+
 # Rotated item selection and scroll-safe quiver footer coordinates.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_item_selection_layout.c" \
