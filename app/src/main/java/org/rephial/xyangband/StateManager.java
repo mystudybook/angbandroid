@@ -457,7 +457,11 @@ public class StateManager {
 			this.keyBuffer.clear();
 	}
 	public void resetKeyBuffer() {
-		this.keyBuffer = new KeyBuffer(this);
+		/* The previous game instance can no longer accept an old popup. */
+		synchronized (quantityPromptGate) {
+			quantityPromptGate.close();
+			this.keyBuffer = new KeyBuffer(this);
+		}
 	}
 
 	public void controlMsg(int type, String body)
@@ -541,8 +545,12 @@ public class StateManager {
 			this.keyBuffer.addDirection(k);
 	}
 	public void signalGameExit() {
-		if (this.keyBuffer != null)
-			this.keyBuffer.signalGameExit();
+		/* Prevent an old UI callback from adding input to a dying game. */
+		synchronized (quantityPromptGate) {
+			quantityPromptGate.close();
+			if (this.keyBuffer != null)
+				this.keyBuffer.signalGameExit();
+		}
 	}
 	public boolean getSignalGameExit() {
 		if (this.keyBuffer != null)
