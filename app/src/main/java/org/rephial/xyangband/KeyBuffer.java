@@ -6,16 +6,13 @@ import android.view.KeyEvent;
 
 import org.rephial.xyangband.KeyMapper.KeyAction;
 
-import java.util.LinkedList;
-import java.util.Queue;
-
 public class KeyBuffer {
 
 	/* keyboard state */
-	private Queue<Integer> keybuffer = new LinkedList<Integer>();
+	private final QuantityKeyQueue keybuffer = new QuantityKeyQueue();
 	private boolean wait = false;
 	private int quit_key_seq = 0;
-	private boolean signal_game_exit = false;
+	private volatile boolean signal_game_exit = false;
 	private NativeWrapper nativew = null;
 	private StateManager state = null;
 
@@ -76,18 +73,22 @@ public class KeyBuffer {
 	}
 
 	/**
-	 * Enqueue a complete synthetic response as one atomic block. Other
-	 * UI threads can add keys before or after, but not in the middle.
-	 * Do not clear the shared queue: it may contain save/exit requests.
-	 * Unlike add(), these keys are already native codes and must not
-	 * consume or modify the user's keyboard modifiers.
+	 * Enqueue a complete native quantity response while holding the same
+	 * FIFO lock as ordinary input. A stale token cannot add more keys.
+	 * Normal keyboard modifiers are not consumed by synthetic keys.
 	 */
-	public void addRawSequence(int[] keys) {
-		if (keys == null || keys.length == 0) return;
+	public boolean addRawSequence(int[] keys, int token) {
 		synchronized (keybuffer) {
-			for (int key : keys) {
-				keybuffer.offer(key);
-			}
+			if (!keybuffer.offerSequence(keys, token)) return false;
+			wakeUp();
+			return true;
+		}
+	}
+
+	/** Expire only tagged native quantity keys, never ordinary queued input. */
+	public void setQuantityToken(int token) {
+		synchronized (keybuffer) {
+			keybuffer.setQuantityToken(token);
 			wakeUp();
 		}
 	}
@@ -167,38 +168,29 @@ public class KeyBuffer {
 	}
 
 	public int get(int v) {
-		int key = 0;
-
 		synchronized (keybuffer) {
+			for (;;) {
+				int special = getSpecialKey();
+				if (special != -1) return special;
 
-			int check = getSpecialKey();
-			if (check != -1) {
-				key = check;
-			}
-			// Avoid losing keys before wait
-			else if (keybuffer.peek() != null) {
-				key = keybuffer.poll();
-			}
-			else if (v == 1) {
+				/* poll() skips stale quantity entries while keeping all
+				 * ordinary input and special macro/save markers FIFO. */
+				Integer next = keybuffer.poll();
+				if (next != null) return next;
+				if (v != 1) return 0;
+
 				try {
-					//Log.d("Angband", "Wait keypress BEFORE");
 					wait = true;
 					keybuffer.wait();
+				} catch (InterruptedException e) {
+					Log.d("Angband", "getch() wait interrupted: " + e);
+					Thread.currentThread().interrupt();
+					return 0;
+				} finally {
 					wait = false;
-					//Log.d("Angband", "Wait keypress AFTER");
-				} catch (Exception e) {
-					wait = false;
-					Log.d("Angband", "getch() wait exception: " + e);
-				}
-
-				// Return key after wait, if there is one
-				if (keybuffer.peek() != null) {
-					key = keybuffer.poll();
-					//Log.w("Angband", "process key = " + key);
 				}
 			}
 		}
-		return key;
 	}
 
 	public void signalSave() {
