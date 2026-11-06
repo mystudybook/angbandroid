@@ -435,3 +435,13 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 閱讀器原本 Esc／q 提前呼叫 `screen_load()` 並 `return`，其他出口在結尾恢復畫面。改為唯一 `screen_save()`／`screen_load()` 配對：任何正常結束（鍵盤、點標題、轉向遇過小終端、觸控底部）都走同一個還原出口，避免未來修改遺漏恢復。
 - `tests/native/test_spell_reader_pages.c` 新增 15 項 C99 預期斷言，驗證 0／15／16／20／40／94／95／96／500 欄的合法選單寬度，以及直橫直反覆尺寸變化時重新計算的結果。`tests/test_spell_reader_source.py` 新增來源測試，確認 `menu_layout()` 在閱讀器返回後一定呼叫、選單首次建立與返回使用同一函式、原始選單選擇結果不被修改，以及閱讀器的畫面儲存／還原各一處、無存檔後的提早 return。
 - **尚待驗收**：需在真實 Android NDK／Gradle 編譯及 emulator／實機上反覆開啟、翻頁、旋轉、關閉、選取／施放法術，確認頁面／遊戲狀態一致。GitHub 靜態程式碼核對不表示實機行為或完整本機測試已通過；本批提交使用 `[skip ci]`，不執行 GitHub Actions。
+
+
+## 第 126 批 — 手機點擊法術列無法選取的事件相容性修正
+
+- 審核 `ui-menu.c::menu_select()` 發現：手機點擊有效的法術列時，`menu_handle_mouse()` 先更新 `menu->cursor` 並設定待輸出的 `EVT_SELECT`，但為防止觸控事件重複觸發，先將**原始 `EVT_MOUSE`** 送到 `menu_handle_action()`，並以 `touch_select_dispatched` 禁止同一次點擊再次派送 `EVT_SELECT`。
+- `ui-spell.c::spell_menu_handler()` 原本**只接受 `EVT_SELECT` 與 `EVT_KBRD`**，因此有效觸控可能僅讓游標移動，卻不會將所點法術儲存為 `selected_spell`；在施法模式中尤其可能回傳未選取。其他種類的選單可能依靠原始 `EVT_MOUSE` 做不同操作，因此本批**只修法術選單，不改全域 `ui-menu.c` 的派送機制**。
+- 現在法術選單可接受由 `ui-menu.c` 正常派送的 `EVT_SELECT`，或是已更新游標、觸控位於 `m->active` 且非 `button=2` 返回手勢的 `EVT_MOUSE`；使用 `angdroid_spell_menu_touch_selectable()` 核對，並確認 `oid` 在 `[0,n_spells)` 內，避免清單外／標題列觸控錯誤選取上一個法術。
+- 對有效選取一律只寫入一次 `d->selected_spell = d->spells[oid]`；瀏覽模式 `d->browse` 仍回傳 true 以繼續瀏覽，選擇／施法模式則回傳 false，讓外層同一次 `EVT_SELECT` **正常返回而不重複執行 row handler**。原本鍵盤法術標籤、Enter、Esc、`?`、`]` 完整說明、旋轉後選單重新排版均保留。
+- 在現有 Native C99 `tests/native/test_spell_reader_pages.c` 加入 **12 項**法術列觸控資格斷言（有效內部座標、不同法術索引、外部與標題、右鍵返回、無效選取索引）。`tests/test_spell_reader_source.py` 新增來源驗證，檢查 `ui-menu.c` 更新游標後原樣派送 `EVT_MOUSE`、防重複呼叫、`ui-spell.c` 新的單次選取邏輯及非法觸控排除。沿用現有 `scripts/test-native-utf8.sh` 和 `scripts/verify-zh-tw.sh`，沒有新增 GitHub Actions。
+- 本批程式碼靜態核對與局部 C99 測試的通過不等於真實 Android 觸控或施法已驗收。仍需在 Android emulator／實機檢查：點不同法術列是否選到點擊目標、僅執行一次施法、清單外點擊不選取、選完能返回、閱讀器 `]`／旋轉操作無回歸。

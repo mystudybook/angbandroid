@@ -137,6 +137,22 @@ int main(void)
     CHECK(angdroid_spell_reader_menu_width(20) == 5);
     CHECK(angdroid_spell_reader_menu_width(40) == 25);
 
+    /* The global menu dispatches an active row click as the raw mouse
+     * event, after updating its cursor; the spell handler must accept it.
+     * Header/outside taps and right-click/back must not select a spell. */
+    CHECK(angdroid_spell_menu_touch_selectable(1, 0, 0));
+    CHECK(angdroid_spell_menu_touch_selectable(1, 1, 0));
+    CHECK(angdroid_spell_menu_touch_selectable(1, 0, 6));
+    CHECK(angdroid_spell_menu_touch_selectable(1, 1, 23));
+    CHECK(!angdroid_spell_menu_touch_selectable(0, 0, 0));
+    CHECK(!angdroid_spell_menu_touch_selectable(0, 1, 4));
+    CHECK(!angdroid_spell_menu_touch_selectable(0, 2, 5));
+    CHECK(!angdroid_spell_menu_touch_selectable(1, 2, 5));
+    CHECK(!angdroid_spell_menu_touch_selectable(1, 1, -1));
+    CHECK(!angdroid_spell_menu_touch_selectable(1, 0, -1));
+    CHECK(!angdroid_spell_menu_touch_selectable(0, 0, -1));
+    CHECK(angdroid_spell_menu_touch_selectable(1, 0, 0));
+
     printf("PASS: UTF-8 spell reader pages (%d assertions)\n", checks);
     return 0;
 }

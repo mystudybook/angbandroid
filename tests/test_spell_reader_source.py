@@ -6,6 +6,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SPELL = (ROOT / "app/src/main/cpp/angband/ui-spell.c").read_text(
     encoding="utf-8")
+MENU = (ROOT / "app/src/main/cpp/angband/ui-menu.c").read_text(
+    encoding="utf-8")
 PAGES = (ROOT / "app/src/main/cpp/angband/zh-tw-spell-reader-pages.h").read_text(
     encoding="utf-8")
 NATIVE = (ROOT / "tests/native/test_spell_reader_pages.c").read_text(
@@ -96,6 +98,38 @@ class FullSpellReaderSourceTest(unittest.TestCase):
         self.assertIn("finished = true;", modal)
         self.assertNotIn("return;", modal.split("screen_save();", 1)[1])
         self.assertNotIn("m->cursor =", modal)
+
+    def test_spell_row_taps_select_exactly_once(self):
+        # Active row mouse taps are delivered as the original EVT_MOUSE,
+        # rather than the translated EVT_SELECT, after menu cursor moves.
+        dispatch = MENU.split("ui_event menu_select(", 1)[1]
+        self.assertIn("menu_handle_mouse(menu, &in, &out);", dispatch)
+        self.assertIn("if (out.type == EVT_SELECT && !no_act)", dispatch)
+        self.assertIn("touch_select_dispatched = true;", dispatch)
+        self.assertIn("menu_handle_action(menu, &in)", dispatch)
+        self.assertIn("!touch_select_dispatched &&", dispatch)
+        self.assertIn("menu_handle_action(menu, &out)", dispatch)
+
+        handler = SPELL.split("static bool spell_menu_handler(", 1)[1]
+        handler = handler.split("static void spell_menu_browser(", 1)[0]
+        self.assertIn("if (e->type == EVT_SELECT ||", handler)
+        self.assertIn("(e->type == EVT_MOUSE &&", handler)
+        self.assertIn("angdroid_spell_menu_touch_selectable(", handler)
+        self.assertIn("region_inside(&m->active, e)", handler)
+        self.assertIn("e->mouse.button, oid)", handler)
+        self.assertIn("if (oid < 0 || oid >= d->n_spells) return false;", handler)
+        self.assertIn("d->selected_spell = d->spells[oid];", handler)
+        self.assertIn("return d->browse ? true : false;", handler)
+        self.assertEqual(1, handler.count("d->selected_spell = d->spells[oid];"))
+
+        # An out-of-region header/back event must not cast the previously
+        # selected row. Test the same eligibility rule in portable native C.
+        self.assertIn("angdroid_spell_menu_touch_selectable(", PAGES)
+        self.assertIn("inside_active && button != 2 && oid >= 0", PAGES)
+        self.assertIn("angdroid_spell_menu_touch_selectable(1, 0, 6)", NATIVE)
+        self.assertIn("!angdroid_spell_menu_touch_selectable(0, 1, 4)", NATIVE)
+        self.assertIn("!angdroid_spell_menu_touch_selectable(1, 2, 5)", NATIVE)
+        self.assertIn("!angdroid_spell_menu_touch_selectable(1, 1, -1)", NATIVE)
 
     def test_native_cases_are_registered(self):
         for phrase in ("A中文B", "Mana Storm hits.", "Alpha  Beta",
