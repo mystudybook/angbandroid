@@ -33,14 +33,17 @@ class PaladinRogueSpellDescriptionsSourceTest(unittest.TestCase):
         translated_pairs = {(n, en) for n, en, zh in MAPPED}
         ranger = {(s["name"], s["english"]) for s in SPELLS
                   if s["class"] == "Ranger"}
+        blackguard = {(s["name"], s["english"]) for s in SPELLS
+                      if s["class"] == "Blackguard"}
+        self.assertEqual(15, len(blackguard))
         classes = (MAGE, DRUID, PRIEST, NECROMANCER, PALADIN, ROGUE,
-                   ranger)
+                   ranger, blackguard)
         self.assertEqual(163, len(SPELLS))
         self.assertEqual(16, len(PALADIN))
         self.assertEqual(10, len(ROGUE))
-        self.assertEqual(120, len(MAPPED))
-        self.assertEqual(120, len(translated_pairs))
-        self.assertEqual(118, len({n for n, en, zh in MAPPED}))
+        self.assertEqual(135, len(MAPPED))
+        self.assertEqual(135, len(translated_pairs))
+        self.assertEqual(133, len({n for n, en, zh in MAPPED}))
         self.assertEqual(set.union(*classes), translated_pairs)
         for name, english, chinese in MAPPED:
             with self.subTest(spell=name):
