@@ -174,3 +174,12 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - **主要 Angband 原生繁體中文**：原本字典已有「正在儲存為 %s。」但顯示端未使用，現已串接；新增操作次數 `Repeat: %d` →「重複次數：%d」，兩者保留原來 `%s`／`%d` 參數與英文 fallback，僅改顯示訊息。
 - JDK 21 可獨立執行 `QuantityPromptTextTest`，由 `scripts/test-quantity-popup.sh` 整合；原生字典 `tests/native/test_game_ui_locale.c` 增加映射驗證；Python 來源保護 `tests/test_frog_quantity_locale_source.py` 已加入 `scripts/verify-zh-tw.sh`。
 - **範圍限制**：FrogComposband 原生終端內的其他大量英文文字尚未整體翻譯，這次先改 Android 彈窗及主要 Angband 的兩項資訊列；其它 native variant 亦不保證已有完整 start/end 事件。完整 APK／NDK、模擬器與實機操作仍需本機驗收，不使用 GitHub Actions。
+
+
+## NPPAngband 7.1.0／Sil-Q 數量輸入生命週期與繁體中文化（第 96 批）
+
+- 兩個核心都會送出原生 `Term_control_quantity` 開始事件；本批補上成功輸入和 Esc 取消時的 `TERM_CONTROL_QUANTITY: "end"`，讓 Android 關閉對應的舊視窗、清理尚未讀取的數量按鍵。未開啟數量視窗的指令參數及重複操作分支不會送出新的 end。
+- NPPAngband 7.1.0 原先在數量輸入取消時直接 return，可能留下暫時性的 `[ALL]` 按鈕；現在取消路徑一併 `button_kill('a')` 並通知 `EVENT_MOUSEBUTTONS`。
+- Android 數量視窗對 NPP 的 `Quantity (0-N, '*' or 'a' = all): ` 和 Sil-Q 的 `Quantity (0-N): ` 新增精確原文字串及數量上限匹配，並提供各自繁中顯示資源。核心英文輸入文字及解析規則不變；自訂商店、裝備或任務提示不會被任意改寫。
+- Sil-Q 既有「非數字表示全部」、NPPAngband 的 `*`／字母代表全部、數量上下限與重複命令行為均保留。NPP 0.5.4 並未使用數量 popup start callback，本批不任意替它加入 end。
+- 已增加 `tests/test_variant_quantity_session_source.py`、JDK `QuantityPromptTextTest` 正反比對案例，並整合 `scripts/verify-zh-tw.sh`。這些測試不等於完整 APK／NDK 或模擬器、實機驗證。未使用 GitHub Actions。
