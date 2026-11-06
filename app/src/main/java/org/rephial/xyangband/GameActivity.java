@@ -256,16 +256,14 @@ public class GameActivity extends LocalizedActivity {
 				!Preferences.getQuantityPopupEnabled() ||
 				!state.isQuantityPromptActive(quantityToken)) return;
 
-		if (quantPopup == null) {
-			quantPopup = new QuantityPopup(this, message, maxValue, initialValue,
-				quantityToken);
-		} else {
-			if (quantPopup.isShowing()) {
-				if (quantPopup.getSessionToken() == quantityToken) return;
-				quantPopup.dismissSilently();
-			}
-			quantPopup.configure(message, maxValue, initialValue, quantityToken);
+		if (quantPopup != null && quantPopup.isShowing()) {
+			if (quantPopup.getSessionToken() == quantityToken) return;
+			quantPopup.dismissSilently();
 		}
+		/* Never rebind an old window's dismiss callback to a new token.
+		 * A fresh popup also avoids late dismissals canceling a new prompt. */
+		quantPopup = new QuantityPopup(this, message, maxValue, initialValue,
+			quantityToken);
 		int gravity = Gravity.RIGHT | Gravity.TOP;
 		int pad = (int)GxUtils.toDips(this, 20);
 		quantPopup.root.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED),
