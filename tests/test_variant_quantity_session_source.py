@@ -55,8 +55,33 @@ class VariantQuantitySessionTest(unittest.TestCase):
         self.assertNotIn('Term_control(TERM_CONTROL_QUANTITY, "end");', prefix)
         self.assertIn("!isdigit((unsigned char)buf[0])", success)
 
-    def test_npp054_has_no_quantity_popup_start(self):
-        self.assertNotIn("Term_control_quantity(", quantity_body(NPP054))
+    def test_npp054_accept_cancel_and_temporary_all_button(self):
+        body = quantity_body(NPP054)
+        # command_arg and max == 1 bypass the popup, exactly as before.
+        self.assertIn("if (p_ptr->command_arg)", body.split(
+            "Term_control_quantity(prompt, max, amt);", 1
+        )[0])
+        self.assertIn("else if ((max != 1))", body.split(
+            "Term_control_quantity(prompt, max, amt);", 1
+        )[0])
+        self.assertEqual(1, body.count("Term_control_quantity(prompt, max, amt);"))
+        self.assertEqual(2, body.count('Term_control(TERM_CONTROL_QUANTITY, "end");'))
+        self.assertIn('soft_kbd_linger("${quant}*");', body)
+        cancel = body.split("if (!get_string(prompt, buf, 7)) {", 1)[1].split(
+            "return (0);", 1
+        )[0]
+        for required in ("soft_kbd_clear(true);",
+                         'Term_control(TERM_CONTROL_QUANTITY, "end");',
+                         "button_kill('a');", "event_signal(EVENT_MOUSEBUTTONS);"):
+            self.assertIn(required, cancel)
+        success = body.split("return (0);", 1)[1]
+        self.assertLess(success.index('Term_control(TERM_CONTROL_QUANTITY, "end");'),
+                        success.index("amt = atoi(buf);"))
+        self.assertIn("button_kill('a');", success)
+        self.assertIn("isalpha((unsigned char)buf[0])", success)
+        # Reuses the exact existing NPP710 default prompt in Android's zh-TW UI.
+        self.assertIn("Quantity (0-%d, '*' or 'a' = all): ", body)
+        self.assertIn("R.string.quantity_prompt_npp_all", POPUP)
 
     def test_exact_generic_prompts_do_not_touch_game_input(self):
         self.assertIn("Quantity (0-%d, '*' or 'a' = all): ", NPP)
