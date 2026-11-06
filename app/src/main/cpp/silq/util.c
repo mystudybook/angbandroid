@@ -3710,10 +3710,13 @@ s16b get_quantity(cptr prompt, int max)
         /* Ask for a quantity */
         if (!term_get_string(prompt, buf, 7)) {
             soft_kbd_clear(true);
+            /* Native quantity input ended; discard stale Android popup keys. */
+            Term_control(TERM_CONTROL_QUANTITY, "end");
             return (0);
         }
 
         soft_kbd_clear(true);
+        Term_control(TERM_CONTROL_QUANTITY, "end");
 
         /* Extract a number */
         amt = atoi(buf);

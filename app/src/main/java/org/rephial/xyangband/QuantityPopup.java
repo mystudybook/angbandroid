@@ -116,6 +116,12 @@ public class QuantityPopup extends PopupWindow
             case QuantityPromptText.FROM_ZERO_ALL:
                 promptText = context.getString(R.string.quantity_prompt_from_zero_all, limit);
                 break;
+            case QuantityPromptText.FROM_ZERO_NPP_ALL:
+                promptText = context.getString(R.string.quantity_prompt_npp_all, limit);
+                break;
+            case QuantityPromptText.FROM_ZERO_SILQ:
+                promptText = context.getString(R.string.quantity_prompt_silq, limit);
+                break;
             default:
                 break;
         }

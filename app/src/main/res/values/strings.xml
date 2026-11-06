@@ -503,6 +503,8 @@
     <string name="quantity_all">All</string>
     <string name="quantity_prompt_from_one">Quantity (1–%1$d):</string>
     <string name="quantity_prompt_from_zero_all">Quantity (0–%1$d, *=all):</string>
+    <string name="quantity_prompt_npp_all">Quantity (0–%1$d, * or a = all):</string>
+    <string name="quantity_prompt_silq">Quantity (0–%1$d; non-digit = all):</string>
     <string name="quantity_all_with_count">All (%1$d)</string>
     <string name="quantity_confirm">Confirm</string>
     <string name="quantity_cancel">Cancel</string>
