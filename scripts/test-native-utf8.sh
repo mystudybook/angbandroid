@@ -295,6 +295,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_text_locale"
 "$BUILD_DIR/test_store_text_locale"
 
+# Exact canonical shop titles and !key / !* confirmation prefixes.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_store_inscription_labels.c" \
+    -o "$BUILD_DIR/test_store_inscription_labels"
+"$BUILD_DIR/test_store_inscription_labels"
+
 # Shopkeeper greetings preserve %s formatting and English fallback.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_store_greetings_locale.c" \
