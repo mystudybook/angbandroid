@@ -347,3 +347,13 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 數值與危險警告逐項保留：狐狸變身不能使用物品、未指定目標的閃電會擊中玩家、地震在城鎮無效且不會摧毀神器、各種半徑/回合/傷害數字與流星爆炸範圍均保持原文資訊。
 - 新增 `tests/native/test_druid_spell_descriptions_locale.c`（27×2+8=62 個預期斷言）與 `tests/test_druid_spell_descriptions_locale_source.py`，同步修正既有 Mage Python 驗證，只針對 Mage 30 組進行核對，讓表格安全擴增。註冊到 `scripts/test-native-utf8.sh`、`scripts/verify-zh-tw.sh`。
 - 原始文字的精確匹配、英文回退機制、遊戲效果與 `ui-spell.c` 顯示接線不改；完整 Native/Python、Android Gradle/NDK、模擬器與實機仍需本機驗證，且未執行 GitHub Actions（`[skip ci]`）。
+
+
+## 第 117 批 — 牧師 28 種法術詳細說明繁體中文化
+
+- 依照 `variant_lib/angband/gamedata/class.txt` 的 28 筆 Priest 法術資料，為原有 `zh-tw-spell-descriptions.h` 新增 28 組名稱＋英文完整說明＋繁體中文的精確映射。翻譯表累計 Mage 30 + Druid 27 + Priest 28 = **85 種**。僅使用原有 `ui-spell.c` 顯示層接線；沒有變更遊戲資料與施法結果。
+- 牧師與 Paladin **15 個同名法術**中，14 個原始說明逐字完全相同，會自然共用繁中翻譯；**Heroism** 明顯不同：Priest 需角色等級 20、Paladin 只需 15。因精確比對原英文描述，Paladin 此條會維持正確的原文，禁止套用錯誤的牧師版本。
+- 保留重要限制與數值：召回延遲 14+1d20 回合、可再次施法取消、限制樓梯／召回選項與魔苟斯存亡的例外；大毀滅半徑 15 格、失明 10+1d10 回合、抗光/抗盲與城鎮無效；守護符文的破壞規則；恢復 2000 HP 及其他治療／光明法術的數值。
+- `tests/test_druid_spell_descriptions_locale_source.py` 已更新為支持 85 筆新表，持續檢查原先 27 筆 Druid、30 筆 Mage 與 Ranger 的 Herbal Curing 差異；原有 Mage 回歸測試無需更動。
+- 新增 `tests/native/test_priest_spell_descriptions_locale.c`（28×2+8 = **64 項預期斷言**）與 `tests/test_priest_spell_descriptions_locale_source.py`，並註冊到 `scripts/test-native-utf8.sh`、`scripts/verify-zh-tw.sh`。
+- 完整 C99/Python、Android Gradle/NDK、模擬器、實機測試仍須本機執行，並以 `[skip ci]` 避免使用 GitHub Actions。
