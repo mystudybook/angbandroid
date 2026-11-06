@@ -513,7 +513,7 @@ static void do_cmd_save_screen_html(int mode, term *other_term)
 
 	/* Check for failure */
 	if (!fff) {
-		msg("Screen dump failed.");
+		msg("%s", angdroid_game_ui_text("Screen dump failed.", angdroid_zh_tw_enabled()));
 		event_signal(EVENT_MESSAGE_FLUSH);
 		return;
 	}
@@ -535,7 +535,10 @@ static void do_cmd_save_screen_html(int mode, term *other_term)
 	file_delete(file_name);
 	do_cmd_redraw();
 
-	msg("%s screen dump saved.", mode ? "Forum text" : "HTML");
+	if (angdroid_zh_tw_enabled())
+		msg("畫面已匯出為 %s 格式。", mode ? "論壇文字" : "HTML");
+	else
+		msg("%s screen dump saved.", mode ? "Forum text" : "HTML");
 	event_signal(EVENT_MESSAGE_FLUSH);
 }
 
@@ -545,7 +548,9 @@ static void do_cmd_save_screen_html(int mode, term *other_term)
  */
 void do_cmd_save_screen(void)
 {
-	char ch = get_char("Dump as (H)TML or (F)orum text? ", "hf", 2, ' ');
+	char ch = get_char(angdroid_game_ui_text(
+		"Dump as (H)TML or (F)orum text? ", angdroid_zh_tw_enabled()),
+		"hf", 2, ' ');
 	int mode = 0;
 	term *ml_term;
 
@@ -561,7 +566,8 @@ void do_cmd_save_screen(void)
 	}
 	ml_term = find_first_subwindow(PW_MONLIST);
 	if (ml_term) {
-		if (!get_check("Include monster list? ")) ml_term = NULL;
+		if (!get_check(angdroid_game_ui_text(
+			"Include monster list? ", angdroid_zh_tw_enabled()))) ml_term = NULL;
 	}
 	do_cmd_save_screen_html(mode, ml_term);
 }

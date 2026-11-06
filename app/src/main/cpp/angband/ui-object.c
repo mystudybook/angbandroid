@@ -52,6 +52,7 @@
 #include "ui-prefs.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-ignore-quality-action.h"
 #include "zh-tw-inscription-confirm.h"
 #include "object-list-text.h"
 #include "inventory-list-display.h"
@@ -1806,8 +1807,14 @@ void textui_cmd_ignore_menu(struct object *obj)
 		value = IGNORE_MAX;
 
 	if (value != IGNORE_MAX && type != ITYPE_MAX) {
-		strnfmt(out_val, sizeof out_val, "All %s %s",
-				quality_values[value].name, ignore_name_for_type(type));
+		/* Translate the menu label only. The existing level/type IDs,
+		 * selection command and ignore rule below stay unchanged. */
+		if (!angdroid_ignore_quality_action_text(out_val, sizeof out_val,
+				quality_values[value].name, ignore_name_for_type(type),
+				angdroid_zh_tw_enabled()))
+			my_strcpy(out_val, angdroid_game_ui_text(
+					"Quality ignore menu", angdroid_zh_tw_enabled()),
+				sizeof out_val);
 
 		menu_dynamic_add(m, out_val, IGNORE_THIS_QUALITY);
 	}
