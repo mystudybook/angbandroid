@@ -458,3 +458,14 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 本批不修改 `ui-menu.c` 的通用事件分派，避免影響商店、背包或其他選單；不修改法術效果、遊戲規則、原文翻譯與存檔。完整 Android NDK/Gradle、模擬器/實機操作（尤其第二次點擊同一列才施法）仍待本機驗證。不使用 GitHub Actions，commit `[skip ci]`。
 
 - 第 127 批同時把選擇提示緩衝區從 80 bytes 擴為 **192 bytes**，在 `prt()` 顯示前以 `angdroid_utf8_clip_columns()` 限制到手機終端欄寬，避免新增的雙擊說明被 UTF-8 位元組截斷或跨行覆蓋法術選單。
+
+
+## 第 128 批 — Android 遊戲畫面手勢取消／多指／長按防止法術誤觸
+
+- **真實觸控路徑審查**：`TermView.java::onTouchEvent()` 原本只有 `ACTION_DOWN/MOVE/CANCEL/UP` 的主要處理，沒有明確追蹤 `ACTION_POINTER_DOWN/UP` 或 `getPointerCount()>1`。如果先加入第二根手指、再依序抬起，剩餘手指最後的 `ACTION_UP` 仍可能走 `ScreenView.executeAction() → onSingleTapUp() → sendMousePress() → state.addMousePress()`。這種多指後的單擊不能用於法術清單第二次觸控確認。
+- 新增 **無 Android 依賴**的純 Java `ScreenTapGuard`，只在起始位置屬於 `ScreenView` 時啟用。單指畫面觸控仍照常送出原生 mouse press；若多指加入／離開、收到 `ACTION_CANCEL`、長按執行或 `onSizeChanged()` 旋轉時，會把該手勢標記取消，最終 `ACTION_UP` 不再變成額外一次畫面單擊。釋放位置若已滑出 `ScreenView`、落到 D-pad/其他覆蓋元件，也不算畫面單擊。
+- **保留其他浮動按鈕**：多指阻擋只適用於 `ScreenView` 起始的手勢；`ScreenTapGuard.begin(false)` 不干擾虛擬方向鍵、重複按鈕、拖曳視窗等既有行為。取消中的畫面手勢不會意外觸發右下／左下的快捷選單，因為新防護在角落觸控判定前執行。
+- `TermView.java::createTimers()` 的 `LONG_PRESS` 分支先取消畫面單擊，**但仍然執行既有 `lastView.executeLongPress(null)`**；沒有拿掉原本長按功能。取消／多指時使用原有 `stopTimers()`，不發出新的原生按鍵或滑鼠事件。
+- 新增 `tests/java/org/rephial/xyangband/ScreenTapGuardTest.java`，直接使用 JDK 21 編譯和執行 **18 項斷言**，確認單指正常、雙指最終抬起被拒、取消後可恢復、長按釋放不重複點擊、畫面滑向浮動按鈕不觸發，以及 D-pad 維持原本操作。完整測試檔與 Java helper 已以 `git hash-object` 對照 GitHub blob SHA，檔案內容一致。
+- 兩個 Java 原始檔已註冊至 `scripts/test-terminal-unicode.sh`，其本來就是 `scripts/verify-zh-tw.sh` 的 Java 測試階段。另新增 `tests/test_screen_tap_guard_source.py`、註冊至 `scripts/verify-zh-tw.sh`，檢查 `TermView.java` 事件遮罩、`ACTION_POINTER_DOWN/UP`、取消、長按、旋轉及快捷鍵順序確實接入。
+- **重要驗證界線**：目前直接執行通過的是純 Java 18 項 helper 斷言，尚未在本環境完成 Android `TermView` 的完整編譯、Gradle／NDK 或 emulator／實機手勢驗收。原生法術選單第 127 批同列二次確認仍保留；`class.txt`、原版 163 筆法術、135 組繁中對照、傷害／耗魔／機率及存檔均不變。GitHub Actions 不使用，Commit 標記 `[skip ci]`。

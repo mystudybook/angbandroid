@@ -45,6 +45,7 @@ run_check "Native C UTF-8 and column-width helpers" sh "$ROOT/scripts/test-nativ
 run_check "Legacy NPP bool headers across supported C standards" sh "$ROOT/scripts/test-native-bool-headers.sh"
 run_check "Native shared-library symbol ownership" python3 "$ROOT/scripts/check_native_link_ownership.py"
 run_check "Native/Java Unicode protocol wiring" python3 "$ROOT/scripts/check-native-unicode-contract.py"
+run_check "Android screen tap long-press and multi-pointer cancellation" python3 "$ROOT/tests/test_screen_tap_guard_source.py"
 run_check "Filtered native menu keyboard hint integration" python3 "$ROOT/tests/test_menu_key_hints_source.py"
 run_check "Visible-page native menu shortcut consistency" python3 "$ROOT/tests/test_menu_visible_tags_source.py"
 run_check "Finite invalid-row menu navigation" python3 "$ROOT/tests/test_menu_navigation_source.py"
