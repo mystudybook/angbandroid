@@ -255,3 +255,12 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - **終端格網保護**：`equip_cmp_print_label()` 在輸出中文及一般提示之前，現在檢查 `Term` 是否存在、終端寬高是否有效、`row/col` 是否在合法範圍內。避免旋轉期間 `hgt-1` 變成 `-1` 或寬度為 0 時繼續呼叫 `prt()`；有效情況仍使用既有 `angdroid_menu_copy_columns()`，完整裁切繁中 UTF-8，不改選單原本按鍵。
 - **狀態與匯出不變**：新增獨立 C99 `equip-compare-state-guard.h`；沒有修改 `display_page(the_summary, player, true)`、檔案匯出 `display_page(s_for_file, player, false)`、排序、裝備篩選或任何存檔格式。正常有物品／無物品狀態與原版互動維持一致。
 - **回歸測試**：新增 `tests/native/test_equip_cmp_tiny_terminal.c`（初始／失敗狀態、0×0、1×1、視窗上下邊界、無效座標、螢幕縮放）到 `scripts/test-native-utf8.sh`；新增 `tests/test_equip_cmp_tiny_terminal_source.py` 檢查實際初始化順序、失敗路徑、UTF-8 安全裁切及匯出隔離，註冊到 `scripts/verify-zh-tw.sh`。所有提交包含 `[skip ci]`，不使用 GitHub Actions。獨立原生測試不能取代 Android NDK／Gradle 與 Android 模擬器／實機在旋轉或切換視窗時的驗收。
+
+
+## 第 106 批 — 裝備比較觸控選取、手機旋轉及中文操作提示
+
+- **觸控選擇的實際風險**：`handle_input_equip_cmp_select()` 原本只按 `mouse.y` 換算目前列，沒有確認橫向 `mouse.x` 在終端範圍內，也沒有核對依 `ifirst`／`indinc` 算出的結果是否位於 `0 .. nfilt-1`。當反向排序、清單分頁、手機旋轉或接收到失效點擊時，可能把不合法篩選索引存成 `work_sel`，第二次點擊又直接以 `sorted_indices[work_sel]` 存取。新的純 C99 `equip-compare-touch-guard.h` 同時驗證終端寬高、X/Y、可見列、升降序、篩選數量與計算結果，超界不更新選取；安全索引仍以原有 `sorted_indices[]` 映射至物品。
+- **空清單／失效選取**：當 `nfilt == 0` 或該頁沒有可選列時，按 `x/I` 不再進入會造成斷言的選取模式，而是顯示「沒有可查看的裝備。」。確認選取前再次檢查 `work_sel` 是否仍合法，避免旋轉或過期事件造成無效索引讀取。取消、右鍵返回、單點選取／同列二次點擊確認、`Enter`、`x` 跳過、選單操作仍使用原本狀態與命令，不改變物品 ID／存檔。
+- **旋轉與反向排序**：`reconfigure_for_term_if_necessary()` 在新終端大小且正常配置時，會把原本 `work_sel` 限定在現有頁面可見範圍；原索引仍可見時維持不變，超出頁面的情況落在最接近的可見列，無效頁面則取消選擇。新增索引運算使用 `int64_t`，避免極端輸入下加減／乘法溢位。
+- **持續中文化**：裝備比較選取模式新增狀態提示「點選物品列以選取，再點一次確認」，並為空結果提示提供中英文對照；仍使用現有 `angdroid_equip_cmp_text()`、`equip_cmp_print_label()` 與 UTF-8 安全欄寬裁切，不更動按鍵綁定、品質比較運算或匯出檔案。
+- **離線驗證**：新增 `tests/native/test_equip_cmp_touch_guard.c` 測試正反序列、邊界、未知座標、0 件物品、失效點擊、旋轉後可見選取；加入 `scripts/test-native-utf8.sh`。新增 `tests/test_equip_cmp_touch_selection_source.py` 核對實際遊戲接線、中文對照、原有 `sorted_indices` 與匯出不變，加入 `scripts/verify-zh-tw.sh`。GitHub 提交全部 `[skip ci]`，不使用 GitHub Actions；整套 Gradle／NDK 編譯與 Android 模擬器／實機的觸控、旋轉行為仍需本機測試。
