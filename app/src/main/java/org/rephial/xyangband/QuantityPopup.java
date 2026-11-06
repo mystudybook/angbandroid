@@ -23,11 +23,12 @@ public class QuantityPopup extends PopupWindow
 
     /** A dismissed, unconfirmed popup must cancel the pending native prompt. */
     private boolean resolved = false;
+    private int sessionToken = 0;
 
     public ViewGroup root = null;
 
     public QuantityPopup(GameActivity p_context, String message,
-                         int maxValue, int initialValue) {
+                         int maxValue, int initialValue, int token) {
         super(p_context);
 
         // Prevent taps or keystrokes passing through to the game while choosing.
@@ -50,7 +51,7 @@ public class QuantityPopup extends PopupWindow
 
         valuePicker.setMinValue(0);
 
-        configure(message, maxValue, initialValue);
+        configure(message, maxValue, initialValue, token);
 
         valueBar.setOnSeekBarChangeListener(this);
 
@@ -78,15 +79,26 @@ public class QuantityPopup extends PopupWindow
                 if (!resolved) {
                     resolved = true;
                     StateManager state = context.getStateManager();
-                    state.addKey(state.getKeyEsc());
+                    if (state != null) state.cancelQuantity(sessionToken);
                 }
             }
         });
     }
 
-    public void configure(String message, int maxValue, int initialValue)
+    public int getSessionToken() {
+        return sessionToken;
+    }
+
+    /** Native prompt ended; never echo Escape to a different game screen. */
+    public void dismissSilently() {
+        resolved = true;
+        if (isShowing()) dismiss();
+    }
+
+    public void configure(String message, int maxValue, int initialValue, int token)
     {
         locked = true;
+        sessionToken = token;
         resolved = false;
         int limit = Math.max(0, maxValue);
 
@@ -122,7 +134,7 @@ public class QuantityPopup extends PopupWindow
         if (id == R.id.cancelButton) {
             resolved = true;
             StateManager state = context.getStateManager();
-            state.addKey(state.getKeyEsc());
+            if (state != null) state.cancelQuantity(sessionToken);
             dismiss();
             locked = false;
             return;
@@ -152,7 +164,7 @@ public class QuantityPopup extends PopupWindow
     {
         StateManager state = context.getStateManager();
         return state != null && state.enqueueQuantity(
-                valuePicker.getValue(), valuePicker.getMaxValue());
+                sessionToken, valuePicker.getValue(), valuePicker.getMaxValue());
     }
 
     @Override
