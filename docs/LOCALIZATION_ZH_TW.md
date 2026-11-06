@@ -123,3 +123,12 @@ These offline checks require Python 3, a JDK and a host C compiler. They check r
 ## Licensing notes
 
 The repository root has no consolidated `LICENSE` file. Some Android Java and native Angband source files declare a GPL v2 **or** original Angband-license alternative, while other source files carry distinct notices. The Android repository also bundles multiple variant engines and third-party assets. An overall right to repackage and redistribute this specific app must **not** be assumed solely from the Angband core license.
+
+
+## Android 數量選擇視窗與輸入防呆（第 91 批）
+
+- 數量選擇視窗新增繁中動態提示、「確認數量」、「取消」與明確「全部（上限）」標籤；1、10、全部仍可直接選取送出。
+- 轉動 NumberPicker 或拖曳滑桿僅改變視窗顯示，**不再反覆注入尚未確認的遊戲按鍵**。按「確認數量」才送出數字加 Enter；按取消、Android 返回或關閉未確認視窗時送 Esc。
+- 視窗可取得焦點且不允許外部點擊穿透，避免在選擇數量時操作遊戲。Activity 暫停時關閉視窗。
+- 使用純 Java 長整數中介計算，避免滑桿換算時的整數溢位、零區間除以零，並限制初始化數量在合法範圍。
+- 離線驗證：`sh scripts/test-quantity-popup.sh`（純 JDK）及 `python3 tests/test_quantity_popup_source.py`（Android 程式與資源連線）。完整 Android 編譯、模擬器觸控與多遊戲核心的端到端驗收仍需本機執行。未使用 GitHub Actions。
