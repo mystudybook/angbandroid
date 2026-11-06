@@ -210,3 +210,10 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - **背包與箭袋**：背包子視窗的 `Burden … lb` 改為「負重 … 磅（剩餘／超出 … 磅）」；處理 `remaining == INT_MIN` 時不再呼叫可能溢位的 `abs(INT_MIN)`。裝備子視窗的 `In quiver` 只在繪製時顯示「箭袋內」，保留資料中的英文 `In quiver` 哨兵字串，避免更動 `set_obj_names()` 的判斷、實際欄位索引或物品資料。箭袋欄位 `Slot n` 以「格 n」顯示；子視窗中彈藥數量改為「箭袋：N 支彈藥」，與既有主要物品選單一致。 另外，子視窗箭袋摘要列現在檢查有效列數、快捷鍵索引及欄寬，用 UTF-8 終端格截斷顯示文字，避免手機旋轉或極窄視窗在底部畫出界；若 `quiver_slot_size` 不合理則略過該摘要。
 - **安全設計**：新增純 C99 的 `inventory-list-display.h`，文字緩衝區不足會返回失敗並清空輸出；超出預留欄位的整段數字會由原有版面函式略過。確認選取標籤、`object_desc()`、`get_item()`、購物／出售／存放／取出交易命令與存檔格式都沒有更動。
 - **回歸驗證**：`tests/native/test_inventory_list_display.c` 測試中英數字、固定終端欄寬、狹窄緩衝區、超長整數、過重與 `INT_MIN`；在 `scripts/test-native-utf8.sh` 使用 host C99 編譯。`tests/test_inventory_list_locale_source.py` 檢查 source-only 顯示、原本的辨識哨兵、物品選擇與商店指令均不變，納入 `scripts/verify-zh-tw.sh`。這些測試不代表 APK／NDK 或模擬器實機已完整驗收；不使用 GitHub Actions。
+
+
+## 第 100 批 — 七種商店名稱與刻字安全確認的繁體中文化
+
+- **商店右側標題**：原版 Angband `terrain.txt` 定義的七種商店名稱（General Store／Armoury／Weapon Smiths／Bookseller／Alchemy Shop／Magic Shop／Black Market）分別顯示為「雜貨店／防具店／武器店／書店／鍊金商店／魔法商店／黑市」；保留 `Home` →「家」的純顯示映射。只在 `ui-store.c` 繪製店名時查詢 `zh-tw-store-names.h`，保留 `f_info[]`、遊戲解析器、`FEAT_`、`store->feat`、店主姓名、商店金額 `max_cost` 及交易規則，英語或未知商店名稱原樣回傳。寬度繼續使用原本 UTF-8 欄位計算，不與店主資訊重疊。
+- **物品安全警示**：物品刻字 `!*` 或 `!key` 的確認畫面原本顯示 `Really <verb> <item>?`，現在以 `zh-tw-inscription-confirm.h` 精確匹配 `cmd_verb()` 原始動詞，將 21 種常見動作（裝備、卸下、丟棄、使用、飲用、投擲、出售、存放、購買、取出等）顯示成「確定要… <物品>？」。沒有命中的動詞仍顯示英文，不會影響 mod 自訂命令。只有確認畫面的 `verify_object()` 物品說明啟用 `ODESC_ZH_TW` 並擴充本機文字緩衝區；`check_for_inscrip` 的比對、`while (n--)` 逐次確認、取消結果、原生 `cmd_verb()` 及存檔都不更動。
+- **回歸測試**：新增純 C99 `tests/native/test_store_inscription_labels.c`，以 `-Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security` 測試每種店名、21 個動詞的繁中與英文、未知名稱／動詞、NULL 與超短緩衝區，接入 `scripts/test-native-utf8.sh`。新增 `tests/test_store_inscription_locale_source.py` 對照 shipped `terrain.txt` 和 `cmd-core.c`、只修改顯示畫面、保留安全確認與交易指令，接入 `scripts/verify-zh-tw.sh`。沒有使用 GitHub Actions。完整 APK／NDK 編譯、模擬器／實機仍需本機驗證。
