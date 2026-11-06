@@ -469,3 +469,14 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 新增 `tests/java/org/rephial/xyangband/ScreenTapGuardTest.java`，直接使用 JDK 21 編譯和執行 **18 項斷言**，確認單指正常、雙指最終抬起被拒、取消後可恢復、長按釋放不重複點擊、畫面滑向浮動按鈕不觸發，以及 D-pad 維持原本操作。完整測試檔與 Java helper 已以 `git hash-object` 對照 GitHub blob SHA，檔案內容一致。
 - 兩個 Java 原始檔已註冊至 `scripts/test-terminal-unicode.sh`，其本來就是 `scripts/verify-zh-tw.sh` 的 Java 測試階段。另新增 `tests/test_screen_tap_guard_source.py`、註冊至 `scripts/verify-zh-tw.sh`，檢查 `TermView.java` 事件遮罩、`ACTION_POINTER_DOWN/UP`、取消、長按、旋轉及快捷鍵順序確實接入。
 - **重要驗證界線**：目前直接執行通過的是純 Java 18 項 helper 斷言，尚未在本環境完成 Android `TermView` 的完整編譯、Gradle／NDK 或 emulator／實機手勢驗收。原生法術選單第 127 批同列二次確認仍保留；`class.txt`、原版 163 筆法術、135 組繁中對照、傷害／耗魔／機率及存檔均不變。GitHub Actions 不使用，Commit 標記 `[skip ci]`。
+
+
+## 第 129 批 — 法術觸控雙次確認的 2 秒有效期與單調時鐘
+
+- 原始第 127 批 `angdroid_spell_menu_confirm_touch()` 只檢查兩次觸控是否為**相同法術列**；若使用者點一次、放下手機很久、再回到原列點一下，仍可能直接確認施法／學習。此問題可從既有 C99 helper 和 `ui-spell.c` 明確重現。
+- 新增 **2 秒確認時限** `ANGDROID_SPELL_TOUCH_CONFIRM_WINDOW_MS=2000`，原生法術選單以 `clock_gettime(CLOCK_MONOTONIC)` 取得**經過時間（毫秒）**，不使用可被手機時間設定、時區或 NTP 調整的日曆時鐘。Android 專案的 minSdk 為 22，可使用 `CLOCK_MONOTONIC`。在 ANSI/C99 建置時於 `ui-spell.c` 的所有標頭之前定義 `_POSIX_C_SOURCE=200809L` 以公開 POSIX 時間介面。
+- 每次觸控只在 **同一 oid、已保存有效時間、單調時間嚴格遞增（兩個事件不能同一毫秒）、且經過時間 ≤2000 毫秒**時確認；若逾時（2001ms）、換列、單調時鐘倒退或讀取失敗（回傳 0），這一下都只會**重新記錄為第一次觸控，絕不直接確認**。等於 2000ms 的邊界仍允許確認；確認後會同時清除待確認索引與時間。
+- `spell_menu_data` 新增 `uint64_t touch_pending_at_ms`。所有原本清除 `touch_pending_oid` 的位置（旋轉重新排版、閱讀器返回、鍵盤/Enter/問號、點選單外、改列、進入瀏覽模式與初始狀態）都改為共用 `angdroid_spell_menu_cancel_touch()` **同時清除 oid 與時間**，避免上一輪計時洩漏到下一次施法操作。瀏覽模式與鍵盤字母／Enter 仍維持原版單次選擇。
+- UI 提示改為繁中「**2 秒內觸控同列兩次確認**」、英文 `Tap same row twice within 2s`，延用原本的 UTF-8 顯示欄裁切，窄螢幕不覆蓋法術列表。未更改 `ui-menu.c` 的所有選單事件派送，也不更動遊戲法術資料、施法計算、角色存檔或所有 135 筆翻譯表。
+- `tests/native/test_spell_reader_pages.c` 更新第 127 批觸控確認測試：同列 2000ms 可確認、2001ms 不可確認、逾時重新準備、換列重計、時間 0／倒退／逼近 `UINT64_MAX`、瀏覽模式與安全清除。仍使用既有 `scripts/test-native-utf8.sh`。同步更新 `tests/test_spell_reader_source.py` 驗證 C99 時鐘來源、欄位、時間計算及全部清除路徑，避免過時的舊 helper 簽名斷言造成誤判。
+- 靜態來源比對與隔離 C99 測試不能取代完整 Android 專案、模擬器或實機驗收；請在手機確認「點一次 → 等待超過 2 秒 → 再點相同法術」**不能施法**，必須在時限內再點第三下才確認；正常連續兩下、換列、瀏覽及鍵盤操作保持正常。不使用 GitHub Actions；commit `[skip ci]`。

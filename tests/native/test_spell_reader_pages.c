@@ -153,58 +153,129 @@ int main(void)
     CHECK(!angdroid_spell_menu_touch_selectable(0, 0, -1));
     CHECK(angdroid_spell_menu_touch_selectable(1, 0, 0));
 
-    /* A keyboard-casting menu must NOT commit on one Android tap,
-     * even when the tapped row was already highlighted by default. */
+    /* Two taps on the SAME spell are valid only within two monotonic
+     * seconds. A stale tap is a fresh FIRST tap, never a cast. */
     {
         int armed = -1;
-        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 0, 0));
-        CHECK(armed == 0);
-        CHECK(angdroid_spell_menu_confirm_touch(&armed, 0, 0));
-        CHECK(armed == -1);
-        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 0, 0));
-        CHECK(armed == 0);
-        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 3, 0));
-        CHECK(armed == 3);
-        CHECK(angdroid_spell_menu_confirm_touch(&armed, 3, 0));
-        CHECK(armed == -1);
+        uint64_t at = 0;
+        CHECK(ANGDROID_SPELL_TOUCH_CONFIRM_WINDOW_MS == UINT64_C(2000));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 0, 0, UINT64_C(1000)));
+        CHECK(armed == 0 && at == UINT64_C(1000));
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 0, 0, UINT64_C(3000)));
+        CHECK(armed == -1 && at == 0);
+        /* Two callbacks in the very same millisecond must not appear
+         * to be two separate intentional taps. */
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 0, 0, UINT64_C(3500)));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 0, 0, UINT64_C(3500)));
+        CHECK(armed == 0 && at == UINT64_C(3500));
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 0, 0, UINT64_C(3501)));
+        CHECK(armed == -1 && at == 0);
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 0, 0, UINT64_C(4000)));
+        CHECK(armed == 0 && at == UINT64_C(4000));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 0, 0, UINT64_C(6001)));
+        CHECK(armed == 0 && at == UINT64_C(6001));
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 0, 0, UINT64_C(6002)));
+        CHECK(armed == -1 && at == 0);
     }
 
-    /* Browsing must continue to respond to a single harmless tap.
-     * A previously armed cast must also be cancelled when browsing. */
-    {
-        int armed = 7;
-        CHECK(angdroid_spell_menu_confirm_touch(&armed, 2, 1));
-        CHECK(armed == -1);
-        CHECK(angdroid_spell_menu_confirm_touch(&armed, 2, 1));
-        CHECK(armed == -1);
-    }
-
-    /* Invalid rows and null state never produce a confirmed action. */
-    {
-        int armed = 4;
-        CHECK(!angdroid_spell_menu_confirm_touch(NULL, 4, 0));
-        CHECK(!angdroid_spell_menu_confirm_touch(&armed, -1, 0));
-        CHECK(armed == 4);
-        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 9, 0));
-        CHECK(armed == 9);
-        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 10, 0));
-        CHECK(armed == 10);
-        CHECK(angdroid_spell_menu_confirm_touch(&armed, 10, 0));
-        CHECK(armed == -1);
-    }
-
-    /* Simulation of a reader exit, rotation, header tap or keyboard
-     * navigation: the UI explicitly resets an armed row to -1. */
+    /* Switching rows resets the deadline. Stale taps on the new row
+     * must also rearm, not cast. */
     {
         int armed = -1;
-        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 5, 0));
-        CHECK(armed == 5);
-        armed = -1;
-        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 5, 0));
-        CHECK(armed == 5);
-        armed = -1;
-        CHECK(!angdroid_spell_menu_confirm_touch(&armed, 5, 0));
-        CHECK(armed == 5);
+        uint64_t at = 0;
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 3, 0, UINT64_C(1000)));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 7, 0, UINT64_C(1100)));
+        CHECK(armed == 7 && at == UINT64_C(1100));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 7, 0, UINT64_C(4000)));
+        CHECK(armed == 7 && at == UINT64_C(4000));
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 7, 0, UINT64_C(4400)));
+        CHECK(armed == -1 && at == 0);
+    }
+
+    /* Monotonic time may fail, roll back, or approach UINT64_MAX.
+     * None of those should permit an incorrect confirmation. */
+    {
+        int armed = -1;
+        uint64_t at = 0;
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 2, 0, 0));
+        CHECK(armed == 2 && at == 0);
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 2, 0, 0));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 2, 0, UINT64_C(5000)));
+        CHECK(armed == 2 && at == UINT64_C(5000));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 2, 0, UINT64_C(4999)));
+        CHECK(armed == 2 && at == UINT64_C(4999));
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 2, 0, UINT64_C(5000)));
+        CHECK(armed == -1 && at == 0);
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 5, 0, UINT64_MAX - UINT64_C(800)));
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 5, 0, UINT64_MAX));
+        CHECK(armed == -1 && at == 0);
+    }
+
+    /* Browsing and keyboard interaction remain independent of touch
+     * confirmation: browsing needs one tap and clears any old timer. */
+    {
+        int armed = 8;
+        uint64_t at = UINT64_C(2000);
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 3, 1, UINT64_C(9000)));
+        CHECK(armed == -1 && at == 0);
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 3, 1, UINT64_C(9001)));
+        CHECK(armed == -1 && at == 0);
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            NULL, &at, 4, 0, UINT64_C(10000)));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, NULL, 4, 0, UINT64_C(10000)));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, -1, 0, UINT64_C(10000)));
+        CHECK(armed == -1 && at == 0);
+    }
+
+    /* Screen resize, reader exit, a keyboard command, and a tapped
+     * invalid row all clear BOTH the pending row and its timestamp. */
+    {
+        int armed = -1;
+        uint64_t at = 0;
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 5, 0, UINT64_C(1200)));
+        CHECK(armed == 5 && at == UINT64_C(1200));
+        angdroid_spell_menu_cancel_touch(&armed, &at);
+        CHECK(armed == -1 && at == 0);
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 5, 0, UINT64_C(1300)));
+        CHECK(armed == 5 && at == UINT64_C(1300));
+        angdroid_spell_menu_cancel_touch(&armed, &at);
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 5, 0, UINT64_C(1400)));
+        CHECK(armed == 5 && at == UINT64_C(1400));
+        angdroid_spell_menu_cancel_touch(&armed, &at);
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 5, 0, UINT64_C(1500)));
+        CHECK(armed == 5 && at == UINT64_C(1500));
+        angdroid_spell_menu_cancel_touch(&armed, &at);
+        CHECK(armed == -1 && at == 0);
+        angdroid_spell_menu_cancel_touch(NULL, &at);
+        angdroid_spell_menu_cancel_touch(&armed, NULL);
+        CHECK(armed == -1 && at == 0);
     }
 
     printf("PASS: UTF-8 spell reader pages (%d assertions)\n", checks);
