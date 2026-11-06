@@ -73,6 +73,7 @@ run_check "Store purchase cancel and stock-index safety" python3 "$ROOT/tests/te
 run_check "Explicit store confirmation and Chinese quantity labels" python3 "$ROOT/tests/test_store_confirmation_source.py"
 run_check "Strict global quantity parsing and Chinese retry" python3 "$ROOT/tests/test_quantity_input_source.py"
 run_check "Object context menu bilingual CJK layout and safe quantity retry state" python3 "$ROOT/tests/test_item_context_quantity_locale_source.py"
+run_check "Gear wear/remove bilingual prompts and UTF-8-safe confirmation" python3 "$ROOT/tests/test_gear_confirmation_locale_source.py"
 run_check "Android quantity popup confirmation / localization wiring" python3 "$ROOT/tests/test_quantity_popup_source.py"
 run_check "Atomic Android quantity sequence and queue isolation" python3 "$ROOT/tests/test_quantity_queue_source.py"
 run_check "Native quantity session lifetime and asynchronous stale popup guards" python3 "$ROOT/tests/test_quantity_prompt_session_source.py"
