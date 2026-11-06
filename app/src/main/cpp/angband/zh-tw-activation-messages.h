@@ -36,7 +36,7 @@ static inline const char *angdroid_zh_tw_activation_message(
         { "The {kind} glow{s} brightly...", "{name} 發出明亮光芒……" },
         { "The {kind} flood{s} the area with goodness...", "{name} 讓四周充滿神聖的力量……" },
         { "{name} glows deep blue...", "{name} 發出深藍色光芒……" },
-        { "Lightning surrounds your {kind}!", "閃電環繞著{name}！" },
+        { "Lightning surrounds your {kind}!", "{name} 被閃電環繞！" },
         { "{name} glow{s} many colors...", "{name} 閃耀著五彩光芒……" },
         { "Your {kind} glow{s} a deep red...", "{name} 發出深紅色光芒……" },
         { "Your {kind} {is} covered in fire...", "{name} 被烈焰包覆……" },
