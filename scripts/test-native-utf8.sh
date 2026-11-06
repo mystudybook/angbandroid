@@ -379,6 +379,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_object_list_text"
 "$BUILD_DIR/test_object_list_text"
 
+# Inventory numeric columns, burden and quiver headings in both locales.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_inventory_list_display.c" \
+    -o "$BUILD_DIR/test_inventory_list_display"
+"$BUILD_DIR/test_inventory_list_display"
+
 # Rotated item selection and scroll-safe quiver footer coordinates.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_item_selection_layout.c" \
