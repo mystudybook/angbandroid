@@ -271,6 +271,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_equip_cmp_locale"
 "$BUILD_DIR/test_equip_cmp_locale"
 
+# Equipment comparison on-screen CJK row labels: suffixes and cell widths.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_equip_cmp_name_display.c" \
+    -o "$BUILD_DIR/test_equip_cmp_name_display"
+"$BUILD_DIR/test_equip_cmp_name_display"
+
 # Original Angband curse.txt labels and exact display-only translations.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_curse_locale.c" \

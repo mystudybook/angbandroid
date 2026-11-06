@@ -32,6 +32,9 @@
 #include "ui-equip-cmp.h"
 #include "droid.h"
 #include "zh-tw-equip-cmp.h"
+#include "zh-tw-artifact-names.h"
+#include "zh-tw-ego-names.h"
+#include "equip-compare-name-display.h"
 #include "menu-text-fit.h"
 #include "ui-event.h"
 #include "ui-input.h"
@@ -2756,6 +2759,36 @@ static wchar_t source_to_char(enum equippable_source src)
 }
 
 
+/* Row labels are presentation only. Keep the original set_short_name() and
+ * short_name field for sorting, filtering, exporting and English mode. */
+static bool equip_cmp_screen_short_name(char *out, size_t capacity,
+    const struct equippable *e, const struct player *p, int columns)
+{
+    char description[384];
+    const char *visible;
+    const char *translated;
+    bool keep_tail = false;
+
+    if (!e || !e->obj || columns <= 0) return false;
+    if (e->obj->known && e->obj->known->artifact) {
+        visible = e->obj->known->artifact->name;
+        translated = angdroid_zh_tw_artifact_name(visible);
+        if (translated) visible = translated;
+        keep_tail = true;
+    } else if (e->obj->known && e->obj->known->ego) {
+        visible = e->obj->known->ego->name;
+        translated = angdroid_zh_tw_ego_name(visible);
+        if (translated) visible = translated;
+        keep_tail = true;
+    } else {
+        object_desc(description, sizeof(description), e->obj,
+            ODESC_COMBAT | ODESC_SINGULAR | ODESC_TERSE | ODESC_ZH_TW, p);
+        visible = description;
+    }
+    return angdroid_equip_cmp_format_short_name(out, capacity, visible,
+        (size_t)columns, keep_tail);
+}
+
 static int display_page(struct equippable_summary *s, const struct player *p,
 	bool allow_reconfig)
 {
@@ -2851,8 +2884,23 @@ static int display_page(struct equippable_summary *s, const struct player *p,
 		} else {
 			nmcolor = color;
 		}
-		Term_putstr(s->icol_name, rdetails.value_position.y,
-			e->nmlen, nmcolor, e->short_name);
+		/* append_to_file() also calls display_page(), but with false:
+		 * only the interactive screen receives translated short names.
+		 * Term_putstr(-1) counts decoded glyphs, not UTF-8 bytes. */
+		if (allow_reconfig && angdroid_zh_tw_enabled() && s->nshortnm > 0) {
+			char display_name[256];
+			if (equip_cmp_screen_short_name(display_name,
+					sizeof(display_name), e, p, s->nshortnm)) {
+				Term_putstr(s->icol_name, rdetails.value_position.y,
+					-1, nmcolor, display_name);
+			} else {
+				Term_putstr(s->icol_name, rdetails.value_position.y,
+					e->nmlen, nmcolor, e->short_name);
+			}
+		} else {
+			Term_putstr(s->icol_name, rdetails.value_position.y,
+				e->nmlen, nmcolor, e->short_name);
+		}
 		rdetails.value_position.x = s->icol_name + s->nshortnm + 1;
 		rdetails.alternate_color_first = false;
 		for (j = 0; j < (int)N_ELEMENTS(s->propcats); ++j) {
