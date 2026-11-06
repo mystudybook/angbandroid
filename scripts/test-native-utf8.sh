@@ -139,6 +139,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_gear_confirmation_locale"
 "$BUILD_DIR/test_gear_confirmation_locale"
 
+# Original Angband item-use pickers: scroll, food, potion, generic item, fuel.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_item_use_locale.c" \
+    -o "$BUILD_DIR/test_item_use_locale"
+"$BUILD_DIR/test_item_use_locale"
+
 # Knowledge categories are display-only and must measure UTF-8 glyph cells.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_knowledge_groups_locale.c" \
