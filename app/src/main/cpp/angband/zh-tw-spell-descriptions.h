@@ -1,4 +1,4 @@
-/* Original Angband Mage, Druid, Priest and Necromancer class.txt spell descriptions, translated for UI only.
+/* Original Angband Mage, Druid, Priest, Necromancer, Paladin and Rogue class.txt spell descriptions, translated for UI only.
  * Match both canonical spell name AND original descriptive text: unrelated
  * variants / updated spell rules must fall back to English, not show stale
  * instructions.  Do not change class.txt, spell data, or saved game records.
@@ -134,6 +134,13 @@ static inline const char *angdroid_zh_tw_spell_description(
         { "Vampire Form", "Allows you to assume the form of a vampire at the cost of half your current hitpoints, than teleports you to the nearest living monster and drains a level-dependent number of hitpoints, healing and nourishing you.  When first transformed you will temporarily be able to take hitpoints from living monsters with your bite attack.", "犧牲目前生命值的一半，化身為吸血鬼，接著傳送至最近的一隻活著的怪物身旁，吸取隨角色等級變化的生命值以治療並補充營養。剛變身後，還能暫時透過撕咬攻擊吸取活著怪物的生命值。" },
         { "Curse", "Deals direct damage to a single monster, more the more damaged the monster is already, at the cost of 100 hitpoints.", "對一隻怪物造成直接傷害；怪物原本受傷越重，傷害越高，但會消耗玩家 100 點生命值。" },
         { "Command", "Allows you to take control of a monster, and move it instead of yourself.  Possible actions are move, stand still, 'd'rop, 'm'agic, or 'r'elease.", "控制一隻怪物，改為操縱牠而不是玩家自身。可執行的動作有移動、原地不動、d 丟棄、m 施法，或 r 解除控制。" },
+
+        /* Paladin/Rogue: Heroism has a different level threshold to Priest. */
+        { "Heroism", "Cures 10 points of damage, removes fear and, from character level 15, grants you heroism (resistance to fear, and a bonus of +12 to-hit) for a level-dependent duration.", "恢復 10 點生命值並消除恐懼；角色等級達到 15 後，還會獲得英雄氣概（抵抗恐懼，命中加值提高 12 點），持續時間取決於角色等級。" },
+        { "Single Combat", "Encases you and the targeted monster in a stone cell from which only the winner can emerge.", "將你與指定怪物封入石室，只有獲勝的一方能夠離開。" },
+        { "Object Detection", "Detects all objects in the immediate area.", "偵測附近的所有物品。" },
+        { "Detect Stairs", "Detects all stairs in a wide area.", "偵測較大範圍內的所有樓梯。" },
+        { "Hit and Run", "Prepares you to teleport a short distance after stealing from a monster.", "準備在從怪物身上偷竊後，立即短距離傳送。" },
     };
     size_t i;
     if (!english || !zh_tw || !name) return english;

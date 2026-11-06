@@ -366,3 +366,13 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 沒有修改 `class.txt` 或任何角色/怪物/魔法效果邏輯，所有字串只在既有 `ui-spell.c` 顯示層套用。英語模式及原文異動仍保留英文。
 - 新增 `tests/native/test_necromancer_spell_descriptions_locale.c`（26×2+6 = **58 項預期 C99 斷言**）、`tests/test_necromancer_spell_descriptions_locale_source.py`（核對 110 組原文、共用法術無重複、21 組副作用關鍵字、完整 C99 對照）。修正既有 Druid/Priest 資料測試的固定表格數量，仍保持完整覆蓋，並註冊兩個新測試至既有離線腳本。
 - 本批不使用 GitHub Actions，commit 包含 `[skip ci]`；只有 GitHub 原始碼靜態檢查可在連線端驗證，完整 Python/C99、Android NDK/Gradle、emulator/實機的窄螢幕與遊戲行為測試仍待本機執行。
+
+
+## 第 119 批 — 聖騎士 Paladin（16 筆）與盜賊 Rogue（10 筆）法術說明
+
+- 對照原始 `variant_lib/angband/gamedata/class.txt` 後，Paladin 16 筆中 14 筆已與 Priest 有完全相同英文描述；Paladin 的 `Heroism` 不同，需 **角色等級 15** 才取得英雄氣概，而 Priest 是等級 **20**；另一個 `Single Combat` 為專屬法術。Rogue 10 筆中 7 筆與 Mage 相同，其餘 `Object Detection`、`Detect Stairs`、`Hit and Run` 需新增翻譯。
+- 本批新增 **5 筆名稱＋完整原文的顯示文字對照**，累計 **115 筆精確原文對照**，對應 **114 個不同法術名稱**；`Heroism` 會依不同完整英文描述顯示不同職業適用的內容。Mage、Druid、Priest、Necromancer、Paladin、Rogue 六個職業的全部法術詳細說明均有匹配。
+- 新增 `tests/native/test_paladin_rogue_spell_descriptions_locale.c`，逐筆核對兩個職業 **26 筆**中英文切換與 8 個差異/NULL/未知/英文回退條件，共 **60 項預期 native 斷言**。
+- 新增 `tests/test_paladin_rogue_spell_descriptions_locale_source.py`，直接解析原始資料，檢查 Paladin 15 個同名之中 14 個完全相同＋一個 `Heroism` 不同，及 Rogue 7 個共用＋3 個獨有，並檢驗新的五組說明與原文逐字對應。
+- 調整 Druid、Priest、Necromancer 既有 Python 檢查，避免因翻譯表成長至 115 筆與 `Heroism` 出現兩個不同原文時誤報。沒有修改遊戲規則、`class.txt`、法術效果、存檔或施法指令。
+- 已註冊兩個測試至 `scripts/test-native-utf8.sh` 與 `scripts/verify-zh-tw.sh`；本批禁止 GitHub Actions、Commit 採 `[skip ci]`。原始碼靜態核對不代表完整 Python/C99、Android Gradle/NDK、emulator 與實機驗證已執行。
