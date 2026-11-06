@@ -32,6 +32,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_screen_text_wrap"
 "$BUILD_DIR/test_screen_text_wrap"
 
+# Full-screen localized spell description pages; no JNI needed.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_spell_reader_pages.c" \
+    -o "$BUILD_DIR/test_spell_reader_pages"
+"$BUILD_DIR/test_spell_reader_pages"
+
 # CJK display columns differ from Unicode scalar counts.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_unicode_display.c" \

@@ -404,3 +404,13 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 新增原生 C99 `tests/native/test_screen_text_wrap.c`，測試 9／10／12／16 欄的 CJK、英文、混合數字與換行計算以及保留行尾欄位。新增 `tests/test_spell_screen_wrap_source.py` 檢查實際原始碼是否正確接線，並登錄至 `scripts/test-native-utf8.sh` 和 `scripts/verify-zh-tw.sh`。
 - 限制：當說明超出可見視窗高度時，目前只安全停止輸出，並未實作完整的法術說明捲動檢視。C99／Python、Android Gradle／NDK、模擬器／實機仍須在完整 checkout 執行驗收。
 - 未動到 `class.txt`、163 種職業法術紀錄、翻譯表、法術施放邏輯、角色資料或存檔。`[skip ci]`，不使用 GitHub Actions。
+
+
+## 第 123 批 — 法術說明全螢幕分頁閱讀（Android／原版 Angband）
+
+- 既有法術選單的 `?` 仍切換選單下方簡介。新增獨立命令鍵 `]` 開啟完整文字閱讀器，**不覆蓋原本字母法術標籤、方向鍵、Space 換頁、Enter 選取／施法**；關閉閱讀器後會回到原選單。
+- 使用完整原始 `spell->text` 與現有的 `angdroid_zh_tw_spell_description()` 嚴格雙重匹配，獨立閱讀器不更動法術資料／遊戲規則，英文及繁中皆能閱讀。
+- 新增純 C99、無 JNI 依賴的 `zh-tw-spell-reader-pages.h`：透過既有 `unicode_display.h` 依 Unicode 顯示欄寬安全拆分文字，避免切斷 UTF-8 位元組／中文字；遇英文空格優先斷字、保留原文換行，依螢幕實際可用高度做上下移動與分頁。轉向改變尺寸時重新計算總行數並夾住捲動位置。
+- 全螢幕閱讀時可用上下鍵或 `j/k` 逐行、PgUp/PgDn（或 `[/]`）翻頁、Home/End 跳頭尾、Esc／q 返回。手機觸控點標題返回；點頁面上半向前一頁／下半往後一頁。
+- 另新增 `tests/native/test_spell_reader_pages.c` 與 `tests/test_spell_reader_source.py`，涵蓋中文、英中混排、連續空格、原文換行、窄欄、UTF-8 完整性、頁面上下限、選單按鍵不被偷走；整合既有 Native / Python 離線驗證入口。
+- 完整 C99/Python、Gradle/NDK、模擬器與實機驗收仍需要在本機執行，GitHub 原始碼靜態核對不可當作實際 UI 驗收；無 GitHub Actions，本批提交含 `[skip ci]`。
