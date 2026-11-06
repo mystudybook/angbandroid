@@ -83,6 +83,7 @@ run_check "Druid spell details and shared Ranger exception" python3 "$ROOT/tests
 run_check "Priest prayer descriptions and Paladin Heroism exception" python3 "$ROOT/tests/test_priest_spell_descriptions_locale_source.py"
 run_check "Necromancer spells, self-damage, shapechanges and original matching" python3 "$ROOT/tests/test_necromancer_spell_descriptions_locale_source.py"
 run_check "Paladin and Rogue original spells, Heroism thresholds and source matching" python3 "$ROOT/tests/test_paladin_rogue_spell_descriptions_locale_source.py"
+run_check "Ranger spell descriptions, Druid Herbal Curing and restrictions" python3 "$ROOT/tests/test_ranger_spell_descriptions_locale_source.py"
 run_check "Android quantity popup confirmation / localization wiring" python3 "$ROOT/tests/test_quantity_popup_source.py"
 run_check "Atomic Android quantity sequence and queue isolation" python3 "$ROOT/tests/test_quantity_queue_source.py"
 run_check "Native quantity session lifetime and asynchronous stale popup guards" python3 "$ROOT/tests/test_quantity_prompt_session_source.py"

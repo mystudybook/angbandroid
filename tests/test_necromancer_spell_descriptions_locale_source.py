@@ -31,14 +31,16 @@ class NecromancerDescriptionLocaleSourceTest(unittest.TestCase):
     def test_complete_canonical_and_reuse_without_duplicates(self):
         self.assertEqual(163, len(SPELLS))
         self.assertEqual(26, len(NECRO))
-        self.assertEqual(115, len(MAPPED))
-        self.assertEqual(115, len({(n, en) for n, en, zh in MAPPED}))
-        self.assertEqual(114, len({n for n, en, zh in MAPPED}))
+        self.assertEqual(120, len(MAPPED))
+        self.assertEqual(120, len({(n, en) for n, en, zh in MAPPED}))
+        self.assertEqual(118, len({n for n, en, zh in MAPPED}))
         paladin = {(x["name"], x["english"]) for x in SPELLS
                    if x["class"] == "Paladin"}
         rogue = {(x["name"], x["english"]) for x in SPELLS
                  if x["class"] == "Rogue"}
-        self.assertEqual(MAGE | DRUID | PRIEST | NECRO | paladin | rogue,
+        ranger = {(x["name"], x["english"]) for x in SPELLS
+                  if x["class"] == "Ranger"}
+        self.assertEqual(MAGE | DRUID | PRIEST | NECRO | paladin | rogue | ranger,
                          {(n, en) for n, en, zh in MAPPED})
         self.assertEqual({("Sense Invisible",
                            "Enables you to see invisible monsters for 24+1d24 turns.")},

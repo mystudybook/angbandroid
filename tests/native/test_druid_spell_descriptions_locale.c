@@ -43,8 +43,11 @@ int main(void)
     check("Ice Storm", "Strikes every monster in line of sight with sheets of ice from above.", "從上方降下大片冰霜，襲擊視線內的每隻怪物。");
     check("Volcanic Eruption", "Creates a radius 5 ball of fire, followed by a radius 5 earthquake, around the player.", "以玩家為中心產生半徑 5 格的火球，接著引發半徑 5 格的地震。");
     check("River of Lightning", "Spews plasma in a long narrow cone from the player.", "從玩家所在位置向前噴射一道狹長的電漿錐形攻擊。");
-    assert(angdroid_zh_tw_spell_description("Herbal Curing",
-        ranger_herbs, 1) == ranger_herbs);
+    assert(strcmp(angdroid_zh_tw_spell_description("Herbal Curing",
+        ranger_herbs, 1), "治癒所有割傷、中毒、暈眩與黑色吐息。") == 0);
+    assert(strcmp(angdroid_zh_tw_spell_description("Herbal Curing",
+        ranger_herbs, 1), angdroid_zh_tw_spell_description("Herbal Curing",
+        druid_herbs, 1)) != 0);
     assert(angdroid_zh_tw_spell_description("Herbal Curing",
         druid_herbs, 1) != druid_herbs);
     assert(angdroid_zh_tw_spell_description("Herbal Curing",
@@ -58,7 +61,7 @@ int main(void)
     assert(angdroid_zh_tw_spell_description("Herbal Curing",
         druid_herbs, 0) == druid_herbs);
     assert(angdroid_zh_tw_spell_description("", "", 1)[0] == '\0');
-    checks += 8;
+    checks += 9;
     printf("PASS: Druid spell descriptions (%d checks)\n", checks);
     return 0;
 }

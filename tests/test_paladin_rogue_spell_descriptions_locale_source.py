@@ -31,13 +31,16 @@ VERIFY = (ROOT / "scripts/verify-zh-tw.sh").read_text(encoding="utf-8")
 class PaladinRogueSpellDescriptionsSourceTest(unittest.TestCase):
     def test_complete_class_records_canonical_source(self):
         translated_pairs = {(n, en) for n, en, zh in MAPPED}
-        classes = (MAGE, DRUID, PRIEST, NECROMANCER, PALADIN, ROGUE)
+        ranger = {(s["name"], s["english"]) for s in SPELLS
+                  if s["class"] == "Ranger"}
+        classes = (MAGE, DRUID, PRIEST, NECROMANCER, PALADIN, ROGUE,
+                   ranger)
         self.assertEqual(163, len(SPELLS))
         self.assertEqual(16, len(PALADIN))
         self.assertEqual(10, len(ROGUE))
-        self.assertEqual(115, len(MAPPED))
-        self.assertEqual(115, len(translated_pairs))
-        self.assertEqual(114, len({n for n, en, zh in MAPPED}))
+        self.assertEqual(120, len(MAPPED))
+        self.assertEqual(120, len(translated_pairs))
+        self.assertEqual(118, len({n for n, en, zh in MAPPED}))
         self.assertEqual(set.union(*classes), translated_pairs)
         for name, english, chinese in MAPPED:
             with self.subTest(spell=name):
