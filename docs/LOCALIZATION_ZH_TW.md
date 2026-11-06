@@ -385,3 +385,12 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - `Brand Ammunition` 保留火焰／寒冷／毒素隨機附加與命中／傷害強化，以及附魔、剋制、損壞、詛咒四種不生效情況。箭矢品質依法杖等級和角色等級決定；掩蓋蹤跡可避免留下氣味追蹤。
 - 新增 Ranger 11 組原文資料 Native C99 測試（預期 30 項斷言），新增來源 Python 測試，並登錄既有 scripts 驗證流程。前面 Druid/Priest/Necromancer/Paladin+Rogue 測試更新 120 組配對／118 名稱與 Rangers 全覆蓋；另修正 Priest 測試過時的「Paladin Heroism 尚未翻譯」假設。
 - 僅改 `zh-tw-spell-descriptions.h` 與相關測試／文件，保留原文完整比對、防止不同職業同名效果誤譯；不修改原始法術資料、角色、戰鬥、存檔。Commit `[skip ci]`，不使用 GitHub Actions。C99/Python、Gradle/NDK、模擬器／實機仍需本機驗證。
+
+
+## 第 121 批 — 黑衛士（Blackguard）15 種法術說明繁體中文化，全八職業完成
+
+- 直接核對 `variant_lib/angband/gamedata/class.txt` 的 **163 筆職業法術紀錄（8 種職業）**：新增 Blackguard 全部 15 筆專屬法術長篇說明，翻譯表現在共有 **135 組不重複的（法術名稱、完整原始英文說明）配對**，涵蓋原版 **133 個不重複法術名稱**與 **163/163 筆職業紀錄**。`Heroism` 與 `Herbal Curing` 各保留 2 種同名但原文不同的安全翻譯。
+- 重要副作用與數值：`Berserk Strength` 近戰 +75、防禦 AC -10、抗恐懼但禁止隨時間治療；`Whirlwind Attack` 等級 5/20/35/50 分別 1/2/3/4 擊；`Leap into Battle` 最多 4 格、25/40 級各增加攻擊、每移動一格攻擊次數 -25% 然後取整；`Shatter Stone` 20+1d30 傷害；`Grim Purpose` 12+d12 回合；`Maim Foe` 成功傷害造成 6 回合暈眩；`Venom` 18+d18 回合；`Bloodlust` 會帶來危險副作用；`Unholy Reprieve` 消耗 66 HP 換 STR/INT/CON 和經驗恢復；`Quake` 半徑 13 格。
+- 新增 `tests/native/test_blackguard_spell_descriptions_locale.c`（15 筆×2 種語言顯示＋8 個安全／fallback 檢查，共 **38 項預期 native 斷言**）、`tests/test_blackguard_spell_descriptions_locale_source.py`（解析正式 class.txt，對比全部 163 筆紀錄與 135 組原文配對、25 組關鍵字，並驗證跨職業同名效果）。同步登錄離線 runner。
+- Mage、Druid、Priest、Necromancer、Paladin+Rogue、Ranger 六組原本的 Python 檢查均將完整映射表更新至 135 配對、133 個名稱及 Blackguard 資料；嚴格原文相符與英文回退機制保持不變。
+- 只修改 `app/src/main/cpp/angband/zh-tw-spell-descriptions.h` 的顯示文字和測試／文件，不修改 `class.txt`、遊戲法術效果、職業數據、存檔、施法流程。使用 `[skip ci]` 不觸發 GitHub Actions；本機 C99/Python、Android Gradle／NDK、模擬器及實機的真實執行／窄螢幕換行仍需驗證。

@@ -31,9 +31,9 @@ class PriestSpellDescriptionsLocaleSourceTest(unittest.TestCase):
         self.assertEqual(30, len(MAGE))
         self.assertEqual(27, len(DRUID))
         self.assertEqual(28, len(PRIEST))
-        self.assertEqual(120, len(MAPPED))
-        self.assertEqual(120, len({(n, en) for n, en, zh in MAPPED}))
-        self.assertEqual(118, len({name for name, en, zh in MAPPED}))
+        self.assertEqual(135, len(MAPPED))
+        self.assertEqual(135, len({(n, en) for n, en, zh in MAPPED}))
+        self.assertEqual(133, len({name for name, en, zh in MAPPED}))
         necromancer = {(x["name"], x["english"]) for x in SPELLS
                        if x["class"] == "Necromancer"}
         self.assertEqual(26, len(necromancer))
@@ -43,8 +43,12 @@ class PriestSpellDescriptionsLocaleSourceTest(unittest.TestCase):
                         if x["class"] == "Rogue"}
         ranger_spells = {(x["name"], x["english"]) for x in SPELLS
                          if x["class"] == "Ranger"}
+        blackguard = {(x["name"], x["english"]) for x in SPELLS
+                      if x["class"] == "Blackguard"}
+        self.assertEqual(15, len(blackguard))
         self.assertEqual(MAGE | DRUID | PRIEST | necromancer
-                         | paladin_spells | rogue_spells | ranger_spells,
+                         | paladin_spells | rogue_spells | ranger_spells
+                         | blackguard,
                          {(n, en) for n, en, zh in MAPPED})
         for n, en, zh in MAPPED:
             with self.subTest(spell=n):

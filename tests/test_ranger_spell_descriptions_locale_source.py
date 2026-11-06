@@ -30,10 +30,14 @@ class RangerDescriptionsLocaleSourceTest(unittest.TestCase):
         mapped = {(n, en): zh for n, en, zh in MAPPED}
         self.assertEqual(163, len(SPELLS))
         self.assertEqual(11, len(RANGER))
-        self.assertEqual(120, len(MAPPED))
-        self.assertEqual(120, len(mapped))
-        self.assertEqual(118, len({name for name, en, zh in MAPPED}))
+        self.assertEqual(135, len(MAPPED))
+        self.assertEqual(135, len(mapped))
+        self.assertEqual(133, len({name for name, en, zh in MAPPED}))
         self.assertTrue(RANGER.issubset(set(mapped)))
+        blackguard = {(s["name"], s["english"]) for s in SPELLS
+                      if s["class"] == "Blackguard"}
+        self.assertEqual(15, len(blackguard))
+        self.assertTrue(blackguard.issubset(set(mapped)))
         shared = set(ranger) & set(druid)
         self.assertEqual(7, len(shared))
         self.assertEqual(6, sum(ranger[n] == druid[n] for n in shared))

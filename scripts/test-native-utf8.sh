@@ -199,6 +199,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_ranger_spell_descriptions_locale"
 "$BUILD_DIR/test_ranger_spell_descriptions_locale"
 
+# Blackguard: all original spell descriptions, dangerous penalties and source fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_blackguard_spell_descriptions_locale.c" \
+    -o "$BUILD_DIR/test_blackguard_spell_descriptions_locale"
+"$BUILD_DIR/test_blackguard_spell_descriptions_locale"
+
 # Knowledge categories are display-only and must measure UTF-8 glyph cells.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_knowledge_groups_locale.c" \
