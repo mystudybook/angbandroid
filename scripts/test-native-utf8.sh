@@ -490,6 +490,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_menu_popup_layout"
 "$BUILD_DIR/test_menu_popup_layout"
 
+# Right-anchored item context menus and quantity retry state, without Android.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_item_context_quantity.c" \
+    -o "$BUILD_DIR/test_item_context_quantity"
+"$BUILD_DIR/test_item_context_quantity"
+
 # Multi-column menu layout on tiny terminal widths must not divide by zero.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_column_width.c" \
