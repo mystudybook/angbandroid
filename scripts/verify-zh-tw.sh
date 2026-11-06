@@ -65,6 +65,7 @@ run_check "Store purchase cancel and stock-index safety" python3 "$ROOT/tests/te
 run_check "Explicit store confirmation and Chinese quantity labels" python3 "$ROOT/tests/test_store_confirmation_source.py"
 run_check "Strict global quantity parsing and Chinese retry" python3 "$ROOT/tests/test_quantity_input_source.py"
 run_check "Android quantity popup confirmation / localization wiring" python3 "$ROOT/tests/test_quantity_popup_source.py"
+run_check "Atomic Android quantity sequence and queue isolation" python3 "$ROOT/tests/test_quantity_queue_source.py"
 run_check "Android quantity slider JDK overflow regression" sh "$ROOT/scripts/test-quantity-popup.sh"
 run_check "Queued store input and stale cursor invalidation" python3 "$ROOT/tests/test_store_input_invalidation_source.py"
 run_check "Scrolled store popups and empty-stock commands" python3 "$ROOT/tests/test_store_menu_flow_source.py"

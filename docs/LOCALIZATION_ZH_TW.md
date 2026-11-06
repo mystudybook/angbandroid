@@ -132,3 +132,12 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 視窗可取得焦點且不允許外部點擊穿透，避免在選擇數量時操作遊戲。Activity 暫停時關閉視窗。
 - 使用純 Java 長整數中介計算，避免滑桿換算時的整數溢位、零區間除以零，並限制初始化數量在合法範圍。
 - 離線驗證：`sh scripts/test-quantity-popup.sh`（純 JDK）及 `python3 tests/test_quantity_popup_source.py`（Android 程式與資源連線）。完整 Android 編譯、模擬器觸控與多遊戲核心的端到端驗收仍需本機執行。未使用 GitHub Actions。
+
+
+## Android 數量輸入原子佇列（第 92 批）
+
+- `QuantityPopup` 按確認或「1／10／全部」時只呼叫 `StateManager.enqueueQuantity()`，由 `QuantityInputSequence` 先建立完整的游標移動／清除舊數字／輸入數字／Enter 序列，再由 `KeyBuffer.addRawSequence()` 在**同一把 queue lock**下全部排入，防止其他 UI 執行緒的按鍵插入**序列中間**。
+- 保留既有 FrogComposband 專用的 15 次右移、15 次 Backspace、原生 Enter 編碼和其他遊戲版本的數量規則；不更動商店價格、背包物件、核心資料或存檔。合成數字使用 ASCII，跳過使用者鍵盤修飾鍵，不會消耗 Ctrl／Shift。
+- 排隊前驗證 0 至 max 的範圍、整數及必要的原生按鍵編碼；若驗證失敗，不會把視窗標記成確認成功。取消／Back 仍只送出 Esc。
+- **限制：** 原子排入只保證整組按鍵無法被其他排入操作插開，**不會**清掉當時已在佇列的按鍵，也無法保證原生遊戲此刻仍停留在數量輸入狀態。清空共用 queue 可能破壞儲存／退出等訊號，因此未採用。仍需 Android 模擬器／實機確認快速連點、跨畫面與多遊戲核心互動。
+- 純 JDK 測試 `tests/java/org/rephial/xyangband/QuantityInputSequenceTest.java`，由 `sh scripts/test-quantity-popup.sh` 執行；Python 原始碼檢查 `python3 tests/test_quantity_queue_source.py` 已加入 `scripts/verify-zh-tw.sh`。未使用 GitHub Actions。
