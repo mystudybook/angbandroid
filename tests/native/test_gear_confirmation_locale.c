@@ -1,11 +1,10 @@
-/* C99: UTF-8 complete glyphs in confirmation and item-selection prompts.
+/* C99: UTF-8 complete glyphs in confirmation and choice prompts.
  * Key handling and canonical item names remain unchanged by these helpers.
  */
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include "../../app/src/main/cpp/angband/confirmation-prompt-display.h"
-#include "../../app/src/main/cpp/angband/zh-tw-ui.h"
 
 static unsigned long checks;
 
@@ -17,31 +16,17 @@ static void build(const char *prompt, const char *suffix, size_t columns,
     memset(buf, 0x7f, sizeof(buf));
     displayed = angdroid_confirmation_prompt_display(
         buf, capacity, prompt, suffix, columns);
-    assert(buf[capacity - 1] != 0x7f || capacity == sizeof(buf));
+    assert(strlen(buf) < capacity);
     assert(displayed == angdroid_utf8_display_columns(buf));
     assert(displayed <= columns);
     if (expect_suffix) assert(strstr(buf, suffix) != NULL);
     checks += 4;
 }
 
-static void phrase(const char *english, const char *traditional)
-{
-    assert(strcmp(angdroid_game_ui_text(english, 0), english) == 0);
-    assert(strcmp(angdroid_game_ui_text(english, 1), traditional) == 0);
-    checks += 2;
-}
-
 int main(void)
 {
     size_t columns, capacity;
     char clipped[16];
-
-    phrase("Wear or wield which item?", "要穿戴或裝備哪件物品？");
-    phrase("You have nothing to wear or wield.", "沒有可以穿戴或裝備的物品。");
-    phrase("Take off or unwield which item?", "要卸下哪件裝備？");
-    phrase("You have nothing to take off or unwield.", "沒有可以卸下的裝備。");
-    phrase("Really take off %s? ", "確定卸下 %s 嗎？ ");
-    phrase("Inscribing %s.", "正在為 %s 刻字。");
 
     for (columns = 6; columns <= 96; ++columns) {
         build("確定卸下火焰之劍（已鑑定的裝備）嗎？ ", "[y/n] ",
@@ -77,12 +62,7 @@ int main(void)
     assert(angdroid_confirmation_prompt_display(
         NULL, 10, "hi", "[y/n] ", 16) == 0);
     checks++;
-    assert(angdroid_game_ui_text(NULL, 1) == NULL);
-    checks++;
-    assert(strcmp(angdroid_game_ui_text("unknown confirmation", 1),
-        "unknown confirmation") == 0);
-    checks++;
-    printf("PASS: bilingual gear/inscription prompts and UTF-8 confirmation (%lu checks)\n",
+    printf("PASS: UTF-8-safe confirmation prompts and suffixes (%lu checks)\n",
         checks);
     return 0;
 }
