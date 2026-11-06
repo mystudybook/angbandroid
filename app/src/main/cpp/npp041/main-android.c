@@ -398,7 +398,9 @@ int Term_control(int what, const char *msg)
 {
 	const char *pbuf = msg;
 	char buf[2048] = "";
+#if defined(HAS_KEYMAP_PACK)
 	int n;
+#endif
 
 	if (what == TERM_CONTROL_CONTEXT && IN_THE_DUNGEON) {
 		strnfmt(buf, sizeof(buf), "in_dungeon:1");
