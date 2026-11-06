@@ -124,6 +124,7 @@ class Npp041QuantityBridgeTest(unittest.TestCase):
 #define TERM_CONTROL_QUANTITY 7
 #define IN_THE_DUNGEON 0
 #define strnfmt snprintf
+#define Term_control_keys(msg) Term_control(TERM_CONTROL_LIST_KEYS, msg)
 #define LOGD(...) ((void)fprintf(stderr, __VA_ARGS__))
 typedef int errr;
 static int observed_what = -1;
