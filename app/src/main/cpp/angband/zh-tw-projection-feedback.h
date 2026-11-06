@@ -88,4 +88,34 @@ static inline const char *angdroid_project_blind_term(const char *english, int z
     return english;
 }
 
+/* Display-only object projection verbs: effect and monster logic stays canonical. */
+static inline const char *angdroid_project_object_destroy_verb(
+    const char *english, int zh_tw)
+{
+    static const struct angdroid_project_feedback_pair map[] = {
+        { "melts", "融化了" },
+        { "melt", "融化了" },
+        { "is destroyed", "被摧毀了" },
+        { "are destroyed", "被摧毀了" },
+        { "burns up", "燒毀了" },
+        { "burn up", "燒毀了" },
+        { "shatters", "碎裂了" },
+        { "shatter", "碎裂了" },
+    };
+    size_t i;
+    if (!english || !zh_tw) return english;
+    for (i = 0; i < sizeof(map) / sizeof(map[0]); ++i)
+        if (strcmp(english, map[i].en) == 0) return map[i].zh;
+    return english;
+}
+
+/* Display-only inventory stack labels; do not alter affected amounts. */
+static inline const char *angdroid_project_inventory_scope(int total, int affected)
+{
+    if (total <= 1) return "";
+    if (affected >= total) return "全部";
+    if (affected > 1) return "部分";
+    return "其中一件";
+}
+
 #endif

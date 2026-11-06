@@ -61,6 +61,23 @@ int main(void)
     verify(angdroid_project_blind_term, "something cold", "寒冷之物");
     verify(angdroid_project_blind_term, "water", "水流");
     verify(angdroid_project_blind_term, "something hard", "堅硬物體");
+    verify(angdroid_project_object_destroy_verb, "melts", "融化了");
+    verify(angdroid_project_object_destroy_verb, "melt", "融化了");
+    verify(angdroid_project_object_destroy_verb, "is destroyed", "被摧毀了");
+    verify(angdroid_project_object_destroy_verb, "are destroyed", "被摧毀了");
+    verify(angdroid_project_object_destroy_verb, "burns up", "燒毀了");
+    verify(angdroid_project_object_destroy_verb, "burn up", "燒毀了");
+    verify(angdroid_project_object_destroy_verb, "shatters", "碎裂了");
+    verify(angdroid_project_object_destroy_verb, "shatter", "碎裂了");
+    assert(angdroid_project_object_destroy_verb("future destruction", 1) &&
+           strcmp(angdroid_project_object_destroy_verb("future destruction", 1),
+                  "future destruction") == 0);
+    assert(angdroid_project_object_destroy_verb(NULL, 1) == NULL);
+    assert(strcmp(angdroid_project_inventory_scope(1, 1), "") == 0);
+    assert(strcmp(angdroid_project_inventory_scope(4, 4), "全部") == 0);
+    assert(strcmp(angdroid_project_inventory_scope(4, 2), "部分") == 0);
+    assert(strcmp(angdroid_project_inventory_scope(4, 1), "其中一件") == 0);
+    checks += 6;
     assert(angdroid_project_feedback("unseen future event", 1) &&
            strcmp(angdroid_project_feedback("unseen future event", 1),
                "unseen future event") == 0);

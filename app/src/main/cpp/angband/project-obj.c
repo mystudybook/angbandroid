@@ -137,14 +137,21 @@ int inven_damage(struct player *p, int type, int cperc)
 				object_desc(o_name, sizeof(o_name), obj,
 					ODESC_BASE, p);
 
-				/* Message */
-				msgt(MSG_DESTROY, "%sour %s (%c) %s %s!",
-				           ((obj->number > 1) ?
-				            ((amt == obj->number) ? "All of y" :
-				             (amt > 1 ? "Some of y" : "One of y")) : "Y"),
-				           o_name, gear_to_label(p, obj),
-				           ((amt > 1) ? "were" : "was"),
-					   (damage ? "damaged" : "destroyed"));
+				/* Message: display only, preserving original amount and slot. */
+				if (angdroid_zh_tw_enabled()) {
+					msgt(MSG_DESTROY, "你的%s（%c）%s%s！", o_name,
+						gear_to_label(p, obj),
+						angdroid_project_inventory_scope(obj->number, amt),
+						damage ? "受損了" : "被摧毀了");
+				} else {
+					msgt(MSG_DESTROY, "%sour %s (%c) %s %s!",
+					           ((obj->number > 1) ?
+					            ((amt == obj->number) ? "All of y" :
+					             (amt > 1 ? "Some of y" : "One of y")) : "Y"),
+					           o_name, gear_to_label(p, obj),
+					           ((amt > 1) ? "were" : "was"),
+						   (damage ? "damaged" : "destroyed"));
+				}
 
 				/* Damage already done? */
 				if (damage)
@@ -559,8 +566,11 @@ bool project_o(struct source origin, int r, struct loc grid, int dam, int typ,
 				/* Observe the resist */
 				if (obvious && obj->known
 						&& !ignore_item_ok(player, obj)) {
-					msg("The %s %s unaffected!", o_name,
-						VERB_AGREEMENT(obj->number, "is", "are"));
+					if (angdroid_zh_tw_enabled())
+						msg("「%s」沒有受到影響！", o_name);
+					else
+						msg("The %s %s unaffected!", o_name,
+							VERB_AGREEMENT(obj->number, "is", "are"));
 				}
 			} else if (obj->mimicking_m_idx) {
 				/* Reveal mimics */
@@ -571,7 +581,11 @@ bool project_o(struct source origin, int r, struct loc grid, int dam, int typ,
 				/* Describe if needed */
 				if (obvious && obj->known && note_kill
 						&& !ignore_item_ok(player, obj)) {
-					msgt(MSG_DESTROY, "The %s %s!", o_name, note_kill);
+					if (angdroid_zh_tw_enabled())
+						msgt(MSG_DESTROY, "「%s」%s！", o_name,
+							angdroid_project_object_destroy_verb(note_kill, true));
+					else
+						msgt(MSG_DESTROY, "The %s %s!", o_name, note_kill);
 				}
 
 				/* Prevent command repetition, if necessary. */
