@@ -1126,7 +1126,8 @@ void print_custom_message(const struct object *obj, const char *string,
 			case MSG_TAG_NAME:
 				if (obj) {
 					end += object_desc(buf, 1024, obj,
-						ODESC_PREFIX | ODESC_BASE, p);
+						ODESC_PREFIX | ODESC_BASE |
+						(angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), p);
 				} else {
 					strnfcat(buf, 1024, &end, "hands");
 				}
