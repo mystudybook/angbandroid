@@ -75,6 +75,23 @@ public class KeyBuffer {
 		}
 	}
 
+	/**
+	 * Enqueue a complete synthetic response as one atomic block. Other
+	 * UI threads can add keys before or after, but not in the middle.
+	 * Do not clear the shared queue: it may contain save/exit requests.
+	 * Unlike add(), these keys are already native codes and must not
+	 * consume or modify the user's keyboard modifiers.
+	 */
+	public void addRawSequence(int[] keys) {
+		if (keys == null || keys.length == 0) return;
+		synchronized (keybuffer) {
+			for (int key : keys) {
+				keybuffer.offer(key);
+			}
+			wakeUp();
+		}
+	}
+
 	public void performCenterTap()
 	{
 		KeyAction act = Preferences.getKeyMapper().getCenterScreenTapAction();
