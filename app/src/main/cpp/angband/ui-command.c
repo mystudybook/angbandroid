@@ -49,6 +49,7 @@
 
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-version-header.h"
 
 /**
  * Redraw the screen
@@ -143,14 +144,19 @@ void do_cmd_unknown(void)
  */
 void do_cmd_version(void)
 {
-	char header_buf[120];
+	char header_buf[256];
 
 	textblock *tb = textblock_new();
 	region local_area = { 0, 0, 0, 0 };
 
-	my_strcpy(header_buf,
-			  format("You are playing %s.  Type '?' for more info.", buildver),
-			  sizeof(header_buf));
+	/* Format only the on-screen header. The build ID and copyright remain
+	 * unchanged, and a short output buffer must never cut a UTF-8 glyph. */
+	if (!angdroid_version_header_text(header_buf, sizeof(header_buf),
+			buildver, angdroid_zh_tw_enabled())) {
+		my_strcpy(header_buf,
+			angdroid_game_ui_text("Version information",
+				angdroid_zh_tw_enabled()), sizeof(header_buf));
+	}
 	textblock_append(tb, "\n");
 	textblock_append(tb, "%s", copyright);
 	textui_textblock_show(tb, local_area, header_buf);
