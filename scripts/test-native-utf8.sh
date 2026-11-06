@@ -427,6 +427,18 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_item_selection_layout"
 "$BUILD_DIR/test_item_selection_layout"
 
+# Original item picker quiver @0..@9 bounds and zh-TW Esc cancellation hint.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_item_picker_tag_guard.c" \
+    -o "$BUILD_DIR/test_item_picker_tag_guard"
+"$BUILD_DIR/test_item_picker_tag_guard"
+
+# Item picker English/Traditional Chinese Esc prompt is display-only.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_item_picker_cancel_locale.c" \
+    -o "$BUILD_DIR/test_item_picker_cancel_locale"
+"$BUILD_DIR/test_item_picker_cancel_locale"
+
 # Store columns must remain safe when a phone's terminal is narrower than
 # the optional price/weight/gold fields.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \

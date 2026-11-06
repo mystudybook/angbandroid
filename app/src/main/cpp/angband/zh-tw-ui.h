@@ -493,6 +493,8 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"Target Aborted.", "已取消選擇目標。"},
         {"(nothing)", "（空）"},
         {"Examine which item?", "要查看哪件物品？"},
+        /* Item picker header hint only; real ESC key and menu IDs stay native. */
+        {" ESC", " Esc 取消"},
         {"You have nothing to examine.", "你沒有可以查看的物品。"},
         {"Inven:", "背包："},
         {"Equip:", "裝備："},
