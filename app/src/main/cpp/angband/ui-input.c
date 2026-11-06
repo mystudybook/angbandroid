@@ -1347,7 +1347,8 @@ static bool get_file_text(const char *suggested_name, char *path, size_t len)
 		return false;
 
 	/* Tell the user where it's saved to. */
-	prt(format("Saving as %s.", path), 0, 0);
+	prt(format(angdroid_game_ui_text("Saving as %s.",
+		angdroid_zh_tw_enabled()), path), 0, 0);
 	anykey();
 	prt("", 0, 0);
 
@@ -1708,7 +1709,8 @@ static int textui_get_count(void)
 	while (1) {
 		struct keypress ke;
 
-		prt(format("Repeat: %d", count), 0, 0);
+		prt(format(angdroid_game_ui_text("Repeat: %d",
+			angdroid_zh_tw_enabled()), count), 0, 0);
 
 		ke = inkey();
 		if (ke.code == ESCAPE)

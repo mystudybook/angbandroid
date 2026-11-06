@@ -3191,6 +3191,11 @@ s16b get_quantity_aux(cptr prompt, int max, int default_amt)
     /* Clear prompt */
     prt("", 0, 0);
 
+    /* Inform Android that this native prompt is finished, even on Esc.
+     * This expires unconsumed, tagged quantity keystrokes and dismisses
+     * only the popup belonging to the completed native prompt. */
+    Term_control(TERM_CONTROL_QUANTITY, "end");
+
     /* Cancelled */
     if (!res) return 0;
 

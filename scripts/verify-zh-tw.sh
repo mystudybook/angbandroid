@@ -68,6 +68,7 @@ run_check "Android quantity popup confirmation / localization wiring" python3 "$
 run_check "Atomic Android quantity sequence and queue isolation" python3 "$ROOT/tests/test_quantity_queue_source.py"
 run_check "Native quantity session lifetime and asynchronous stale popup guards" python3 "$ROOT/tests/test_quantity_prompt_session_source.py"
 run_check "Tagged quantity FIFO and FAangband native completion" python3 "$ROOT/tests/test_quantity_tagged_queue_source.py"
+run_check "FrogComposband quantity lifecycle and zh-TW quantity prompts" python3 "$ROOT/tests/test_frog_quantity_locale_source.py"
 run_check "Android quantity slider JDK overflow regression" sh "$ROOT/scripts/test-quantity-popup.sh"
 run_check "Queued store input and stale cursor invalidation" python3 "$ROOT/tests/test_store_input_invalidation_source.py"
 run_check "Scrolled store popups and empty-stock commands" python3 "$ROOT/tests/test_store_menu_flow_source.py"

@@ -61,12 +61,19 @@ class QuantityPopupSourceTest(unittest.TestCase):
         for language in ("values", "values-zh-rTW"):
             root = ET.parse(RES / language / "strings.xml").getroot()
             table = {el.get("name"): el.text for el in root.findall("string")}
-            for name in ("quantity_all_with_count", "quantity_confirm", "quantity_cancel"):
+            for name in ("quantity_all_with_count", "quantity_confirm", "quantity_cancel",
+                         "quantity_prompt_from_one", "quantity_prompt_from_zero_all"):
                 self.assertIn(name, table)
                 self.assertTrue(table[name])
             self.assertIn("%1$d", table["quantity_all_with_count"])
+            self.assertIn("%1$d", table["quantity_prompt_from_one"])
+            self.assertIn("%1$d", table["quantity_prompt_from_zero_all"])
         self.assertIn("context.getString(R.string.quantity_all_with_count, limit)", POPUP)
-        self.assertIn('prompt.setText(message == null ? "" : message);', POPUP)
+        self.assertIn("QuantityPromptText.classify(promptText, limit)", POPUP)
+        self.assertIn("prompt.setText(promptText);", POPUP)
+        self.assertIn("R.string.quantity_prompt_from_one", POPUP)
+        self.assertIn("R.string.quantity_prompt_from_zero_all", POPUP)
+        self.assertIn('String promptText = message == null ? "" : message;', POPUP)
 
 
 if __name__ == "__main__":

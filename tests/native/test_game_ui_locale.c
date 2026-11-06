@@ -12,6 +12,15 @@
 int main(void)
 {
     const char *unknown = "Untranslated data";
+    /* Repeat count and export path are presentation-only format strings. */
+    assert(strcmp(angdroid_game_ui_text("Repeat: %d", 1),
+                  "重複次數：%d") == 0);
+    assert(strcmp(angdroid_game_ui_text("Repeat: %d", 0),
+                  "Repeat: %d") == 0);
+    assert(strcmp(angdroid_game_ui_text("Saving as %s.", 1),
+                  "正在儲存為 %s。") == 0);
+    assert(strcmp(angdroid_game_ui_text("Saving as %s.", 0),
+                  "Saving as %s.") == 0);
     /* Knowledge footer shortcuts keep their original command letters. */
     assert(strcmp(angdroid_game_ui_text(", 'c' to copy", 1), "，c 複製") == 0);
     assert(strcmp(angdroid_game_ui_text(", 'c' to copy", 0), ", 'c' to copy") == 0);

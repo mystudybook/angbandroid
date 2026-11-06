@@ -164,3 +164,13 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - FAangband 的 `textui_get_quantity()` 現在在成功與 Esc 取消時均送出 `TERM_CONTROL_QUANTITY: "end"`，使舊 popup 和過期數量按鍵能立即失效。**FAangband 的既有數量解析（如字母代表全部）仍照舊**，本輪只修正原生 Android 控制事件，不改其數量運算及角色／存檔資料。
 - **注意：** 其他獨立 native variant 仍須逐一核實其 `Term_control_quantity` 用法、原生終了事件和返回流程。本批的 FIFO 保護會阻止上一個 session 的殘留數量序列流入下一個 session，但**無法判別先前排入的普通按鍵是否也已過時**；消費端已讀走的按鍵也不能回溯。這不是整體遊戲交易的原子化。
 - 離線測試：`QuantityKeyQueueTest.java` 對 FIFO、原生通知、只移除 tagged keys、巨集／存檔、連續切換與部分消費進行純 JDK 測試；`test_quantity_tagged_queue_source.py` 驗證 Java 串接與 FAangband 原生程式碼。均納入 `scripts/verify-zh-tw.sh`，不需 GitHub Actions。完整 APK／NDK 編譯及 Android 模擬器／實機驗證仍需本機進行。
+
+
+## 第 95 批 — FrogComposband 數量提示結束與更多繁體中文
+
+- **FrogComposband**：在 `get_quantity_aux()` 完成原生數量輸入後、Esc 取消後均送出 `TERM_CONTROL_QUANTITY = "end"`。訊息在 native prompt 清除之後、數量結果傳回之前送出，讓第 93–94 批的 session gate 與 tagged FIFO 能清除尚未讀取的過期數量鍵；`command_arg` 和 `repeat_pull` 這兩條不曾開啟 popup 的快速路徑不發送 end。
+- 原有 FrogComposband `atoi`、字母代表全部、上限／下限、重複指令和存檔格式保持不變。這一批只補生命週期，不擅自套用主要 Angband 的嚴格數量解析規則。
+- **Android 共用數量視窗繁體中文**：對 FrogComposband 預設 `Quantity (1-N): ` 和 FAangband／英文 Angband 預設 `Quantity (0-N, *=all): `，僅在提示原文與原生 max 完全一致時才使用 Android locale strings 顯示「選擇數量（1～N）」或「選擇數量（0～N，* 表示全部）」。其他商店／背包自訂提示保留原文，未變動遊戲命令或數量序列。英文資源提供等價提示。
+- **主要 Angband 原生繁體中文**：原本字典已有「正在儲存為 %s。」但顯示端未使用，現已串接；新增操作次數 `Repeat: %d` →「重複次數：%d」，兩者保留原來 `%s`／`%d` 參數與英文 fallback，僅改顯示訊息。
+- JDK 21 可獨立執行 `QuantityPromptTextTest`，由 `scripts/test-quantity-popup.sh` 整合；原生字典 `tests/native/test_game_ui_locale.c` 增加映射驗證；Python 來源保護 `tests/test_frog_quantity_locale_source.py` 已加入 `scripts/verify-zh-tw.sh`。
+- **範圍限制**：FrogComposband 原生終端內的其他大量英文文字尚未整體翻譯，這次先改 Android 彈窗及主要 Angband 的兩項資訊列；其它 native variant 亦不保證已有完整 start/end 事件。完整 APK／NDK、模擬器與實機操作仍需本機驗收，不使用 GitHub Actions。
