@@ -35,6 +35,7 @@
 #include "zh-tw-artifact-names.h"
 #include "zh-tw-ego-names.h"
 #include "equip-compare-name-display.h"
+#include "equip-compare-state-guard.h"
 #include "menu-text-fit.h"
 #include "ui-event.h"
 #include "ui-input.h"
@@ -314,8 +315,14 @@ static struct indirect_sort_data sort_dat;
 static void equip_cmp_print_label(const char *english, int row, int col)
 {
     char clipped[192];
-    size_t width = (Term && col >= 0 && col < Term->wid) ?
-        (size_t)(Term->wid - col) : 0;
+    size_t width;
+
+    /* During a failed resize even the bottom prompt row can be -1.
+     * Never ask the terminal to print at an invalid row or column. */
+    if (!Term || !angdroid_equip_cmp_label_region_valid(
+            Term->wid, Term->hgt, row, col)) return;
+
+    width = (size_t)(Term->wid - col);
     angdroid_menu_copy_columns(clipped, sizeof(clipped),
         angdroid_equip_cmp_text(english, angdroid_zh_tw_enabled()), width);
     prt(clipped, row, col);
@@ -370,14 +377,21 @@ void equip_cmp_display(void)
 		 * Use row 0 for state transition or other informational
 		 * messages
 		 */
-		if (the_summary->dlg_trans_msg != NULL &&
-			the_summary->dlg_trans_msg[0] != '\0') {
+		/* A failed small-terminal layout can return before nfilt or
+		 * item filters exist. Do not read the summary in BAIL state:
+		 * the player should only see the resize/failure prompt. */
+		if (angdroid_equip_cmp_summary_readable(
+				istate == EQUIP_CMP_MENU_BAIL, the_summary != NULL) &&
+				the_summary->dlg_trans_msg != NULL &&
+				the_summary->dlg_trans_msg[0] != '\0') {
 			equip_cmp_print_label(the_summary->dlg_trans_msg, 0, 0);
 			the_summary->dlg_trans_msg = NULL;
 		} else {
-			if (the_summary->nfilt == 0) {
+			if (angdroid_equip_cmp_summary_readable(
+					istate == EQUIP_CMP_MENU_BAIL, the_summary != NULL) &&
+					the_summary->nfilt == 0) {
 				equip_cmp_print_label("No items; use q, !, c, or R to change filter", 0, 0);
-			} else if (! states[istate].clear) {
+			} else if (!states[istate].clear) {
 				prt("", 0, 0);
 			}
 		}
@@ -2433,6 +2447,7 @@ static int initialize_summary(struct player *p,
 		(*s)->p_and_eq_auxvals = NULL;
 		(*s)->dlg_trans_msg = NULL;
 		(*s)->nitems = 0;
+		(*s)->nfilt = 0; /* A resize may fail before counting any items. */
 		(*s)->nalloc = 0;
 		(*s)->stores = EQUIPPABLE_NO_STORE;
 		(*s)->ifirst = 0;
