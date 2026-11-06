@@ -118,6 +118,25 @@ int main(void)
     CHECK(angdroid_spell_reader_tap_action(1, 1, 20, 3) ==
         ANGDROID_SPELL_READER_TAP_IGNORE);
 
+    /* The selected spell book must get a fresh, bounded menu region when
+     * returning from a full reader after portrait/landscape rotation. */
+    CHECK(angdroid_spell_reader_menu_width(-1) == 0);
+    CHECK(angdroid_spell_reader_menu_width(0) == 0);
+    CHECK(angdroid_spell_reader_menu_width(4) == 0);
+    CHECK(angdroid_spell_reader_menu_width(15) == 0);
+    CHECK(angdroid_spell_reader_menu_width(16) == 1);
+    CHECK(angdroid_spell_reader_menu_width(20) == 5);
+    CHECK(angdroid_spell_reader_menu_width(40) == 25);
+    CHECK(angdroid_spell_reader_menu_width(94) == 79);
+    CHECK(angdroid_spell_reader_menu_width(95) == 80);
+    CHECK(angdroid_spell_reader_menu_width(96) == 80);
+    CHECK(angdroid_spell_reader_menu_width(500) == 80);
+    /* Recomputing for a new width must not be based on the prior width. */
+    CHECK(angdroid_spell_reader_menu_width(40) == 25);
+    CHECK(angdroid_spell_reader_menu_width(95) == 80);
+    CHECK(angdroid_spell_reader_menu_width(20) == 5);
+    CHECK(angdroid_spell_reader_menu_width(40) == 25);
+
     printf("PASS: UTF-8 spell reader pages (%d assertions)\n", checks);
     return 0;
 }

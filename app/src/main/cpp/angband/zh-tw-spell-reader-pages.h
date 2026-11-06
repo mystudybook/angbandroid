@@ -131,4 +131,13 @@ static inline int angdroid_spell_reader_tap_action(
         : ANGDROID_SPELL_READER_TAP_DOWN;
 }
 
+/* Recalculate the book menu's right-aligned width after device rotation.
+ * The original menu reserves 15 terminal columns beside the spell list,
+ * and caps the list at 80 columns. Never reuse the pre-rotation width. */
+static inline int angdroid_spell_reader_menu_width(int terminal_width)
+{
+    if (terminal_width <= 15) return 0;
+    return terminal_width - 15 < 80 ? terminal_width - 15 : 80;
+}
+
 #endif
