@@ -21,7 +21,7 @@ class QuantityInputSourceTest(unittest.TestCase):
         self.assertIn('#include "quantity-input.h"', UI)
         self.assertIn("angdroid_parse_quantity(buf, max, &amt)", body)
         self.assertIn("while (true)", body)
-        self.assertIn("if (!get_string(prompt, buf, sizeof(buf))) return 0;", body)
+        self.assertIn("if (!get_string(prompt, buf, sizeof(buf))) break;", body)
         self.assertIn("if (*p == '*')", PARSER)
         self.assertIn("if (!digits) return false;", PARSER)
         self.assertIn("if (*p) return false;", PARSER)
@@ -40,7 +40,12 @@ class QuantityInputSourceTest(unittest.TestCase):
         self.assertIn("if (max == 1) return 1;", body)
         self.assertIn("Term_control_quantity(prompt, max, amt);", body)
         self.assertIn("soft_kbd_linger(", body)
-        self.assertIn("return amt;", body)
+        self.assertIn("return result;", body)
+        self.assertIn("result = amt;", body)
+        self.assertIn('Term_control(TERM_CONTROL_QUANTITY, "end");', body)
+        self.assertEqual(1, body.count('Term_control(TERM_CONTROL_QUANTITY, "end");'))
+        self.assertLess(body.index("Term_control_quantity(prompt, max, amt);"),
+                        body.index('Term_control(TERM_CONTROL_QUANTITY, "end");'))
 
     def test_store_quantity_and_confirmation_remain_safe(self):
         self.assertIn("amt = get_quantity(ask, obj->number);", SHOP)
