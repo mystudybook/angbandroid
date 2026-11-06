@@ -40,6 +40,8 @@
 #include "player-timed.h"
 #include "player-util.h"
 #include "project.h"
+#include "droid.h"
+#include "zh-tw-mon-blow-feedback.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -210,7 +212,10 @@ static void display_blow_message_vs_player(const struct blow_method *method,
 		}
 		string_free(act);
 	} else if (damage > 0 && OPT(p, show_damage)) {
-		msgt(method->msgt, "You take %d damage.", damage);
+		if (angdroid_zh_tw_enabled())
+			msgt(method->msgt, "你受到 %d 點傷害。", damage);
+		else
+			msgt(method->msgt, "You take %d damage.", damage);
 	}
 }
 
@@ -280,13 +285,21 @@ static void steal_player_item(melee_effect_handler_context_t *context)
 			monster_desc(m_name, sizeof(m_name), context->mon, MDESC_STANDARD);
 
 			/* Fail to steal */
-			msg("%s tries to steal %s %s, but fails.", m_name,
-				(split ? "one of your" : "your"), o_name);
+			if (angdroid_zh_tw_enabled())
+				msg("%s試圖偷走你的%s%s，但失敗了。", m_name,
+					(split ? "其中一件" : ""), o_name);
+			else
+				msg("%s tries to steal %s %s, but fails.", m_name,
+					(split ? "one of your" : "your"), o_name);
 		} else {
 			/* Message */
-			msg("%s %s (%c) was stolen!",
-				(split ? "One of your" : "Your"), o_name,
-				gear_to_label(context->p, obj));
+			if (angdroid_zh_tw_enabled())
+				msg("你的%s%s（%c）被偷走了！", (split ? "其中一件" : ""),
+					o_name, gear_to_label(context->p, obj));
+			else
+				msg("%s %s (%c) was stolen!",
+					(split ? "One of your" : "Your"), o_name,
+					gear_to_label(context->p, obj));
 
 			/* Steal and carry */
 			stolen = gear_object_for_use(context->p, obj, 1,
@@ -427,13 +440,17 @@ static void melee_effect_elemental(melee_effect_handler_context_t *context,
 
 	if (context->p) {
 		switch (type) {
-			case PROJ_ACID: msg("You are covered in acid!");
+			case PROJ_ACID: msg("%s", angdroid_mon_blow_feedback("You are covered in acid!",
+			angdroid_zh_tw_enabled()));
 				break;
-			case PROJ_ELEC: msg("You are struck by electricity!");
+			case PROJ_ELEC: msg("%s", angdroid_mon_blow_feedback("You are struck by electricity!",
+			angdroid_zh_tw_enabled()));
 				break;
-			case PROJ_FIRE: msg("You are enveloped in flames!");
+			case PROJ_FIRE: msg("%s", angdroid_mon_blow_feedback("You are enveloped in flames!",
+			angdroid_zh_tw_enabled()));
 				break;
-			case PROJ_COLD: msg("You are covered with frost!");
+			case PROJ_COLD: msg("%s", angdroid_mon_blow_feedback("You are covered with frost!",
+			angdroid_zh_tw_enabled()));
 				break;
 		}
 	}
@@ -615,15 +632,18 @@ static void melee_effect_experience(melee_effect_handler_context_t *context,
 	}
 
 	if (player_of_has(context->p, OF_HOLD_LIFE) && (randint0(100) < chance)) {
-		msg("You keep hold of your life force!");
+		msg("%s", angdroid_mon_blow_feedback("You keep hold of your life force!",
+			angdroid_zh_tw_enabled()));
 	} else {
 		int32_t d = drain_amount +
 			(context->p->exp/100) * z_info->life_drain_percent;
 		if (player_of_has(context->p, OF_HOLD_LIFE)) {
-			msg("You feel your life slipping away!");
+			msg("%s", angdroid_mon_blow_feedback("You feel your life slipping away!",
+			angdroid_zh_tw_enabled()));
 			player_exp_lose(context->p, d / 10, false);
 		} else {
-			msg("You feel your life draining away!");
+			msg("%s", angdroid_mon_blow_feedback("You feel your life draining away!",
+			angdroid_zh_tw_enabled()));
 			player_exp_lose(context->p, d, false);
 		}
 	}
@@ -746,7 +766,8 @@ static void melee_effect_handler_DRAIN_CHARGES(melee_effect_handler_context_t *c
 		if (unpower) {
 			int heal = context->rlev * unpower;
 
-			msg("Energy drains from your pack!");
+			msg("%s", angdroid_mon_blow_feedback("Energy drains from your pack!",
+			angdroid_zh_tw_enabled()));
 
 			context->obvious = true;
 
@@ -790,7 +811,8 @@ static void melee_effect_handler_EAT_GOLD(melee_effect_handler_context_t *contex
         (randint0(100) < (adj_dex_safe[current_player->state.stat_ind[STAT_DEX]]
 						  + current_player->lev))) {
         /* Saving throw message */
-        msg("You quickly protect your money pouch!");
+        msg("%s", angdroid_mon_blow_feedback("You quickly protect your money pouch!",
+			angdroid_zh_tw_enabled()));
 
         /* Occasional blink anyway */
         if (randint0(3)) context->blinked = true;
@@ -801,16 +823,22 @@ static void melee_effect_handler_EAT_GOLD(melee_effect_handler_context_t *contex
         if (gold > current_player->au) gold = current_player->au;
         current_player->au -= gold;
         if (gold <= 0) {
-            msg("Nothing was stolen.");
+            msg("%s", angdroid_mon_blow_feedback("Nothing was stolen.",
+			angdroid_zh_tw_enabled()));
             return;
         }
 
         /* Let the player know they were robbed */
-        msg("Your purse feels lighter.");
+        msg("%s", angdroid_mon_blow_feedback("Your purse feels lighter.",
+			angdroid_zh_tw_enabled()));
         if (current_player->au)
-            msg("%d coins were stolen!", gold);
+            if (angdroid_zh_tw_enabled())
+                msg("%d 枚金幣被偷走了！", gold);
+            else
+                msg("%d coins were stolen!", gold);
         else
-            msg("All of your coins were stolen!");
+            msg("%s", angdroid_mon_blow_feedback("All of your coins were stolen!",
+			angdroid_zh_tw_enabled()));
 
         /* While we have gold, put it in objects */
         while (gold > 0) {
@@ -858,7 +886,8 @@ static void melee_effect_handler_EAT_ITEM(melee_effect_handler_context_t *contex
 		/* Saving throw (unless paralyzed) based on dex and level */
 		if (!context->p->timed[TMD_PARALYZED] && (randint0(100) < chance)) {
 			/* Saving throw message */
-			msg("You grab hold of your backpack!");
+			msg("%s", angdroid_mon_blow_feedback("You grab hold of your backpack!",
+			angdroid_zh_tw_enabled()));
 
 			/* Occasional "blink" anyway */
 			context->blinked = true;
@@ -909,13 +938,21 @@ static void melee_effect_handler_EAT_FOOD(melee_effect_handler_context_t *contex
 		if (obj->number == 1) {
 			object_desc(o_name, sizeof(o_name), obj, ODESC_BASE,
 				context->p);
-			msg("Your %s (%c) was eaten!", o_name,
-				gear_to_label(context->p, obj));
+			if (angdroid_zh_tw_enabled())
+				msg("你的%s（%c）被吃掉了！", o_name,
+					gear_to_label(context->p, obj));
+			else
+				msg("Your %s (%c) was eaten!", o_name,
+					gear_to_label(context->p, obj));
 		} else {
 			object_desc(o_name, sizeof(o_name), obj,
 				ODESC_PREFIX | ODESC_BASE, context->p);
-			msg("One of your %s (%c) was eaten!", o_name,
-				gear_to_label(context->p, obj));
+			if (angdroid_zh_tw_enabled())
+				msg("你的一件%s（%c）被吃掉了！", o_name,
+					gear_to_label(context->p, obj));
+			else
+				msg("One of your %s (%c) was eaten!", o_name,
+					gear_to_label(context->p, obj));
 		}
 
 		/* Steal and eat */
