@@ -394,8 +394,8 @@ static bool enchant_spell(int num_hit, int num_dam, int num_ac, struct command *
 	item_tester filter = num_ac ? tval_is_armor : tval_is_weapon;
 
 	/* Get an item */
-	q = "Enchant which item? ";
-	s = "You have nothing to enchant.";
+	q = angdroid_general_effect_message("Enchant which item? ", angdroid_zh_tw_enabled());
+	s = angdroid_general_effect_message("You have nothing to enchant.", angdroid_zh_tw_enabled());
 	if (cmd) {
 		if (cmd_get_item(cmd, "tgtitem", &obj, q, s, filter,
 				itemmode)) {
@@ -1107,8 +1107,8 @@ bool effect_handler_RESTORE_MANA(effect_handler_context_t *context)
  */
 bool effect_handler_REMOVE_CURSE(effect_handler_context_t *context)
 {
-	const char *prompt = "Uncurse which item? ";
-	const char *rejmsg = "You have no curses to remove.";
+	const char *prompt = angdroid_general_effect_message("Uncurse which item? ", angdroid_zh_tw_enabled());
+	const char *rejmsg = angdroid_general_effect_message("You have no curses to remove.", angdroid_zh_tw_enabled());
 	int itemmode = (USE_EQUIP | USE_INVEN | USE_QUIVER | USE_FLOOR);
 	int strength = effect_calculate_value(context, false);
 	struct object *obj = NULL;
@@ -1178,7 +1178,7 @@ bool effect_handler_RECALL(effect_handler_context_t *context)
 	target_depth = dungeon_get_next_level(player, player->max_depth, 1);
 	if (OPT(player, birth_force_descend) && !(player->depth)
 			&& is_quest(player, target_depth)) {
-		if (!get_check("Are you sure you want to descend? ")) {
+		if (!get_check(angdroid_general_effect_message("Are you sure you want to descend? ", angdroid_zh_tw_enabled()))) {
 			return false;
 		}
 	}
@@ -1188,7 +1188,7 @@ bool effect_handler_RECALL(effect_handler_context_t *context)
 		/* Reset recall depth */
 		if (player->depth > 0) {
 			if (player->depth != player->max_depth) {
-				if (get_check("Set recall depth to current depth? ")) {
+				if (get_check(angdroid_general_effect_message("Set recall depth to current depth? ", angdroid_zh_tw_enabled()))) {
 					player->recall_depth = player->max_depth = player->depth;
 				}
 			} else {
@@ -1206,7 +1206,7 @@ bool effect_handler_RECALL(effect_handler_context_t *context)
 			angdroid_zh_tw_enabled()));
 	} else {
 		/* Deactivate recall */
-		if (!get_check("Word of Recall is already active.  Do you want to cancel it? "))
+		if (!get_check(angdroid_general_effect_message("Word of Recall is already active.  Do you want to cancel it? ", angdroid_zh_tw_enabled())))
 			return false;
 
 		player->word_recall = 0;
@@ -2054,8 +2054,8 @@ bool effect_handler_IDENTIFY(effect_handler_context_t *context)
 	context->ident = true;
 
 	/* Get an item */
-	q = "Identify which item? ";
-	s = "You have nothing to identify.";
+	q = angdroid_general_effect_message("Identify which item? ", angdroid_zh_tw_enabled());
+	s = angdroid_general_effect_message("You have nothing to identify.", angdroid_zh_tw_enabled());
 	if (context->cmd) {
 		if (cmd_get_item(context->cmd, "tgtitem", &obj, q, s,
 				item_tester_unknown, itemmode)) {
@@ -2252,8 +2252,8 @@ bool effect_handler_RECHARGE(effect_handler_context_t *context)
 	player->upkeep->recharge_pow = strength;
 
 	/* Get an item */
-	q = "Recharge which item? ";
-	s = "You have nothing to recharge.";
+	q = angdroid_general_effect_message("Recharge which item? ", angdroid_zh_tw_enabled());
+	s = angdroid_general_effect_message("You have nothing to recharge.", angdroid_zh_tw_enabled());
 	if (context->cmd) {
 		if (cmd_get_item(context->cmd, "tgtitem", &obj, q, s,
 				tval_can_have_charges, itemmode)) {
@@ -3417,8 +3417,8 @@ bool effect_handler_BRAND_AMMO(effect_handler_context_t *context)
 	context->ident = true;
 
 	/* Get an item */
-	q = "Brand which kind of ammunition? ";
-	s = "You have nothing to brand.";
+	q = angdroid_general_effect_message("Brand which kind of ammunition? ", angdroid_zh_tw_enabled());
+	s = angdroid_general_effect_message("You have nothing to brand.", angdroid_zh_tw_enabled());
 	if (context->cmd) {
 		if (cmd_get_item(context->cmd, "tgtitem", &obj, q, s,
 				tval_is_ammo, itemmode)) {
@@ -3447,8 +3447,8 @@ bool effect_handler_BRAND_BOLTS(effect_handler_context_t *context)
 	context->ident = true;
 
 	/* Get an item */
-	q = "Brand which bolts? ";
-	s = "You have no bolts to brand.";
+	q = angdroid_general_effect_message("Brand which bolts? ", angdroid_zh_tw_enabled());
+	s = angdroid_general_effect_message("You have no bolts to brand.", angdroid_zh_tw_enabled());
 	if (context->cmd) {
 		if (cmd_get_item(context->cmd, "tgtitem", &obj, q, s,
 				tval_is_bolt, itemmode)) {
@@ -3478,8 +3478,8 @@ bool effect_handler_CREATE_ARROWS(effect_handler_context_t *context)
 	bool none_left = false;
 
 	/* Get an item */
-	q = "Make arrows from which staff? ";
-	s = "You have no staff to use.";
+	q = angdroid_general_effect_message("Make arrows from which staff? ", angdroid_zh_tw_enabled());
+	s = angdroid_general_effect_message("You have no staff to use.", angdroid_zh_tw_enabled());
 	if (context->cmd) {
 		if (cmd_get_item(context->cmd, "tgtitem", &obj, q, s,
 				tval_is_staff, itemmode)) {
@@ -3534,8 +3534,8 @@ bool effect_handler_TAP_DEVICE(effect_handler_context_t *context)
 	const char *item = "";
 
 	/* Get an item */
-	q = "Drain charges from which item? ";
-	s = "You have nothing to drain charges from.";
+	q = angdroid_general_effect_message("Drain charges from which item? ", angdroid_zh_tw_enabled());
+	s = angdroid_general_effect_message("You have nothing to drain charges from.", angdroid_zh_tw_enabled());
 	if (context->cmd) {
 		if (cmd_get_item(context->cmd, "tgtitem", &obj, q, s,
 				tval_can_have_charges, itemmode)) {

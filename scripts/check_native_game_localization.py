@@ -2057,11 +2057,11 @@ def main():
         r'\{ "([^"]+)", "([^"]+)" \}', general_effect_header)
     general_effect_test_pairs = re.findall(
         r'\{ "([^"]+)", "([^"]+)" \}', general_effect_test)
-    expect(len(general_effect_pairs) == 71 and
-           len({en for en, _ in general_effect_pairs}) == 71 and
+    expect(len(general_effect_pairs) == 90 and
+           len({en for en, _ in general_effect_pairs}) == 90 and
            all(zh.strip() and "%" not in zh for _, zh in general_effect_pairs) and
            general_effect_test_pairs == general_effect_pairs,
-           "Generic spell feedback must have 71 canonical English keys and tests")
+           "Generic spell feedback and prompts must have 90 English keys and tests")
     expect('"zh-tw-general-effect-messages.h"' in general_effects and
            general_effects.count('msg("%s", angdroid_general_effect_message(')
                 == 78 and
