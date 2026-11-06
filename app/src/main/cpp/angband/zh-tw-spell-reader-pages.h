@@ -152,6 +152,15 @@ static inline int angdroid_spell_menu_touch_selectable(
 }
 
 
+/* The menu's level/mana/failure/info columns start at cells 33/36/41/46.
+ * Keep the localized header at exactly 50 display cells, independent of
+ * UTF-8 byte length, so the three-cell selection tag stays aligned. */
+static inline const char *angdroid_spell_menu_header(int zh_tw)
+{
+    return zh_tw ? "法術名稱                         等 魔力 失敗 資訊" :
+        "Name                             Lv Mana Fail Info";
+}
+
 /* A deliberately generous window for confirming a spell by touch.
  * Longer gaps must NEVER commit a stale spell or study selection. */
 #define ANGDROID_SPELL_TOUCH_CONFIRM_WINDOW_MS UINT64_C(2000)
