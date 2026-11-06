@@ -135,7 +135,8 @@ static void spell_menu_show_full_description(const struct class_spell *spell)
 {
     bool zh;
     const char *description, *name;
-    size_t first = 0;
+    size_t first = 0, saved_offset = 0;
+    bool reflow = false;
     if (!spell) return;
     zh = angdroid_zh_tw_enabled();
     description = angdroid_zh_tw_spell_description(spell->name,
@@ -147,40 +148,62 @@ static void spell_menu_show_full_description(const struct class_spell *spell)
     while (true) {
         int width, height;
         size_t columns, visible, total, row = 0, start = 0, next;
-        char line[1024];
+        size_t top_offset = 0;
+        char line[1024], title[256], status[256];
         ui_event in;
         Term_get_size(&width, &height);
         if (width < 4 || height < 4) break;
         columns = (size_t)(width - 1);
         visible = (size_t)(height - 2);
         total = angdroid_spell_reader_line_count(description, columns);
+        if (reflow) {
+            first = angdroid_spell_reader_line_for_offset(description,
+                columns, saved_offset);
+            reflow = false;
+        }
         first = angdroid_spell_reader_clamp_scroll(first, total, visible);
 
         Term_clear();
-        prt(name, 0, 0);
+        /* Avoid allowing the title itself to wrap into the body. */
+        my_strcpy(title, name, sizeof(title));
+        angdroid_utf8_clip_columns(title, columns);
+        prt(title, 0, 0);
         while (row < first + visible &&
             angdroid_spell_reader_next_line(description, start, columns,
                 line, sizeof(line), &next)) {
+            if (row == first) top_offset = start;
             if (row >= first)
                 c_prt(COLOUR_WHITE, line, (int)(row - first) + 1, 0);
             start = next;
             ++row;
         }
+        /* Keep the exit hint visible even on narrow portrait terminals. */
         if (zh)
-            prt(format("第 %d/%d 行 ↑↓捲動 PgUp/PgDn翻頁 Esc返回",
-                (int)(first + (total > 0)), (int)total), height - 1, 0);
+            strnfmt(status, sizeof(status),
+                "Esc/點頂底返回  %d/%d 行 ↑↓捲動",
+                (int)(first + (total > 0)), (int)total);
         else
-            prt(format("Line %d/%d Arrows scroll PgUp/PgDn page Esc back",
-                (int)(first + (total > 0)), (int)total), height - 1, 0);
+            strnfmt(status, sizeof(status),
+                "Esc/tap top or bottom back  %d/%d",
+                (int)(first + (total > 0)), (int)total);
+        angdroid_utf8_clip_columns(status, columns);
+        prt(status, height - 1, 0);
 
         in = inkey_ex();
-        if (in.type == EVT_RESIZE) continue;
+        if (in.type == EVT_RESIZE) {
+            /* The old row number is invalid after changing column width. */
+            saved_offset = top_offset;
+            reflow = true;
+            continue;
+        }
+        if (in.type == EVT_ESCAPE) break;
         if (in.type == EVT_MOUSE) {
-            /* Tap the title to exit; upper/lower page to go back/forward. */
-            if (in.mouse.y == 0) break;
-            if (in.mouse.y < height / 2)
+            int action = angdroid_spell_reader_tap_action(
+                (int)in.mouse.x, (int)in.mouse.y, width, height);
+            if (action == ANGDROID_SPELL_READER_TAP_BACK) break;
+            if (action == ANGDROID_SPELL_READER_TAP_UP)
                 first = angdroid_spell_reader_page_up(first, visible);
-            else
+            else if (action == ANGDROID_SPELL_READER_TAP_DOWN)
                 first = angdroid_spell_reader_page_down(first, total, visible);
             continue;
         }

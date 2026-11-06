@@ -414,3 +414,14 @@ The repository root has no consolidated `LICENSE` file. Some Android Java and na
 - 全螢幕閱讀時可用上下鍵或 `j/k` 逐行、PgUp/PgDn（或 `[/]`）翻頁、Home/End 跳頭尾、Esc／q 返回。手機觸控點標題返回；點頁面上半向前一頁／下半往後一頁。
 - 另新增 `tests/native/test_spell_reader_pages.c` 與 `tests/test_spell_reader_source.py`，涵蓋中文、英中混排、連續空格、原文換行、窄欄、UTF-8 完整性、頁面上下限、選單按鍵不被偷走；整合既有 Native / Python 離線驗證入口。
 - 完整 C99/Python、Gradle/NDK、模擬器與實機驗收仍需要在本機執行，GitHub 原始碼靜態核對不可當作實際 UI 驗收；無 GitHub Actions，本批提交含 `[skip ci]`。
+
+
+## 第 124 批 — 法術說明閱讀器：旋轉定位、觸控誤翻頁與窄螢幕可讀性
+
+- 延續第 123 批的獨立 `]` 全螢幕法術說明閱讀器，修正 **螢幕旋轉時閱讀位置跳動**：原本只保留第幾個畫面行（row index），直／橫螢幕寬度不同時會把原文重新斷行，於是相同行號指向不同文字。現在每次渲染記錄螢幕頂端所顯示行的**原始 UTF-8 位元組起點**；收到 `EVT_RESIZE` 時，根據新寬度的文字分行定位到包含該位元組的行，再限制到合法頁面範圍，不會將 UTF-8 字元切成一半。
+- 新增可直接由 C99 測試的 `angdroid_spell_reader_line_for_offset()`，並處理空字串、超過文末的偏移量及極窄終端尺寸。
+- 原本任何 `EVT_MOUSE` 都可能以相對高度決定翻頁，甚至觸及終端範圍外。本批新增 `angdroid_spell_reader_tap_action()` 統一檢查 `x/y` 有效範圍和可用尺寸，讓標題列與底部提示列都可以觸控退出，本文上／下半部仍是向上／向下翻頁；點擊範圍外則完全忽略。
+- 閱讀器標題與底部操作提示統一使用 `angdroid_utf8_clip_columns()` 裁至目前的實際終端顯示欄寬，避免長文字覆蓋本文；保留 Esc、q、方向鍵、PgUp/PgDn、Home/End 以及選單專用的 `]` 快捷鍵。若收到 `EVT_ESCAPE` 事件可直接安全退出。退出後仍會 `screen_load()` 恢復選單，不修改施法流程或任何存檔資料。
+- 在 `tests/native/test_spell_reader_pages.c` 追加 **21 項 C99 預期斷言**，測試寬度不同時相同字元位元組位置的行號轉換、超過文末偏移、有效／無效觸控、標題／底部退出及極窄尺寸；擴充 `tests/test_spell_reader_source.py` 確認實際 UI 事件有使用相同的純函式、提示字串有依 Unicode 顯示欄裁切，以及舊選單的施法／選擇鍵依然未動。
+- 原有 Native/Python 驗證腳本會自動執行這兩個既有測試，不新增 GitHub Actions。沒有修改 `class.txt`、163 筆法術原始紀錄、135 組翻譯對照、法術耗魔／成功率／傷害、角色資料或存檔。
+- GitHub 源碼靜態核對不代表完整 Android／NDK／模擬器或實機驗收；請在本機執行 `sh scripts/verify-zh-tw.sh --android zh-tw-validation-124.log`，實際確認開啟長文、捲動一半後旋轉、點上／下半部與標題／底部返回，以及返回後正常選擇和施放法術。

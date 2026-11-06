@@ -81,6 +81,43 @@ int main(void)
     CHECK(angdroid_spell_reader_line_count(
         "犧牲生命值後吸取敵人的生命，並恢復自身生命與營養。", 9) > 5);
 
+    /* Rotation must preserve the source text position, not the old row. */
+    CHECK(angdroid_spell_reader_line_for_offset("中文法術", 5, 0) == 0);
+    CHECK(angdroid_spell_reader_line_for_offset("中文法術", 5, 6) == 1);
+    CHECK(angdroid_spell_reader_line_for_offset("中文法術", 3, 6) == 2);
+    CHECK(angdroid_spell_reader_line_for_offset("中文法術", 7, 6) == 0);
+    CHECK(angdroid_spell_reader_line_for_offset("中文法術", 5, 999) == 1);
+    CHECK(angdroid_spell_reader_line_for_offset("A中文B", 5, 7) == 1);
+    CHECK(angdroid_spell_reader_line_for_offset(NULL, 8, 6) == 0);
+    CHECK(angdroid_spell_reader_line_for_offset("", 8, 6) == 0);
+    CHECK(angdroid_spell_reader_line_for_offset("中文", 1, 3) == 0);
+
+    /* Title/footer leave; body scrolls only inside the terminal bounds. */
+    CHECK(angdroid_spell_reader_tap_action(0, 0, 20, 10) ==
+        ANGDROID_SPELL_READER_TAP_BACK);
+    CHECK(angdroid_spell_reader_tap_action(5, 9, 20, 10) ==
+        ANGDROID_SPELL_READER_TAP_BACK);
+    CHECK(angdroid_spell_reader_tap_action(5, 1, 20, 10) ==
+        ANGDROID_SPELL_READER_TAP_UP);
+    CHECK(angdroid_spell_reader_tap_action(5, 4, 20, 10) ==
+        ANGDROID_SPELL_READER_TAP_UP);
+    CHECK(angdroid_spell_reader_tap_action(5, 5, 20, 10) ==
+        ANGDROID_SPELL_READER_TAP_DOWN);
+    CHECK(angdroid_spell_reader_tap_action(5, 8, 20, 10) ==
+        ANGDROID_SPELL_READER_TAP_DOWN);
+    CHECK(angdroid_spell_reader_tap_action(20, 2, 20, 10) ==
+        ANGDROID_SPELL_READER_TAP_IGNORE);
+    CHECK(angdroid_spell_reader_tap_action(3, 10, 20, 10) ==
+        ANGDROID_SPELL_READER_TAP_IGNORE);
+    CHECK(angdroid_spell_reader_tap_action(-1, 2, 20, 10) ==
+        ANGDROID_SPELL_READER_TAP_IGNORE);
+    CHECK(angdroid_spell_reader_tap_action(2, -1, 20, 10) ==
+        ANGDROID_SPELL_READER_TAP_IGNORE);
+    CHECK(angdroid_spell_reader_tap_action(1, 1, 3, 10) ==
+        ANGDROID_SPELL_READER_TAP_IGNORE);
+    CHECK(angdroid_spell_reader_tap_action(1, 1, 20, 3) ==
+        ANGDROID_SPELL_READER_TAP_IGNORE);
+
     printf("PASS: UTF-8 spell reader pages (%d assertions)\n", checks);
     return 0;
 }
