@@ -247,6 +247,14 @@ public class GameActivity extends LocalizedActivity {
 		}
 	}
 
+	/** Dispose a popup when its native game has exited; never send Esc. */
+	public void dismissQuantityPopupForGameExit() {
+		if (quantPopup != null) {
+			quantPopup.dismissSilently();
+			quantPopup = null;
+		}
+	}
+
 	public void runQuantityPopup(String message, int maxValue, int initialValue,
 			int quantityToken)
 	{
