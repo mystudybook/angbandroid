@@ -41,6 +41,7 @@ class MonsterBlowFeedbackLocaleSourceTest(unittest.TestCase):
             'current_player->au -= gold;',
             'if (gold <= 0)',
             'while (gold > 0)',
+            'if (current_player->au) {',
         ):
             self.assertIn(text, BLOWS)
         self.assertIn(
