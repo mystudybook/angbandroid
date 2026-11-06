@@ -1861,6 +1861,7 @@ def main():
            'msgt(method->msgt, "You take %d damage.", damage);' in blow_ui and
            'msg("%d 枚金幣被偷走了！", gold);' in blow_ui and
            'msg("%d coins were stolen!", gold);' in blow_ui and
+           'if (current_player->au) {' in blow_ui and
            'msg("%s試圖偷走你的%s%s，但失敗了。", m_name,' in blow_ui and
            'msg("%s tries to steal %s %s, but fails.", m_name,' in blow_ui and
            'msg("你的%s%s（%c）被偷走了！",' in blow_ui and
