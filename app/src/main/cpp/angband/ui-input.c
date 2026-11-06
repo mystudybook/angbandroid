@@ -1195,7 +1195,10 @@ static int textui_get_quantity(const char *prompt, int max)
 		while (true) {
 			strnfmt(buf, sizeof(buf), "%d", amt);
 			if (!get_string(prompt, buf, sizeof(buf))) break;
-			if (angdroid_parse_quantity(buf, max, &amt)) {
+			/* Keep the last valid default on an invalid attempt.
+			 * The strict base parser clears its out-parameter on errors. */
+			if (angdroid_parse_quantity_preserving_default(
+					buf, max, &amt)) {
 				result = amt;
 				break;
 			}
