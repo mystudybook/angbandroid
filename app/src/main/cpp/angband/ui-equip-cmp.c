@@ -1077,61 +1077,61 @@ static int handle_input_equip_cmp_select(ui_event in, int istate,
 					s->work_sel = new_sel;
 			} else if (Term && angdroid_equip_cmp_label_region_valid(
 					Term->wid, Term->hgt, in.mouse.y, in.mouse.x)) {
-			/* Out-of-row taps retain the original action menu. */
-			char *labels = string_make(lower_case);
-			struct menu *m = menu_dynamic_new();
+				/* Out-of-row taps retain the original action menu. */
+				char *labels = string_make(lower_case);
+				struct menu *m = menu_dynamic_new();
 
-			m->selections = labels;
-			if ((s->indinc < 0 && s->work_sel > 0)
-					|| (s->indinc >= 0
-					&& s->work_sel < s->nfilt - 1)) {
-				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to next page",
-				angdroid_zh_tw_enabled()),
-					'n', ACT_CTX_EQUIPCMP_SELECT_NEXT_PAGE,
-					labels);
-			}
-			if ((s->indinc > 0 && s->work_sel > 0)
-					|| (s->indinc <= 0
-					&& s->work_sel < s->nfilt - 1)) {
-				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to previous page",
-				angdroid_zh_tw_enabled()),
-					'p', ACT_CTX_EQUIPCMP_SELECT_PREV_PAGE,
-					labels);
-			}
-			if ((s->indinc < 0 && s->work_sel > 0)
-					|| (s->indinc >= 0
-					&& s->work_sel < s->nfilt - 1)) {
-				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to next line",
-				angdroid_zh_tw_enabled()),
-					'N', ACT_CTX_EQUIPCMP_SELECT_NEXT_LINE,
-					labels);
-			}
-			if ((s->indinc > 0 && s->work_sel > 0)
-					|| (s->indinc <= 0
-					&& s->work_sel < s->nfilt - 1)) {
-				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to previous line",
-				angdroid_zh_tw_enabled()),
-					'P', ACT_CTX_EQUIPCMP_SELECT_PREV_LINE,
-					labels);
-			}
-			menu_dynamic_add_label(m, angdroid_equip_cmp_text("Skip selection",
-				angdroid_zh_tw_enabled()), 's',
-				ACT_CTX_EQUIPCMP_SELECT_SKIP, labels);
-			menu_dynamic_add_label(m, angdroid_equip_cmp_text("Help",
-				angdroid_zh_tw_enabled()), '?',
-				ACT_CTX_EQUIPCMP_SELECT_HELP, labels);
+				m->selections = labels;
+				if ((s->indinc < 0 && s->work_sel > 0)
+						|| (s->indinc >= 0
+						&& s->work_sel < s->nfilt - 1)) {
+					menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to next page",
+					angdroid_zh_tw_enabled()),
+						'n', ACT_CTX_EQUIPCMP_SELECT_NEXT_PAGE,
+						labels);
+				}
+				if ((s->indinc > 0 && s->work_sel > 0)
+						|| (s->indinc <= 0
+						&& s->work_sel < s->nfilt - 1)) {
+					menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to previous page",
+					angdroid_zh_tw_enabled()),
+						'p', ACT_CTX_EQUIPCMP_SELECT_PREV_PAGE,
+						labels);
+				}
+				if ((s->indinc < 0 && s->work_sel > 0)
+						|| (s->indinc >= 0
+						&& s->work_sel < s->nfilt - 1)) {
+					menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to next line",
+					angdroid_zh_tw_enabled()),
+						'N', ACT_CTX_EQUIPCMP_SELECT_NEXT_LINE,
+						labels);
+				}
+				if ((s->indinc > 0 && s->work_sel > 0)
+						|| (s->indinc <= 0
+						&& s->work_sel < s->nfilt - 1)) {
+					menu_dynamic_add_label(m, angdroid_equip_cmp_text("Go to previous line",
+					angdroid_zh_tw_enabled()),
+						'P', ACT_CTX_EQUIPCMP_SELECT_PREV_LINE,
+						labels);
+				}
+				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Skip selection",
+					angdroid_zh_tw_enabled()), 's',
+					ACT_CTX_EQUIPCMP_SELECT_SKIP, labels);
+				menu_dynamic_add_label(m, angdroid_equip_cmp_text("Help",
+					angdroid_zh_tw_enabled()), '?',
+					ACT_CTX_EQUIPCMP_SELECT_HELP, labels);
 
-			screen_save();
+				screen_save();
 
-			menu_dynamic_calc_location(m, in.mouse.x, in.mouse.y);
-			region_erase_bordered(&m->boundary);
+				menu_dynamic_calc_location(m, in.mouse.x, in.mouse.y);
+				region_erase_bordered(&m->boundary);
 
-			action =  menu_dynamic_select(m);
+				action =  menu_dynamic_select(m);
 
-			screen_load();
+				screen_load();
 
-			menu_dynamic_free(m);
-			string_free(labels);
+				menu_dynamic_free(m);
+				string_free(labels);
 			}
 		}
 	}
