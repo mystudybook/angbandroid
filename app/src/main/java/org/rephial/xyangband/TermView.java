@@ -3854,7 +3854,8 @@ public class TermView extends View implements OnGestureListener {
 	}
 
 	public void onResume() {
-		/* A resumed app must require a fresh ACTION_DOWN before any tap. */
+		/* Invalidate a native spell tap as well as the Java DOWN/UP state. */
+		state.invalidateInputLifecycleEpoch();
 		screenTapGuard.abortGesture();
 		Log.d("Angband", "Termview.onResume()");
 		//vibrate = Preferences.getVibrate();
@@ -3865,14 +3866,16 @@ public class TermView extends View implements OnGestureListener {
 		super.onWindowFocusChanged(hasWindowFocus);
 		if (!hasWindowFocus) {
 			/* Notification shade/dialog focus loss may not pause the Activity. */
+			if (state != null) state.invalidateInputLifecycleEpoch();
 			screenTapGuard.abortGesture();
 			stopTimers();
 		}
 	}
 
 	public void onPause() {
-		/* Abort touches and repeats BEFORE the save request clears the
-		 * queued native input. An old ACTION_UP must not be replayed. */
+		/* Invalidate native pending spells BEFORE the save request drains
+		 * the ordinary input queue; the epoch itself is not a queued key. */
+		state.invalidateInputLifecycleEpoch();
 		screenTapGuard.abortGesture();
 		stopTimers();
 		state.gameThread.send(GameThread.Request.SaveGame);

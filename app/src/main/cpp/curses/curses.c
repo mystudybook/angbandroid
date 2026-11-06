@@ -54,6 +54,7 @@ static jmethodID NativeWrapper_delwin;
 static jmethodID NativeWrapper_scroll;
 static jmethodID NativeWrapper_wrefresh;
 static jmethodID NativeWrapper_getch;
+static jmethodID NativeWrapper_get_input_lifecycle_epoch;
 static jmethodID NativeWrapper_wmove;
 static jmethodID NativeWrapper_mvwinch;
 static jmethodID NativeWrapper_curs_set;
@@ -513,6 +514,21 @@ int angdroid_getch(int v) {
 	return k;
 }
 
+/* Read the UI thread's lifecycle epoch from native game thread via JNI.
+ * No synthetic key enters the FIFO and no other menu behavior changes. */
+int angdroid_input_lifecycle_epoch(void) {
+    jint result;
+
+    if (!env || !NativeWrapperObj || !NativeWrapper_get_input_lifecycle_epoch)
+        return -1;
+    result = JAVA_CALL_INT(NativeWrapper_get_input_lifecycle_epoch);
+    if ((*env)->ExceptionCheck(env)) {
+        (*env)->ExceptionClear(env);
+        return -1;
+    }
+    return result > 0 ? (int)result : -1;
+}
+
 int mvinch(int r, int c) {
 	int ch = mvwinch(stdscr,r,c);
 	return ch;
@@ -603,6 +619,11 @@ JNIEXPORT void JNICALL angdroid_gameStart
 	NativeWrapper_initscr = JAVA_METHOD("initscr", "()V");
 	NativeWrapper_wrefresh = JAVA_METHOD("wrefresh", "(I)V");
 	NativeWrapper_getch = JAVA_METHOD("getch", "(I)I");
+	NativeWrapper_get_input_lifecycle_epoch =
+		JAVA_METHOD("getInputLifecycleEpoch", "()I");
+	if (!NativeWrapper_get_input_lifecycle_epoch &&
+			(*env)->ExceptionCheck(env))
+		(*env)->ExceptionClear(env);
 	NativeWrapper_getcury = JAVA_METHOD("getcury", "(I)I");
 	NativeWrapper_getcurx = JAVA_METHOD("getcurx", "(I)I");
 	NativeWrapper_init_color = JAVA_METHOD("init_color", "(II)V");

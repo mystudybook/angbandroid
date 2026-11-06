@@ -33,6 +33,19 @@ public class StateManager {
 	/* keybuffer */
 	private KeyBuffer keyBuffer = null;
 
+	/* Independent of the key queue: the native spell picker observes
+	 * lifecycle changes without injecting a gameplay or save command. */
+	private final InputLifecycleEpoch inputLifecycleEpoch =
+		new InputLifecycleEpoch();
+
+	public int getInputLifecycleEpoch() {
+		return inputLifecycleEpoch.current();
+	}
+
+	public void invalidateInputLifecycleEpoch() {
+		inputLifecycleEpoch.invalidate();
+	}
+
 	/** Native quantity prompt tokens, updated immediately on the game thread. */
 	private final QuantityPromptGate quantityPromptGate = new QuantityPromptGate();
 

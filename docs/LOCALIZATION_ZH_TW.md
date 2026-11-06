@@ -501,3 +501,25 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-130.log
 ```
 
 手動驗證：先按下遊戲畫面但尚未抬手就切到背景／通知欄、再返回並抬手，不得產生滑鼠點擊；一般點擊仍應可選法術、需要合法的同列第二下才確認；連續快速切換、畫面取消、右下角快捷選單、D-pad 長按及方向鍵重複都須確認。
+
+
+## 第 131 批 — Android 暫停／恢復直接撤銷 Native 法術首次觸控
+
+- **根因追蹤**：第 129 批的 2 秒確認時限只能避免久置後的第一次點擊；第 130 批取消 Java 側未完成的按下／抬手，但 **Native `ui-spell.c::spell_menu_data` 仍保留 `touch_pending_oid` 與 `touch_pending_at_ms`**。如果在第一次有效點擊後於 2 秒內迅速切背景又返回，再點同一法術，原生端仍可能直接完成施法。Java `GameThread.Request.SaveGame` 會由 `KeyBuffer.signalSave()` 清空排隊的輸入，但不會重置已存入 `ui-spell.c` 的結構欄位。
+- **不能用額外 Esc 或特殊鍵修正**：共用 `KeyBuffer` 依遊戲狀態排序一般按鍵、儲存 marker、控制命令。把生命週期通知混成遊戲按鍵可能造成多個遊戲變體的非預期行為。改用跨執行緒、只讀查詢的 **InputLifecycleEpoch**：
+  - `InputLifecycleEpoch.java` 使用 `AtomicInteger` CAS 遞增世代，預設 1、避免負數／0，累積到 `Integer.MAX_VALUE` 後回到 1；不插入遊戲指令。
+  - `StateManager` 持有世代物件，`TermView.onPause()`、`onResume()` 與 `onWindowFocusChanged(false)` 在取消 Java 手勢時同步增加世代。**onPause 先通知、再停止 timer 並發出 SaveGame**；畫面焦點短暫丟失但未進入 Activity pause，也會通知。
+  - `NativeWrapper.getInputLifecycleEpoch()` 回傳當下世代；`curses.c` 在 native 遊戲啟動時快取 `getInputLifecycleEpoch:()I` JNI 方法識別碼，透過 `angdroid_input_lifecycle_epoch()` 從遊戲執行緒直接讀值。JNI 不可用、發生例外或讀到無效世代時回傳 -1，**不得直接確認觸控施法**。
+  - `ui-spell.c` 的 `spell_menu_data` 記住最近觀察的世代；在法術清單重畫和每次處理法術列事件時比較目前世代。若世代改變、JNI 故障或無效，就以 `angdroid_spell_menu_touch_epoch_changed()` 同時撤銷待確認法術與時間戳；如果變動恰好發生在重畫與處理點擊之間，則此次觸控**直接吃掉**，不得當作第二次確認。只有未改變、有效的世代才繼續原有的 2 秒雙擊確認。
+- **範圍**：不修改 `ui-menu.c` 共用事件分派、Java `KeyBuffer`、任何法術施放與學習規則、角色存檔格式，以及已完成的 163 筆原版法術資料和 135 組繁中長說明。
+- **測試**：新增獨立 JDK `InputLifecycleEpochTest.java`，包含暫停／恢復世代變更和 4 條執行緒各遞增 1,000 次，確保沒有丟失更新；在 `tests/native/test_spell_reader_pages.c` 新增生命週期變動、JNI 回傳 -1／0、重新同步與無效指標的 C99 回歸測試；`tests/test_spell_touch_lifecycle_source.py` 檢查 UI→StateManager→NativeWrapper→JNI→Native 法術選單連線及只讀、無特殊按鍵的事件保護。新增 Java 測試已接入 `scripts/test-terminal-unicode.sh`；來源檢查接入 `scripts/verify-zh-tw.sh`，C99 沿用已有的 Native 測試腳本。
+- **驗收限制**：獨立主機測試／GitHub 原始碼核對不等同 Android 的 JNI、NDK／Gradle、模擬器／實機端到端驗證。尤其焦點喪失／恢復時 native 與 Java 執行緒相互交錯的事件次序仍需在手機測試。提交 `[skip ci]`，**不使用 GitHub Actions**。
+
+### 第 131 批 Mac 本機驗證
+
+```bash
+git pull --ff-only origin master
+sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
+```
+
+驗收場景：開啟施法選單 → 點一次 A（未施法）→ **2 秒內切到背景又返回** → 再點 A，必須只當新的第一次觸控、不能立即施法；然後合法再點 A 才確認。相同場景需測試通知欄失焦、旋轉畫面、瀏覽模式、Enter／法術字母及其他虛擬按鈕。

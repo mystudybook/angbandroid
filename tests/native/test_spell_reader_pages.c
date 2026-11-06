@@ -278,6 +278,63 @@ int main(void)
         CHECK(armed == -1 && at == 0);
     }
 
+    /* Lifecycle changes invalidate a native first tap even when only a
+     * few milliseconds elapsed and the KeyBuffer was already cleared. */
+    {
+        int armed = -1, known_epoch = 4;
+        uint64_t at = 0;
+
+        CHECK(!angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, &known_epoch, 4));
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 3, 0, UINT64_C(1000)));
+        CHECK(armed == 3 && at == UINT64_C(1000));
+
+        CHECK(angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, &known_epoch, 5)); /* onPause */
+        CHECK(known_epoch == 5 && armed == -1 && at == 0);
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 3, 0, UINT64_C(1050)));
+        CHECK(armed == 3 && at == UINT64_C(1050));
+        CHECK(angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, &known_epoch, 6)); /* onResume */
+        CHECK(known_epoch == 6 && armed == -1 && at == 0);
+        CHECK(!angdroid_spell_menu_confirm_touch(
+            &armed, &at, 3, 0, UINT64_C(1100)));
+        CHECK(armed == 3 && at == UINT64_C(1100));
+        CHECK(angdroid_spell_menu_confirm_touch(
+            &armed, &at, 3, 0, UINT64_C(1400)));
+        CHECK(armed == -1 && at == 0);
+
+        /* A repeated poll with an unchanged generation has no effect. */
+        CHECK(!angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, &known_epoch, 6));
+        CHECK(known_epoch == 6);
+    }
+
+    /* A JNI failure must fail closed; no pending spell may survive. */
+    {
+        int armed = 8, known_epoch = 10;
+        uint64_t at = UINT64_C(9000);
+        CHECK(angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, &known_epoch, -1));
+        CHECK(armed == -1 && at == 0 && known_epoch == -1);
+        CHECK(angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, &known_epoch, 0));
+        CHECK(armed == -1 && at == 0 && known_epoch == -1);
+        CHECK(angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, &known_epoch, 11));
+        CHECK(armed == -1 && at == 0 && known_epoch == 11);
+        CHECK(!angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, &known_epoch, 11));
+        CHECK(angdroid_spell_menu_touch_epoch_changed(
+            NULL, &at, &known_epoch, 12));
+        CHECK(angdroid_spell_menu_touch_epoch_changed(
+            &armed, NULL, &known_epoch, 12));
+        CHECK(angdroid_spell_menu_touch_epoch_changed(
+            &armed, &at, NULL, 12));
+    }
+
     printf("PASS: UTF-8 spell reader pages (%d assertions)\n", checks);
     return 0;
 }

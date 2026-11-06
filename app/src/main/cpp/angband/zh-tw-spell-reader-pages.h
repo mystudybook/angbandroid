@@ -197,4 +197,22 @@ static inline int angdroid_spell_menu_confirm_touch(
     return 0;
 }
 
+/* Cancel a pending spell when a pause/resume/focus-loss epoch changes.
+ * Negative/unavailable JNI values fail shut and can never confirm a touch. */
+static inline int angdroid_spell_menu_touch_epoch_changed(
+    int *armed_oid, uint64_t *armed_at_ms, int *known_epoch,
+    int observed_epoch)
+{
+    if (!armed_oid || !armed_at_ms || !known_epoch) return 1;
+    if (observed_epoch <= 0) {
+        angdroid_spell_menu_cancel_touch(armed_oid, armed_at_ms);
+        *known_epoch = -1;
+        return 1;
+    }
+    if (observed_epoch == *known_epoch) return 0;
+    angdroid_spell_menu_cancel_touch(armed_oid, armed_at_ms);
+    *known_epoch = observed_epoch;
+    return 1;
+}
+
 #endif
