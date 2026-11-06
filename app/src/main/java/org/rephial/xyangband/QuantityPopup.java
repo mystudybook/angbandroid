@@ -8,8 +8,6 @@ import android.widget.PopupWindow;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
-import java.util.List;
-
 public class QuantityPopup extends PopupWindow
         implements View.OnClickListener,
         SeekBar.OnSeekBarChangeListener,
@@ -141,38 +139,20 @@ public class QuantityPopup extends PopupWindow
             return;
         }
 
-        // Only a deliberate button press commits the quantity.
-        resolved = true;
-        sendValue();
-        dismiss();
+        // A failed or stale quantity cannot close the popup as "confirmed".
+        // Only one deliberate button action can enqueue a complete response.
+        if (sendValue()) {
+            resolved = true;
+            dismiss();
+        }
         locked = false;
     }
 
-    private void sendValue()
+    private boolean sendValue()
     {
         StateManager state = context.getStateManager();
-        String str = Integer.toString(valuePicker.getValue());
-        List<Integer> list = InputUtils.parseCodeKeys(str);
-
-        // For some variants, go to the right.
-        int keyRight = state.getKeyRightForQuantity();
-        if (keyRight > 0) {
-            for (int i = 0; i < 15; i++) {
-                state.addKey(keyRight);
-            }
-        }
-
-        // Replace the native prompt's prefilled quantity.
-        for (int i = 0; i < 15; i++) {
-            state.addKey(state.getKeyBackspace());
-        }
-
-        for (Integer keycode : list) {
-            if (keycode > 0) {
-                state.addKey(keycode);
-            }
-        }
-        state.addKey(state.getKeyEnter());
+        return state != null && state.enqueueQuantity(
+                valuePicker.getValue(), valuePicker.getMaxValue());
     }
 
     @Override
