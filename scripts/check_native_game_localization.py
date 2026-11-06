@@ -1872,8 +1872,8 @@ def main():
            'player_exp_lose(context->p, d, false);' in blow_ui,
            "Monster melee messages must keep original damage, stealing, and life drain")
     expect('test_mon_blow_feedback_locale.c' in native_tests and
-           'test_mon_blow_feedback_locale.c' in native_tests and
-           'test_mon_blow_feedback_locale.c' in native_tests,
+           'verify("You are covered in acid!", "酸液濺滿了你的全身！");' in blow_test and
+           'verify("All of your coins were stolen!", "你的金幣全被偷走了！");' in blow_test,
            "Monster melee bilingual host C99 regression must be registered")
 
     # Gameplay projection feedback and monster attacks are translated only
