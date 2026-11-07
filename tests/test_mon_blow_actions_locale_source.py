@@ -53,8 +53,8 @@ class MonsterBlowActionsLocaleSourceTest(unittest.TestCase):
             "return monster_blow_method_action_render(method, midx, NULL);",
             "in_cursor = angdroid_mon_blow_action_template(msg->act_msg,",
             "if (translated) *translated = zh_action;",
-            'zh_action ? "你" : "you"',
-            'zh_action ? "你的" : "your"',
+            '&end, "你", strlen("你"))',
+            '&end, "你的", strlen("你的"))',
             'if (!zh_action && !strchr(punct, *in_cursor))',
         ):
             self.assertIn(token, SOURCE)
