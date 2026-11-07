@@ -45,7 +45,7 @@ class MonsterBlowActionsLocaleSourceTest(unittest.TestCase):
             "int choice = randint0(method->num_messages);",
             "const struct blow_message *msg = method->messages;",
             "while (choice--)",
-            "blow_tag_lookup(tag)",
+            "blow_tag_lookup(tag, (size_t)(s - tag))",
             "monster_desc(m_name,",
             "MDESC_TARG | MDESC_POSS",
             "return string_make(buf);",
