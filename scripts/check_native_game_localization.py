@@ -1905,7 +1905,7 @@ def main():
            'int choice = randint0(method->num_messages);' in blow_ui and
            'in_cursor = angdroid_mon_blow_action_template(msg->act_msg,' in blow_ui and
            'if (translated) *translated = zh_action;' in blow_ui and
-           'blow_tag_lookup(tag)' in blow_ui and
+           'blow_tag_lookup(tag, (size_t)(s - tag))' in blow_ui and
            'msgt(method->msgt, "%s%s%s（%d）", m_name, act,' in blow_ui and
            'msgt(method->msgt, "%s %s%s (%d)", m_name, act,' in blow_ui and
            'msgt(method->msgt, "%s%s%s", m_name, act, fullstop);' in blow_ui and
