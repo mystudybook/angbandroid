@@ -4,6 +4,66 @@
 #include <string.h>
 #include "../../app/src/main/cpp/angband/zh-tw-mon-blow-actions.h"
 static int checks;
+
+/* UTF-8 boundary tests: length is always bytes, never glyphs. */
+static void verify_utf8_append(void)
+{
+    char buf[11] = "";
+    size_t used = 0;
+    angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "你", strlen("你"));
+    assert(used == strlen("你") && strcmp(buf, "你") == 0);
+    checks += 1;
+
+    angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "a🐱", strlen("a🐱"));
+    assert(strcmp(buf, "你a🐱") == 0 && used == strlen("你a🐱"));
+    checks += 1;
+
+    /* A 3-byte glyph must not be partially written into only 2 bytes. */
+    angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "界", strlen("界"));
+    assert(strcmp(buf, "你a🐱") == 0 && used == strlen("你a🐱"));
+    checks += 1;
+
+    /* Prevent a truncated UTF-8 source slice from leaking a partial glyph. */
+    used = 0;
+    buf[0] = '\0';
+    angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "中文", 2);
+    assert(used == 0 && buf[0] == '\0');
+    checks += 1;
+
+    angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "中文", 5);
+    assert(used == 3 && strcmp(buf, "中") == 0);
+    checks += 1;
+
+    /* Invalid leading and continuation bytes never enter output. */
+    used = 0;
+    buf[0] = '\0';
+    angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "\x80", 1);
+    assert(used == 0 && buf[0] == '\0');
+    checks += 1;
+
+    angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "\xE4\x41\x80", 3);
+    assert(used == 0 && buf[0] == '\0');
+    checks += 1;
+
+    angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "\xED\xA0\x80", 3);
+    assert(used == 0 && buf[0] == '\0');
+    checks += 1;
+
+    angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "\xF4\x90\x80\x80", 4);
+    assert(used == 0 && buf[0] == '\0');
+    checks += 1;
+
+    angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "ok", 2);
+    assert(used == 2 && strcmp(buf, "ok") == 0);
+    checks += 1;
+
+    /* Never write past the end, even if the caller's offset is full. */
+    used = sizeof(buf);
+    angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "你", 3);
+    assert(used == sizeof(buf));
+    checks += 1;
+}
+
 static void verify(const char *(*translate)(const char *, int),
     const char *en, const char *zh)
 {
@@ -13,6 +73,7 @@ static void verify(const char *(*translate)(const char *, int),
 }
 int main(void)
 {
+    verify_utf8_append();
     verify(angdroid_mon_blow_action_template, "hits {target}", "擊中了{target}");
     verify(angdroid_mon_blow_action_template, "touches {target}", "觸碰了{target}");
     verify(angdroid_mon_blow_action_template, "punches {target}", "揮拳打向{target}");

@@ -45,7 +45,7 @@ class MonsterBlowActionsLocaleSourceTest(unittest.TestCase):
             "int choice = randint0(method->num_messages);",
             "const struct blow_message *msg = method->messages;",
             "while (choice--)",
-            "blow_tag_lookup(tag)",
+            "blow_tag_lookup(tag, (size_t)(s - tag))",
             "monster_desc(m_name,",
             "MDESC_TARG | MDESC_POSS",
             "return string_make(buf);",
@@ -53,8 +53,8 @@ class MonsterBlowActionsLocaleSourceTest(unittest.TestCase):
             "return monster_blow_method_action_render(method, midx, NULL);",
             "in_cursor = angdroid_mon_blow_action_template(msg->act_msg,",
             "if (translated) *translated = zh_action;",
-            'zh_action ? "你" : "you"',
-            'zh_action ? "你的" : "your"',
+            '&end, "你", strlen("你"))',
+            '&end, "你的", strlen("你的"))',
             'if (!zh_action && !strchr(punct, *in_cursor))',
         ):
             self.assertIn(token, SOURCE)
@@ -91,6 +91,42 @@ class MonsterBlowActionsLocaleSourceTest(unittest.TestCase):
                 '", "' + zh + '");', NATIVE)
         self.assertIn('angdroid_mon_blow_save_feedback(NULL, 1) == NULL', NATIVE)
         self.assertIn('angdroid_mon_blow_action_template(NULL, 1) == NULL', NATIVE)
+
+    def test_utf8_append_never_splits_multibyte_glyphs(self):
+        for text in (
+            "angdroid_mon_blow_append_utf8(",
+            "width > bytes - i",
+            "width > capacity - pos - 1",
+            "memcpy(dst + pos, source + i, width);",
+            "dst[pos] = '\\0';",
+            "lead >= 0xE0 && lead <= 0xEF",
+            "lead >= 0xF0 && lead <= 0xF4",
+            "lead == 0xED",
+            "lead == 0xF4",
+        ):
+            self.assertIn(text, HEADER)
+        for text in (
+            'angdroid_mon_blow_append_utf8(buf, sizeof(buf), &end,',
+            'angdroid_mon_blow_append_utf8(buf, sizeof(buf),',
+            'strnfcat(buf, 1024, &end, "%s", in_cursor);',
+            'strnfcat(buf, sizeof(buf), &end, "%s", "you");',
+            'strnfcat(buf, sizeof(buf), &end, "%s", "your");',
+        ):
+            self.assertIn(text, SOURCE)
+        self.assertEqual(9, SOURCE.count("angdroid_mon_blow_append_utf8("))
+        self.assertIn("verify_utf8_append();", NATIVE)
+        self.assertIn('angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "中文", 2);', NATIVE)
+
+    def test_tag_lookup_is_exact_and_unknown_keeps_literal_in_zh(self):
+        self.assertIn("blow_tag_lookup(const char *tag, size_t length)", SOURCE)
+        self.assertIn('length == 6 && strncmp(tag, "target", 6) == 0', SOURCE)
+        self.assertIn('length == 8 && strncmp(tag, "oftarget", 8) == 0', SOURCE)
+        self.assertIn('length == 3 && strncmp(tag, "has", 3) == 0', SOURCE)
+        self.assertIn("blow_tag_lookup(tag, (size_t)(s - tag))", SOURCE)
+        self.assertIn("&end, next, (size_t)(s - next + 1)", SOURCE)
+        self.assertIn("if (zh_action)", SOURCE)
+        # English is still emitted by Angband's own byte-based formatter.
+        self.assertIn('strnfcat(buf, 1024, &end, "%.*s",', SOURCE)
 
     def test_offline_registration_and_checker(self):
         self.assertIn("test_mon_blow_actions_locale.c", RUNNER)

@@ -56,13 +56,15 @@ typedef enum {
 	BLOW_TAG_HAS
 } blow_tag_t;
 
-static blow_tag_t blow_tag_lookup(const char *tag)
+static blow_tag_t blow_tag_lookup(const char *tag, size_t length)
 {
-	if (strncmp(tag, "target", 6) == 0)
+	/* Tags are slices, not null-terminated. Never treat {targeted} or
+	 * {haste} as an actual {target} or {has} placeholder. */
+	if (length == 6 && strncmp(tag, "target", 6) == 0)
 		return BLOW_TAG_TARGET;
-	else if (strncmp(tag, "oftarget", 8) == 0)
+	else if (length == 8 && strncmp(tag, "oftarget", 8) == 0)
 		return BLOW_TAG_OF_TARGET;
-	else if (strncmp(tag, "has", 3) == 0)
+	else if (length == 3 && strncmp(tag, "has", 3) == 0)
 		return BLOW_TAG_HAS;
 	else
 		return BLOW_TAG_NONE;
@@ -108,8 +110,12 @@ static char *monster_blow_method_action_render(const struct blow_method *method,
 	next = strchr(in_cursor, '{');
 	while (next) {
 		/* Copy the text leading up to this { */
-		strnfcat(buf, 1024, &end, "%.*s", (int) (next - in_cursor),
-			in_cursor);
+		if (zh_action)
+			angdroid_mon_blow_append_utf8(buf, sizeof(buf), &end,
+				in_cursor, (size_t)(next - in_cursor));
+		else
+			strnfcat(buf, 1024, &end, "%.*s", (int) (next - in_cursor),
+				in_cursor);
 
 		s = next + 1;
 		while (*s && isalpha((unsigned char) *s)) s++;
@@ -120,7 +126,7 @@ static char *monster_blow_method_action_render(const struct blow_method *method,
 			tag = next + 1;
 			in_cursor = s + 1;
 
-			switch (blow_tag_lookup(tag)) {
+			switch (blow_tag_lookup(tag, (size_t)(s - tag))) {
 				case BLOW_TAG_TARGET: {
 					char m_name[80];
 					if (midx > 0) {
@@ -132,11 +138,18 @@ static char *monster_blow_method_action_render(const struct blow_method *method,
 						monster_desc(m_name,
 							sizeof(m_name), t_mon,
 							mdesc_mode);
-						strnfcat(buf, sizeof(buf),
-							&end, "%s", m_name);
+						if (zh_action)
+							angdroid_mon_blow_append_utf8(buf, sizeof(buf),
+								&end, m_name, strlen(m_name));
+						else
+							strnfcat(buf, sizeof(buf),
+								&end, "%s", m_name);
 					} else {
-						strnfcat(buf, sizeof(buf), &end,
-							zh_action ? "你" : "you");
+						if (zh_action)
+							angdroid_mon_blow_append_utf8(buf, sizeof(buf),
+								&end, "你", strlen("你"));
+						else
+							strnfcat(buf, sizeof(buf), &end, "%s", "you");
 					}
 					break;
 				}
@@ -146,25 +159,43 @@ static char *monster_blow_method_action_render(const struct blow_method *method,
 						monster_desc(m_name,
 							sizeof(m_name), t_mon,
 							MDESC_TARG | MDESC_POSS);
-						strnfcat(buf, sizeof(buf), &end, "%s", m_name);
+						if (zh_action)
+							angdroid_mon_blow_append_utf8(buf, sizeof(buf),
+								&end, m_name, strlen(m_name));
+						else
+							strnfcat(buf, sizeof(buf), &end, "%s", m_name);
 					} else {
-						strnfcat(buf, sizeof(buf), &end,
-							zh_action ? "你的" : "your");
+						if (zh_action)
+							angdroid_mon_blow_append_utf8(buf, sizeof(buf),
+								&end, "你的", strlen("你的"));
+						else
+							strnfcat(buf, sizeof(buf), &end, "%s", "your");
 					}
 					break;
 				}
 				case BLOW_TAG_HAS: {
 					if (midx > 0) {
-						strnfcat(buf, sizeof(buf), &end,
-							zh_action ? "有" : "has");
+						if (zh_action)
+							angdroid_mon_blow_append_utf8(buf, sizeof(buf),
+								&end, "有", strlen("有"));
+						else
+							strnfcat(buf, sizeof(buf), &end, "%s", "has");
 					} else {
-						strnfcat(buf, sizeof(buf), &end,
-							zh_action ? "有" : "have");
+						if (zh_action)
+							angdroid_mon_blow_append_utf8(buf, sizeof(buf),
+								&end, "有", strlen("有"));
+						else
+							strnfcat(buf, sizeof(buf), &end, "%s", "have");
 					}
 					break;
 				}
 
 				default: {
+					/* Unknown locale tags are kept literally, never guessed.
+					 * The original English parser behavior is unchanged. */
+					if (zh_action)
+						angdroid_mon_blow_append_utf8(buf, sizeof(buf),
+								&end, next, (size_t)(s - next + 1));
 					break;
 				}
 			}
@@ -175,7 +206,11 @@ static char *monster_blow_method_action_render(const struct blow_method *method,
 
 		next = strchr(in_cursor, '{');
 	}
-	strnfcat(buf, 1024, &end, "%s", in_cursor);
+	if (zh_action)
+		angdroid_mon_blow_append_utf8(buf, sizeof(buf), &end,
+			in_cursor, strlen(in_cursor));
+	else
+		strnfcat(buf, 1024, &end, "%s", in_cursor);
 	return string_make(buf);
 }
 

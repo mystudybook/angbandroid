@@ -95,4 +95,44 @@ static inline const char *angdroid_mon_blow_save_feedback(
         if (strcmp(english, map[i].en) == 0) return map[i].zh;
     return english;
 }
+/*
+ * Append one valid UTF-8 code point at a time into a bounded display buffer.
+ * A clipped CJK glyph or incomplete source sequence is never copied.
+ * This helper is deliberately not used by the original English formatter.
+ */
+static inline void angdroid_mon_blow_append_utf8(char *dst, size_t capacity,
+    size_t *used, const char *source, size_t bytes)
+{
+    size_t pos, i = 0;
+    if (!dst || !used || !source || !capacity || *used >= capacity) return;
+    pos = *used;
+    while (i < bytes && source[i]) {
+        const unsigned char lead = (unsigned char)source[i];
+        size_t width, j;
+        if (lead < 0x80) width = 1;
+        else if (lead >= 0xC2 && lead <= 0xDF) width = 2;
+        else if (lead >= 0xE0 && lead <= 0xEF) width = 3;
+        else if (lead >= 0xF0 && lead <= 0xF4) width = 4;
+        else break;
+
+        if (width > bytes - i || width > capacity - pos - 1) break;
+        for (j = 1; j < width; ++j) {
+            if (((unsigned char)source[i + j] & 0xC0) != 0x80) break;
+        }
+        if (j != width) break;
+        if (width == 3 &&
+            ((lead == 0xE0 && (unsigned char)source[i + 1] < 0xA0) ||
+             (lead == 0xED && (unsigned char)source[i + 1] >= 0xA0))) break;
+        if (width == 4 &&
+            ((lead == 0xF0 && (unsigned char)source[i + 1] < 0x90) ||
+             (lead == 0xF4 && (unsigned char)source[i + 1] >= 0x90))) break;
+
+        memcpy(dst + pos, source + i, width);
+        pos += width;
+        i += width;
+    }
+    dst[pos] = '\0';
+    *used = pos;
+}
+
 #endif
