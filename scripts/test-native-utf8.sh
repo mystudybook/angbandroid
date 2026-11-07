@@ -289,6 +289,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_player_feedback_locale"
 "$BUILD_DIR/test_player_feedback_locale"
 
+# Player-calcs: inventory rearrangement, weapon/armor statuses.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_player_calcs_feedback_locale.c" \
+    -o "$BUILD_DIR/test_player_calcs_feedback_locale"
+"$BUILD_DIR/test_player_calcs_feedback_locale"
+
 # All canonical monster spell messages (and original race overrides).
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_mon_spell_message_locale.c" \

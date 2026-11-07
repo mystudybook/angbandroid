@@ -1842,6 +1842,38 @@ def main():
            'verify("Your limbs feel more energetic!", "你的四肢變得更加靈活有力！");' in timed_test,
            "Timed status C99 test must cover all groups and dynamic object-kind tags")
 
+    # Player status recalculation is not a translation layer: keep every
+    # equip/pack/spell decision intact, localize only emitted messages.
+    calcs_ui = source(CPP / "angband/player-calcs.c", errors)
+    calcs_header = source(CPP / "angband/zh-tw-player-calcs-feedback.h", errors)
+    calcs_test = source(ROOT / "tests/native/test_player_calcs_feedback_locale.c", errors)
+    calcs_pairs = re.findall(r'\{ "([^"]+)", "([^"]+)" \}', calcs_header)
+    expect(len(calcs_pairs) == 12 and
+           len({en for en, _ in calcs_pairs}) == 12 and
+           calcs_ui.count('angdroid_player_calcs_feedback(') == 12 and
+           all(zh and "%" not in zh and
+               'angdroid_player_calcs_feedback("' + en + '",' in calcs_ui and
+               'verify("' + en + '", "' + zh + '");' in calcs_test
+               for en, zh in calcs_pairs),
+           "Player calcs inventory/equipment message map and C99 cases mismatch")
+    expect('"droid.h"' in calcs_ui and
+           '"zh-tw-spell-names.h"' in calcs_ui and
+           calcs_ui.count('msg("你忘記了「%s」。",') == 2 and
+           calcs_ui.count('msg("You have forgotten the %s of %s.",') == 2 and
+           calcs_ui.count('msg("你重新想起了「%s」。",') == 1 and
+           calcs_ui.count('msg("You have remembered the %s of %s.",') == 1 and
+           calcs_ui.count('angdroid_zh_tw_spell_name(spell->name, true)') == 3 and
+           'msg("你還可以學習 %d 項新法術。", p->upkeep->new_spells);' in calcs_ui and
+           'msg("You can learn %d more %s.", p->upkeep->new_spells, buf);' in calcs_ui and
+           'if (p->state.heavy_shoot != state.heavy_shoot)' in calcs_ui and
+           'if (p->state.heavy_wield != state.heavy_wield)' in calcs_ui and
+           'if (p->state.cumber_armor != state.cumber_armor)' in calcs_ui and
+           'p->upkeep->redraw |= (PR_STUDY | PR_OBJECT);' in calcs_ui,
+           "Player calcs translation must leave stats, spells and UI redraw intact")
+    expect('test_player_calcs_feedback_locale.c' in native_tests and
+           'angdroid_player_calcs_feedback(NULL, 1) == NULL' in calcs_test,
+           "Player calcs C99 fallback test must be registered")
+
     # Monster melee effects (not attack decision logic): fixed messages use
     # exact-match bilingual lookup, dynamic messages use literal C format strings.
     blow_ui = source(CPP / "angband/mon-blows.c", errors)

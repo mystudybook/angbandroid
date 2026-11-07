@@ -110,6 +110,7 @@ run_check "Current native localization display guards and negative mutations" py
 run_check "Native translated message branch scope (dangling else)" python3 "$ROOT/tests/test_native_locale_branch_braces.py"
 run_check "Native projection terrain, knockback, and chest feedback zh-TW" python3 "$ROOT/tests/test_projection_terrain_feedback_locale_source.py"
 run_check "Object projection damage, immunity and destruction zh-TW" python3 "$ROOT/tests/test_projection_item_feedback_locale_source.py"
+run_check "Player recalculation, inventory, weapon and spell feedback zh-TW" python3 "$ROOT/tests/test_player_calcs_feedback_locale_source.py"
 run_check "Native monster elemental attacks, life drain and theft zh-TW" python3 "$ROOT/tests/test_mon_blow_feedback_locale_source.py"
 run_check "Monster action templates and saving throw zh-TW" python3 "$ROOT/tests/test_mon_blow_actions_locale_source.py"
 run_check "Ranged out-of-range prompt and monster item-crush bilingual feedback" python3 "$ROOT/tests/test_combat_feedback_edge_locale_source.py"
