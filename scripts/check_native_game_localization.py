@@ -1921,6 +1921,19 @@ def main():
                 in blow_actions_test,
            "Monster blow C99 action and save cases must be registered")
 
+    # A Chinese blow action may be longer than 1024 bytes: do not split
+    # UTF-8 code points at the message buffer limit; preserve English format.
+    expect('static inline void angdroid_mon_blow_append_utf8(' in blow_actions and
+           'width > bytes - i' in blow_actions and
+           'width > capacity - pos - 1' in blow_actions and
+           'memcpy(dst + pos, source + i, width);' in blow_actions and
+           blow_ui.count('angdroid_mon_blow_append_utf8(') == 9 and
+           'strnfcat(buf, 1024, &end, "%.*s",' in blow_ui and
+           'strnfcat(buf, 1024, &end, "%s", in_cursor);' in blow_ui and
+           'blow_tag_lookup(const char *tag, size_t length)' in blow_ui and
+           'blow_tag_lookup(tag, (size_t)(s - tag))' in blow_ui and
+           'verify_utf8_append();' in blow_actions_test,
+           "Monster blow UTF-8 byte limits and exact tag matching must be safe")
     # Gameplay projection feedback and monster attacks are translated only
     # at display sinks, preserving the original damage and status calculations.
     projection_player = source(CPP / "angband/project-player.c", errors)
