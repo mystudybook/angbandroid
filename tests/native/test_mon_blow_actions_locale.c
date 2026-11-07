@@ -8,7 +8,7 @@ static int checks;
 /* UTF-8 boundary tests: length is always bytes, never glyphs. */
 static void verify_utf8_append(void)
 {
-    char buf[12] = "";
+    char buf[11] = "";
     size_t used = 0;
     angdroid_mon_blow_append_utf8(buf, sizeof(buf), &used, "你", strlen("你"));
     assert(used == strlen("你") && strcmp(buf, "你") == 0);
