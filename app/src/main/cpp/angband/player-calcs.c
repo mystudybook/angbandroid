@@ -38,6 +38,9 @@
 #include "player-spell.h"
 #include "player-timed.h"
 #include "player-util.h"
+#include "droid.h"
+#include "zh-tw-player-calcs-feedback.h"
+#include "zh-tw-spell-names.h"
 
 /**
  * Stat Table (INT) -- Magic devices
@@ -1175,7 +1178,8 @@ void calc_inventory(struct player *p)
 	if (character_dungeon) {
 		for (i = 0; i < z_info->quiver_size; i++) {
 			if (old_quiver[i] && p->upkeep->quiver[i] != old_quiver[i]) {
-				msg("You re-arrange your quiver.");
+				msg("%s", angdroid_player_calcs_feedback("You re-arrange your quiver.",
+					angdroid_zh_tw_enabled()));
 				break;
 			}
 		}
@@ -1226,7 +1230,8 @@ void calc_inventory(struct player *p)
 		for (i = 0; i < z_info->pack_size; i++) {
 			if (old_pack[i] && p->upkeep->inven[i] != old_pack[i]
 					 && !object_is_equipped(p->body, old_pack[i])) {
-				msg("You re-arrange your pack.");
+				msg("%s", angdroid_player_calcs_feedback("You re-arrange your pack.",
+					angdroid_zh_tw_enabled()));
 				break;
 			}
 		}
@@ -1333,8 +1338,13 @@ static void calc_spells(struct player *p)
 			p->spell_flags[j] &= ~PY_SPELL_LEARNED;
 
 			/* Message */
-			msg("You have forgotten the %s of %s.", spell->realm->spell_noun,
-				spell->name);
+			if (angdroid_zh_tw_enabled()) {
+				msg("你忘記了「%s」。",
+					angdroid_zh_tw_spell_name(spell->name, true));
+			} else {
+				msg("You have forgotten the %s of %s.",
+					spell->realm->spell_noun, spell->name);
+			}
 
 			/* One more can be learned */
 			p->upkeep->new_spells++;
@@ -1364,8 +1374,13 @@ static void calc_spells(struct player *p)
 			p->spell_flags[j] &= ~PY_SPELL_LEARNED;
 
 			/* Message */
-			msg("You have forgotten the %s of %s.", spell->realm->spell_noun,
-				spell->name);
+			if (angdroid_zh_tw_enabled()) {
+				msg("你忘記了「%s」。",
+					angdroid_zh_tw_spell_name(spell->name, true));
+			} else {
+				msg("You have forgotten the %s of %s.",
+					spell->realm->spell_noun, spell->name);
+			}
 
 			/* One more can be learned */
 			p->upkeep->new_spells++;
@@ -1398,8 +1413,13 @@ static void calc_spells(struct player *p)
 			p->spell_flags[j] |= PY_SPELL_LEARNED;
 
 			/* Message */
-			msg("You have remembered the %s of %s.", spell->realm->spell_noun,
-				spell->name);
+			if (angdroid_zh_tw_enabled()) {
+				msg("你重新想起了「%s」。",
+					angdroid_zh_tw_spell_name(spell->name, true));
+			} else {
+				msg("You have remembered the %s of %s.",
+					spell->realm->spell_noun, spell->name);
+			}
 
 			/* One less can be learned */
 			p->upkeep->new_spells--;
@@ -1462,7 +1482,10 @@ static void calc_spells(struct player *p)
 				}
 			}
 			/* Message */
-			msg("You can learn %d more %s.", p->upkeep->new_spells, buf);
+			if (angdroid_zh_tw_enabled())
+				msg("你還可以學習 %d 項新法術。", p->upkeep->new_spells);
+			else
+				msg("You can learn %d more %s.", p->upkeep->new_spells, buf);
 		}
 
 		/* Redraw Study Status */
@@ -2414,31 +2437,39 @@ static void update_bonuses(struct player *p)
 		if (p->state.heavy_shoot != state.heavy_shoot) {
 			/* Message */
 			if (state.heavy_shoot)
-				msg("You have trouble wielding such a heavy bow.");
+				msg("%s", angdroid_player_calcs_feedback("You have trouble wielding such a heavy bow.",
+					angdroid_zh_tw_enabled()));
 			else if (equipped_item_by_slot_name(p, "shooting"))
-				msg("You have no trouble wielding your bow.");
+				msg("%s", angdroid_player_calcs_feedback("You have no trouble wielding your bow.",
+					angdroid_zh_tw_enabled()));
 			else
-				msg("You feel relieved to put down your heavy bow.");
+				msg("%s", angdroid_player_calcs_feedback("You feel relieved to put down your heavy bow.",
+					angdroid_zh_tw_enabled()));
 		}
 
 		/* Take note when "heavy weapon" changes */
 		if (p->state.heavy_wield != state.heavy_wield) {
 			/* Message */
 			if (state.heavy_wield)
-				msg("You have trouble wielding such a heavy weapon.");
+				msg("%s", angdroid_player_calcs_feedback("You have trouble wielding such a heavy weapon.",
+					angdroid_zh_tw_enabled()));
 			else if (equipped_item_by_slot_name(p, "weapon"))
-				msg("You have no trouble wielding your weapon.");
+				msg("%s", angdroid_player_calcs_feedback("You have no trouble wielding your weapon.",
+					angdroid_zh_tw_enabled()));
 			else
-				msg("You feel relieved to put down your heavy weapon.");	
+				msg("%s", angdroid_player_calcs_feedback("You feel relieved to put down your heavy weapon.",
+					angdroid_zh_tw_enabled()));	
 		}
 
 		/* Take note when "illegal weapon" changes */
 		if (p->state.bless_wield != state.bless_wield) {
 			/* Message */
 			if (state.bless_wield) {
-				msg("You feel attuned to your weapon.");
+				msg("%s", angdroid_player_calcs_feedback("You feel attuned to your weapon.",
+					angdroid_zh_tw_enabled()));
 			} else if (equipped_item_by_slot_name(p, "weapon")) {
-				msg("You feel less attuned to your weapon.");
+				msg("%s", angdroid_player_calcs_feedback("You feel less attuned to your weapon.",
+					angdroid_zh_tw_enabled()));
 			}
 		}
 
@@ -2446,9 +2477,11 @@ static void update_bonuses(struct player *p)
 		if (p->state.cumber_armor != state.cumber_armor) {
 			/* Message */
 			if (state.cumber_armor)
-				msg("The weight of your armor encumbers your movement.");
+				msg("%s", angdroid_player_calcs_feedback("The weight of your armor encumbers your movement.",
+					angdroid_zh_tw_enabled()));
 			else
-				msg("You feel able to move more freely.");
+				msg("%s", angdroid_player_calcs_feedback("You feel able to move more freely.",
+					angdroid_zh_tw_enabled()));
 		}
 	}
 
