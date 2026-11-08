@@ -48,6 +48,7 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-target-help.h"
+#include "zh-tw-target-monster.h"
 
 /*
  * Holds state passed between target_set_interactive_aux() and the handlers
@@ -485,7 +486,8 @@ static bool aux_monster(struct chunk *c, struct player *p,
 	/* Not boring */
 	auxst->boring = false;
 
-	/* Get the monster name ("a kobold") */
+	/* Keep monster_desc() untouched for visibility, pronouns and grammar.
+	 * Only its display copy may use an exact, visible translated race name. */
 	monster_desc(m_name, sizeof(m_name), mon, MDESC_IND_VIS);
 
 	/* Track this monster's race and health */
@@ -502,32 +504,48 @@ static bool aux_monster(struct chunk *c, struct player *p,
 			auxst->press = inkey_m();
 		} else {
 			char buf[80];
+			char name_zh[160], status_zh[160];
+			const bool zh_tw = angdroid_zh_tw_enabled();
 
-			/* Describe the monster */
+			/* Translate only the visible monster's on-screen text. */
 			look_mon_desc(buf, sizeof(buf),
 				square(c, auxst->grid)->mon);
+			if (zh_tw) {
+				angdroid_target_monster_display(name_zh, sizeof(name_zh),
+					m_name, mon->race->name,
+					rf_has(mon->race->flags, RF_UNIQUE), true);
+				angdroid_target_monster_status(status_zh,
+					sizeof(status_zh), buf, true);
+			}
 
-			/* Describe, and prompt for recall */
+			/* Preserve the original English layout in English mode. */
 			if (p->wizard) {
+				if (zh_tw)
+					strnfmt(out_val, sizeof(out_val),
+						"%s%s%s（%s），%s（%d:%d，噪音=%d，氣味=%d）。",
+						angdroid_target_monster_intro(auxst->phrase1, true),
+						auxst->phrase2, name_zh, status_zh,
+						auxst->coord_desc, auxst->grid.y, auxst->grid.x,
+						(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+						(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+				else
+					strnfmt(out_val, sizeof(out_val),
+						"%s%s%s (%s), %s (%d:%d, noise=%d, scent=%d).",
+						auxst->phrase1, auxst->phrase2, m_name, buf,
+						auxst->coord_desc, auxst->grid.y, auxst->grid.x,
+						(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+						(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+			} else if (zh_tw) {
 				strnfmt(out_val, sizeof(out_val),
-					"%s%s%s (%s), %s (%d:%d, noise=%d, scent=%d).",
-					auxst->phrase1,
-					auxst->phrase2,
-					m_name,
-					buf,
-					auxst->coord_desc,
-					auxst->grid.y,
-					auxst->grid.x,
-					(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
-					(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+					"%s%s%s（%s），%s。",
+					angdroid_target_monster_intro(auxst->phrase1, true),
+					auxst->phrase2, name_zh, status_zh,
+					auxst->coord_desc);
 			} else {
 				strnfmt(out_val, sizeof(out_val),
 					"%s%s%s (%s), %s.",
-					auxst->phrase1,
-					auxst->phrase2,
-					m_name,
-					buf,
-					auxst->coord_desc);
+					auxst->phrase1, auxst->phrase2,
+					m_name, buf, auxst->coord_desc);
 			}
 
 			prt(out_val, 0, 0);
