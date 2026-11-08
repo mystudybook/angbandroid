@@ -395,9 +395,11 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	}
 	if (localized_scroll) {
 		if (prefix && number == 0)
-			strnfcat(buf, max, &end, "沒有剩餘的");
+			angdroid_zh_tw_item_append_utf8(buf, max, &end,
+				"沒有剩餘的");
 		else if (prefix && number > 1)
-			strnfcat(buf, max, &end, "%u 張", number);
+			angdroid_zh_tw_item_append_amount(buf, max, &end,
+				"", number, " 張");
 		angdroid_zh_tw_item_append_utf8(buf, max, &end, scroll_display);
 	} else if (localized_flavored) {
 		angdroid_zh_tw_item_append_utf8(buf, max, &end, flavored_display);
@@ -424,14 +426,9 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 			/* Safe backward fallback for unexpectedly long source labels. */
 			if (prefix && number == 0)
 				angdroid_zh_tw_item_append_utf8(buf, max, &end, "沒有剩餘的");
-			else if (prefix && number > 1) {
-				char count_label[48];
-				int n = snprintf(count_label, sizeof(count_label),
-					"%u 件", number);
-				if (n > 0 && (size_t)n < sizeof(count_label))
-					angdroid_zh_tw_item_append_utf8(buf, max,
-						&end, count_label);
-			}
+			else if (prefix && number > 1)
+				angdroid_zh_tw_item_append_amount(buf, max, &end,
+					"", number, " 件");
 			angdroid_zh_tw_item_append_utf8(buf, max, &end,
 				localized_kind);
 		}
