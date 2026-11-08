@@ -34,6 +34,7 @@
 #include "zh-tw-item-grammar.h"
 #include "zh-tw-item-details.h"
 #include "../curses/unicode_display.h"
+#include "obj-desc-name-utf8.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -262,65 +263,8 @@ static size_t obj_desc_name_prefix(char *buf, size_t max, size_t end,
 size_t obj_desc_name_format(char *buf, size_t max, size_t end,
 		const char *fmt, const char *modstr, bool pluralise)
 {
-	/* Copy the string */
-	while (*fmt) {
-		/* Skip */
-		if (*fmt == '&') {
-			while (*fmt == ' ' || *fmt == '&')
-				fmt++;
-			continue;
-		} else if (*fmt == '~') {
-			/* Pluralizer (regular English plurals) */
-			char prev = *(fmt - 1);
-
-			if (!pluralise)	{
-				fmt++;
-				continue;
-			}
-
-			/* e.g. cutlass-e-s, torch-e-s, box-e-s */
-			if (prev == 's' || prev == 'h' || prev == 'x')
-				strnfcat(buf, max, &end, "es");
-			else
-				strnfcat(buf, max, &end, "s");
-		} else if (*fmt == '|') {
-			/* Special plurals 
-			* e.g. kni|fe|ves|
-			*          ^  ^  ^ */
-			const char *singular = fmt + 1;
-			const char *plural   = strchr(singular, '|');
-			const char *endmark  = NULL;
-
-			if (plural) {
-				plural++;
-				endmark = strchr(plural, '|');
-			}
-
-			if (!singular || !plural || !endmark) return end;
-
-			if (!pluralise)
-				strnfcat(buf, max, &end, "%.*s",
-					(int) (plural - singular) - 1,
-					singular);
-			else
-				strnfcat(buf, max, &end, "%.*s",
-					(int) (endmark - plural), plural);
-
-			fmt = endmark;
-		} else if (*fmt == '#') {
-			/* Add modstr, with pluralisation if relevant */
-			end = obj_desc_name_format(buf, max, end, modstr, NULL,	pluralise);
-		}
-
-		else
-			buf[end++] = *fmt;
-
-		fmt++;
-	}
-
-	buf[end] = 0;
-
-	return end;
+	return angdroid_obj_desc_name_format_safe(
+		buf, max, end, fmt, modstr, pluralise);
 }
 
 

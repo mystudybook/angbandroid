@@ -560,6 +560,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_object_list_compact_layout"
 "$BUILD_DIR/test_object_list_compact_layout"
 
+# Core object description grammar must stay within buffers on CJK text.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_obj_desc_name_utf8.c" \
+    -o "$BUILD_DIR/test_obj_desc_name_utf8"
+"$BUILD_DIR/test_obj_desc_name_utf8"
+
 # Object list article/count prefixes and CJK names must remain complete.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_object_list_name_utf8.c" \

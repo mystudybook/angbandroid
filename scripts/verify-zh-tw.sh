@@ -53,6 +53,7 @@ run_check "Finite invalid-row menu navigation" python3 "$ROOT/tests/test_menu_na
 run_check "Inventory and equipment UTF-8 display safety" python3 "$ROOT/tests/test_object_list_text_source.py"
 run_check "Visible object list narrow-screen bounds" python3 "$ROOT/tests/test_object_list_compact_layout_source.py"
 run_check "Visible object list UTF-8 name prefixes" python3 "$ROOT/tests/test_object_list_name_utf8_source.py"
+run_check "Core item grammar UTF-8 bounds" python3 "$ROOT/tests/test_obj_desc_name_utf8_source.py"
 run_check "Inventory and equipment bilingual captions and selection invariants" python3 "$ROOT/tests/test_inventory_list_locale_source.py"
 run_check "Rotated item-selection and compact shop prompts" python3 "$ROOT/tests/test_item_selection_rotation_source.py"
 run_check "Knowledge glyph strict Unicode input and bilingual autoinscriptions" python3 "$ROOT/tests/test_knowledge_glyph_codepoint_locale_source.py"
