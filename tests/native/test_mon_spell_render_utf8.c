@@ -47,8 +47,14 @@ int main(void)
         0, invalid, strlen(invalid));
     CHECK(used == 2);
     CHECK(strcmp(out, "?X") == 0);
+    /* A genuinely broken UTF-8 source is sanitized to question marks. */
     used = angdroid_mon_spell_append_utf8(out, sizeof(out),
         0, tail, strlen(tail));
+    CHECK(used == 2);
+    CHECK(strcmp(out, "??") == 0);
+    /* A valid Han glyph whose requested slice is only 2 bytes is dropped. */
+    used = angdroid_mon_spell_append_utf8(out, sizeof(out),
+        0, "中文", 2);
     CHECK(used == 0);
     CHECK(strcmp(out, "") == 0);
     CHECK(angdroid_mon_spell_append_utf8(NULL, 0, 0, "中", 3) == 0);
