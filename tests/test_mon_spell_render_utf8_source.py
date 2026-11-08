@@ -45,6 +45,7 @@ class MonsterSpellRenderSourceTest(unittest.TestCase):
         self.assertIn('"（", strlen("（")', SPELL)
         self.assertIn('"）", strlen("）")', SPELL)
         self.assertIn("if (zh_spell)", SPELL)
+        self.assertIn("display ? strlen(display) : 0", SPELL)
 
     def test_english_and_spell_combat_path_not_changed(self):
         for source in (
