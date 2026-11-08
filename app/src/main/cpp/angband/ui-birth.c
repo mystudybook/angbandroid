@@ -1402,13 +1402,30 @@ static int edit_text(char *buffer, int buflen) {
 		ulen = (n_lines > 0) ? line_starts[n_lines - 1] +
 			line_lengths[n_lines - 1]: 0;
 
-		/* Set cursor to current editing position */
+		/* The wrapping table indexes Unicode characters, but a Han
+		 * character occupies two terminal cells.  Convert the
+		 * current line's scalar range back to display columns. */
 		get_screen_loc(cursor, &x, &y, n_lines, line_starts, line_lengths);
+		if (n_lines > 0 && y >= 0 && (size_t)y < n_lines) {
+			size_t line_start = line_starts[y];
+			size_t before = angdroid_input_cursor_columns(
+				buffer, line_start);
+			size_t at_cursor = angdroid_input_cursor_columns(
+				buffer, (size_t)cursor);
+			size_t cols = at_cursor >= before ? at_cursor - before : 0;
+			if (cols >= (size_t)area.width) cols = (size_t)area.width - 1;
+			x = (int)cols;
+		}
 		Term_gotoxy(1 + x, 19 + y);
 
 		ke = inkey();
 		switch (ke.code) {
 			case ESCAPE:
+				/* Cancellation must release this iteration's wrapped
+				 * line arrays and textblock before leaving the editor. */
+				mem_free(line_starts);
+				mem_free(line_lengths);
+				textblock_free(tb);
 				return -1;
 
 			case KC_ENTER:
@@ -1424,7 +1441,10 @@ static int edit_text(char *buffer, int buflen) {
 				break;
 
 			case ARROW_DOWN: {
-				int add = line_lengths[y] + 1;
+				int add;
+				/* Empty history has no wrapped lines. */
+				if (n_lines == 0 || (size_t)y >= n_lines) break;
+				add = line_lengths[y] + 1;
 				if (cursor + add < ulen) cursor += add;
 				break;
 			}

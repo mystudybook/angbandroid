@@ -57,6 +57,24 @@ class InputUtf8SourceTest(unittest.TestCase):
         self.assertNotIn('char old_history[240]', method)
         self.assertIn('if (n == 1 && scalar == 0xFFFDu', HELPER)
 
+    def test_birth_history_editor_uses_cjk_columns_and_safe_cancel(self):
+        method = BIRTH.split("static int edit_text(char *buffer, int buflen)", 1)[1].split(
+            "\n\n/**\n * ------------------------------------------------------------------------\n * Allowing the player", 1)[0]
+        self.assertIn('get_screen_loc(cursor, &x, &y, n_lines, line_starts, line_lengths);',
+                      method)
+        self.assertIn('angdroid_input_cursor_columns(', method)
+        self.assertIn('buffer, line_start', method)
+        self.assertIn('buffer, (size_t)cursor', method)
+        self.assertIn('if (cols >= (size_t)area.width)', method)
+        self.assertIn('if (n_lines == 0 || (size_t)y >= n_lines) break;', method)
+        cancel = method.split('case ESCAPE:', 1)[1].split('case KC_ENTER:', 1)[0]
+        self.assertLess(cancel.index('mem_free(line_starts);'),
+                        cancel.index('return -1;'))
+        self.assertLess(cancel.index('mem_free(line_lengths);'),
+                        cancel.index('return -1;'))
+        self.assertLess(cancel.index('textblock_free(tb);'),
+                        cancel.index('return -1;'))
+
     def test_host_regressions_in_offline_runners(self):
         self.assertIn('tests/native/test_ui_input_utf8.c', RUN)
         self.assertIn('"$BUILD_DIR/test_ui_input_utf8"', RUN)

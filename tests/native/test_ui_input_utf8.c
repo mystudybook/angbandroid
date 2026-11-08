@@ -20,6 +20,10 @@ int main(void)
     assert(angdroid_input_cursor_columns(text, 4) == 6);
     assert(angdroid_input_cursor_columns(text, 999) == 6);
     assert(angdroid_input_cursor_columns("A🐱B", 2) == 3);
+    /* Birth history wrapping starts from a scalar index; the cursor
+     * must move three terminal cells across "A貓", not two bytes. */
+    assert(angdroid_input_cursor_columns("龍A貓B", 3) -
+        angdroid_input_cursor_columns("龍A貓B", 1) == 3);
     assert(angdroid_input_cursor_columns(NULL, 3) == 0);
 
     at = text + strlen("龍A");
