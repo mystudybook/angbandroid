@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include "zh-tw-faangband-monster-base.h"
 
 #define ANGDROID_ZH_TW_SYMBOL_TVAL_COUNT 36
 
@@ -154,7 +155,8 @@ static inline const char *angdroid_symbol_monster_base_text(
             strcmp(canonical_text, descriptions[i].canonical_text) == 0)
             return descriptions[i].traditional;
     }
-    return canonical_text;
+    return angdroid_faangband_monster_base_text(base_name,
+        canonical_text, zh_tw);
 }
 
 #endif /* ANGDROID_ZH_TW_SYMBOL_QUERY_H */
