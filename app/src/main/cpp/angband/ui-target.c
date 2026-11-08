@@ -440,14 +440,16 @@ static bool aux_hallucinate(struct chunk *c, struct player *p,
 			strnfmt(out_val, sizeof(out_val),
 				"%s%s%s，%s（%d:%d，噪音=%d，氣味=%d）。",
 				angdroid_target_world_intro(auxst->phrase1, true),
-				auxst->phrase2, name_strange, auxst->coord_desc,
+				angdroid_target_world_link(auxst->phrase2, true),
+				name_strange, auxst->coord_desc,
 				auxst->grid.y, auxst->grid.x,
 				(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
 				(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
 		else
 			strnfmt(out_val, sizeof(out_val), "%s%s%s，%s。",
 				angdroid_target_world_intro(auxst->phrase1, true),
-				auxst->phrase2, name_strange, auxst->coord_desc);
+				angdroid_target_world_link(auxst->phrase2, true),
+				name_strange, auxst->coord_desc);
 	} else if (p->wizard) {
 		strnfmt(out_val, sizeof(out_val),
 			"%s%s%s, %s (%d:%d, noise=%d, scent=%d).",
@@ -792,16 +794,16 @@ static bool aux_object(struct chunk *c, struct player *p,
 			if (angdroid_zh_tw_enabled()) {
 				if (p->wizard)
 					strnfmt(out_val, sizeof(out_val),
-						"%s有 %d 件物品，%s（%d:%d，噪音=%d，氣味=%d）。",
-						angdroid_target_world_intro(auxst->phrase1, true),
+						"%s一堆物品（%d 件），%s（%d:%d，噪音=%d，氣味=%d）。",
+						angdroid_target_world_pile_intro(auxst->phrase1, true),
 						floor_num, auxst->coord_desc,
 						auxst->grid.y, auxst->grid.x,
 						(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
 						(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
 				else
 					strnfmt(out_val, sizeof(out_val),
-						"%s有 %d 件物品，%s。",
-						angdroid_target_world_intro(auxst->phrase1, true),
+						"%s一堆物品（%d 件），%s。",
+						angdroid_target_world_pile_intro(auxst->phrase1, true),
 						floor_num, auxst->coord_desc);
 			} else if (p->wizard) {
 				strnfmt(out_val, sizeof(out_val),
