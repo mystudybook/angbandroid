@@ -53,6 +53,7 @@ def block(start, end):
     return TARGET.split(start, 1)[1].split(end, 1)[0]
 hall = block("static bool aux_hallucinate(", "static bool aux_monster(")
 trap = block("static bool aux_trap(", "static bool aux_object(")
+recall = block("static ui_event target_recall_loop_object(", "static bool aux_reinit(")
 pile = block("static bool aux_object(", "static bool aux_terrain(")
 terrain = block("static bool aux_terrain(", "static bool aux_wrapup(")
 
@@ -71,6 +72,13 @@ assert "if (floor_num > 1)" in pile
 assert pile.count("一堆物品（%d 件）") == 2
 assert pile.count("angdroid_target_world_pile_intro(auxst->phrase1, true)") == 2
 assert "target_recall_loop_object(" in pile
+assert "object_desc(o_name, sizeof(o_name)," in recall
+assert "angdroid_target_world_intro(s1, true)" in recall
+assert "angdroid_target_world_link(s2, true)" in recall
+assert '"%s%s%s%s，%s。"' in recall
+assert '"%s%s%s%s, %s."' in recall
+assert "display_object_recall_interactive(" in recall
+assert "ODESC_PREFIX | ODESC_FULL" in recall
 assert "if (!auxst->boring && !square_isinteresting(" in terrain
 assert "name = square_apparent_name(p->cave, auxst->grid);" in terrain
 assert "angdroid_target_world_terrain(name, true)" in terrain
