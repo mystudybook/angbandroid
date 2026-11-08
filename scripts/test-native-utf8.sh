@@ -138,6 +138,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_visible_flavor_fallback_locale"
 "$BUILD_DIR/test_visible_flavor_fallback_locale"
 
+# Twenty class-book titles from both variants' class.txt files.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_class_book_names_locale.c" \
+    -o "$BUILD_DIR/test_class_book_names_locale"
+"$BUILD_DIR/test_class_book_names_locale"
+
 # Exact FAangband-only item kind additions (screen-only fallback).
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_item_names_locale.c" \

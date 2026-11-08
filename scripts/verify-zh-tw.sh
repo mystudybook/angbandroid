@@ -66,6 +66,7 @@ run_check "Item picker numeric quiver tag, localized cancel hint and CJK recall 
 run_check "UI-only item name localization and export isolation" python3 "$ROOT/tests/test_visible_item_name_localization.py"
 run_check "Known-item classifiers and translated artifact/ego grammar" python3 "$ROOT/tests/test_item_name_grammar_localization.py"
 run_check "FAangband supplemental kind names and known-effect nouns" python3 "$ROOT/tests/test_faangband_item_names_source.py"
+run_check "Class-book Chinese names and shape lore" python3 "$ROOT/tests/test_class_book_names_source.py"
 run_check "Equipment combat and inscription UTF-8 safety" python3 "$ROOT/tests/test_item_details_localization.py"
 run_check "Equipment comparison two-item detail zh-TW isolation" python3 "$ROOT/tests/test_equipment_comparison_detail_locale_source.py"
 run_check "Equipment comparison screen-only CJK short names, stable sort/export" python3 "$ROOT/tests/test_equip_cmp_name_display_source.py"

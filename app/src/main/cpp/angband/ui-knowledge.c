@@ -75,6 +75,7 @@
 #include "zh-tw-symbol-query.h"
 #include "zh-tw-shape-lore.h"
 #include "zh-tw-spell-names.h"
+#include "zh-tw-class-book-names.h"
 #include "knowledge-monster-label.h"
 #include "knowledge-column-text.h"
 #include "knowledge-note-prefill.h"
@@ -3301,13 +3302,18 @@ static void shape_lore_append_triggering_spells(textblock *tb,
 						if (n == 0) {
 							textblock_append(tb, "\n");
 						}
-						if (angdroid_zh_tw_enabled())
+						if (angdroid_zh_tw_enabled()) {
+							/* Show the actual class book in Chinese; an unknown
+							 * title remains English without changing the source key. */
+							const char *book_title =
+								angdroid_zh_tw_class_book_name(
+									kind->name, tval_find_name(kind->tval));
 							textblock_append(tb,
 								"%s的法術「%s」（出自 %s）會觸發變身。",
 								angdroid_shape_class(c->name, true),
 								angdroid_zh_tw_spell_name(spell->name, true),
-								kind->name);
-						else
+								book_title ? book_title : kind->name);
+						} else
 							textblock_append(tb,
 								"The %s spell, %s, from %s triggers the shapechange.",
 								c->name, spell->name, kind->name);

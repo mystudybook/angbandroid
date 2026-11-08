@@ -27,6 +27,7 @@
 #include "droid.h"
 #include "zh-tw-items.h"
 #include "zh-tw-faangband-items.h"
+#include "zh-tw-class-book-names.h"
 #include "zh-tw-ego-names.h"
 #include "zh-tw-artifact-names.h"
 #include "zh-tw-flavor-names.h"
@@ -89,6 +90,9 @@ void object_kind_name(char *buf, size_t max, const struct object_kind *kind,
 		bool zh_tw = angdroid_zh_tw_enabled();
 		const char *translated = zh_tw ?
 			angdroid_zh_tw_item_kind_name(kind->name) : NULL;
+		if (zh_tw && !translated)
+			translated = angdroid_zh_tw_class_book_name(
+				kind->name, tval_find_name(kind->tval));
 		if (zh_tw && !translated)
 			translated = angdroid_zh_tw_faangband_item_kind_name(
 				kind->name, tval_find_name(kind->tval));
@@ -340,6 +344,9 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() && aware &&
 			!show_flavor && obj->kind->name) {
 		localized_kind = angdroid_zh_tw_item_kind_name(obj->kind->name);
+		if (!localized_kind)
+			localized_kind = angdroid_zh_tw_class_book_name(
+					obj->kind->name, tval_find_name(obj->tval));
 		if (!localized_kind)
 			localized_kind = angdroid_zh_tw_faangband_item_kind_name(
 					obj->kind->name, tval_find_name(obj->tval));
