@@ -114,6 +114,7 @@ run_check "Object projection damage, immunity and destruction zh-TW" python3 "$R
 run_check "Player recalculation, inventory, weapon and spell feedback zh-TW" python3 "$ROOT/tests/test_player_calcs_feedback_locale_source.py"
 run_check "Native monster elemental attacks, life drain and theft zh-TW" python3 "$ROOT/tests/test_mon_blow_feedback_locale_source.py"
 run_check "UTF-8 editor cursor/deletion and lossless default text" python3 "$ROOT/tests/test_ui_input_utf8_source.py"
+run_check "Top-line Unicode message wrap safety" python3 "$ROOT/tests/test_message_wrap_utf8_source.py"
 run_check "Monster list, item origin and dynamic UTF-8 display strings" python3 "$ROOT/tests/test_dynamic_names_utf8_source.py"
 run_check "Monster spell exact tags and UTF-8 message assembly" python3 "$ROOT/tests/test_mon_spell_render_utf8_source.py"
 run_check "Monster action templates and saving throw zh-TW" python3 "$ROOT/tests/test_mon_blow_actions_locale_source.py"

@@ -55,6 +55,7 @@
 #include "confirmation-prompt-display.h"
 #include "../curses/unicode_display.h"
 #include "ui-input-utf8.h"
+#include "message-wrap-utf8.h"
 
 static bool inkey_xtra;
 uint32_t inkey_scan;		/* See the "inkey()" function */
@@ -449,11 +450,12 @@ bool msg_flag;
 void display_message(game_event_type unused, game_event_data *data, void *user)
 {
 	int n;
-	char *t;
+	const char *t;
 	char buf[1024];
+	char line[1024];
 	uint8_t color;
 	int w, h;
-
+	size_t columns;
 	int type;
 	const char *msg;
 
@@ -467,88 +469,58 @@ void display_message(game_event_type unused, game_event_data *data, void *user)
 		return;
 	}
 
-	if (!msg || !Term || !character_generated)
-		return;
+	if (!msg || !Term || !character_generated) return;
 
-	/* Obtain the size */
 	(void)Term_get_size(&w, &h);
+	if (w <= 0) return;
 
-	/* Hack -- Reset */
+	/* Do not confuse UTF-8 encoded byte length with on-screen columns. */
 	if (!msg_flag) message_column = 0;
+	n = strlen(msg);
+	if (n > 1000) return;
+	angdroid_utf8_copy_complete(buf, sizeof(buf), msg);
+	columns = angdroid_utf8_display_columns(buf);
+	color = message_type_color(type);
 
-	/* Message Length */
-	n = (msg ? strlen(msg) : 0);
+	/* A screen narrower than the -more- marker cannot paginate safely.
+	 * Still show as much as the underlying terminal can fit. */
+	if (w < 9) {
+		Term_putstr(0, 0, -1, color, buf);
+		msg_flag = true;
+		message_column = (int)MIN(columns + 1, (size_t)(w - 1));
+		return;
+	}
 
-	/* Hack -- flush when requested or needed */
-	if (message_column && (!msg || ((message_column + n) > (w - 8)))) {
-		/* Flush */
+	if (message_column &&
+			(size_t)message_column + columns > (size_t)(w - 8)) {
 		msg_flush(message_column);
-
-		/* Forget it */
 		msg_flag = false;
-
-		/* Reset */
 		message_column = 0;
 	}
 
-	/* No message */
-	if (!msg) return;
-
-	/* Paranoia */
-	if (n > 1000) return;
-
-	/* Copy it */
-	my_strcpy(buf, msg, sizeof(buf));
-
-	/* Analyze the buffer */
+	/* Split into complete UTF-8 scalars, reserving room for -more-.
+	 * An ASCII space may act as the word-wrap delimiter; never overwrite
+	 * part of a multi-byte glyph to manufacture a break. */
 	t = buf;
+	while (angdroid_utf8_display_columns(t) > (size_t)(w - 1)) {
+		struct angdroid_message_piece piece =
+			angdroid_message_next_piece(t, (size_t)(w - 8));
+		if (!piece.bytes) break;
 
-	/* Get the color of the message */
-	color = message_type_color(type);
-
-	/* Split message */
-	while (n > w - 1) {
-		char oops;
-
-		int check, split;
-
-		/* Default split */
-		split = w - 8;
-
-		/* Find the rightmost split point */
-		for (check = (w / 2); check < w - 8; check++)
-			if (t[check] == ' ') split = check;
-
-		/* Save the split character */
-		oops = t[split];
-
-		/* Split the message */
-		t[split] = '\0';
-
-		/* Display part of the message */
-		Term_putstr(0, 0, split, color, t);
-
-		/* Flush it */
-		msg_flush(split + 1);
-
-		/* Restore the split character */
-		t[split] = oops;
-
-		/* Insert a space */
-		t[--split] = ' ';
-
-		/* Prepare to recurse on the rest of "buf" */
-		t += split; n -= split;
+		memcpy(line, t, piece.bytes);
+		line[piece.bytes] = '\0';
+		Term_putstr(0, 0, -1, color, line);
+		msg_flush((int)piece.columns + 1);
+		t += piece.advance;
+		message_column = 0;
+		msg_flag = false;
 	}
 
-	/* Display the tail of the message */
-	Term_putstr(message_column, 0, n, color, t);
-
-	/* Remember the message */
+	/* Term_putstr's length is Unicode scalar count, not UTF-8 bytes.
+	 * Passing -1 renders the whole NUL-terminated remainder. */
+	Term_putstr(message_column, 0, -1, color, t);
 	msg_flag = true;
-
-	/* Remember the position */
-	message_column += n + 1;
+	message_column += (int)angdroid_utf8_display_columns(t) + 1;
 }
 
 /**

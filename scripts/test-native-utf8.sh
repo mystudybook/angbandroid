@@ -32,6 +32,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_screen_text_wrap"
 "$BUILD_DIR/test_screen_text_wrap"
 
+# Top-line message wrap preserves Chinese glyphs and original words.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_message_wrap_utf8.c" \
+    -o "$BUILD_DIR/test_message_wrap_utf8"
+"$BUILD_DIR/test_message_wrap_utf8"
+
 # Full-screen localized spell description pages; no JNI needed.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_spell_reader_pages.c" \
