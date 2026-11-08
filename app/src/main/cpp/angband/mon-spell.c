@@ -33,6 +33,7 @@
 #include "droid.h"
 #include "zh-tw-mon-spell-text.h"
 #include "zh-tw-mon-spell-lash.h"
+#include "zh-tw-mon-spell-render.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -47,17 +48,17 @@ typedef enum {
 	SPELL_TAG_OF_TYPE
 } spell_tag_t;
 
-static spell_tag_t spell_tag_lookup(const char *tag)
+static spell_tag_t spell_tag_lookup(const char *tag, size_t length)
 {
-	if (strncmp(tag, "name", 4) == 0)
+	if (angdroid_mon_spell_tag_matches(tag, length, "name"))
 		return SPELL_TAG_NAME;
-	else if (strncmp(tag, "pronoun", 7) == 0)
+	else if (angdroid_mon_spell_tag_matches(tag, length, "pronoun"))
 		return SPELL_TAG_PRONOUN;
-	else if (strncmp(tag, "target", 6) == 0)
+	else if (angdroid_mon_spell_tag_matches(tag, length, "target"))
 		return SPELL_TAG_TARGET;
-	else if (strncmp(tag, "type", 4) == 0)
+	else if (angdroid_mon_spell_tag_matches(tag, length, "type"))
 		return SPELL_TAG_TYPE;
-	else if (strncmp(tag, "oftype", 6) == 0)
+	else if (angdroid_mon_spell_tag_matches(tag, length, "oftype"))
 		return SPELL_TAG_OF_TYPE;
 	else
 		return SPELL_TAG_NONE;
@@ -108,6 +109,7 @@ static void spell_message(struct monster *mon,
 	struct monster_spell_level *level = spell->level;
 	struct monster *t_mon = NULL;
 	bool is_leading;
+	bool zh_spell = angdroid_zh_tw_enabled();
 
 	/* Get the right level of message */
 	while (level->next && mon->race->spell_power >= level->next->power) {
@@ -189,8 +191,12 @@ static void spell_message(struct monster *mon,
 	is_leading = (next == in_cursor);
 	while (next) {
 		/* Copy the text leading up to this { */
-		strnfcat(buf, 1024, &end, "%.*s", (int) (next - in_cursor),
-			in_cursor);
+		if (zh_spell)
+			end = angdroid_mon_spell_append_utf8(buf, sizeof(buf), end,
+				in_cursor, (size_t)(next - in_cursor));
+		else
+			strnfcat(buf, 1024, &end, "%.*s", (int) (next - in_cursor),
+				in_cursor);
 
 		s = next + 1;
 		while (*s && isalpha((unsigned char) *s)) s++;
@@ -201,7 +207,7 @@ static void spell_message(struct monster *mon,
 			tag = next + 1;
 			in_cursor = s + 1;
 
-			switch (spell_tag_lookup(tag)) {
+			switch (spell_tag_lookup(tag, (size_t)(s - tag))) {
 				case SPELL_TAG_NAME: {
 					char m_name[80];
 					int mdesc_mode = (MDESC_IND_HID |
@@ -216,8 +222,12 @@ static void spell_message(struct monster *mon,
 					monster_desc(m_name, sizeof(m_name),
 						mon, mdesc_mode);
 
-					strnfcat(buf, sizeof(buf), &end, "%s",
-						m_name);
+					if (zh_spell)
+						end = angdroid_mon_spell_append_utf8(buf,
+							sizeof(buf), end, m_name, strlen(m_name));
+					else
+strnfcat(buf, sizeof(buf), &end, "%s",
+											m_name);
 					break;
 				}
 
@@ -227,8 +237,12 @@ static void spell_message(struct monster *mon,
 					/* Get the monster possessive ("his"/"her"/"its") */
 					monster_desc(m_poss, sizeof(m_poss), mon, MDESC_PRO_VIS | MDESC_POSS);
 
-					strnfcat(buf, sizeof(buf), &end, "%s",
-						m_poss);
+					if (zh_spell)
+						end = angdroid_mon_spell_append_utf8(buf,
+							sizeof(buf), end, m_poss, strlen(m_poss));
+					else
+strnfcat(buf, sizeof(buf), &end, "%s",
+											m_poss);
 					break;
 				}
 
@@ -243,11 +257,19 @@ static void spell_message(struct monster *mon,
 						monster_desc(m_name,
 							sizeof(m_name), t_mon,
 							mdesc_mode);
-						strnfcat(buf, sizeof(buf), &end,
-							"%s", m_name);
+						if (zh_spell)
+							end = angdroid_mon_spell_append_utf8(buf,
+								sizeof(buf), end, m_name, strlen(m_name));
+						else
+strnfcat(buf, sizeof(buf), &end,
+													"%s", m_name);
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "%s",
-							angdroid_zh_tw_enabled() ? "你" : "you");
+						if (zh_spell) {
+							const char *display = "你";
+							end = angdroid_mon_spell_append_utf8(buf,
+								sizeof(buf), end, display, strlen(display));
+						} else
+							strnfcat(buf, sizeof(buf), &end, "%s", "you");
 					}
 					break;
 				}
@@ -256,9 +278,12 @@ static void spell_message(struct monster *mon,
 					/* Preserve canonical lash type, localize its label. */
 					int type = mon->race->blow[0].effect->lash_type;
 					char *type_name = projections[type].lash_desc;
-					strnfcat(buf, sizeof(buf), &end, "%s",
-						angdroid_mon_spell_lash(type_name,
-							angdroid_zh_tw_enabled()));
+					if (zh_spell) {
+						const char *display = angdroid_mon_spell_lash(type_name, true);
+						end = angdroid_mon_spell_append_utf8(buf,
+							sizeof(buf), end, display, strlen(display));
+					} else
+						strnfcat(buf, sizeof(buf), &end, "%s", angdroid_mon_spell_lash(type_name, false));
 					break;
 				}
 
@@ -267,10 +292,10 @@ static void spell_message(struct monster *mon,
 					char *type_name = projections[type].lash_desc;
 					if (type_name) {
 						if (angdroid_zh_tw_enabled()) {
-							strnfcat(buf, sizeof(buf), &end, "（");
-							strnfcat(buf, sizeof(buf), &end, "%s",
-								angdroid_mon_spell_lash(type_name, true));
-							strnfcat(buf, sizeof(buf), &end, "）");
+							const char *display = angdroid_mon_spell_lash(type_name, true);
+							end = angdroid_mon_spell_append_utf8(buf, sizeof(buf), end, "（", strlen("（"));
+							end = angdroid_mon_spell_append_utf8(buf, sizeof(buf), end, display, strlen(display));
+							end = angdroid_mon_spell_append_utf8(buf, sizeof(buf), end, "）", strlen("）"));
 						} else {
 							strnfcat(buf, sizeof(buf), &end, " of ");
 							strnfcat(buf, sizeof(buf), &end,
@@ -292,7 +317,11 @@ static void spell_message(struct monster *mon,
 		next = strchr(in_cursor, '{');
 		is_leading = false;
 	}
-	strnfcat(buf, 1024, &end, "%s", in_cursor);
+	if (zh_spell)
+		end = angdroid_mon_spell_append_utf8(buf, sizeof(buf), end,
+			in_cursor, strlen(in_cursor));
+	else
+		strnfcat(buf, 1024, &end, "%s", in_cursor);
 
 	msgt(spell->msgt, "%s", buf);
 }

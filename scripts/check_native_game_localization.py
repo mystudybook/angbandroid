@@ -2262,6 +2262,36 @@ def main():
            'A new monster spell.' in monster_spell_test,
            "Monster spell locale integration must register independent C99 test")
 
+    # Monster spells expand {name}/{target}/{type}/{oftype} in translated
+    # CJK templates. Prefix-only matching accepts fabricated tags, while
+    # strnfcat() can cut a UTF-8 glyph. Keep English path and combat intact.
+    mon_render = source(CPP / "angband/zh-tw-mon-spell-render.h", errors)
+    mon_render_test = source(
+        ROOT / "tests/native/test_mon_spell_render_utf8.c", errors)
+    mon_render_source_test = source(
+        ROOT / "tests/test_mon_spell_render_utf8_source.py", errors)
+    expect('spell_tag_lookup(const char *tag, size_t length)' in
+               monster_spell_ui and
+           'spell_tag_lookup(tag, (size_t)(s - tag))' in monster_spell_ui and
+           all('angdroid_mon_spell_tag_matches(tag, length, "' + tag + '")' in
+               monster_spell_ui for tag in (
+                   "name", "pronoun", "target", "type", "oftype")) and
+           'strlen(known) == bytes' in mon_render and
+           'memcmp(tag, known, bytes) == 0' in mon_render and
+           'static inline size_t angdroid_mon_spell_append_utf8(' in
+               mon_render and
+           'step > bytes - offset' in mon_render and
+           'step > capacity - used - 1' in mon_render and
+           monster_spell_ui.count('angdroid_mon_spell_append_utf8(') >= 9 and
+           'strnfcat(buf, 1024, &end, "%.*s",' in monster_spell_ui and
+           'strnfcat(buf, 1024, &end, "%s", in_cursor);' in
+               monster_spell_ui and
+           'angdroid_mon_spell_tag_matches(NULL, 4,' in mon_render_test and
+           'test_mon_spell_render_utf8.c' in native_tests and
+           'MonsterSpellRenderSourceTest' in mon_render_source_test and
+           'tests/test_mon_spell_render_utf8_source.py' in
+               source(ROOT / "scripts/verify-zh-tw.sh", errors),
+           "Monster spell tags require exact length and CJK-safe append")
     # Core player warnings, death messages and command prompts remain
     # presentation-only; savefile causes and user notes are unchanged.
     player_util_i18n = source(CPP / "angband/player-util.c", errors)
