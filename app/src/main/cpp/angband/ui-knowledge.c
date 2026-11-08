@@ -77,6 +77,7 @@
 #include "zh-tw-spell-names.h"
 #include "knowledge-monster-label.h"
 #include "knowledge-column-text.h"
+#include "knowledge-note-prefill.h"
 #include "menu-text-fit.h"
 #include "../curses/unicode_display.h"
 
@@ -2162,6 +2163,15 @@ static const char *o_xtra_prompt(int oid)
 	return sel;
 }
 
+/* The edit widget has an 80-byte input buffer. Refuse a prefill if
+ * acceptance could silently lose a saved inscription's suffix or bytes. */
+static void knowledge_note_edit_unavailable(void)
+{
+	msg("%s", angdroid_zh_tw_enabled()
+		? "現有刻字過長或包含無效的 UTF-8，無法安全編輯。"
+		: "Existing inscription is too long or contains invalid UTF-8.");
+}
+
 /**
  * Special key actions for object inscription.
  */
@@ -2201,9 +2211,16 @@ static void o_xtra_act(struct keypress ch, int oid)
 		prt(angdroid_game_ui_text("Inscribe with: ",
 			angdroid_zh_tw_enabled()), 0, 0);
 
-		/* Default note */
-		if (k->note_aware || k->note_unaware)
-			strnfmt(text, sizeof(text), "%s", get_autoinscription(k, k->aware));
+		/* Do not overwrite a clipped original note upon confirmation. */
+		if (k->note_aware || k->note_unaware) {
+			const char *saved = get_autoinscription(k, k->aware);
+			if (!angdroid_knowledge_note_prefill(
+					text, sizeof(text), saved)) {
+				screen_load();
+				knowledge_note_edit_unavailable();
+				return;
+			}
+		}
 
 		/* Get an inscription */
 		if (askfor_aux(text, sizeof(text), NULL)) {
@@ -2379,10 +2396,15 @@ static void rune_xtra_act(struct keypress ch, int oid)
 		prt(angdroid_game_ui_text("Inscribe with: ",
 			angdroid_zh_tw_enabled()), 0, 0);
 
-		/* Default note */
-		if (rune_note(oid))
-			strnfmt(note_text, sizeof(note_text), "%s",
-					quark_str(rune_note(oid)));
+		/* Existing rune notes are user content: reject a lossy prefill. */
+		if (rune_note(oid) &&
+				!angdroid_knowledge_note_prefill(
+					note_text, sizeof(note_text),
+					quark_str(rune_note(oid)))) {
+			screen_load();
+			knowledge_note_edit_unavailable();
+			return;
+		}
 
 		/* Get an inscription */
 		if (askfor_aux(note_text, sizeof(note_text), NULL)) {
