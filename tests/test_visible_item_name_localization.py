@@ -109,6 +109,14 @@ class VisibleObjectLocalizationTest(unittest.TestCase):
         self.assertIn('"（剩餘 ", obj->timeout, " 回合）"', DESCRIBE)
         self.assertIn('" (%d turns)"', DESCRIBE)
 
+    def test_faangband_kind_names_are_display_only(self):
+        self.assertIn('#include "zh-tw-faangband-items.h"', DESCRIBE)
+        self.assertEqual(DESCRIBE.count("angdroid_zh_tw_faangband_item_kind_name("), 4)
+        self.assertIn("if (zh_tw && !translated)", DESCRIBE)
+        self.assertIn("if (aware && obj->kind->name)", DESCRIBE)
+        self.assertIn("angdroid_zh_tw_identified_flavor_name(display_name,", DESCRIBE)
+        self.assertIn("translated ? translated : kind->name", DESCRIBE)
+
     def test_item_kind_mapping_is_still_complete(self):
         translated = (CPP / "zh-tw-items.h").read_text(encoding="utf-8")
         entries = re.findall(r'\{\s*"([^"\n]+)",\s*"([^"\n]+)"\s*\}', translated)

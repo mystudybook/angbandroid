@@ -138,6 +138,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_visible_flavor_fallback_locale"
 "$BUILD_DIR/test_visible_flavor_fallback_locale"
 
+# Exact FAangband-only item kind additions (screen-only fallback).
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_item_names_locale.c" \
+    -o "$BUILD_DIR/test_faangband_item_names_locale"
+"$BUILD_DIR/test_faangband_item_names_locale"
+
 # Seven flavored noun phrases: count, identification and UTF-8 safety.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_flavored_object_locale.c" \

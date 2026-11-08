@@ -26,6 +26,7 @@
 #include "obj-util.h"
 #include "droid.h"
 #include "zh-tw-items.h"
+#include "zh-tw-faangband-items.h"
 #include "zh-tw-ego-names.h"
 #include "zh-tw-artifact-names.h"
 #include "zh-tw-flavor-names.h"
@@ -85,8 +86,29 @@ void object_kind_name(char *buf, size_t max, const struct object_kind *kind,
 	 * object_desc(), unidentified flavors and the canonical grammar
 	 * template untouched for gameplay and save compatibility. */
 	else {
-		const char *translated = angdroid_zh_tw_enabled() ?
+		bool zh_tw = angdroid_zh_tw_enabled();
+		const char *translated = zh_tw ?
 			angdroid_zh_tw_item_kind_name(kind->name) : NULL;
+		if (zh_tw && !translated)
+			translated = angdroid_zh_tw_faangband_item_kind_name(
+				kind->name, tval_find_name(kind->tval));
+
+		/* Only already-known flavored kinds can show their effect.
+		 * In knowledge and ignore lists, include the Chinese item noun
+		 * (力量戒指, 治療藥水) rather than an isolated effect label.
+		 * Existing full-noun translations must not repeat the noun. */
+		if (zh_tw && kind->flavor && kind->name) {
+			const char *type = tval_find_name(kind->tval);
+			const char *noun = angdroid_zh_tw_identified_flavor_noun(type);
+			char display_name[256];
+			if (*noun && angdroid_zh_tw_identified_flavor_name(display_name,
+					sizeof(display_name), type,
+					translated ? translated : kind->name) &&
+					strlen(display_name) < max) {
+				angdroid_utf8_copy_complete(buf, max, display_name);
+				return;
+			}
+		}
 		if (translated)
 			angdroid_utf8_copy_complete(buf, max, translated);
 		else
@@ -316,8 +338,12 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		if (localized_flavor) modstr = localized_flavor;
 	}
 	if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() && aware &&
-			!show_flavor && obj->kind->name)
+			!show_flavor && obj->kind->name) {
 		localized_kind = angdroid_zh_tw_item_kind_name(obj->kind->name);
+		if (!localized_kind)
+			localized_kind = angdroid_zh_tw_faangband_item_kind_name(
+					obj->kind->name, tval_find_name(obj->tval));
+	}
 
 	/* The title is random Latin-like text, not a translatable word. Do
 	 * not regenerate it, change the flavor pointer, or disclose the kind.
@@ -343,6 +369,9 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		if (aware && obj->kind->name) {
 			visible_effect = angdroid_zh_tw_item_kind_name(
 				obj->kind->name);
+			if (!visible_effect)
+				visible_effect = angdroid_zh_tw_faangband_item_kind_name(
+					obj->kind->name, tval_find_name(obj->tval));
 			if (!visible_effect) visible_effect = obj->kind->name;
 		}
 		if (appearance && *appearance && (!aware || visible_effect))
@@ -471,6 +500,9 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	else if (localized_scroll && aware && !obj->artifact) {
 		/* Only an identified scroll may reveal its actual effect. */
 		const char *known = angdroid_zh_tw_item_kind_name(obj->kind->name);
+		if (!known)
+			known = angdroid_zh_tw_faangband_item_kind_name(
+				obj->kind->name, tval_find_name(obj->tval));
 		/* Keep the translated (or canonical fallback) effect and its
 		 * full-width parentheses as one optional, complete display unit. */
 		(void)angdroid_obj_desc_append_scroll_effect(buf, max, &end,
