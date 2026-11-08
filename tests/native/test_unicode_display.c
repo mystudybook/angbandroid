@@ -75,7 +75,7 @@ int main(void)
     /* Spell names must be UTF-8 valid BEFORE column clipping.  A byte
      * truncate may otherwise leave a dangling Han or emoji prefix. */
     {
-        char dest[8];
+        char dest[7];
         char tight[4];
         char tiny[2];
         char null_dest = 'Z';
