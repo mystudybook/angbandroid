@@ -54,6 +54,7 @@
 #include "quantity-input.h"
 #include "confirmation-prompt-display.h"
 #include "../curses/unicode_display.h"
+#include "ui-input-utf8.h"
 
 static bool inkey_xtra;
 uint32_t inkey_scan;		/* See the "inkey()" function */
@@ -680,7 +681,7 @@ bool askfor_aux_keypress(char *buf, size_t buflen, size_t *curs, size_t *len,
 				*len -= ocurs - oshift;
 			} else {
 				/* Get offset of the next character. */
-				oshift = utf8_fskip(buf + *curs, 1, NULL);
+				oshift = angdroid_input_next_codepoint(ocurs);
 				assert(oshift);
 				memmove(ocurs, oshift, *len - (oshift - buf));
 				/* Decrement */
@@ -825,11 +826,17 @@ bool askfor_aux(char *buf, size_t len, bool (*keypress_h)(char *, size_t, size_t
 	/* Paranoia */
 	if ((x < 0) || (x >= 80)) x = 0;
 
-	/* Restrict the length */
-	if (x + len > 80) len = 80 - x;
-
-	/* Truncate the default entry */
-	buf[len-1] = '\0';
+	/* Reject oversize defaults without truncating user names or notes.
+	 * A narrower 80-column widget must never cause silent data loss. */
+	if (!angdroid_input_prefill_fits(buf, len)) {
+		bell();
+		return false;
+	}
+	if (len > 80 - (size_t)x) len = 80 - (size_t)x;
+	if (!angdroid_input_prefill_fits(buf, len)) {
+		bell();
+		return false;
+	}
 
 	/* Get the position of the null byte */
 	nul = strlen(buf);
@@ -841,7 +848,7 @@ bool askfor_aux(char *buf, size_t len, bool (*keypress_h)(char *, size_t, size_t
 	/* Process input */
 	while (!done) {
 		/* Place cursor */
-		Term_gotoxy(x + k, y);
+		Term_gotoxy(x + (int)angdroid_input_cursor_columns(buf, k), y);
 
 		/* Get a key */
 		ch = inkey();
@@ -917,11 +924,17 @@ bool askfor_aux_ext(char *buf, size_t len,
 	/* Paranoia */
 	if (x < 0 || x >= 80) x = 0;
 
-	/* Restrict the length */
-	if (x + len > 80) len = 80 - x;
-
-	/* Truncate the default entry */
-	buf[len-1] = '\0';
+	/* Reject oversize defaults without truncating user names or notes.
+	 * A narrower 80-column widget must never cause silent data loss. */
+	if (!angdroid_input_prefill_fits(buf, len)) {
+		bell();
+		return false;
+	}
+	if (len > 80 - (size_t)x) len = 80 - (size_t)x;
+	if (!angdroid_input_prefill_fits(buf, len)) {
+		bell();
+		return false;
+	}
 
 	/* Get the position of the null byte */
 	nul = strlen(buf);
@@ -935,7 +948,7 @@ bool askfor_aux_ext(char *buf, size_t len,
 		ui_event in;
 
 		/* Place cursor */
-		Term_gotoxy(x + k, y);
+		Term_gotoxy(x + (int)angdroid_input_cursor_columns(buf, k), y);
 
 		/*
 		 * Get input.  Emulate what inkey() does without the coercing

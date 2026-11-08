@@ -38,6 +38,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_spell_reader_pages"
 "$BUILD_DIR/test_spell_reader_pages"
 
+# UTF-8 editor: deletion byte spans, display columns and safe prefills.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_ui_input_utf8.c" \
+    -o "$BUILD_DIR/test_ui_input_utf8"
+"$BUILD_DIR/test_ui_input_utf8"
+
 # CJK display columns differ from Unicode scalar counts.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_unicode_display.c" \
