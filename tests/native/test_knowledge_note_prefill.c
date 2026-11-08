@@ -13,7 +13,7 @@ int main(void)
     assert(strcmp(note, "龍🐱 A") == 0);
     assert(angdroid_knowledge_note_prefill(small, sizeof(small), "龍"));
     assert(strcmp(small, "龍") == 0);
-    assert(!angdroid_knowledge_note_prefill(small, sizeof(small), "龍龍"));
+    assert(!angdroid_knowledge_note_prefill(small, sizeof(small), "龍龍龍"));
     assert(small[0] == '\0');
 
     for (i = 0; i < 79; ++i) fits[i] = 'a';
