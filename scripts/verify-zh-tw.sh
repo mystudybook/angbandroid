@@ -70,6 +70,7 @@ run_check "FAangband additional spell names and exact descriptions" python3 "$RO
 run_check "FAangband divergent spell effect descriptions" python3 "$ROOT/tests/test_faangband_variant_spell_descriptions_source.py"
 run_check "FAangband dragon and bear shape names and FLYING" python3 "$ROOT/tests/test_faangband_shapes_source.py"
 run_check "FAangband 64 race/class/specialty ability descriptions" python3 "$ROOT/tests/test_faangband_abilities_source.py"
+run_check "FAangband six resistance-renewal timed messages" python3 "$ROOT/tests/test_faangband_timed_renewals_source.py"
 run_check "Angband/FAangband shape combat verbs" python3 "$ROOT/tests/test_shape_combat_verbs_source.py"
 run_check "Class-book Chinese names and shape lore" python3 "$ROOT/tests/test_class_book_names_source.py"
 run_check "Equipment combat and inscription UTF-8 safety" python3 "$ROOT/tests/test_item_details_localization.py"
