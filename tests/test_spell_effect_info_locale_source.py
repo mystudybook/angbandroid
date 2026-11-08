@@ -68,6 +68,35 @@ class SpellEffectInfoLocaleSourceTest(unittest.TestCase):
         self.assertIn("text_out_c(COLOUR_L_GREEN", UI)
         self.assertNotIn("projections[e->subtype].player_desc =", UI)
 
+    def test_spell_summary_appends_whole_utf8_scalars(self):
+        unicode = (ROOT / "app/src/main/cpp/curses/unicode_display.h").read_text(
+            encoding="utf-8")
+        native = (ROOT / "tests/native/test_spell_effect_info_locale.c").read_text(
+            encoding="utf-8")
+        self.assertIn('#include "../curses/unicode_display.h"', PLAYER)
+        self.assertIn(
+            "static inline size_t angdroid_utf8_append_complete(", unicode)
+        self.assertIn(
+            "return offset + angdroid_utf8_copy_complete(", unicode)
+        self.assertEqual(
+            5, PLAYER.count("angdroid_utf8_append_complete("))
+        self.assertIn(
+            'offset = angdroid_utf8_append_complete(p, len, offset, type);',
+            PLAYER)
+        self.assertIn('offset += append_random_value_string(', PLAYER)
+        self.assertIn(
+            "offset = angdroid_utf8_append_complete(",
+            PLAYER)
+        self.assertNotIn(
+            'strnfmt(p + offset, len - offset, " %s ", type)', PLAYER)
+        self.assertNotIn(
+            'strnfmt(p + offset, len - offset, "%s", special)', PLAYER)
+        self.assertIn("if (!p || !len) return;", PLAYER)
+        self.assertIn('angdroid_utf8_append_complete(summary, sizeof(summary),',
+                      native)
+        self.assertIn('strcmp(summary, "  傷害 1234;") == 0', native)
+        self.assertIn('angdroid_utf8_append_complete(NULL, 0, 0, "中文")', native)
+
     def test_both_offline_test_runners_registered(self):
         self.assertIn("tests/native/test_spell_effect_info_locale.c", RUNNER)
         self.assertIn("tests/test_spell_effect_info_locale_source.py", VERIFY)
