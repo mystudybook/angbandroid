@@ -560,6 +560,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_object_list_compact_layout"
 "$BUILD_DIR/test_object_list_compact_layout"
 
+# Artifact and ego suffixes must be added as complete UTF-8 units.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_obj_desc_suffix_utf8.c" \
+    -o "$BUILD_DIR/test_obj_desc_suffix_utf8"
+"$BUILD_DIR/test_obj_desc_suffix_utf8"
+
 # Visible inscriptions: complete player UTF-8, atomic status tags and brace.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_obj_desc_inscription_utf8.c" \

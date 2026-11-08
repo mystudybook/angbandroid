@@ -36,6 +36,7 @@
 #include "../curses/unicode_display.h"
 #include "obj-desc-name-utf8.h"
 #include "obj-desc-inscription-utf8.h"
+#include "obj-desc-suffix-utf8.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -407,18 +408,18 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 					sizeof(suffix_display), translated_suffix)) {
 				/* A translated (name) / quoted suffix is one visual
 				 * unit: never leave an opening bracket without its mate. */
-				angdroid_zh_tw_item_append_whole(buf, max, &end,
-					suffix_display);
+				/* An optional displayed name is either complete or absent.
+				 * Never fall back to a clipped translated suffix. */
+				(void)angdroid_obj_desc_append_suffix_atomic(buf, max,
+					&end, suffix_display, false);
 				chinese_suffix_done = true;
 			}
 		}
 		if (!chinese_suffix_done) {
-			if (translated_suffix) {
-				strnfcat(buf, max, &end, " ");
-				angdroid_zh_tw_item_append_utf8(buf, max, &end,
-					artifact_name);
-			} else
-				strnfcat(buf, max, &end, " %s", artifact_name);
+			/* Exact same canonical or translated name if it fits;
+			 * no isolated space or incomplete UTF-8 otherwise. */
+			(void)angdroid_obj_desc_append_suffix_atomic(buf, max,
+				&end, artifact_name, true);
 		}
 	}
 	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store)) {
@@ -438,18 +439,18 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 					sizeof(suffix_display), translated_suffix)) {
 				/* A translated (name) / quoted suffix is one visual
 				 * unit: never leave an opening bracket without its mate. */
-				angdroid_zh_tw_item_append_whole(buf, max, &end,
-					suffix_display);
+				/* An optional displayed name is either complete or absent.
+				 * Never fall back to a clipped translated suffix. */
+				(void)angdroid_obj_desc_append_suffix_atomic(buf, max,
+					&end, suffix_display, false);
 				chinese_suffix_done = true;
 			}
 		}
 		if (!chinese_suffix_done) {
-			if (translated_suffix) {
-				strnfcat(buf, max, &end, " ");
-				angdroid_zh_tw_item_append_utf8(buf, max, &end,
-					ego_name);
-			} else
-				strnfcat(buf, max, &end, " %s", ego_name);
+			/* Exact same canonical or translated name if it fits;
+			 * no isolated space or incomplete UTF-8 otherwise. */
+			(void)angdroid_obj_desc_append_suffix_atomic(buf, max,
+				&end, ego_name, true);
 		}
 	}
 	else if (localized_scroll && aware && !obj->artifact) {

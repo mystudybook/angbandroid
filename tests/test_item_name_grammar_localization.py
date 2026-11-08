@@ -51,8 +51,11 @@ class KnownItemGrammarTest(unittest.TestCase):
         self.assertIn("if (localized) ego_name = localized;", SOURCE)
         self.assertEqual(SOURCE.count("if (localized_kind && translated_suffix)"), 2)
         self.assertEqual(SOURCE.count("angdroid_zh_tw_item_suffix("), 2)
-        self.assertIn('strnfcat(buf, max, &end, " %s", artifact_name);', SOURCE)
-        self.assertIn('strnfcat(buf, max, &end, " %s", ego_name);', SOURCE)
+        self.assertEqual(SOURCE.count("angdroid_obj_desc_append_suffix_atomic("), 4)
+        self.assertIn("artifact_name, true);", SOURCE)
+        self.assertIn("ego_name, true);", SOURCE)
+        self.assertNotIn('strnfcat(buf, max, &end, " %s", artifact_name);', SOURCE)
+        self.assertNotIn('strnfcat(buf, max, &end, " %s", ego_name);', SOURCE)
         self.assertIn("angdroid_zh_tw_artifact_name(artifact_name)", SOURCE)
         self.assertIn("angdroid_zh_tw_ego_name(ego_name)", SOURCE)
 
