@@ -295,6 +295,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_player_calcs_feedback_locale"
 "$BUILD_DIR/test_player_calcs_feedback_locale"
 
+# Monster spell rendering: exact tags, UTF-8 fragments, English fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_mon_spell_render_utf8.c" \
+    -o "$BUILD_DIR/test_mon_spell_render_utf8"
+"$BUILD_DIR/test_mon_spell_render_utf8"
+
 # All canonical monster spell messages (and original race overrides).
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_mon_spell_message_locale.c" \
