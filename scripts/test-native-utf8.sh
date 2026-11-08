@@ -428,6 +428,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_timed_messages_locale"
 "$BUILD_DIR/test_timed_messages_locale"
 
+# FAangband-only 14 shape names and FLYING flag, standalone C99.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_shapes_locale.c" \
+    -o "$BUILD_DIR/test_faangband_shapes_locale"
+"$BUILD_DIR/test_faangband_shapes_locale"
+
 # Shape knowledge: bilingual display names and restriction text, C99.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_shape_lore_locale.c" \
