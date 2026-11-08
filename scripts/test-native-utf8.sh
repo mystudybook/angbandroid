@@ -548,6 +548,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_player_ability_locale"
 "$BUILD_DIR/test_player_ability_locale"
 
+# World targeting terrain/trap descriptions, hallucination and item piles.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_target_world_locale.c" \
+    -o "$BUILD_DIR/test_target_world_locale"
+"$BUILD_DIR/test_target_world_locale"
+
 # Monster targeting and look prompts: visible-only names and status.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_target_monster_locale.c" \
