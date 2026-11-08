@@ -25,7 +25,7 @@ class FlavoredObjectTest(unittest.TestCase):
         self.assertIn("if (aware && obj->kind->name) {", DESC)
         self.assertIn("if (!visible_effect) visible_effect = obj->kind->name;", DESC)
         self.assertIn("visible_effect = angdroid_zh_tw_item_kind_name(", DESC)
-        self.assertIn("if (!aware || visible_effect)", DESC)
+        self.assertIn("if (appearance && *appearance && (!aware || visible_effect))", DESC)
         self.assertIn("tval_find_name(obj->tval), appearance,", DESC)
         self.assertIn("localized_flavor : obj->kind->flavor->text;", DESC)
         self.assertIn("else if (localized_flavored)", DESC)
