@@ -350,8 +350,21 @@ static ui_event target_recall_loop_object(struct object *obj, int y, int x,
 				cave->objects[obj->oidx],
 				ODESC_PREFIX | ODESC_FULL, p);
 
-			/* Describe the object */
-			if (p->wizard) {
+			/* Keep object_desc() and knowledge/awareness unchanged. */
+			if (angdroid_zh_tw_enabled()) {
+				const char *intro = angdroid_target_world_intro(s1, true);
+				const char *link = angdroid_target_world_link(s2, true);
+				if (p->wizard)
+					strnfmt(out_val, TARGET_OUT_VAL_SIZE,
+						"%s%s%s%s，%s（%d:%d，噪音=%d，氣味=%d）。",
+						intro, link, s3, o_name, coords, y, x,
+						(int)cave->noise.grids[y][x],
+						(int)cave->scent.grids[y][x]);
+				else
+					strnfmt(out_val, TARGET_OUT_VAL_SIZE,
+						"%s%s%s%s，%s。", intro, link, s3,
+						o_name, coords);
+			} else if (p->wizard) {
 				strnfmt(out_val, TARGET_OUT_VAL_SIZE,
 						"%s%s%s%s, %s (%d:%d, noise=%d, scent=%d).", s1, s2, s3,
 						o_name, coords, y, x, (int)cave->noise.grids[y][x],
