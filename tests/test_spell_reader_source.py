@@ -204,8 +204,9 @@ class FullSpellReaderSourceTest(unittest.TestCase):
         self.assertIn("2 秒內觸控同列兩次確認", SPELL)
         self.assertIn("Tap same row twice within 2s", SPELL)
         self.assertIn("char buf[192];", SPELL)
-        self.assertIn("angdroid_utf8_clip_columns(buf, (size_t)(Term->wid - 1));",
-                      SPELL)
+        self.assertIn("angdroid_spell_menu_copy_prompt(buf, sizeof(buf),", SPELL)
+        self.assertIn("angdroid_utf8_clip_columns(dst, (size_t)(terminal_width - 1));",
+                      PAGES)
 
         # C99 must use a monotonic millisecond clock, not time(NULL),
         # clock() (process CPU time), or adjustable gettimeofday().
@@ -252,6 +253,30 @@ class FullSpellReaderSourceTest(unittest.TestCase):
         self.assertIn("angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,",
                       handler)
         self.assertEqual(1, handler.count("d->selected_spell = d->spells[oid];"))
+
+    def test_browse_and_selection_prompt_utf8_column_safety(self):
+        self.assertEqual(
+            4, SPELL.count("angdroid_spell_menu_copy_prompt(buf, sizeof(buf),"))
+        self.assertIn('format("選擇%s（%s）？2 秒內觸控同列兩次確認；? 說明 ] 全文",', SPELL)
+        self.assertIn('format("瀏覽%s（? 切換說明、] 閱讀全文）",', SPELL)
+        self.assertIn('format("Browsing %ss.', SPELL)
+        self.assertIn("static inline void angdroid_spell_menu_copy_prompt(", PAGES)
+        self.assertIn("angdroid_utf8_copy_complete(dst, capacity, text);", PAGES)
+        self.assertIn("if (terminal_width <= 1) return;", PAGES)
+        self.assertIn("dst[0] = '\\0';", PAGES)
+        self.assertIn(
+            "angdroid_utf8_clip_columns(dst, (size_t)(terminal_width - 1));",
+            PAGES)
+        self.assertNotIn('prt(format("瀏覽', SPELL)
+        self.assertIn("menu_select(m, 0, true);", SPELL)
+        for phrase in (
+            'CHECK(strcmp(prompt, "瀏覽法術") == 0);',
+            'CHECK(strcmp(tight, "法") == 0);',
+            'angdroid_spell_menu_copy_prompt(prompt, sizeof(prompt),',
+            'angdroid_spell_menu_copy_prompt(NULL, 0, "中文", 20);',
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, NATIVE)
 
     def test_native_cases_are_registered(self):
         for phrase in ("A中文B", "Mana Storm hits.", "Alpha  Beta",

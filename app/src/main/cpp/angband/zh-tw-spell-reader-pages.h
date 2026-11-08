@@ -109,6 +109,18 @@ static inline size_t angdroid_spell_reader_line_for_offset(
     return row > 0 ? row - 1 : 0;
 }
 
+/* Bound selection and browsing prompts to the current terminal width.
+ * The spell's source strings and menu actions are not modified. */
+static inline void angdroid_spell_menu_copy_prompt(char *dst, size_t capacity,
+    const char *text, int terminal_width)
+{
+    if (!dst || capacity == 0) return;
+    dst[0] = '\0';
+    if (terminal_width <= 1) return;
+    angdroid_utf8_copy_complete(dst, capacity, text);
+    angdroid_utf8_clip_columns(dst, (size_t)(terminal_width - 1));
+}
+
 /* Handle taps only inside the actual terminal view. The title and footer
  * both close the reader; upper/lower text areas scroll in opposite directions.
  * A touch outside the terminal must not inadvertently turn a page. */

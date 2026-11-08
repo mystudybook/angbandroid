@@ -664,8 +664,9 @@ def main():
     expect('"You cannot browse that."' in game_ui_header
            and '"無法瀏覽這本書。"' in game_ui_header,
            "Missing spell menu translation")
-    expect('strnfmt(buf, sizeof buf, "選擇%s（%s）？按 ? 切換說明"' in spell_ui,
-           "Spell selection not localized with a literal printf format")
+    expect('format("選擇%s（%s）？2 秒內觸控同列兩次確認；? 說明 ] 全文"' in spell_ui and
+           'format("瀏覽%s（? 切換說明、] 閱讀全文）"' in spell_ui,
+           "Spell selection and browsing must preserve literal bilingual formats")
     expect('msgt(MSG_STUDY, "你已學會：%s。"' in player_spell,
            "Spell learning message not localized")
     for english, chinese in (("That wand has no charges.", "這根魔杖已沒有使用次數。"),
@@ -962,6 +963,22 @@ def main():
                         if line.startswith("spell:")}
     expect(spell_keys == canonical_spells,
            "Spell names must match the full canonical Angband class.txt set")
+    # Both spell menu prompts are single-row.  format() grows as needed;
+    # copy whole UTF-8 scalars into bounded buffers, then clip by cells.
+    spell_reader = source(CPP / "angband/zh-tw-spell-reader-pages.h", errors)
+    spell_reader_native = source(
+        ROOT / "tests/native/test_spell_reader_pages.c", errors)
+    expect('static inline void angdroid_spell_menu_copy_prompt(' in spell_reader
+           and 'angdroid_utf8_copy_complete(dst, capacity, text);' in spell_reader
+           and 'if (terminal_width <= 1) return;' in spell_reader
+           and 'angdroid_utf8_clip_columns(dst, (size_t)(terminal_width - 1));'
+               in spell_reader
+           and spell_ui.count('angdroid_spell_menu_copy_prompt(buf, sizeof(buf),') == 4
+           and 'prt(buf, 0, 0);' in spell_ui
+           and 'prt(format("瀏覽' not in spell_ui
+           and 'CHECK(strcmp(prompt, "瀏覽法術") == 0);' in spell_reader_native
+           and 'test_spell_reader_pages.c' in native_tests,
+           "Spell selection and browsing headers must use UTF-8-safe one-row clipping")
     # A translated spell name may be longer than the byte-sized menu or
     # reader title buffer; copy complete UTF-8 scalars before column clipping.
     expect('static inline size_t angdroid_utf8_copy_complete(' in display_width
