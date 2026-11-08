@@ -62,15 +62,18 @@ flavor = triples(section(
     "static const struct {const char *name, *source, *zh;} flavors[] = {", "    };"))
 standard = pairs(section(
     "static const struct {const char *name, *source;} standard[] = {", "    };"))
-assert len(names) == 15
-assert len(flavor) == 23
-assert set(names) <= exclusive
-assert set(flavor) == set(names) | changed
+assert len(names) == 92
+assert len(flavor) == 99
+assert set(names) == exclusive
+assert set(flavor) == (set(names) - {"skeleton lord"}) | changed
 assert set(standard) == changed
 assert all(flavor[name] == (by_fa[name], flavor[name][1])
            and flavor[name][1] for name in flavor)
 assert all(by_ang[name] == standard[name] for name in changed)
-assert all(names[name] and flavor[name][1] for name in names)
+assert all(names[name] for name in names)
+assert all(flavor[name][1] for name in names if name != "skeleton lord")
+assert by_fa["skeleton lord"] == ""
+assert "skeleton lord" not in flavor
 assert set(names).isdisjoint(set(re.findall(
     r'^\s*\{ "([^"\n]+)", "[^"\n]+" \},$', NAMES, re.M)))
 assert set(names).isdisjoint(set(re.findall(
@@ -90,5 +93,6 @@ assert "#define ANGDROID_ZH_TW_MONSTER_LORE 623" in ORIGINAL_LORE
 assert "#define ANGDROID_ZH_TW_MONSTER_NAMES 522" in NAMES
 assert "#define ANGDROID_ZH_TW_UNIQUE_MONSTER_NAMES 101" in UNIQUE
 assert "tests/native/test_faangband_monster_flavor.c" in NATIVE
+assert "tests/native/test_faangband_monster_flavor_remaining.c" in NATIVE
 assert "tests/test_faangband_monster_flavor_source.py" in VERIFY
-print("PASS: 15 FA-only monster names/lore and 8 divergent canonical descriptions")
+print("PASS: 92 FA-only names, 91 FA-only lore and 8 divergent descriptions")
