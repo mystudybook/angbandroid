@@ -70,6 +70,25 @@ class DynamicNamesUtf8SourceTest(unittest.TestCase):
         self.assertIn('strnfcat(buf, max, &end, " %s", ego_name)', DESC)
         self.assertIn('if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled()', DESC)
 
+    def test_translated_artifact_and_ego_suffixes_are_atomic(self):
+        # Both branches must protect their Chinese punctuation as a unit;
+        # a complete UTF-8 prefix is insufficient when the closing bracket
+        # would fall beyond a short output buffer.
+        self.assertEqual(
+            DESC.count("angdroid_zh_tw_item_append_whole(buf, max, &end,\\n"
+                       "\\t\\t\\t\\t\\tsuffix_display);"), 2)
+        self.assertNotIn(
+            "angdroid_zh_tw_item_append_utf8(buf, max, &end,\\n"
+            "\\t\\t\\t\\t\\tsuffix_display);", DESC)
+        item_test = (
+            ROOT / "tests/native/test_item_details_locale.c"
+        ).read_text(encoding="utf-8")
+        self.assertIn('char suffix_text[64], narrow[16], exact[19];',
+                      item_test)
+        self.assertIn('assert(strcmp(narrow, "長劍") == 0);', item_test)
+        self.assertIn('assert(strcmp(exact, "長劍（屠龍）") == 0);',
+                      item_test)
+
     def test_long_store_names_keep_chinese_fallback_and_shortcut(self):
         self.assertIn('angdroid_knowledge_store_label_for_menu(localized,',
                       KNOWLEDGE)
