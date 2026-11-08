@@ -30,6 +30,7 @@
 #include "droid.h"
 #include "../curses/unicode_display.h"
 #include "zh-tw-monster-list-ui.h"
+#include "monster-list-compact-layout.h"
 
 /**
  * Format a section of the monster list: a header followed by monster list
@@ -132,15 +133,15 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 					abs(list->entries[index].dx[section]), direction2);
 		}
 
-		/* Get width available for monster name and sleep tag: 2 for char and
-		 * space; location includes padding; last -1 for some reason? */
-		/* Reserve the tile, space and distance in TERMINAL columns, not
-		 * UTF-8 bytes or Unicode scalar counts. Avoid unsigned underflow
-		 * on very small subwindows. */
+		/* Reserve the symbol/space and only show distance when the
+		 * name still has at least four terminal columns. On narrow
+		 * windows it is better to identify the monster than its range. */
 		{
-			size_t reserved = 3 + angdroid_utf8_display_columns(location);
-			full_width = (max_width > 0 && (size_t)max_width > reserved) ?
-				(size_t)max_width - reserved : 0;
+			struct angdroid_monster_row_budget budget =
+				angdroid_monster_row_fit(max_width,
+					angdroid_utf8_display_columns(location));
+			full_width = budget.name_columns;
+			if (!budget.show_location) location[0] = '\0';
 		}
 
 		asleep_in_section = list->entries[index].asleep[section];
@@ -153,11 +154,11 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 			strnfmt(asleep, sizeof(asleep), "%s",
 				zh_tw ? "（睡眠中）" : " (asleep)");
 
-		/* Never split a UTF-8 glyph. Hide the optional sleep tag if it
-		 * alone is wider than the available terminal columns. */
+		/* Sleep is optional; keep the name if both do not fit.
+		 * The actual name is still clipped at whole UTF-8 scalars. */
 		{
 			size_t asleep_columns = angdroid_utf8_display_columns(asleep);
-			if (asleep_columns > full_width) {
+			if (!angdroid_monster_sleep_fits(full_width, asleep_columns)) {
 				asleep[0] = '\0';
 				asleep_columns = 0;
 			}
@@ -383,7 +384,7 @@ void monster_list_show_subwindow(int height, int width)
 	monster_list_t *list;
 	int i;
 
-	if (height < 1 || width < 1)
+	if (height < 1 || width < 7)
 		return;
 
 	tb = textblock_new();
@@ -423,10 +424,11 @@ void monster_list_show_interactive(int height, int width)
 	size_t max_width = 0, max_height = 0;
 	int safe_height, safe_width;
 	region r;
+	struct angdroid_monster_list_popup popup;
 	int sort_exp = 0;
 	struct keypress ch;
 
-	if (height < 1 || width < 1)
+	if (height < 7 || width < 12)
 		return;
 
 	// Repeat
@@ -449,10 +451,19 @@ void monster_list_show_interactive(int height, int width)
 		 */
 		monster_list_format_textblock(list, NULL, 1000, 1000, &max_height,
 									  &max_width);
-		safe_height = MIN(height - 3, (int) max_height + 3);
-		safe_width = MIN(width - 40, (int) max_width);
+		/* The pager reserves one header and two footer rows.
+		 * Reject unusable tiny screens before region_calculate() can
+		 * reinterpret a negative/zero width as a full-screen region. */
+		if (!angdroid_monster_list_popup_fit(width, height,
+				max_width, max_height, &popup)) {
+			textblock_free(tb);
+			monster_list_free(list);
+			return;
+		}
+		safe_height = popup.height;
+		safe_width = popup.width;
 		r.col = -safe_width;
-		r.row = 1;
+		r.row = popup.row;
 		r.width = safe_width;
 		r.page_rows = safe_height;
 
