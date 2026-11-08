@@ -622,7 +622,10 @@ static void display_panel(const struct panel *p, bool left_adj,
 
 		available = w - offset;
 		if (available <= 0) continue;
-		my_strcpy(value, pl->value, sizeof(value));
+		/* panel_line() formats into a 96-byte buffer first. If that
+		 * byte bound cuts a multibyte glyph, never forward invalid UTF-8
+		 * to the terminal: retain complete scalars or replace bad bytes. */
+		angdroid_utf8_copy_complete(value, sizeof(value), pl->value);
 		angdroid_utf8_clip_columns(value, (size_t)available);
 		columns = (int)angdroid_utf8_display_columns(value);
 		if (left_adj)
