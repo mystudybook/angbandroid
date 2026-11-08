@@ -326,6 +326,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_terrain_trap_locale"
 "$BUILD_DIR/test_terrain_trap_locale"
 
+# FAangband-only monster trap knowledge and all canonical trap notifications.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_trap_locale.c" \
+    -o "$BUILD_DIR/test_faangband_trap_locale"
+"$BUILD_DIR/test_faangband_trap_locale"
+
 # FAangband wilderness terrain names, lore and cliff/lava prompts.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_terrain_locale.c" \
