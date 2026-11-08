@@ -435,8 +435,8 @@ CC="${CC:-cc}"
 "$BUILD_DIR/test_faangband_shapes_locale"
 
 # Player shapechange attacks: all 14 Angband/FAangband blow verbs.
-"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \\
-    "$ROOT/tests/native/test_shape_combat_verbs.c" \\
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_shape_combat_verbs.c" \
     -o "$BUILD_DIR/test_shape_combat_verbs"
 "$BUILD_DIR/test_shape_combat_verbs"
 
