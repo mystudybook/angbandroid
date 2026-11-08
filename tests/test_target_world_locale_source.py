@@ -1,0 +1,89 @@
+#!/usr/bin/env python3
+"""Display-only target look terrain/traps and hallucination/pile messages."""
+from pathlib import Path
+import re
+
+ROOT = Path(__file__).resolve().parents[1]
+def read(path):
+    return (ROOT / path).read_text(encoding="utf-8")
+
+TARGET = read("app/src/main/cpp/angband/ui-target.c")
+HDR = read("app/src/main/cpp/angband/zh-tw-target-world.h")
+TT = read("app/src/main/cpp/angband/zh-tw-terrain-trap.h")
+FA_TRAPS = read("app/src/main/cpp/angband/zh-tw-faangband-traps.h")
+FA_TERRAIN = read("variant_lib/faangband/gamedata/terrain.txt")
+FA_TRAP_DATA = read("variant_lib/faangband/gamedata/trap.txt")
+NATIVE = read("scripts/test-native-utf8.sh")
+VERIFY = read("scripts/verify-zh-tw.sh")
+
+def names(data):
+    return re.findall(r"^name:([^\r\n]+)$", data, re.M)
+
+def pairs(text, first, last):
+    seg = text.split(first, 1)[1].split(last, 1)[0]
+    found = re.findall(r'^\s*\{ "([^"\n]+)", "([^"\n]+)" \},$', seg, re.M)
+    assert len(found) == len({x[0] for x in found})
+    return dict(found)
+
+terrain_map = pairs(
+    TT, "static const struct angdroid_terrain_trap_pair terrain_names[] = {", "    };")
+trap_map = pairs(
+    TT, "static const struct angdroid_terrain_trap_pair trap_names[] = {", "    };")
+fa_trap_map = pairs(
+    FA_TRAPS, "static const struct angdroid_fa_trap_pair map[] = {", "    };")
+fa_terrain_names = names(FA_TERRAIN)
+fa_trap_names = [line.split(":")[-1] for line in names(FA_TRAP_DATA)]
+assert len(fa_terrain_names) == 41
+assert len(fa_trap_names) == 55
+assert set(fa_terrain_names) <= terrain_map.keys()
+assert set(fa_trap_names) <= trap_map.keys() | fa_trap_map.keys()
+assert "unknown grid" in terrain_map
+assert "water" in terrain_map and "empty space" in terrain_map
+assert "falling branch" in fa_trap_map
+assert "stasis trap" in fa_trap_map
+assert "angdroid_terrain_name(apparent, zh_tw)" in HDR
+assert "angdroid_trap_name(known, zh_tw)" in HDR
+assert "angdroid_trap_lore(known, zh_tw)" in HDR
+assert "something strange" in HDR
+assert "某種奇怪的東西" in HDR
+assert '"on "' in HDR
+assert '"You are "' in HDR
+
+def block(start, end):
+    return TARGET.split(start, 1)[1].split(end, 1)[0]
+hall = block("static bool aux_hallucinate(", "static bool aux_monster(")
+trap = block("static bool aux_trap(", "static bool aux_object(")
+pile = block("static bool aux_object(", "static bool aux_terrain(")
+terrain = block("static bool aux_terrain(", "static bool aux_wrapup(")
+
+assert "if (!p->timed[TMD_IMAGE]) return false;" in hall
+assert "angdroid_target_world_hallucination(" in hall
+assert hall.count("angdroid_target_world_link(auxst->phrase2, true)") == 2
+assert "name_strange" in hall
+assert "if (!square_isvisibletrap(p->cave, auxst->grid)) return false;" in trap
+assert "trap = square(p->cave, auxst->grid)->trap;" in trap
+assert "angdroid_target_world_trap_name(" in trap
+assert "angdroid_target_world_trap_desc(" in trap
+assert "trap->kind->name" in trap and "trap->kind->desc" in trap
+assert 'auxst->press = inkey_m();' in trap
+assert "floor_num = scan_distant_floor(" in pile
+assert "if (floor_num > 1)" in pile
+assert pile.count("一堆物品（%d 件）") == 2
+assert pile.count("angdroid_target_world_pile_intro(auxst->phrase1, true)") == 2
+assert "target_recall_loop_object(" in pile
+assert "if (!auxst->boring && !square_isinteresting(" in terrain
+assert "name = square_apparent_name(p->cave, auxst->grid);" in terrain
+assert "angdroid_target_world_terrain(name, true)" in terrain
+assert "square_apparent_look_in_preposition(" in terrain
+assert "square_apparent_look_prefix(" in terrain
+assert "move_cursor_relative(" in terrain
+for section in (hall, trap, pile, terrain):
+    assert "if (p->wizard)" in section or "if (p->wizard)" in section
+    assert "noise=%d, scent=%d" in section
+    assert "噪音=%d，氣味=%d" in section
+    assert "auxst->coord_desc" in section
+    assert "angdroid_zh_tw_enabled()" in section
+assert '#include "zh-tw-target-world.h"' in TARGET
+assert "tests/native/test_target_world_locale.c" in NATIVE
+assert "tests/test_target_world_locale_source.py" in VERIFY
+print("PASS: 41 apparent terrains, 55 visible traps and target look output hooks")
