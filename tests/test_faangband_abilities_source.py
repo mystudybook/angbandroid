@@ -33,7 +33,7 @@ fa_only = [x for x in entries(FA) if x.get('type') == 'player' and x.get('code')
            (x.get('type'), x.get('code')) not in standard]
 assert len(fa_only) == 64
 def pairs(segment):
-    return re.findall(r'^\\s*\\{ "([^"\\n]+)", "([^"\\n]+)" \\},$', segment, re.M)
+    return re.findall(r'^\s*\{ "([^"\n]+)", "([^"\n]+)" \},$', segment, re.M)
 names = EXTRA.split('static inline const char *angdroid_faangband_ability_name(', 1)[1]
 names = names.split('static inline const char *angdroid_faangband_ability_description(', 1)[0]
 descs = EXTRA.split('static inline const char *angdroid_faangband_ability_description(', 1)[1]
