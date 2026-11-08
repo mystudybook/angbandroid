@@ -75,11 +75,11 @@ class DynamicNamesUtf8SourceTest(unittest.TestCase):
         # a complete UTF-8 prefix is insufficient when the closing bracket
         # would fall beyond a short output buffer.
         self.assertEqual(
-            DESC.count("angdroid_zh_tw_item_append_whole(buf, max, &end,\\n"
-                       "\\t\\t\\t\\t\\tsuffix_display);"), 2)
+            DESC.count("angdroid_zh_tw_item_append_whole(buf, max, &end,\n"
+                       "\t\t\t\t\tsuffix_display);"), 2)
         self.assertNotIn(
-            "angdroid_zh_tw_item_append_utf8(buf, max, &end,\\n"
-            "\\t\\t\\t\\t\\tsuffix_display);", DESC)
+            "angdroid_zh_tw_item_append_utf8(buf, max, &end,\n"
+            "\t\t\t\t\tsuffix_display);", DESC)
         item_test = (
             ROOT / "tests/native/test_item_details_locale.c"
         ).read_text(encoding="utf-8")
