@@ -49,6 +49,7 @@
 #include "zh-tw-ui.h"
 #include "zh-tw-target-help.h"
 #include "zh-tw-target-monster.h"
+#include "zh-tw-target-world.h"
 
 /*
  * Holds state passed between target_set_interactive_aux() and the handlers
@@ -426,14 +427,28 @@ static bool aux_reinit(struct chunk *c, struct player *p,
 static bool aux_hallucinate(struct chunk *c, struct player *p,
 		struct target_aux_state *auxst)
 {
-	const char *name_strange = "something strange";
+	const char *name_strange = angdroid_target_world_hallucination(
+		angdroid_zh_tw_enabled());
 	char out_val[TARGET_OUT_VAL_SIZE];
 
 	if (!p->timed[TMD_IMAGE]) return false;
 
 	/* Hallucination messes things up */
-	/* Display a message */
-	if (p->wizard) {
+	/* Display a message: leave the same unknown identity visible. */
+	if (angdroid_zh_tw_enabled()) {
+		if (p->wizard)
+			strnfmt(out_val, sizeof(out_val),
+				"%s%s%s，%s（%d:%d，噪音=%d，氣味=%d）。",
+				angdroid_target_world_intro(auxst->phrase1, true),
+				auxst->phrase2, name_strange, auxst->coord_desc,
+				auxst->grid.y, auxst->grid.x,
+				(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+				(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+		else
+			strnfmt(out_val, sizeof(out_val), "%s%s%s，%s。",
+				angdroid_target_world_intro(auxst->phrase1, true),
+				auxst->phrase2, name_strange, auxst->coord_desc);
+	} else if (p->wizard) {
 		strnfmt(out_val, sizeof(out_val),
 			"%s%s%s, %s (%d:%d, noise=%d, scent=%d).",
 			auxst->phrase1,
@@ -684,7 +699,24 @@ static bool aux_trap(struct chunk *c, struct player *p,
 	/* Interact */
 	while (1) {
 		/* Describe, and prompt for recall */
-		if (p->wizard) {
+		if (angdroid_zh_tw_enabled()) {
+			const char *name_zh = angdroid_target_world_trap_name(
+				trap->kind->name, true);
+			const char *desc_zh = angdroid_target_world_trap_desc(
+				trap->kind->desc, true);
+			if (p->wizard)
+				strnfmt(out_val, sizeof(out_val),
+					"%s%s，%s（%d:%d，噪音=%d，氣味=%d）。",
+					angdroid_target_world_intro(auxst->phrase1, true),
+					name_zh, auxst->coord_desc,
+					auxst->grid.y, auxst->grid.x,
+					(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+					(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+			else
+				strnfmt(out_val, sizeof(out_val), "%s%s，%s。",
+					angdroid_target_world_intro(auxst->phrase1, true),
+					desc_zh, auxst->coord_desc);
+		} else if (p->wizard) {
 			strnfmt(out_val, sizeof(out_val),
 				"%s%s%s%s, %s (%d:%d, noise=%d, scent=%d).",
 				auxst->phrase1,
@@ -757,7 +789,21 @@ static bool aux_object(struct chunk *c, struct player *p,
 	if (floor_num > 1) {
 		while (1) {
 			/* Describe the pile */
-			if (p->wizard) {
+			if (angdroid_zh_tw_enabled()) {
+				if (p->wizard)
+					strnfmt(out_val, sizeof(out_val),
+						"%s有 %d 件物品，%s（%d:%d，噪音=%d，氣味=%d）。",
+						angdroid_target_world_intro(auxst->phrase1, true),
+						floor_num, auxst->coord_desc,
+						auxst->grid.y, auxst->grid.x,
+						(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+						(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+				else
+					strnfmt(out_val, sizeof(out_val),
+						"%s有 %d 件物品，%s。",
+						angdroid_target_world_intro(auxst->phrase1, true),
+						floor_num, auxst->coord_desc);
+			} else if (p->wizard) {
 				strnfmt(out_val, sizeof(out_val),
 					"%s%sa pile of %d objects, %s (%d:%d, noise=%d, scent=%d).",
 					auxst->phrase1,
@@ -881,8 +927,22 @@ static bool aux_terrain(struct chunk *c, struct player *p,
 	/* Pick prefix for the name */
 	lphrase3 = square_apparent_look_prefix(p->cave, auxst->grid);
 
-	/* Display a message */
-	if (p->wizard) {
+	/* Only translate the apparent feature, never a hidden terrain ID. */
+	if (angdroid_zh_tw_enabled()) {
+		const char *name_zh = angdroid_target_world_terrain(name, true);
+		if (p->wizard)
+			strnfmt(out_val, sizeof(out_val),
+				"%s%s，%s（%d:%d，噪音=%d，氣味=%d）。",
+				angdroid_target_world_intro(auxst->phrase1, true),
+				name_zh, auxst->coord_desc,
+				auxst->grid.y, auxst->grid.x,
+				(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+				(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+		else
+			strnfmt(out_val, sizeof(out_val), "%s%s，%s。",
+				angdroid_target_world_intro(auxst->phrase1, true),
+				name_zh, auxst->coord_desc);
+	} else if (p->wizard) {
 		strnfmt(out_val, sizeof(out_val),
 			"%s%s%s%s, %s (%d:%d, noise=%d, scent=%d).",
 			auxst->phrase1,
