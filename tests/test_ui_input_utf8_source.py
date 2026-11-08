@@ -10,6 +10,8 @@ HELPER = (CPP / "ui-input-utf8.h").read_text(encoding="utf-8")
 NATIVE = (ROOT / "tests/native/test_ui_input_utf8.c").read_text(encoding="utf-8")
 RUN = (ROOT / "scripts/test-native-utf8.sh").read_text(encoding="utf-8")
 VERIFY = (ROOT / "scripts/verify-zh-tw.sh").read_text(encoding="utf-8")
+BIRTH = (CPP / "ui-birth.c").read_text(encoding="utf-8")
+PLAYER = (CPP / "ui-player.c").read_text(encoding="utf-8")
 
 
 class InputUtf8SourceTest(unittest.TestCase):
@@ -30,6 +32,30 @@ class InputUtf8SourceTest(unittest.TestCase):
         self.assertNotIn("buf[len-1] =", UI)
         self.assertIn('angdroid_terminal_columns(scalar)', HELPER)
         self.assertIn('if (!text || !capacity) return false;', HELPER)
+
+    def test_name_editor_preserves_existing_saved_name(self):
+        method = UI.split("bool get_character_name(", 1)[1].split(
+            "\n\n/**", 1)[0]
+        self.assertIn('angdroid_input_prefill_copy(buf, buflen, player->full_name)', method)
+        self.assertIn('if (!res)', method)
+        self.assertIn('msg("%s", angdroid_zh_tw_enabled() ?', method)
+        self.assertNotIn('my_strcpy(buf, player->full_name, buflen)', method)
+        self.assertIn('char namebuf[PLAYER_NAME_LEN] = "";', PLAYER)
+        self.assertIn('if (!source || !angdroid_input_prefill_fits(source, capacity))',
+                      HELPER)
+        self.assertIn('memcpy(dest, source, length + 1);', HELPER)
+
+    def test_history_editor_preserves_existing_saved_text(self):
+        method = BIRTH.split("static enum birth_stage get_history_command(", 1)[1].split(
+            "\n\n/**", 1)[0]
+        self.assertIn('#include "ui-input-utf8.h"', BIRTH)
+        self.assertIn('angdroid_input_prefill_copy(history, sizeof(history),',
+                      method)
+        self.assertIn('return BIRTH_HISTORY_CHOICE;', method)
+        self.assertIn('switch (edit_text(history, sizeof(history)))', method)
+        self.assertNotIn('my_strcpy(history, player->history', method)
+        self.assertNotIn('char old_history[240]', method)
+        self.assertIn('if (n == 1 && scalar == 0xFFFDu', HELPER)
 
     def test_host_regressions_in_offline_runners(self):
         self.assertIn('tests/native/test_ui_input_utf8.c', RUN)

@@ -40,6 +40,34 @@ int main(void)
     assert(!angdroid_input_prefill_fits(not_terminated, sizeof(not_terminated)));
     assert(!angdroid_input_prefill_fits(NULL, 8));
     assert(!angdroid_input_prefill_fits(short_name, 0));
+    {
+        char out[12], small[7], tiny[1] = { 'X' };
+        char malformed[] = { (char)0xE4, 'A', '\0' };
+        char incomplete[] = { 'Z', (char)0xF0, (char)0x9F, '\0' };
+        char too_long[] = "中文龍";
+
+        assert(angdroid_input_prefill_copy(out, sizeof(out), "龍🐱A"));
+        assert(strcmp(out, "龍🐱A") == 0);
+        assert(angdroid_input_prefill_copy(small, sizeof(small), "中文"));
+        assert(strcmp(small, "中文") == 0);
+        assert(!angdroid_input_prefill_copy(small, sizeof(small),
+            too_long));
+        assert(small[0] == '\0');
+        assert(!angdroid_input_prefill_copy(out, sizeof(out),
+            malformed));
+        assert(out[0] == '\0');
+        assert(!angdroid_input_prefill_copy(out, sizeof(out),
+            incomplete));
+        assert(out[0] == '\0');
+        assert(angdroid_input_prefill_copy(out, sizeof(out), "a"));
+        assert(strcmp(out, "a") == 0);
+        assert(angdroid_input_prefill_copy(out, sizeof(out), ""));
+        assert(out[0] == '\0');
+        assert(!angdroid_input_prefill_copy(out, sizeof(out), NULL));
+        assert(!angdroid_input_prefill_copy(NULL, sizeof(out), "中文"));
+        assert(!angdroid_input_prefill_copy(tiny, 0, "中文"));
+        assert(tiny[0] == 'X');
+    }
     puts("PASS: UTF-8 delete span, CJK cursor cells and lossless default text");
     return 0;
 }

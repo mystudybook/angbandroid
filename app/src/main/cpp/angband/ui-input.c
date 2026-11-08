@@ -1127,11 +1127,18 @@ bool get_character_name(char *buf, size_t buflen)
 	/* Paranoia */
 	event_signal(EVENT_MESSAGE_FLUSH);
 
+	/* A previous saved name may be larger than the current edit
+	 * buffer.  Refuse rather than turn its truncated prefix into
+	 * a new name if the user merely accepts the dialog. */
+	if (!angdroid_input_prefill_copy(buf, buflen, player->full_name)) {
+		msg("%s", angdroid_zh_tw_enabled() ?
+			"目前角色名稱過長或包含無效的 UTF-8，無法安全編輯。" :
+			"Character name is too long or contains invalid UTF-8.");
+		return false;
+	}
+
 	/* Display prompt */
 	prt(angdroid_game_ui_text("Enter a name for your character (* for a random name): ", angdroid_zh_tw_enabled()), 0, 0);
-
-	/* Save the player name */
-	my_strcpy(buf, player->full_name, buflen);
 
 	soft_kbd_linger("*");
 
@@ -1143,9 +1150,10 @@ bool get_character_name(char *buf, size_t buflen)
 	/* Clear prompt */
 	prt("", 0, 0);
 
-	/* Revert to the old name if the player doesn't pick a new one. */
+	/* Restore the exact original name on cancel. */
 	if (!res)
-		my_strcpy(buf, player->full_name, buflen);
+		(void) angdroid_input_prefill_copy(buf, buflen,
+			player->full_name);
 
 	return res;
 }

@@ -30,6 +30,7 @@
 #include "ui-game.h"
 #include "ui-help.h"
 #include "ui-input.h"
+#include "ui-input-utf8.h"
 #include "ui-menu.h"
 #include "ui-options.h"
 #include "ui-player.h"
@@ -1546,10 +1547,6 @@ static enum birth_stage get_history_command(void)
 {
 	enum birth_stage next = 0;
 	struct keypress ke;
-	char old_history[240];
-
-	/* Save the original history */
-	my_strcpy(old_history, player->history, sizeof(old_history));
 
 	/* Ask for some history */
 	prt(angdroid_game_ui_text("Accept character history? [y/n]", angdroid_zh_tw_enabled()), 0, 0);
@@ -1565,7 +1562,15 @@ static enum birth_stage get_history_command(void)
 		next = BIRTH_BACK;
 	} else if (ke.code == 'N' || ke.code == 'n') {
 		char history[240];
-		my_strcpy(history, player->history, sizeof(history));
+		/* A long UTF-8 history must not silently become a truncated
+		 * replacement when the user presses Enter in the editor. */
+		if (!angdroid_input_prefill_copy(history, sizeof(history),
+				player->history)) {
+			msg("%s", angdroid_zh_tw_enabled() ?
+				"角色背景故事過長或包含無效的 UTF-8，無法安全編輯。" :
+				"Character history is too long or contains invalid UTF-8.");
+			return BIRTH_HISTORY_CHOICE;
+		}
 
 		switch (edit_text(history, sizeof(history))) {
 			case -1:
