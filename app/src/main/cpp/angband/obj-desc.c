@@ -330,32 +330,44 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 			obj->kind->flavor->text, true);
 
 
-	/* Only names with a translated visible appearance can use the
-	 * Chinese noun grammar. Unknown effects stay hidden until aware. */
+	/* The Chinese noun can still be shown for an uncovered/custom
+	 * appearance. Keep its original flavor spelling instead of returning
+	 * to an English article + type name. Never reveal the kind before it
+	 * is aware: only an already-known effect may be shown in parentheses. */
 	if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() &&
-			show_flavor && localized_flavor && !obj->artifact &&
+			show_flavor && obj->kind->flavor && !obj->artifact &&
 			!obj->ego && obj->tval != TV_SCROLL) {
+		const char *appearance = localized_flavor ?
+			localized_flavor : obj->kind->flavor->text;
 		const char *visible_effect = NULL;
-		if (aware) {
+		if (aware && obj->kind->name) {
 			visible_effect = angdroid_zh_tw_item_kind_name(
 				obj->kind->name);
+			if (!visible_effect) visible_effect = obj->kind->name;
 		}
-		if (!aware || visible_effect)
+		if (appearance && *appearance && (!aware || visible_effect))
 			localized_flavored = angdroid_zh_tw_flavored_object(
 				flavored_display, sizeof(flavored_display),
-				tval_find_name(obj->tval), localized_flavor,
+				tval_find_name(obj->tval), appearance,
 				visible_effect, prefix, number);
 	}
 	if (localized_scroll) {
-		if (prefix && number == 0)
-			angdroid_zh_tw_item_append_utf8(buf, max, &end,
-				"沒有剩餘的");
-		else if (prefix && number > 1)
-			angdroid_zh_tw_item_append_amount(buf, max, &end,
-				"", number, " 張");
-		angdroid_zh_tw_item_append_utf8(buf, max, &end, scroll_display);
+		char complete_scroll[160];
+		/* Include quantity and closing quote in a single optional unit.
+		 * Narrow buffers show the safe category, not half a title. */
+		if (!angdroid_zh_tw_known_item_name(complete_scroll,
+				sizeof(complete_scroll), "scroll", scroll_display,
+				prefix, number) ||
+			!angdroid_zh_tw_item_append_whole(buf, max, &end,
+				complete_scroll))
+			angdroid_zh_tw_item_append_utf8(buf, max, &end, "卷軸");
 	} else if (localized_flavored) {
-		angdroid_zh_tw_item_append_utf8(buf, max, &end, flavored_display);
+		/* No half-open known-effect parenthesis on tiny terminals. */
+		if (!angdroid_zh_tw_item_append_whole(buf, max, &end,
+				flavored_display))
+			angdroid_zh_tw_item_append_utf8(buf, max, &end,
+				angdroid_zh_tw_identified_flavor_noun(
+					tval_find_name(obj->tval)));
 	} else if (localized_kind) {
 		char known_display[256];
 		char named_effect[160];
