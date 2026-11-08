@@ -226,8 +226,8 @@ static void spell_message(struct monster *mon,
 						end = angdroid_mon_spell_append_utf8(buf,
 							sizeof(buf), end, m_name, strlen(m_name));
 					else
-strnfcat(buf, sizeof(buf), &end, "%s",
-											m_name);
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							m_name);
 					break;
 				}
 
@@ -241,8 +241,8 @@ strnfcat(buf, sizeof(buf), &end, "%s",
 						end = angdroid_mon_spell_append_utf8(buf,
 							sizeof(buf), end, m_poss, strlen(m_poss));
 					else
-strnfcat(buf, sizeof(buf), &end, "%s",
-											m_poss);
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							m_poss);
 					break;
 				}
 
@@ -261,15 +261,16 @@ strnfcat(buf, sizeof(buf), &end, "%s",
 							end = angdroid_mon_spell_append_utf8(buf,
 								sizeof(buf), end, m_name, strlen(m_name));
 						else
-strnfcat(buf, sizeof(buf), &end,
-													"%s", m_name);
+							strnfcat(buf, sizeof(buf), &end,
+								"%s", m_name);
 					} else {
 						if (zh_spell) {
 							const char *display = "你";
 							end = angdroid_mon_spell_append_utf8(buf,
 								sizeof(buf), end, display, strlen(display));
 						} else
-							strnfcat(buf, sizeof(buf), &end, "%s", "you");
+							strnfcat(buf, sizeof(buf), &end, "%s",
+								angdroid_zh_tw_enabled() ? "你" : "you");
 					}
 					break;
 				}
@@ -291,7 +292,7 @@ strnfcat(buf, sizeof(buf), &end,
 					int type = mon->race->blow[0].effect->lash_type;
 					char *type_name = projections[type].lash_desc;
 					if (type_name) {
-						if (angdroid_zh_tw_enabled()) {
+						if (zh_spell) {
 							const char *display = angdroid_mon_spell_lash(type_name, true);
 							end = angdroid_mon_spell_append_utf8(buf, sizeof(buf), end, "（", strlen("（"));
 							end = angdroid_mon_spell_append_utf8(buf, sizeof(buf), end, display, strlen(display));
