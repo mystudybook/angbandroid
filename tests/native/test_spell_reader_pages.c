@@ -81,6 +81,38 @@ int main(void)
     CHECK(!angdroid_spell_reader_next_line("", 0, 8, line,
         sizeof(line), &next));
 
+    /* The previously unbounded browsing banner and byte-formatted picker
+     * must render exactly one row of complete UTF-8 code points. */
+    {
+        char prompt[64], tight[5];
+        char unchanged = 'X';
+        angdroid_spell_menu_copy_prompt(prompt, sizeof(prompt),
+            "瀏覽法術（? 切換說明、] 閱讀全文）", 9);
+        CHECK(strcmp(prompt, "瀏覽法術") == 0);
+        CHECK(angdroid_utf8_display_columns(prompt) == 8);
+        angdroid_spell_menu_copy_prompt(prompt, sizeof(prompt),
+            "瀏覽法術（? 切換說明、] 閱讀全文）", 5);
+        CHECK(strcmp(prompt, "瀏覽") == 0);
+        angdroid_spell_menu_copy_prompt(prompt, sizeof(prompt),
+            "Browse spells here", 7);
+        CHECK(strcmp(prompt, "Browse") == 0);
+        angdroid_spell_menu_copy_prompt(tight, sizeof(tight), "法術", 40);
+        CHECK(strcmp(tight, "法") == 0);
+        angdroid_spell_menu_copy_prompt(prompt, sizeof(prompt), "法術", 2);
+        CHECK(prompt[0] == '\0');
+        angdroid_spell_menu_copy_prompt(prompt, sizeof(prompt), "any", 1);
+        CHECK(prompt[0] == '\0');
+        angdroid_spell_menu_copy_prompt(prompt, sizeof(prompt), "any", -1);
+        CHECK(prompt[0] == '\0');
+        angdroid_spell_menu_copy_prompt(prompt, sizeof(prompt), NULL, 40);
+        CHECK(prompt[0] == '\0');
+        angdroid_spell_menu_copy_prompt(prompt, sizeof(prompt), "甲🐱乙", 7);
+        CHECK(angdroid_utf8_display_columns(prompt) <= 6);
+        angdroid_spell_menu_copy_prompt(NULL, 0, "中文", 20);
+        angdroid_spell_menu_copy_prompt(&unchanged, 0, "中文", 20);
+        CHECK(unchanged == 'X');
+    }
+
     CHECK(angdroid_spell_reader_clamp_scroll(0, 20, 6) == 0);
     CHECK(angdroid_spell_reader_clamp_scroll(20, 20, 6) == 14);
     CHECK(angdroid_spell_reader_clamp_scroll(5, 3, 6) == 0);
