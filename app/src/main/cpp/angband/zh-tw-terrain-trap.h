@@ -5,6 +5,7 @@
 #define ANGDROID_ZH_TW_TERRAIN_TRAP_H
 #include <stddef.h>
 #include <string.h>
+#include "zh-tw-faangband-traps.h"
 
 struct angdroid_terrain_trap_pair { const char *en; const char *zh; };
 static inline const char *angdroid_terrain_trap_lookup(
@@ -194,8 +195,10 @@ static inline const char *angdroid_trap_name(const char *en, int zh_tw)
         { "knife trap", "刀刃陷阱" },
         { "petrifying trap", "石化陷阱" },
     };
-    return angdroid_terrain_trap_lookup(en, zh_tw, trap_names,
-                                       sizeof trap_names / sizeof trap_names[0]);
+    const char *translated = angdroid_terrain_trap_lookup(en, zh_tw,
+        trap_names, sizeof trap_names / sizeof trap_names[0]);
+    return translated != en ? translated :
+        angdroid_faangband_trap_name(en, zh_tw);
 }
 
 static inline const char *angdroid_trap_lore(const char *en, int zh_tw)
@@ -238,7 +241,9 @@ static inline const char *angdroid_trap_lore(const char *en, int zh_tw)
         { "A trap designed to bleed you to death.", "設計來讓你流血致死的陷阱。" },
         { "A trap that stuns you and gives you stoneskin.", "會使你暈眩，並讓你獲得石膚效果的陷阱。" },
     };
-    return angdroid_terrain_trap_lookup(en, zh_tw, trap_lore,
-                                       sizeof trap_lore / sizeof trap_lore[0]);
+    const char *translated = angdroid_terrain_trap_lookup(en, zh_tw,
+        trap_lore, sizeof trap_lore / sizeof trap_lore[0]);
+    return translated != en ? translated :
+        angdroid_faangband_trap_lore(en, zh_tw);
 }
 #endif
