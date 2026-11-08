@@ -33,6 +33,7 @@
 #include "zh-tw-flavored-object.h"
 #include "zh-tw-item-grammar.h"
 #include "zh-tw-item-details.h"
+#include "../curses/unicode_display.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -68,7 +69,10 @@ void object_kind_name(char *buf, size_t max, const struct object_kind *kind,
 		if (kind->tval == TV_SCROLL && angdroid_zh_tw_enabled() &&
 				angdroid_zh_tw_scroll_title(buf, max, flavor, false))
 			return;
-		my_strcpy(buf, localized ? localized : flavor, max);
+		if (localized)
+			angdroid_utf8_copy_complete(buf, max, localized);
+		else
+			my_strcpy(buf, flavor, max);
 	}
 
 	/* Use the localized DISPLAY name only for a known kind. Keep
@@ -78,7 +82,7 @@ void object_kind_name(char *buf, size_t max, const struct object_kind *kind,
 		const char *translated = angdroid_zh_tw_enabled() ?
 			angdroid_zh_tw_item_kind_name(kind->name) : NULL;
 		if (translated)
-			my_strcpy(buf, translated, max);
+			angdroid_utf8_copy_complete(buf, max, translated);
 		else
 			(void) obj_desc_name_format(buf, max, 0, kind->name, NULL, false);
 	}

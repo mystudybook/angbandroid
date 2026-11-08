@@ -158,8 +158,8 @@ def main():
            "Original Angband item-kind catalog incomplete: "
            + ", ".join(sorted(real_item_names - item_translated_names)[:15]))
     # Every non-unique source monster (excluding the <player> placeholder)
-    # must have a display-only Chinese label. Unique monster proper names
-    # deliberately retain their canonical name and purple rendering.
+    # and every curated unique has a display-only Chinese label. Canonical
+    # race identities, purple rendering and game records remain unchanged.
     monster_records = []
     current_name = None
     current_unique = False
@@ -244,7 +244,9 @@ def main():
     expect('"zh-tw-flavor-names.h"' in obj
            and "if (!easy_know && !kind->aware && kind->flavor)" in obj
            and "angdroid_zh_tw_flavor_name(flavor)" in obj
-           and "my_strcpy(buf, localized ? localized : flavor, max);" in obj
+           and "angdroid_utf8_copy_complete(buf, max, localized);" in obj
+           and "angdroid_utf8_copy_complete(buf, max, translated);" in obj
+           and "my_strcpy(buf, flavor, max);" in obj
            and "show_flavor && obj->kind->flavor" in obj
            and "angdroid_zh_tw_flavor_name(obj->kind->flavor->text)" in obj
            and "if (localized_flavor) modstr = localized_flavor;" in obj
@@ -762,7 +764,9 @@ def main():
            and "localized ? localized : race->text" in monster_lore,
            "Monster flavor display-only mapping or fallback missing")
     expect("angdroid_zh_tw_monster_list_name(race->name)" in monster_lore_ui
-           and "name_zh ? name_zh : race->name" in monster_lore_ui,
+           and "angdroid_zh_tw_unique_monster_name(race->name)" in monster_lore_ui
+           and "name_zh ? name_zh : race->name" in monster_lore_ui
+           and "else if (OPT(player, purple_uniques))" in monster_lore_ui,
            "Monster lore title translation or unique fallback missing")
     expect("test_monster_lore_locale.c" in native_tests,
            "Monster lore host test not registered")

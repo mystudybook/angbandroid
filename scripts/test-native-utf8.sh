@@ -82,6 +82,13 @@ CC="${CC:-cc}"
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_item_locale.c" \
     -o "$BUILD_DIR/test_item_locale"
+"$BUILD_DIR/test_item_locale"
+
+# Known and unidentified display names may be clipped on small buffers.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_item_kind_utf8_copy.c" \
+    -o "$BUILD_DIR/test_item_kind_utf8_copy"
+"$BUILD_DIR/test_item_kind_utf8_copy"
 
 # Identified ego suffixes are translated only in opted-in UI descriptions.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \

@@ -6,6 +6,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 CPP = ROOT / "app/src/main/cpp/angband"
 MON = (CPP / "mon-desc.c").read_text(encoding="utf-8")
+LORE = (CPP / "ui-mon-lore.c").read_text(encoding="utf-8")
 INFO = (CPP / "obj-info.c").read_text(encoding="utf-8")
 DESC = (CPP / "obj-desc.c").read_text(encoding="utf-8")
 RENDER = (CPP / "zh-tw-monster-list-render.h").read_text(encoding="utf-8")
@@ -28,6 +29,25 @@ class DynamicNamesUtf8SourceTest(unittest.TestCase):
         self.assertIn('snprintf(out, capacity, "[U] ")', RENDER)
         self.assertIn('snprintf(out, capacity, "%3d ", number)', RENDER)
         self.assertNotIn('strnfmt(buf, buflen, "[U] %s", translated)', MON)
+
+    def test_monster_recall_title_uses_known_unique_translation(self):
+        self.assertIn('#include "zh-tw-unique-monsters.h"', LORE)
+        self.assertIn('angdroid_zh_tw_unique_monster_name(race->name)', LORE)
+        self.assertIn('angdroid_zh_tw_monster_list_name(race->name)', LORE)
+        self.assertIn('if (!name_zh) textblock_append(tb, "The ");', LORE)
+        self.assertIn('else if (OPT(player, purple_uniques))', LORE)
+        self.assertIn('name_zh ? name_zh : race->name', LORE)
+        self.assertIn('if (!spoilers)', LORE)
+
+    def test_object_kind_name_copies_complete_translated_characters(self):
+        self.assertIn('#include "../curses/unicode_display.h"', DESC)
+        self.assertIn('angdroid_utf8_copy_complete(buf, max, localized);', DESC)
+        self.assertIn('angdroid_utf8_copy_complete(buf, max, translated);', DESC)
+        self.assertIn('my_strcpy(buf, flavor, max);', DESC)
+        self.assertIn('obj_desc_name_format(buf, max, 0, kind->name, NULL, false)', DESC)
+        self.assertIn('if (!easy_know && !kind->aware && kind->flavor)', DESC)
+        self.assertIn('test_item_kind_utf8_copy.c', RUNNER)
+        self.assertIn('"$BUILD_DIR/test_item_locale"', RUNNER)
 
     def test_item_origin_unique_and_regular_fallback(self):
         self.assertIn('#include "zh-tw-unique-monsters.h"', INFO)
