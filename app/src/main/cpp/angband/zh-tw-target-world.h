@@ -18,6 +18,25 @@ static inline const char *angdroid_target_world_intro(const char *en,
     return en;
 }
 
+
+/* English linking prepositions are not grammatical after zh-TW introductions.
+ * Preserve unknown variants as-is; this only changes presentation text. */
+static inline const char *angdroid_target_world_link(const char *en,
+    int zh_tw)
+{
+    if (!en || !zh_tw) return en;
+    if (strcmp(en, "on ") == 0) return "";
+    return en;
+}
+
+static inline const char *angdroid_target_world_pile_intro(const char *en,
+    int zh_tw)
+{
+    if (!en || !zh_tw) return en;
+    if (strcmp(en, "You are ") == 0) return "你所在的位置有";
+    return angdroid_target_world_intro(en, true);
+}
+
 static inline const char *angdroid_target_world_terrain(const char *apparent,
     int zh_tw)
 {
