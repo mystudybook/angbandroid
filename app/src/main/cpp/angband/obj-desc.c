@@ -37,6 +37,7 @@
 #include "obj-desc-name-utf8.h"
 #include "obj-desc-inscription-utf8.h"
 #include "obj-desc-suffix-utf8.h"
+#include "obj-desc-effect-utf8.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -456,24 +457,18 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	else if (localized_scroll && aware && !obj->artifact) {
 		/* Only an identified scroll may reveal its actual effect. */
 		const char *known = angdroid_zh_tw_item_kind_name(obj->kind->name);
-		/* The parentheses are one optional unit.  Never display half of
-		 * an identified scroll effect at a short byte boundary. */
-		{
-			char effect_label[256];
-			int n = snprintf(effect_label, sizeof(effect_label),
-				"（%s）", known ? known : obj->kind->name);
-			if (n >= 0 && (size_t)n < sizeof(effect_label))
-				angdroid_zh_tw_item_append_whole(
-					buf, max, &end, effect_label);
-		}
+		/* Keep the translated (or canonical fallback) effect and its
+		 * full-width parentheses as one optional, complete display unit. */
+		(void)angdroid_obj_desc_append_scroll_effect(buf, max, &end,
+			known ? known : obj->kind->name);
 	}
 	else if (!localized_kind && aware && !obj->artifact &&
 			 !localized_flavored &&
 			 (obj->kind->flavor || obj->kind->tval == TV_SCROLL)) {
-		if (terse)
-			strnfcat(buf, max, &end, " '%s'", obj->kind->name);
-		else
-			strnfcat(buf, max, &end, " of %s", obj->kind->name);
+		/* Preserve the original English punctuation and identification
+		 * checks, but never display a partial UTF-8 effect or quote. */
+		(void)angdroid_obj_desc_append_flavor_effect(buf, max, &end,
+			obj->kind->name, terse);
 	}
 
 	return end;

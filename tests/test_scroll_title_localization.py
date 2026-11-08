@@ -33,7 +33,10 @@ class ScrollTitleDisplayTests(unittest.TestCase):
         self.assertIn("obj->kind->flavor->text, true", DESC)
         self.assertIn("else if (localized_scroll && aware && !obj->artifact)", DESC)
         self.assertIn("angdroid_zh_tw_item_kind_name(obj->kind->name)", DESC)
-        self.assertIn('strnfcat(buf, max, &end, "（%s）",', DESC)
+        self.assertIn("angdroid_obj_desc_append_scroll_effect(buf, max, &end,", DESC)
+        self.assertIn("known ? known : obj->kind->name", DESC)
+        self.assertNotIn('snprintf(effect_label, sizeof(effect_label),', DESC)
+        self.assertNotIn('strnfcat(buf, max, &end, " of %s"', DESC)
         self.assertIn("else if (!localized_kind && aware", DESC)
 
     def test_title_is_opaque_with_bounded_c99_buffer(self):

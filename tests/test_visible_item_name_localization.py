@@ -49,8 +49,11 @@ class VisibleObjectLocalizationTest(unittest.TestCase):
         self.assertIn('const char *ego_name = obj->ego->name;', DESCRIBE)
         self.assertIn('angdroid_zh_tw_ego_name(ego_name)', DESCRIBE)
         self.assertIn('if (localized) ego_name = localized;', DESCRIBE)
-        self.assertIn('strnfcat(buf, max, &end, " %s", ego_name);', DESCRIBE)
-        self.assertIn('strnfcat(buf, max, &end, " %s", artifact_name);', DESCRIBE)
+        self.assertIn("angdroid_obj_desc_append_suffix_atomic(buf, max,", DESCRIBE)
+        self.assertIn("&end, ego_name, true);", DESCRIBE)
+        self.assertIn("&end, artifact_name, true);", DESCRIBE)
+        self.assertNotIn('strnfcat(buf, max, &end, " %s", ego_name);', DESCRIBE)
+        self.assertNotIn('strnfcat(buf, max, &end, " %s", artifact_name);', DESCRIBE)
 
     def test_artifact_names_only_after_identification(self):
         art_header = (CPP / "zh-tw-artifact-names.h").read_text(encoding="utf-8")
@@ -64,7 +67,7 @@ class VisibleObjectLocalizationTest(unittest.TestCase):
         self.assertIn("const char *artifact_name = obj->artifact->name;", DESCRIBE)
         self.assertIn("angdroid_zh_tw_artifact_name(artifact_name)", DESCRIBE)
         self.assertIn("if (localized) artifact_name = localized;", DESCRIBE)
-        self.assertIn('strnfcat(buf, max, &end, " %s", artifact_name);', DESCRIBE)
+        self.assertIn("&end, artifact_name, true);", DESCRIBE)
 
     def test_unknown_item_flavor_only_changes_visible_appearance(self):
         flavor_header = (CPP / "zh-tw-flavor-names.h").read_text(encoding="utf-8")
@@ -96,9 +99,9 @@ class VisibleObjectLocalizationTest(unittest.TestCase):
         self.assertNotIn("ODESC_ZH_TW", export)
 
     def test_user_notes_and_unknown_names_remain_safe(self):
-        self.assertIn("!(i == 0 && obj->note)", DESCRIBE)
-        self.assertIn("angdroid_zh_tw_item_append_whole(buf, max, &end, label);", DESCRIBE)
-        self.assertIn('strnfcat(buf, max, &end, "%s", u[i]);', DESCRIBE)
+        self.assertIn("if (zh_tw && !(i == 0 && obj->note))", DESCRIBE)
+        self.assertIn("angdroid_obj_desc_inscription_append(buf, max, &end,", DESCRIBE)
+        self.assertNotIn('strnfcat(buf, max, &end, "%s", u[i]);', DESCRIBE)
         self.assertIn('strnfmt(buf, max, "未知物品")', DESCRIBE)
         self.assertIn('strnfmt(buf, max, "an unknown item")', DESCRIBE)
         self.assertIn('"（剩餘 ", obj->pval, " 次充能）"', DESCRIBE)
