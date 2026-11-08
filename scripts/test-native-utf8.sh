@@ -386,6 +386,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_attack_feedback_locale"
 "$BUILD_DIR/test_attack_feedback_locale"
 
+# FAangband projection spell summaries and monster lash descriptions.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_projection_locale.c" \
+    -o "$BUILD_DIR/test_faangband_projection_locale"
+"$BUILD_DIR/test_faangband_projection_locale"
+
 # Projection feedback and monster direct attack messages.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_projection_feedback_locale.c" \
