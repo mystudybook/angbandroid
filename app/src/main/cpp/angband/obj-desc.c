@@ -39,6 +39,7 @@
 #include "obj-desc-suffix-utf8.h"
 #include "obj-desc-effect-utf8.h"
 #include "obj-desc-chest-money-utf8.h"
+#include "obj-desc-numeric-utf8.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -534,7 +535,7 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_DICE, obj->dd, obj->ds);
 		else
-			strnfcat(buf, max, &end, " (%dd%d)", obj->dd, obj->ds);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%dd%d)", obj->dd, obj->ds);
 	}
 
 	/* Display shooting power as part of the multiplier */
@@ -544,7 +545,7 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 				ANGDROID_ITEM_MULTIPLIER,
 				obj->pval + obj->modifiers[OBJ_MOD_MIGHT], 0);
 		else
-			strnfcat(buf, max, &end, " (x%d)",
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (x%d)",
 				obj->pval + obj->modifiers[OBJ_MOD_MIGHT]);
 	}
 
@@ -567,28 +568,28 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_ATTACK_PAIR, to_h, to_d);
 		else
-			strnfcat(buf, max, &end, " (%+d,%+d)", to_h, to_d);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%+d,%+d)", to_h, to_d);
 	} else if (obj->to_h < 0 && object_has_standard_to_h(obj)) {
 		/* Special treatment for body armor with only a to-hit penalty */
 		if (zh_tw)
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_HIT, obj->to_h, 0);
 		else
-			strnfcat(buf, max, &end, " (%+d)", obj->to_h);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%+d)", obj->to_h);
 	} else if (to_d != 0 && (!p || p->obj_k->to_d)) {
 		/* To-dam rune known only */
 		if (zh_tw)
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_DAMAGE, to_d, 0);
 		else
-			strnfcat(buf, max, &end, " (%+d)", to_d);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%+d)", to_d);
 	} else if (to_h != 0 && (!p || p->obj_k->to_h)) {
 		/* To-hit rune known only */
 		if (zh_tw)
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_HIT, to_h, 0);
 		else
-			strnfcat(buf, max, &end, " (%+d)", to_h);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%+d)", to_h);
 	}
 
 	/* Show armor bonuses */
@@ -598,20 +599,20 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 				end = obj_desc_combat_zh_tw(buf, max, end,
 					ANGDROID_ITEM_ARMOR_PAIR, obj->ac, to_a);
 			else
-				strnfcat(buf, max, &end, " [%d,%+d]", obj->ac, to_a);
+				(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " [%d,%+d]", obj->ac, to_a);
 		} else if (to_a) {
 			if (zh_tw)
 				end = obj_desc_combat_zh_tw(buf, max, end,
 					ANGDROID_ITEM_ARMOR_BONUS, to_a, 0);
 			else
-				strnfcat(buf, max, &end, " [%+d]", to_a);
+				(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " [%+d]", to_a);
 		}
 	} else if (obj_desc_show_armor(obj, p)) {
 		if (zh_tw)
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_ARMOR, obj->ac, 0);
 		else
-			strnfcat(buf, max, &end, " [%d]", obj->ac);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " [%d]", obj->ac);
 	}
 
 	return end;
@@ -629,7 +630,7 @@ static size_t obj_desc_light(const struct object *obj, char *buf, size_t max,
 			angdroid_zh_tw_item_append_amount(buf, max, &end,
 				"（剩餘 ", obj->timeout, " 回合）");
 		else
-			strnfcat(buf, max, &end, " (%d turns)", obj->timeout);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%d turns)", obj->timeout);
 	}
 
 	return end;
@@ -676,13 +677,10 @@ static size_t obj_desc_mods(const struct object *obj, char *buf, size_t max,
 		}
 	}
 
-	/* Print the modifiers */
-	strnfcat(buf, max, &end, " <");
-	for (j = 0; j < num_mods; j++) {
-		if (j) strnfcat(buf, max, &end, ", ");
-		strnfcat(buf, max, &end, "%+d", mods[j]);
-	}
-	strnfcat(buf, max, &end, ">");
+	/* The original English fallback must have balanced angle brackets
+	 * and all distinct known modifiers, or be omitted as a whole. */
+	(void)angdroid_obj_desc_append_modifiers_ascii(buf, max, &end,
+		mods, (size_t)num_mods);
 
 	return end;
 }
@@ -701,7 +699,7 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
 			angdroid_zh_tw_item_append_amount(buf, max, &end,
 				"（剩餘 ", obj->pval, " 次充能）");
 		else
-			strnfcat(buf, max, &end, " (%d charge%s)", obj->pval,
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%d charge%s)", obj->pval,
 				PLURAL(obj->pval));
 	} else if (obj->timeout > 0) {
 		if (tval_is_rod(obj) && obj->number > 1) {
@@ -709,12 +707,12 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
 				angdroid_zh_tw_item_append_amount(buf, max, &end,
 					"（", number_charging(obj), " 根充能中）");
 			else
-				strnfcat(buf, max, &end, " (%d charging)", number_charging(obj));
+				(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%d charging)", number_charging(obj));
 		} else if (tval_is_rod(obj) || obj->activation || obj->effect) {
 			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
 				angdroid_zh_tw_item_append_whole(buf, max, &end, "（充能中）");
 			else
-				strnfcat(buf, max, &end, " (charging)");
+				(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (charging)");
 		}
 	}
 
@@ -793,14 +791,14 @@ static size_t obj_desc_aware(const struct object *obj, char *buf, size_t max,
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
 			angdroid_zh_tw_item_append_whole(buf, max, &end, " {未見過}");
 		else
-			strnfcat(buf, max, &end, " {unseen}");
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " {unseen}");
 	} else if (!object_runes_known(obj)) {
-		strnfcat(buf, max, &end, " {??}");
+		(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " {??}");
 	} else if (obj->known->curses) {
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
 			angdroid_zh_tw_item_append_whole(buf, max, &end, " {受詛咒}");
 		else
-			strnfcat(buf, max, &end, " {cursed}");
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " {cursed}");
 	}
 
 	return end;

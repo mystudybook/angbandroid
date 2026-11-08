@@ -25,8 +25,8 @@ class ItemDetailsLocalizationTest(unittest.TestCase):
         self.assertIn("object_to_hit(obj)", OBJ)
         self.assertIn("object_to_dam(obj)", OBJ)
         self.assertIn("object_to_ac(obj)", OBJ)
-        self.assertIn('strnfcat(buf, max, &end, " (%+d,%+d)", to_h, to_d);', OBJ)
-        self.assertIn('strnfcat(buf, max, &end, " [%d,%+d]", obj->ac, to_a);', OBJ)
+        self.assertIn('angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%+d,%+d)", to_h, to_d);', OBJ)
+        self.assertIn('angdroid_obj_desc_append_formatted_detail(buf, max, &end, " [%d,%+d]", obj->ac, to_a);', OBJ)
 
     def test_modifier_uniqueness_and_hidden_statuses(self):
         self.assertIn("if (obj->modifiers[i] != 0)", OBJ)
@@ -35,6 +35,8 @@ class ItemDetailsLocalizationTest(unittest.TestCase):
         self.assertIn("angdroid_zh_tw_item_modifiers_text(", OBJ)
         self.assertIn("angdroid_zh_tw_item_append_amount(", OBJ)
         self.assertIn("number_charging(obj)", OBJ)
+        self.assertIn("angdroid_obj_desc_append_modifiers_ascii(buf, max, &end,", OBJ)
+        self.assertIn("angdroid_obj_desc_append_formatted_detail(buf, max, &end,", OBJ)
         self.assertIn("object_flavor_is_aware(obj)", OBJ)
         self.assertIn('u[n++] = quark_str(obj->note);', OBJ)
         self.assertIn("if (zh_tw && !(i == 0 && obj->note))", OBJ)

@@ -58,6 +58,7 @@ run_check "Player item inscription UTF-8/closing brace" python3 "$ROOT/tests/tes
 run_check "Artifact and ego suffix UTF-8 atomicity" python3 "$ROOT/tests/test_obj_desc_suffix_utf8_source.py"
 run_check "Known scroll/flavor effect UTF-8 and punctuation" python3 "$ROOT/tests/test_obj_desc_effect_utf8_source.py"
 run_check "Chest trap and money UI UTF-8 localization" python3 "$ROOT/tests/test_obj_desc_chest_money_utf8_source.py"
+run_check "Atomic numeric item details and status" python3 "$ROOT/tests/test_obj_desc_numeric_utf8_source.py"
 run_check "Inventory and equipment bilingual captions and selection invariants" python3 "$ROOT/tests/test_inventory_list_locale_source.py"
 run_check "Rotated item-selection and compact shop prompts" python3 "$ROOT/tests/test_item_selection_rotation_source.py"
 run_check "Knowledge glyph strict Unicode input and bilingual autoinscriptions" python3 "$ROOT/tests/test_knowledge_glyph_codepoint_locale_source.py"

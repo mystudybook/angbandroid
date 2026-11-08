@@ -560,6 +560,10 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_object_list_compact_layout"
 "$BUILD_DIR/test_object_list_compact_layout"
 
+# Numeric, charging and modifier details must never leave half punctuation.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security     "$ROOT/tests/native/test_obj_desc_numeric_utf8.c"     -o "$BUILD_DIR/test_obj_desc_numeric_utf8"
+"$BUILD_DIR/test_obj_desc_numeric_utf8"
+
 # Known chest trap labels and money-kind descriptions are UTF-8 complete.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_obj_desc_chest_money_utf8.c" \
