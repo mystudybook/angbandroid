@@ -144,6 +144,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_class_book_names_locale"
 "$BUILD_DIR/test_class_book_names_locale"
 
+# FAangband-specific descriptions for two shared-name spells.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_variant_spell_descriptions.c" \
+    -o "$BUILD_DIR/test_faangband_variant_spell_descriptions"
+"$BUILD_DIR/test_faangband_variant_spell_descriptions"
+
 # Exact FAangband-only spell name and description display fallback.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_spells_locale.c" \
