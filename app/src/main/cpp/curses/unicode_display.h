@@ -75,6 +75,37 @@ static inline size_t angdroid_utf8_display_columns(const char *text)
     return columns;
 }
 
+/* Copy complete UTF-8 scalars into a byte-limited display buffer.
+ * Caller may subsequently clip to terminal columns.  Unlike my_strcpy(),
+ * this never writes a partial Han glyph at the byte boundary.
+ * A malformed input byte is replaced with ASCII '?' (one byte) so even an
+ * invalid translated name cannot inject broken UTF-8 into the terminal.
+ */
+static inline size_t angdroid_utf8_copy_complete(char *dst, size_t capacity,
+    const char *text)
+{
+    size_t used = 0, offset = 0;
+    uint32_t scalar;
+    size_t count, j;
+    if (!dst || capacity == 0) return 0;
+    dst[0] = '\0';
+    if (!text) return 0;
+    while (text[offset]) {
+        count = angdroid_utf8_next_scalar(text + offset, &scalar);
+        if (!count || count > capacity - used - 1) break;
+        if (count == 1 && scalar == 0xFFFDu &&
+            (unsigned char)text[offset] >= 0x80u) {
+            dst[used++] = '?';
+            ++offset;
+            continue;
+        }
+        for (j = 0; j < count; ++j) dst[used++] = text[offset + j];
+        offset += count;
+    }
+    dst[used] = '\0';
+    return used;
+}
+
 /* In-place clip to whole UTF-8 scalars that fit inside max_columns.
  * This never slices the bytes belonging to a Han/Hangul/wide character. */
 static inline void angdroid_utf8_clip_columns(char *text, size_t max_columns)

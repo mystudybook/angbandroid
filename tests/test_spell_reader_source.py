@@ -49,10 +49,41 @@ class FullSpellReaderSourceTest(unittest.TestCase):
         self.assertIn("ANGDROID_SPELL_READER_TAP_DOWN", SPELL)
         self.assertIn("if (in.type == EVT_ESCAPE) break;", SPELL)
 
+    def test_spell_names_are_copied_without_partial_utf8_before_column_clip(self):
+        unicode = (ROOT / "app/src/main/cpp/curses/unicode_display.h").read_text(
+            encoding="utf-8")
+        native_unicode = (ROOT / "tests/native/test_unicode_display.c").read_text(
+            encoding="utf-8")
+        self.assertIn("static inline size_t angdroid_utf8_copy_complete(", unicode)
+        self.assertIn("angdroid_utf8_next_scalar(text + offset, &scalar)", unicode)
+        self.assertIn("count > capacity - used - 1", unicode)
+        self.assertIn("dst[used] = '\\0';", unicode)
+        self.assertIn("dst[used++] = '?';", unicode)
+        self.assertIn(
+            "angdroid_utf8_copy_complete(spell_name_buf, sizeof(spell_name_buf),",
+            SPELL)
+        self.assertIn("display_spell_name);", SPELL)
+        self.assertIn(
+            "angdroid_utf8_copy_complete(title, sizeof(title), name);", SPELL)
+        self.assertIn("angdroid_utf8_clip_columns(spell_name_buf, 30)", SPELL)
+        self.assertIn("angdroid_utf8_clip_columns(title, columns)", SPELL)
+        self.assertNotIn(
+            "my_strcpy(spell_name_buf, display_spell_name, sizeof(spell_name_buf));",
+            SPELL)
+        self.assertNotIn("my_strcpy(title, name, sizeof(title));", SPELL)
+        for phrase in (
+            'angdroid_utf8_copy_complete(dest, sizeof(dest), "甲乙丙")',
+            'angdroid_utf8_copy_complete(dest, sizeof(dest), "é🐱")',
+            'angdroid_utf8_copy_complete(dest, sizeof(dest), broken)',
+            'angdroid_utf8_copy_complete(tiny, sizeof(tiny), "中文")',
+        ):
+            self.assertIn(phrase, native_unicode)
+        self.assertIn("test_unicode_display.c", RUNNER)
+
     def test_narrow_screen_title_footer_and_rotation_safe_pagination(self):
         self.assertIn("angdroid_utf8_clip_columns(title, columns);", SPELL)
         self.assertIn("angdroid_utf8_clip_columns(status, columns);", SPELL)
-        self.assertIn("my_strcpy(title, name, sizeof(title));", SPELL)
+        self.assertIn("angdroid_utf8_copy_complete(title, sizeof(title), name);", SPELL)
         self.assertIn("if (row == first) top_offset = start;", SPELL)
         self.assertIn("ANGDROID_SPELL_READER_TAP_IGNORE", PAGES)
         self.assertIn("x >= width || y >= height", PAGES)
