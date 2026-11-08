@@ -73,6 +73,7 @@ run_check "FAangband 64 race/class/specialty ability descriptions" python3 "$ROO
 run_check "FAangband six resistance-renewal timed messages" python3 "$ROOT/tests/test_faangband_timed_renewals_source.py"
 run_check "FAangband projection and dragonfire/hellfire lash names" python3 "$ROOT/tests/test_faangband_projection_source.py"
 run_check "FAangband wilderness terrain and cliff/lava notices" python3 "$ROOT/tests/test_faangband_terrain_source.py"
+run_check "FAangband monster traps and bilingual activation notifications" python3 "$ROOT/tests/test_faangband_trap_source.py"
 run_check "Angband/FAangband shape combat verbs" python3 "$ROOT/tests/test_shape_combat_verbs_source.py"
 run_check "Class-book Chinese names and shape lore" python3 "$ROOT/tests/test_class_book_names_source.py"
 run_check "Equipment combat and inscription UTF-8 safety" python3 "$ROOT/tests/test_item_details_localization.py"
