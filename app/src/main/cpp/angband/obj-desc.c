@@ -35,6 +35,7 @@
 #include "zh-tw-item-details.h"
 #include "../curses/unicode_display.h"
 #include "obj-desc-name-utf8.h"
+#include "obj-desc-inscription-utf8.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -754,31 +755,27 @@ static size_t obj_desc_inscrip(const struct object *obj, char *buf,
 		u[n++] = "??";
 
 	if (n) {
+		const bool zh_tw = (mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled();
+		const char *display[6];
 		int i;
+
 		for (i = 0; i < n; i++) {
-			if (i == 0)
-				strnfcat(buf, max, &end, " {");
-			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() &&
-					!(i == 0 && obj->note)) {
-				const char *label = u[i];
+			const char *label = u[i];
+			/* A player's own inscription is never translated, including
+			 * when it contains Chinese or an original English status word. */
+			if (zh_tw && !(i == 0 && obj->note)) {
 				if (streq(label, "empty")) label = "已耗盡";
 				else if (streq(label, "tried")) label = "已試用";
 				else if (streq(label, "cursed")) label = "受詛咒";
 				else if (streq(label, "ignore")) label = "忽略";
-				angdroid_zh_tw_item_append_whole(buf, max, &end, label);
-			} else {
-				/* User-written inscriptions are never translated. */
-				strnfcat(buf, max, &end, "%s", u[i]);
 			}
-			if (i < n - 1) {
-				if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-					angdroid_zh_tw_item_append_whole(buf, max, &end, "、");
-				else
-					strnfcat(buf, max, &end, ", ");
-			}
+			display[i] = label;
 		}
 
-		strnfcat(buf, max, &end, "}");
+		/* Show complete UTF-8 scalars, reserve the closing brace, and
+		 * never display only part of an automatic status label. */
+		angdroid_obj_desc_inscription_append(buf, max, &end,
+			display, (size_t)n, zh_tw, obj->note != 0);
 	}
 
 	return end;

@@ -7,6 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CPP = ROOT / "app/src/main/cpp/angband"
 OBJ = (CPP / "obj-desc.c").read_text(encoding="utf-8")
 HEADER = (CPP / "zh-tw-item-details.h").read_text(encoding="utf-8")
+INSCRIPTION = (CPP / "obj-desc-inscription-utf8.h").read_text(encoding="utf-8")
 EXPORT = (CPP / "save-charoutput.c").read_text(encoding="utf-8")
 RAND = (CPP / "obj-util.c").read_text(encoding="utf-8")
 
@@ -35,9 +36,11 @@ class ItemDetailsLocalizationTest(unittest.TestCase):
         self.assertIn("angdroid_zh_tw_item_append_amount(", OBJ)
         self.assertIn("number_charging(obj)", OBJ)
         self.assertIn("object_flavor_is_aware(obj)", OBJ)
-        self.assertIn('strnfcat(buf, max, &end, "%s", u[i]);', OBJ)
-        self.assertIn("!(i == 0 && obj->note)", OBJ)
-        self.assertIn('angdroid_zh_tw_item_append_whole(buf, max, &end, "、");', OBJ)
+        self.assertIn('u[n++] = quark_str(obj->note);', OBJ)
+        self.assertIn("if (zh_tw && !(i == 0 && obj->note))", OBJ)
+        self.assertIn("angdroid_obj_desc_inscription_append(buf, max, &end,", OBJ)
+        self.assertIn('const char *separator = zh_tw ? "、" : ", ";', INSCRIPTION)
+        self.assertIn("out[used++] = '}';", INSCRIPTION)
 
     def test_complete_utf8_append_and_no_persistent_changes(self):
         self.assertIn("written = angdroid_zh_tw_item_append_utf8(out, cap, end, text);", HEADER)
