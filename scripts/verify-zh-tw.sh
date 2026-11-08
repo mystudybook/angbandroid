@@ -51,6 +51,7 @@ run_check "Filtered native menu keyboard hint integration" python3 "$ROOT/tests/
 run_check "Visible-page native menu shortcut consistency" python3 "$ROOT/tests/test_menu_visible_tags_source.py"
 run_check "Finite invalid-row menu navigation" python3 "$ROOT/tests/test_menu_navigation_source.py"
 run_check "Inventory and equipment UTF-8 display safety" python3 "$ROOT/tests/test_object_list_text_source.py"
+run_check "Visible object list narrow-screen bounds" python3 "$ROOT/tests/test_object_list_compact_layout_source.py"
 run_check "Inventory and equipment bilingual captions and selection invariants" python3 "$ROOT/tests/test_inventory_list_locale_source.py"
 run_check "Rotated item-selection and compact shop prompts" python3 "$ROOT/tests/test_item_selection_rotation_source.py"
 run_check "Knowledge glyph strict Unicode input and bilingual autoinscriptions" python3 "$ROOT/tests/test_knowledge_glyph_codepoint_locale_source.py"

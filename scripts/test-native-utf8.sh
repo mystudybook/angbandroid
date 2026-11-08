@@ -554,6 +554,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_menu_flow"
 "$BUILD_DIR/test_store_menu_flow"
 
+# Visible object list must keep its popup in bounds and prioritize item names.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_object_list_compact_layout.c" \
+    -o "$BUILD_DIR/test_object_list_compact_layout"
+"$BUILD_DIR/test_object_list_compact_layout"
+
 # Inventory, equipment and quiver text must not be truncated mid-UTF8.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_object_list_text.c" \
