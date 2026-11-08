@@ -659,6 +659,27 @@ def main():
            "Character sheet label alignment uses UTF-8 byte length")
     expect("angdroid_utf8_clip_columns(value" in player_ui,
            "Character sheet value clipping may split UTF-8 glyphs")
+    # Character panels are formatted in 96-byte buffers; vstrnfmt() can
+    # truncate the last multibyte glyph before the column-width clip.
+    # Only sanitize the displayed copy: keep the raw stat calculation, source
+    # spell/class titles, keyboard commands and character export unchanged.
+    expect('vstrnfmt(pl->value, sizeof pl->value, fmt, vp);' in player_ui and
+           'char value[sizeof(p->lines[i].value)];' in player_ui and
+           'angdroid_utf8_copy_complete(value, sizeof(value), pl->value);'
+               in player_ui and
+           'my_strcpy(value, pl->value, sizeof(value));' not in player_ui and
+           'angdroid_utf8_clip_columns(value, (size_t)available);'
+               in player_ui and
+           'angdroid_utf8_display_columns(value)' in player_ui and
+           'Term_putstr(col + offset, row, -1, pl->attr, value);'
+               in player_ui and
+           'test_unicode_display.c' in native_tests,
+           "Character sheet must sanitize panel bytes before column clip")
+    expect('char formatted[96], rendered[96];' in
+               source(ROOT / "tests/native/test_unicode_display.c", errors) and
+           'tests/test_character_panel_utf8_source.py' in
+               source(ROOT / "scripts/verify-zh-tw.sh", errors),
+           "Character panel UTF-8 96-byte boundary regression must be registered")
     expect("Term_putstr(col, row, -1, COLOUR_WHITE, pl->label)" in player_ui,
            "Character sheet labels may be cut at a UTF-8 byte boundary")
     expect('"You cannot browse that."' in game_ui_header

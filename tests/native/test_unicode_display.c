@@ -107,6 +107,43 @@ int main(void)
         CHECK(tiny[0] == '\0');
     }
 
+
+    /* The character sheet formats each panel value into 96 bytes.
+     * At exactly 95 data bytes, vstrnfmt() may leave a partial Han glyph.
+     * A later column clip alone does not repair an incomplete UTF-8 tail. */
+    {
+        char formatted[96], rendered[96];
+        size_t i;
+        for (i = 0; i < 31; ++i)
+            memcpy(formatted + i * 3, "中", 3);
+        formatted[93] = (char)0xE4;
+        formatted[94] = (char)0xB8;
+        formatted[95] = '\0';
+        CHECK(strlen(formatted) == 95);
+        CHECK(angdroid_utf8_copy_complete(
+            rendered, sizeof(rendered), formatted) == 95);
+        CHECK(memcmp(rendered, formatted, 93) == 0);
+        CHECK(strcmp(rendered + 93, "??") == 0);
+        CHECK(angdroid_utf8_display_columns(rendered) == 64);
+        angdroid_utf8_clip_columns(rendered, 16);
+        CHECK(strlen(rendered) == 24);
+        CHECK(angdroid_utf8_display_columns(rendered) == 16);
+
+        memset(formatted, 'A', 95);
+        formatted[95] = '\0';
+        CHECK(angdroid_utf8_copy_complete(
+            rendered, sizeof(rendered), formatted) == 95);
+        CHECK(strcmp(rendered, formatted) == 0);
+
+        memset(formatted, 'X', 93);
+        formatted[93] = (char)0xF0;
+        formatted[94] = (char)0x9F;
+        formatted[95] = '\0';
+        CHECK(angdroid_utf8_copy_complete(
+            rendered, sizeof(rendered), formatted) == 95);
+        CHECK(strcmp(rendered + 93, "??") == 0);
+    }
+
     puts("PASS: UTF-8 terminal cell width, safe clipping and padding");
     printf("Assertions: %d\n", cases);
     return 0;
