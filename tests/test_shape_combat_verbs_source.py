@@ -13,7 +13,7 @@ NATIVE = (ROOT / "scripts/test-native-utf8.sh").read_text(encoding="utf-8")
 VERIFY = (ROOT / "scripts/verify-zh-tw.sh").read_text(encoding="utf-8")
 
 def shape_verbs(source):
-    return set(re.findall(r"^blow:([^\\r\\n]+)$", source, re.M))
+    return set(re.findall(r"^blow:([^\r\n]+)$", source, re.M))
 
 ang = shape_verbs(ANG)
 fa = shape_verbs(FA)
@@ -22,7 +22,7 @@ assert len(ang) == 14
 
 melee = COMBAT.split("static inline const char *angdroid_melee_verb_zh_tw(", 1)[1]
 melee = melee.split("static inline const char *angdroid_ranged_verb_zh_tw(", 1)[0]
-pairs = re.findall(r'^\\s*\\{"([^"\\n]+)", "([^"\\n]+)"\\},', melee, re.M)
+pairs = re.findall(r'^\s*\{"([^"\n]+)", "([^"\n]+)"\},', melee, re.M)
 mapping = dict(pairs)
 assert len(pairs) == len(mapping)
 assert ang <= set(mapping)
