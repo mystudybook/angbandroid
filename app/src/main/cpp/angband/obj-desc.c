@@ -38,6 +38,7 @@
 #include "obj-desc-inscription-utf8.h"
 #include "obj-desc-suffix-utf8.h"
 #include "obj-desc-effect-utf8.h"
+#include "obj-desc-chest-money-utf8.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -499,15 +500,18 @@ static bool obj_desc_show_armor(const struct object *obj,
  * Special descriptions for types of chest traps
  */
 static size_t obj_desc_chest(const struct object *obj, char *buf, size_t max,
-							 size_t end)
+							 size_t end, uint32_t mode)
 {
 	if (!tval_is_chest(obj)) return end;
 
 	/* The chest is unopened, but we know nothing about its trap/lock */
 	if (obj->pval && !obj->known->pval) return end;
 
-	/* Describe the traps */
-	strnfcat(buf, max, &end, " (%s)", chest_trap_name(obj));
+	/* Localize only the visible trap name.  The existing known-pval
+	 * check above keeps hidden traps and gameplay behavior unchanged. */
+	(void)angdroid_obj_desc_append_chest_status(buf, max, &end,
+		chest_trap_name(obj),
+		(mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled());
 
 	return end;
 }
@@ -856,9 +860,9 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 	}
 
 	if (tval_is_money(obj))
-		return strnfmt(buf, max, "%d gold pieces worth of %s%s",
-				obj->pval, obj->kind->name,
-				ignore_item_ok(p, obj) ? " {ignore}" : "");
+		return angdroid_obj_desc_money_text(buf, max, obj->pval,
+			obj->kind->name, ignore_item_ok(p, obj),
+			(mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled());
 
 	/* Egos and kinds whose name we know are seen */
 	if (obj->known->ego && !spoil)
@@ -875,7 +879,7 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 	/* Combat properties */
 	if (mode & ODESC_COMBAT) {
 		if (tval_is_chest(obj))
-			end = obj_desc_chest(obj, buf, max, end);
+			end = obj_desc_chest(obj, buf, max, end, mode);
 		else if (tval_is_light(obj))
 			end = obj_desc_light(obj, buf, max, end, mode);
 
