@@ -282,7 +282,8 @@ static void spell_message(struct monster *mon,
 					if (zh_spell) {
 						const char *display = angdroid_mon_spell_lash(type_name, true);
 						end = angdroid_mon_spell_append_utf8(buf,
-							sizeof(buf), end, display, strlen(display));
+							sizeof(buf), end, display,
+							display ? strlen(display) : 0);
 					} else
 						strnfcat(buf, sizeof(buf), &end, "%s", angdroid_mon_spell_lash(type_name, false));
 					break;
