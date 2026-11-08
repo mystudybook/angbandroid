@@ -22,6 +22,7 @@
 #include "obj-ignore.h"
 #include "obj-knowledge.h"
 #include "obj-list.h"
+#include "object-list-name-display.h"
 #include "obj-pile.h"
 #include "obj-tval.h"
 #include "obj-util.h"
@@ -353,9 +354,9 @@ uint8_t object_list_entry_line_attribute(const object_list_entry_t *entry)
  * Format the object name so that the prefix is right aligned to a common
  * column.
  *
- * This uses the default logic of object_desc() in order to handle flavors,
- * artifacts, vowels and so on. It was easier to do this and then use strtok()
- * to break it up than to do anything else.
+ * Preserve the original object_desc() grammar (counts, flavors, artifacts,
+ * vowels), but treat short ASCII count/articles as display-only decoration.
+ * Chinese names without them must preserve complete UTF-8 glyphs.
  *
  * \param entry is the object list entry that has a name to be formatted.
  * \param line_buffer is the buffer to format into.
@@ -364,9 +365,7 @@ uint8_t object_list_entry_line_attribute(const object_list_entry_t *entry)
 void object_list_format_name(const object_list_entry_t *entry,
 							 char *line_buffer, size_t size)
 {
-	char name[80];
-	const char *chunk;
-	char *source;
+	char name[256];
 	bool has_singular_prefix;
 	bool los = false;
 	int field;
@@ -375,6 +374,9 @@ void object_list_format_name(const object_list_entry_t *entry,
 	struct loc grid;
 	bool object_is_recognized_artifact;
 
+	if (!line_buffer || size == 0)
+		return;
+	line_buffer[0] = '\0';
 	if (entry == NULL || entry->object == NULL || entry->object->kind == NULL)
 		return;
 
@@ -419,22 +421,9 @@ void object_list_format_name(const object_list_entry_t *entry,
 	object_desc(name, sizeof(name), base_obj, ODESC_PREFIX | ODESC_FULL |
 		ODESC_ALTNUM | (entry->count[field] << 16), player);
 
-	/* The source string for strtok() needs to be set properly, depending on
-	 * when we use it. */
-	if (!has_singular_prefix && entry->count[field] == 1) {
-		chunk = " ";
-		source = name;
-	}
-	else {
-		chunk = strtok(name, " ");
-		source = NULL;
-	}
-
-	/* Right alight the prefix and clip. */
-	strnfmt(line_buffer, size, "%3.3s ", chunk);
-
-	/* Get the rest of the name and clip it to fit the max width. */
-	chunk = strtok(source, "\0");
-	my_strcat(line_buffer, chunk, size);
+	/* Localized names may contain no ASCII spaces at all. Avoid
+	 * slicing CJK glyphs or depending on mutable tokenization state. */
+	angdroid_object_list_name_copy(line_buffer, size, name,
+		has_singular_prefix || entry->count[field] != 1);
 }
 

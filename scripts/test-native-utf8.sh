@@ -560,6 +560,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_object_list_compact_layout"
 "$BUILD_DIR/test_object_list_compact_layout"
 
+# Object list article/count prefixes and CJK names must remain complete.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_object_list_name_utf8.c" \
+    -o "$BUILD_DIR/test_object_list_name_utf8"
+"$BUILD_DIR/test_object_list_name_utf8"
+
 # Inventory, equipment and quiver text must not be truncated mid-UTF8.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_object_list_text.c" \
