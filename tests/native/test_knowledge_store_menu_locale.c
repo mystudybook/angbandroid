@@ -26,6 +26,7 @@ int main(void)
 {
     char tiny[8] = "before";
     char empty[1] = "";
+    char medium[64];
     const char *long_name = "A shop with an unusually long name that cannot fit";
     action("Display object knowledge", "查看物品知識");
     action("Display rune knowledge", "查看符文知識");
@@ -61,6 +62,21 @@ int main(void)
     assert(angdroid_knowledge_store_label(empty, sizeof(empty),
         "General Store", 1, "", 1) == NULL);
     assert(empty[0] == '\0');
+    ++checks;
+    /* Long Chinese custom names use a numbered Chinese fallback, not
+     * an English sentence; the same long English name keeps the original
+     * NULL / caller fallback behavior. */
+    assert(angdroid_knowledge_store_label_for_menu(medium, sizeof(medium),
+        long_name, 11, " (9)", 1) == medium);
+    assert(strcmp(medium, "查看第 11 間商店的商品 (9)") == 0);
+    ++checks;
+    assert(angdroid_knowledge_store_label_for_menu(medium, sizeof(medium),
+        long_name, 11, " (9)", 0) == NULL);
+    assert(medium[0] == '\0');
+    ++checks;
+    assert(angdroid_knowledge_store_label_for_menu(medium, sizeof(medium),
+        "General Store", 1, " (1)", 1) == medium);
+    assert(strcmp(medium, "查看雜貨店的商品 (1)") == 0);
     ++checks;
     assert(angdroid_knowledge_store_label(NULL, 0,
         "General Store", 1, "", 1) == NULL);

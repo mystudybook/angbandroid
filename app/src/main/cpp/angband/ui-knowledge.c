@@ -3821,12 +3821,13 @@ static void reset_main_knowledge_menu(void)
 		const char *name = f_info[stores[j].feat].name;
 		const char *shortcut = (j < 9) ? shortcuts[j] : "";
 		char localized[256];
-		const char *label = angdroid_knowledge_store_label(localized,
+		const char *label = angdroid_knowledge_store_label_for_menu(localized,
 			sizeof(localized), name, j + 1, shortcut,
 			angdroid_zh_tw_enabled());
 
-		/* Preserve the original format if an unusual custom store name
-		 * does not fit in the bounded translation buffer. */
+		/* A long translated custom name now falls back to its Chinese
+		 * numbered label; only the original English mode uses this
+		 * canonical English full-name fallback. */
 		if (!label) {
 			label = name ? format("Display %s'%s contents%s",
 				name, suffix(name, "s") ? "" : "s", shortcut) :

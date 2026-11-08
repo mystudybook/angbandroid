@@ -9,6 +9,10 @@ MON = (CPP / "mon-desc.c").read_text(encoding="utf-8")
 INFO = (CPP / "obj-info.c").read_text(encoding="utf-8")
 DESC = (CPP / "obj-desc.c").read_text(encoding="utf-8")
 RENDER = (CPP / "zh-tw-monster-list-render.h").read_text(encoding="utf-8")
+KNOWLEDGE = (CPP / "ui-knowledge.c").read_text(encoding="utf-8")
+STORE = (CPP / "zh-tw-knowledge-menu.h").read_text(encoding="utf-8")
+STORE_TEST = (ROOT / "tests/native/test_knowledge_store_menu_locale.c").read_text(
+    encoding="utf-8")
 RUNNER = (ROOT / "scripts/test-native-utf8.sh").read_text(encoding="utf-8")
 CHECKER = (ROOT / "scripts/check_native_game_localization.py").read_text(
     encoding="utf-8")
@@ -45,6 +49,17 @@ class DynamicNamesUtf8SourceTest(unittest.TestCase):
         self.assertIn('strnfcat(buf, max, &end, " %s", artifact_name)', DESC)
         self.assertIn('strnfcat(buf, max, &end, " %s", ego_name)', DESC)
         self.assertIn('if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled()', DESC)
+
+    def test_long_store_names_keep_chinese_fallback_and_shortcut(self):
+        self.assertIn('angdroid_knowledge_store_label_for_menu(localized,',
+                      KNOWLEDGE)
+        self.assertIn('static inline const char *angdroid_knowledge_store_label_for_menu(',
+                      STORE)
+        self.assertIn('NULL, store_number, shortcut, zh_tw)', STORE)
+        self.assertIn('"查看第 11 間商店的商品 (9)"', STORE_TEST)
+        self.assertIn('long_name, 11, " (9)", 0)', STORE_TEST)
+        self.assertIn('main_knowledge_menu.actions[i].action =',
+                      KNOWLEDGE)
 
     def test_host_regressions_registered(self):
         self.assertIn('test_monster_list_render_utf8.c', RUNNER)

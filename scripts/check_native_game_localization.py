@@ -1581,7 +1581,8 @@ def main():
     expect('"zh-tw-knowledge-menu.h"' in knowledge_ui and
            'pre_store_actions[j].label, angdroid_zh_tw_enabled()' in knowledge_ui and
            'post_store_actions[j].label, angdroid_zh_tw_enabled()' in knowledge_ui and
-           'angdroid_knowledge_store_label(localized,' in knowledge_ui and
+           'angdroid_knowledge_store_label_for_menu(localized,' in knowledge_ui
+           and 'angdroid_knowledge_store_label(out, capacity,' in knowledge_menu_header and
            'main_knowledge_menu.m.cmd_keys = main_knowledge_menu.storekeys;' in knowledge_ui and
            'handle_store_shortcuts' in knowledge_ui,
            "Knowledge menu labels must be translated without altering store keys")
