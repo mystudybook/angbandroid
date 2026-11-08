@@ -386,6 +386,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_mon_spell_render_utf8"
 "$BUILD_DIR/test_mon_spell_render_utf8"
 
+# Remaining 77 FAangband exclusive monsters and 76 complete source descriptions.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_monster_flavor_remaining.c" \
+    -o "$BUILD_DIR/test_faangband_monster_flavor_remaining"
+"$BUILD_DIR/test_faangband_monster_flavor_remaining"
+
 # FAangband first 15 exclusive monster names and eight divergent descriptions.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_monster_flavor.c" \
