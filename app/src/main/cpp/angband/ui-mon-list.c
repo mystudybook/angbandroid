@@ -29,6 +29,7 @@
 
 #include "droid.h"
 #include "../curses/unicode_display.h"
+#include "zh-tw-monster-list-ui.h"
 
 /**
  * Format a section of the monster list: a header followed by monster list
@@ -238,14 +239,18 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 static bool monster_list_format_special(const monster_list_t *list, textblock *tb, int max_lines, int max_width, size_t *max_height_result, size_t *max_width_result)
 {
 	if (player->timed[TMD_IMAGE] > 0) {
-		/* Hack - message needs newline to calculate width properly. */
-		const char *message = "Your hallucinations are too wild to see things clearly.\n";
+		/* Keep the newline as before, but measure the localized text
+		 * in terminal columns instead of encoded UTF-8 bytes. */
+		const bool zh_tw = angdroid_zh_tw_enabled();
+		const char *message =
+			angdroid_monster_list_hallucination_text(zh_tw);
 
 		if (max_height_result != NULL)
 			*max_height_result = 1;
 
 		if (max_width_result != NULL)
-			*max_width_result = strlen(message);
+			*max_width_result =
+				angdroid_monster_list_hallucination_columns(zh_tw);
 
 		if (tb != NULL)
 			textblock_append_c(tb, COLOUR_ORANGE, "%s", message);
@@ -466,12 +471,10 @@ void monster_list_show_interactive(int height, int width)
 
 		char buf[300];
 
-		if (sort_exp) {
-			my_strcpy(buf, "Press 'x' to turn OFF 'sort by exp'", sizeof(buf));
-		}
-		else {
-			my_strcpy(buf, "Press 'x' to turn ON 'sort by exp'", sizeof(buf));
-		}
+		/* Localize the hint only; 'x' remains the native shortcut. */
+		angdroid_utf8_copy_complete(buf, sizeof(buf),
+			angdroid_monster_list_sort_hint(
+				angdroid_zh_tw_enabled(), sort_exp));
 
 		ch = textui_textblock_show(tb, r, buf);
 
