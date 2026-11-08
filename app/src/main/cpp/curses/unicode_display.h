@@ -106,6 +106,18 @@ static inline size_t angdroid_utf8_copy_complete(char *dst, size_t capacity,
     return used;
 }
 
+/* Append only whole UTF-8 scalars to an already NUL-terminated display
+ * buffer.  The caller owns the byte offset, so no repeated strlen() scan is
+ * needed for spell-effect summaries or other incremental UI renderers.
+ * A full buffer is left unchanged.  Never modifies game-state strings. */
+static inline size_t angdroid_utf8_append_complete(char *dst, size_t capacity,
+    size_t offset, const char *text)
+{
+    if (!dst || capacity == 0 || offset >= capacity) return offset;
+    return offset + angdroid_utf8_copy_complete(
+        dst + offset, capacity - offset, text);
+}
+
 /* In-place clip to whole UTF-8 scalars that fit inside max_columns.
  * This never slices the bytes belonging to a Han/Hangul/wide character. */
 static inline void angdroid_utf8_clip_columns(char *text, size_t max_columns)

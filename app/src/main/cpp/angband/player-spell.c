@@ -31,6 +31,7 @@
 #include "zh-tw-ui.h"
 #include "zh-tw-spell-names.h"
 #include "zh-tw-spell-effect-info.h"
+#include "../curses/unicode_display.h"
 #include "player-timed.h"
 #include "player-util.h"
 #include "project.h"
@@ -717,15 +718,21 @@ static void spell_effect_append_value_info(const struct effect *effect,
 			|| (rv.dice > 0 && rv.sides > 0))
 			&& (ist->pre_rv.dice != rv.dice
 			|| ist->pre_rv.sides != rv.sides)))) {
+		/* Translation labels contain multibyte Han glyphs. strnfmt("%s")
+		 * can cut through a glyph when the summary buffer is nearly full.
+		 * Use complete-scalar appends; dice numbers remain ASCII as before. */
 		if (offset) {
-			offset += strnfmt(p + offset, len - offset, ";");
+			offset = angdroid_utf8_append_complete(p, len, offset, ";");
 		}
 
-		offset += strnfmt(p + offset, len - offset, " %s ", type);
+		offset = angdroid_utf8_append_complete(p, len, offset, " ");
+		offset = angdroid_utf8_append_complete(p, len, offset, type);
+		offset = angdroid_utf8_append_complete(p, len, offset, " ");
 		offset += append_random_value_string(p + offset, len - offset, &rv);
 
 		if (strlen(special) > 1) {
-			strnfmt(p + offset, len - offset, "%s", special);
+			offset = angdroid_utf8_append_complete(
+				p, len, offset, special);
 		}
 
 		ist->pre = effect;
@@ -740,6 +747,9 @@ void get_spell_info(int spell_index, char *p, size_t len)
 	struct spell_info_iteration_state ist = {
 		NULL, "", { 0, 0, 0, 0 }, { 0, 0, 0, 0 }, false };
 
+	/* The spell menu passes a valid 192-byte buffer. Keep this
+	 * display helper safe for empty and null-capacity callers as well. */
+	if (!p || !len) return;
 	p[0] = '\0';
 
 	while (effect) {

@@ -1000,6 +1000,28 @@ def main():
            and 'CHECK(strcmp(prompt, "瀏覽法術") == 0);' in spell_reader_native
            and 'test_spell_reader_pages.c' in native_tests,
            "Spell selection and browsing headers must use UTF-8-safe one-row clipping")
+    # Native spell effect summaries consist of user-facing CJK labels,
+    # ASCII dice expressions and suffixes.  Never truncate a Han glyph while
+    # appending to the 192-byte spell-menu info field; keep game effect data.
+    spell_effect_locale = source(CPP / "angband/player-spell.c", errors)
+    unicode_display = source(CPP / "curses/unicode_display.h", errors)
+    spell_effect_test = source(
+        ROOT / "tests/native/test_spell_effect_info_locale.c", errors)
+    expect('static inline size_t angdroid_utf8_append_complete(' in
+               unicode_display and
+           'return offset + angdroid_utf8_copy_complete(' in unicode_display and
+           spell_effect_locale.count('angdroid_utf8_append_complete(') == 5 and
+           'offset = angdroid_utf8_append_complete(p, len, offset, type);' in
+               spell_effect_locale and
+           'offset += append_random_value_string(' in spell_effect_locale and
+           'strnfmt(p + offset, len - offset, " %s ", type)' not in
+               spell_effect_locale and
+           'strnfmt(p + offset, len - offset, "%s", special)' not in
+               spell_effect_locale and
+           'if (!p || !len) return;' in spell_effect_locale and
+           'strcmp(summary, "  傷害 1234;") == 0' in spell_effect_test and
+           'test_spell_effect_info_locale.c' in native_tests,
+           "Spell effect summary must append complete CJK scalars and preserve dice")
     # A translated spell name may be longer than the byte-sized menu or
     # reader title buffer; copy complete UTF-8 scalars before column clipping.
     expect('static inline size_t angdroid_utf8_copy_complete(' in display_width

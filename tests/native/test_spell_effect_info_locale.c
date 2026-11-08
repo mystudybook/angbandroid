@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../../app/src/main/cpp/angband/zh-tw-spell-effect-info.h"
+#include "../../app/src/main/cpp/curses/unicode_display.h"
 
 static int checks;
 
@@ -48,6 +49,55 @@ int main(void)
         angdroid_zh_tw_spell_effect_info(", len %d", 0), 12);
     assert(strcmp(formatted, ", len 12") == 0);
     checks += 2;
+
+
+    /* A multi-effect summary can end midway through a translated label.
+     * Preserve ASCII dice/delimiters but never emit partial UTF-8 glyphs. */
+    {
+        char summary[15] = "";
+        char tiny[3] = "X";
+        char null_out = 'Q';
+        size_t used = 0;
+        used = angdroid_utf8_append_complete(summary, sizeof(summary),
+            used, "  傷害 ");
+        assert(used == strlen("  傷害 "));
+        assert(strcmp(summary, "  傷害 ") == 0);
+        checks += 2;
+
+        used = angdroid_utf8_append_complete(summary, sizeof(summary),
+            used, "1234");
+        assert(used == strlen("  傷害 1234"));
+        assert(strcmp(summary, "  傷害 1234") == 0);
+        checks += 2;
+
+        /* Only one free byte remains: do not copy part of 「治」. */
+        used = angdroid_utf8_append_complete(summary, sizeof(summary),
+            used, "治療");
+        assert(used == strlen("  傷害 1234"));
+        assert(strcmp(summary, "  傷害 1234") == 0);
+        checks += 2;
+
+        assert(angdroid_utf8_append_complete(
+            summary, sizeof(summary), used, ";") == used + 1);
+        assert(strcmp(summary, "  傷害 1234;") == 0);
+        checks += 2;
+
+        assert(angdroid_utf8_append_complete(tiny, sizeof(tiny),
+            1, "治療") == 1);
+        assert(strcmp(tiny, "X") == 0);
+        checks += 2;
+
+        assert(angdroid_utf8_append_complete(NULL, 0, 0, "中文") == 0);
+        assert(angdroid_utf8_append_complete(
+            &null_out, 0, 0, "中文") == 0);
+        assert(null_out == 'Q');
+        checks += 3;
+
+        assert(angdroid_utf8_append_complete(summary, sizeof(summary),
+            sizeof(summary), "中文") == sizeof(summary));
+        assert(strcmp(summary, "  傷害 1234;") == 0);
+        checks += 2;
+    }
 
     printf("PASS: spell effect info bilingual display (%d checks)\n", checks);
     return 0;
