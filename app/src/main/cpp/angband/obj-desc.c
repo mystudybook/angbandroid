@@ -460,7 +460,9 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 			char suffix_display[192];
 			if (angdroid_zh_tw_item_suffix(suffix_display,
 					sizeof(suffix_display), translated_suffix)) {
-				angdroid_zh_tw_item_append_utf8(buf, max, &end,
+				/* A translated (name) / quoted suffix is one visual
+				 * unit: never leave an opening bracket without its mate. */
+				angdroid_zh_tw_item_append_whole(buf, max, &end,
 					suffix_display);
 				chinese_suffix_done = true;
 			}
@@ -489,7 +491,9 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 			char suffix_display[192];
 			if (angdroid_zh_tw_item_suffix(suffix_display,
 					sizeof(suffix_display), translated_suffix)) {
-				angdroid_zh_tw_item_append_utf8(buf, max, &end,
+				/* A translated (name) / quoted suffix is one visual
+				 * unit: never leave an opening bracket without its mate. */
+				angdroid_zh_tw_item_append_whole(buf, max, &end,
 					suffix_display);
 				chinese_suffix_done = true;
 			}
