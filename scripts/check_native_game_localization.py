@@ -962,6 +962,21 @@ def main():
                         if line.startswith("spell:")}
     expect(spell_keys == canonical_spells,
            "Spell names must match the full canonical Angband class.txt set")
+    # A translated spell name may be longer than the byte-sized menu or
+    # reader title buffer; copy complete UTF-8 scalars before column clipping.
+    expect('static inline size_t angdroid_utf8_copy_complete(' in display_width
+           and 'angdroid_utf8_next_scalar(text + offset, &scalar)' in
+               display_width
+           and 'count > capacity - used - 1' in display_width
+           and 'dst[used] = \'\\0\';' in display_width
+           and 'angdroid_utf8_copy_complete(spell_name_buf, sizeof(spell_name_buf),'
+               in spell_ui
+           and 'angdroid_utf8_copy_complete(title, sizeof(title), name);'
+               in spell_ui
+           and 'angdroid_utf8_clip_columns(title, columns);' in spell_ui
+           and 'angdroid_utf8_clip_columns(spell_name_buf, 30)' in spell_ui
+           and 'test_unicode_display.c' in native_tests,
+           "Spell menu and full reader titles must copy complete UTF-8 scalars")
     expect('angdroid_zh_tw_spell_name(spell->name' in spell_ui
            and 'angdroid_utf8_clip_columns(spell_name_buf, 30)' in spell_ui
            and 'angdroid_utf8_display_columns(spell_name_buf)' in spell_ui,

@@ -71,6 +71,42 @@ int main(void)
     CHECK(angdroid_utf8_printf_field_bytes("中文", 2) == strlen("中文"));
     CHECK(angdroid_utf8_printf_field_bytes(NULL, 5) == 5);
 
+
+    /* Spell names must be UTF-8 valid BEFORE column clipping.  A byte
+     * truncate may otherwise leave a dangling Han or emoji prefix. */
+    {
+        char dest[7];
+        char tight[4];
+        char tiny[2];
+        char null_dest = 'Z';
+        char broken[] = { (char)0xE4, 'Z', '\0' };
+
+        CHECK(angdroid_utf8_copy_complete(dest, sizeof(dest), "甲乙丙")
+              == strlen("甲乙"));
+        CHECK(strcmp(dest, "甲乙") == 0);
+        CHECK(angdroid_utf8_display_columns(dest) == 4);
+        CHECK(angdroid_utf8_copy_complete(dest, sizeof(dest), "A中文")
+              == strlen("A中"));
+        CHECK(strcmp(dest, "A中") == 0);
+        CHECK(angdroid_utf8_copy_complete(tight, sizeof(tight), "中文")
+              == strlen("中"));
+        CHECK(strcmp(tight, "中") == 0);
+        CHECK(angdroid_utf8_copy_complete(tiny, sizeof(tiny), "中文") == 0);
+        CHECK(tiny[0] == '\0');
+        CHECK(angdroid_utf8_copy_complete(dest, sizeof(dest), "é🐱")
+              == strlen("é🐱"));
+        CHECK(strcmp(dest, "é🐱") == 0);
+        CHECK(angdroid_utf8_copy_complete(dest, sizeof(dest), broken) == 2);
+        CHECK(strcmp(dest, "?Z") == 0);
+        CHECK(angdroid_utf8_copy_complete(dest, sizeof(dest), NULL) == 0);
+        CHECK(dest[0] == '\0');
+        CHECK(angdroid_utf8_copy_complete(NULL, 0, "中文") == 0);
+        CHECK(angdroid_utf8_copy_complete(&null_dest, 0, "中文") == 0);
+        CHECK(null_dest == 'Z');
+        CHECK(angdroid_utf8_copy_complete(tiny, sizeof(tiny), "") == 0);
+        CHECK(tiny[0] == '\0');
+    }
+
     puts("PASS: UTF-8 terminal cell width, safe clipping and padding");
     printf("Assertions: %d\n", cases);
     return 0;

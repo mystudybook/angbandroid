@@ -127,7 +127,8 @@ static void spell_menu_display(struct menu *m, int oid, bool cursor,
      * a Han glyph occupies two cells on Android's curses terminal. */
     display_spell_name = angdroid_zh_tw_spell_name(spell->name,
         angdroid_zh_tw_enabled());
-    my_strcpy(spell_name_buf, display_spell_name, sizeof(spell_name_buf));
+    angdroid_utf8_copy_complete(spell_name_buf, sizeof(spell_name_buf),
+        display_spell_name);
     angdroid_utf8_clip_columns(spell_name_buf, 30);
     spell_columns = angdroid_utf8_display_columns(spell_name_buf);
     strnfmt(out, sizeof(out), "%s%*s", spell_name_buf,
@@ -174,7 +175,7 @@ static void spell_menu_show_full_description(const struct class_spell *spell)
 
         Term_clear();
         /* Avoid allowing the title itself to wrap into the body. */
-        my_strcpy(title, name, sizeof(title));
+        angdroid_utf8_copy_complete(title, sizeof(title), name);
         angdroid_utf8_clip_columns(title, columns);
         prt(title, 0, 0);
         while (row < first + visible &&
