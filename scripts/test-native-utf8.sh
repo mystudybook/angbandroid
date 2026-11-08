@@ -386,6 +386,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_mon_spell_render_utf8"
 "$BUILD_DIR/test_mon_spell_render_utf8"
 
+# FAangband extra monster base, lore and spell messages.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_monster_spells.c" \
+    -o "$BUILD_DIR/test_faangband_monster_spells"
+"$BUILD_DIR/test_faangband_monster_spells"
+
 # All canonical monster spell messages (and original race overrides).
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_mon_spell_message_locale.c" \
