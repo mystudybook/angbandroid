@@ -514,19 +514,18 @@ static int spell_menu_select(struct menu *m, const char *noun, const char *verb)
 	screen_save();
 	region_erase_bordered(&m->active);
 
-	/* Format, capitalise and display */
+	/* Format complete UTF-8 characters, then clip to terminal cells. */
 	if (angdroid_zh_tw_enabled()) {
-        strnfmt(buf, sizeof buf, "選擇%s（%s）？2 秒內觸控同列兩次確認；? 說明 ] 全文",
-            angdroid_zh_tw_magic_term(noun, true),
-            angdroid_zh_tw_magic_term(verb, true));
-    } else {
-        strnfmt(buf, sizeof buf, "%s which %s? Tap same row twice within 2s; ? help, ] full",
-                verb, noun);
-        my_strcap(buf);
-    }
-	/* The extra two-tap help must not wrap across the spell menu. */
-	if (Term->wid > 1)
-		angdroid_utf8_clip_columns(buf, (size_t)(Term->wid - 1));
+		angdroid_spell_menu_copy_prompt(buf, sizeof(buf),
+			format("選擇%s（%s）？2 秒內觸控同列兩次確認；? 說明 ] 全文",
+				angdroid_zh_tw_magic_term(noun, true),
+				angdroid_zh_tw_magic_term(verb, true)), Term->wid);
+	} else {
+		angdroid_spell_menu_copy_prompt(buf, sizeof(buf),
+			format("%s which %s? Tap same row twice within 2s; ? help, ] full",
+				verb, noun), Term->wid);
+		my_strcap(buf);
+	}
 	prt(buf, 0, 0);
 
 	menu_select(m, 0, true);
@@ -541,15 +540,21 @@ static int spell_menu_select(struct menu *m, const char *noun, const char *verb)
 static void spell_menu_browse(struct menu *m, const char *noun)
 {
 	struct spell_menu_data *d = menu_priv(m);
+	char buf[192];
 
 	screen_save();
 
 	region_erase_bordered(&m->active);
+	/* The book browser must obey the same width bound as the spell picker. */
 	if (angdroid_zh_tw_enabled())
-        prt(format("瀏覽%s（? 切換說明、] 閱讀全文）",
-            angdroid_zh_tw_magic_term(noun, true)), 0, 0);
-    else
-        prt(format("Browsing %ss. ('?' toggle, ']' read all)", noun), 0, 0);
+		angdroid_spell_menu_copy_prompt(buf, sizeof(buf),
+			format("瀏覽%s（? 切換說明、] 閱讀全文）",
+				angdroid_zh_tw_magic_term(noun, true)), Term->wid);
+	else
+		angdroid_spell_menu_copy_prompt(buf, sizeof(buf),
+			format("Browsing %ss. ('?' toggle, ']' read all)", noun),
+			Term->wid);
+	prt(buf, 0, 0);
 
 	d->browse = true;
 	angdroid_spell_menu_cancel_touch(&d->touch_pending_oid,
