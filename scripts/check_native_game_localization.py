@@ -2283,6 +2283,7 @@ def main():
            'step > bytes - offset' in mon_render and
            'step > capacity - used - 1' in mon_render and
            monster_spell_ui.count('angdroid_mon_spell_append_utf8(') >= 9 and
+           'display ? strlen(display) : 0' in monster_spell_ui and
            'strnfcat(buf, 1024, &end, "%.*s",' in monster_spell_ui and
            'strnfcat(buf, 1024, &end, "%s", in_cursor);' in
                monster_spell_ui and
