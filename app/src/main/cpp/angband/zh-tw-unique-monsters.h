@@ -7,6 +7,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include "zh-tw-faangband-monster-flavor.h"
 
 #define ANGDROID_ZH_TW_UNIQUE_MONSTER_NAMES 101
 
@@ -125,7 +126,7 @@ static inline const char *angdroid_zh_tw_unique_monster_name(
         if (strcmp(english, names[i].english) == 0)
             return names[i].traditional;
     }
-    return NULL;
+    return angdroid_faangband_monster_name(english);
 }
 
 #endif
