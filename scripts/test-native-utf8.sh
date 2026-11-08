@@ -428,6 +428,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_timed_messages_locale"
 "$BUILD_DIR/test_timed_messages_locale"
 
+# FAangband-specific on-increase messages for temporary resistances.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_timed_renewals.c" \
+    -o "$BUILD_DIR/test_faangband_timed_renewals"
+"$BUILD_DIR/test_faangband_timed_renewals"
+
 # FAangband-only 14 shape names and FLYING flag, standalone C99.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_shapes_locale.c" \
