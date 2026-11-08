@@ -221,7 +221,7 @@ def main():
            "Unique monster names must cover all 101 canonical source names")
     expect('"zh-tw-unique-monsters.h"' in mon
            and 'angdroid_zh_tw_unique_monster_name(race->name)' in mon
-           and 'strnfmt(buf, buflen, "[U] %s", translated)' in mon
+           and 'angdroid_zh_tw_monster_list_copy(buf, buflen,' in mon
            and 'strnfmt(buf, buflen, "[U] %s", race->name)' in mon,
            "Unique names must stay display-only in monster lists")
     # Translating an unidentified visual label must not reveal the kind.

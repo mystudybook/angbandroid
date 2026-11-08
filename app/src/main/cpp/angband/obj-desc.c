@@ -398,9 +398,9 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 			strnfcat(buf, max, &end, "沒有剩餘的");
 		else if (prefix && number > 1)
 			strnfcat(buf, max, &end, "%u 張", number);
-		strnfcat(buf, max, &end, "%s", scroll_display);
+		angdroid_zh_tw_item_append_utf8(buf, max, &end, scroll_display);
 	} else if (localized_flavored) {
-		strnfcat(buf, max, &end, "%s", flavored_display);
+		angdroid_zh_tw_item_append_utf8(buf, max, &end, flavored_display);
 	} else if (localized_kind) {
 		char known_display[256];
 		char named_effect[160];
@@ -423,10 +423,17 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		} else {
 			/* Safe backward fallback for unexpectedly long source labels. */
 			if (prefix && number == 0)
-				strnfcat(buf, max, &end, "沒有剩餘的");
-			else if (prefix && number > 1)
-				strnfcat(buf, max, &end, "%u 件", number);
-			strnfcat(buf, max, &end, "%s", localized_kind);
+				angdroid_zh_tw_item_append_utf8(buf, max, &end, "沒有剩餘的");
+			else if (prefix && number > 1) {
+				char count_label[48];
+				int n = snprintf(count_label, sizeof(count_label),
+					"%u 件", number);
+				if (n > 0 && (size_t)n < sizeof(count_label))
+					angdroid_zh_tw_item_append_utf8(buf, max,
+						&end, count_label);
+			}
+			angdroid_zh_tw_item_append_utf8(buf, max, &end,
+				localized_kind);
 		}
 	} else {
 		/* Preserve English pluralization and unidentified flavor text. */
@@ -457,8 +464,14 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 				chinese_suffix_done = true;
 			}
 		}
-		if (!chinese_suffix_done)
-			strnfcat(buf, max, &end, " %s", artifact_name);
+		if (!chinese_suffix_done) {
+			if (translated_suffix) {
+				strnfcat(buf, max, &end, " ");
+				angdroid_zh_tw_item_append_utf8(buf, max, &end,
+					artifact_name);
+			} else
+				strnfcat(buf, max, &end, " %s", artifact_name);
+		}
 	}
 	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store)) {
 		/* Only translate a revealed ego suffix for opted-in screen calls.
@@ -480,14 +493,28 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 				chinese_suffix_done = true;
 			}
 		}
-		if (!chinese_suffix_done)
-			strnfcat(buf, max, &end, " %s", ego_name);
+		if (!chinese_suffix_done) {
+			if (translated_suffix) {
+				strnfcat(buf, max, &end, " ");
+				angdroid_zh_tw_item_append_utf8(buf, max, &end,
+					ego_name);
+			} else
+				strnfcat(buf, max, &end, " %s", ego_name);
+		}
 	}
 	else if (localized_scroll && aware && !obj->artifact) {
 		/* Only an identified scroll may reveal its actual effect. */
 		const char *known = angdroid_zh_tw_item_kind_name(obj->kind->name);
-		strnfcat(buf, max, &end, "（%s）",
-			known ? known : obj->kind->name);
+		/* The parentheses are one optional unit.  Never display half of
+		 * an identified scroll effect at a short byte boundary. */
+		{
+			char effect_label[256];
+			int n = snprintf(effect_label, sizeof(effect_label),
+				"（%s）", known ? known : obj->kind->name);
+			if (n >= 0 && (size_t)n < sizeof(effect_label))
+				angdroid_zh_tw_item_append_whole(
+					buf, max, &end, effect_label);
+		}
 	}
 	else if (!localized_kind && aware && !obj->artifact &&
 			 !localized_flavored &&

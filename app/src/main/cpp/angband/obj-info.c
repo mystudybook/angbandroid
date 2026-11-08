@@ -48,6 +48,7 @@
 #include "zh-tw-ego-lore.h"
 #include "zh-tw-kind-lore.h"
 #include "zh-tw-monsters.h"
+#include "zh-tw-unique-monsters.h"
 
 /**
  * Describes the number of blows possible for given stat bonuses
@@ -2294,8 +2295,12 @@ static bool describe_origin(textblock *tb, const struct object *obj, bool terse)
 
 		if (!obj->origin_race) {
 			zh_dropper = "已不可考的怪物";
-		} else if (!unique) {
-			found = angdroid_zh_tw_monster_list_name(dropper);
+		} else {
+			/* A revealed unique source also has a Chinese display name.
+			 * Unknown names remain canonical English, never guessed. */
+			found = unique
+				? angdroid_zh_tw_unique_monster_name(dropper)
+				: angdroid_zh_tw_monster_list_name(dropper);
 			if (found) zh_dropper = found;
 		}
 
