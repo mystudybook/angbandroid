@@ -77,6 +77,7 @@ run_check "FAangband monster traps and bilingual activation notifications" pytho
 run_check "FAangband flying dragon and 7 spell lore/14 message translations" python3 "$ROOT/tests/test_faangband_monster_spells_source.py"
 run_check "FAangband monster names and source-exact divergent lore" python3 "$ROOT/tests/test_faangband_monster_flavor_source.py"
 run_check "Targeting visible-only monster names and status locale" python3 "$ROOT/tests/test_target_monster_locale_source.py"
+run_check "Target-look terrain, visible trap and item-pile descriptions" python3 "$ROOT/tests/test_target_world_locale_source.py"
 run_check "Angband/FAangband shape combat verbs" python3 "$ROOT/tests/test_shape_combat_verbs_source.py"
 run_check "Class-book Chinese names and shape lore" python3 "$ROOT/tests/test_class_book_names_source.py"
 run_check "Equipment combat and inscription UTF-8 safety" python3 "$ROOT/tests/test_item_details_localization.py"
