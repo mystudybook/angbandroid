@@ -442,6 +442,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					const wchar_t *arg = va_arg(vp, const wchar_t *);
 					const char *dot;
 					size_t wide_len, max_chars, capacity, max_bytes;
+					int max_encoded_bytes;
 					size_t used = 0, index, precision = (size_t)-1;
 					char *utf8;
 					int bytes, converted, written;
@@ -453,11 +454,12 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					 * encoder. Casting wchar_t to char discarded every
 					 * non-ASCII character, and the old fixed buffer
 					 * silently clipped any name longer than 767 chars. */
-					max_bytes = (size_t)text_wcsz();
-					if (max_bytes == 0) {
+					max_encoded_bytes = text_wcsz();
+					if (max_encoded_bytes <= 0) {
 						buf[0] = '\0';
 						return 0;
 					}
+					max_bytes = (size_t)max_encoded_bytes;
 
 					/* printf precision on a string is measured in
 					 * bytes. Never emit only part of a UTF-8 scalar,
