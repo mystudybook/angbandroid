@@ -508,20 +508,44 @@ void text_out_to_file(uint8_t a, const char *str)
  * Output text to the screen or to a file depending on the selected
  * text_out hook.
  */
+/* A compound format may contain a long %s field even when it is not
+ * exactly "%s". Retry formatting until the output fits: the old 1024-byte
+ * local buffer clipped those descriptions before they reached the hook. */
+static void angdroid_text_out_vformatted(uint8_t attr,
+		const char *fmt, va_list vp)
+{
+	size_t capacity = 1024;
+	char *buf = mem_alloc(capacity);
+
+	while (1) {
+		va_list args;
+		size_t length;
+
+		va_copy(args, vp);
+		length = vstrnfmt(buf, capacity, fmt, args);
+		va_end(args);
+		if (length < capacity - 1) break;
+
+		/* Guard the doubling arithmetic before asking the allocator. */
+		if (capacity > ((size_t)-1) / 2) break;
+		capacity *= 2;
+		buf = mem_realloc(buf, capacity);
+	}
+
+	text_out_hook(attr, buf);
+	mem_free(buf);
+}
+
 void text_out(const char *fmt, ...)
 {
-	char buf[1024];
 	va_list vp;
 
 	va_start(vp, fmt);
 	if (strcmp(fmt, "%s") == 0) {
-		/* Preserve long UTF-8 lore passed as a single string. vstrnfmt()
-		 * can clip %s inside its fixed per-field temporary buffer. */
 		const char *plain = va_arg(vp, const char *);
 		text_out_hook(COLOUR_WHITE, plain ? plain : "");
 	} else {
-		(void)vstrnfmt(buf, sizeof(buf), fmt, vp);
-		text_out_hook(COLOUR_WHITE, buf);
+		angdroid_text_out_vformatted(COLOUR_WHITE, fmt, vp);
 	}
 	va_end(vp);
 }
@@ -532,7 +556,6 @@ void text_out(const char *fmt, ...)
  */
 void text_out_c(uint8_t a, const char *fmt, ...)
 {
-	char buf[1024];
 	va_list vp;
 
 	va_start(vp, fmt);
@@ -540,8 +563,7 @@ void text_out_c(uint8_t a, const char *fmt, ...)
 		const char *plain = va_arg(vp, const char *);
 		text_out_hook(a, plain ? plain : "");
 	} else {
-		(void)vstrnfmt(buf, sizeof(buf), fmt, vp);
-		text_out_hook(a, buf);
+		angdroid_text_out_vformatted(a, fmt, vp);
 	}
 	va_end(vp);
 }
