@@ -105,6 +105,8 @@ static inline void angdroid_target_world_utf8_trim(char *text,
     size_t offset = 0;
     uint32_t scalar;
     if (!zh_tw || !text || !capacity) return;
+    /* strnfmt() NUL-terminates; handle unexpected full buffers safely. */
+    if (!memchr(text, '\0', capacity)) text[capacity - 1] = '\0';
     while (offset < capacity && text[offset]) {
         size_t count = angdroid_utf8_next_scalar(text + offset, &scalar);
         if (!count || count > capacity - offset ||
@@ -114,10 +116,6 @@ static inline void angdroid_target_world_utf8_trim(char *text,
             return;
         }
         offset += count;
-    }
-    if (offset == capacity) {
-        /* Defensive: strnfmt() normally guarantees a NUL. */
-        text[capacity - 1] = '\0';
     }
 }
 
