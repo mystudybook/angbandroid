@@ -127,16 +127,17 @@ static inline void angdroid_target_monster_status(char *out, size_t capacity,
             unknown[len] = '\0';
             translated = unknown;
         }
-        if (!first) {
-            size_t separator_bytes = strlen("、");
+        {
+            size_t separator_bytes = first ? 0 : strlen("、");
             size_t remaining = capacity - used;
-            /* Append the separator and following status as one unit.
-             * Otherwise a narrow display leaves a dangling "、" or half
-             * of a translated condition at the end of the line. */
+            /* Every status must fit as a complete phrase, including the
+             * first one. Otherwise narrow screens could display fragments
+             * such as "嚴重受" instead of "嚴重受損". */
             if (remaining <= separator_bytes ||
                 strlen(translated) >= remaining - separator_bytes) break;
-            used = angdroid_utf8_append_complete(
-                out, capacity, used, "、");
+            if (!first)
+                used = angdroid_utf8_append_complete(
+                    out, capacity, used, "、");
         }
         used = angdroid_utf8_append_complete(out, capacity, used, translated);
         first = 0;
