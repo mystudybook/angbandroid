@@ -115,6 +115,12 @@ assert "if (!zh_tw || !text || !capacity) return;" in HDR
 assert "angdroid_fit_terminal_text(" in read("app/src/main/cpp/angband/ui-term.c")
 assert "angdroid_utf8_clip_columns(output, 10);" in read("tests/native/test_target_world_locale.c")
 assert "strlen(output) == 1 + 84 * 3" in read("tests/native/test_target_world_locale.c")
+# Keep the 256-byte truncation fixture GCC/Clang -Werror-compatible.
+# A deliberate snprintf("%s") truncation triggers GCC -Wformat-truncation.
+TARGET_NATIVE = read("tests/native/test_target_world_locale.c")
+assert "memcpy(output, source, sizeof output - 1);" in TARGET_NATIVE
+assert "output[sizeof output - 1] = '\\0';" in TARGET_NATIVE
+assert 'snprintf(output, sizeof output, "%s", source);' not in TARGET_NATIVE
 assert "Term_addstr(-1, attr, str);" in read("app/src/main/cpp/angband/ui-output.c")
 assert '#include "zh-tw-target-world.h"' in TARGET
 assert "tests/native/test_target_world_locale.c" in NATIVE
