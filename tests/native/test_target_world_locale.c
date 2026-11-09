@@ -79,6 +79,26 @@ int main(void)
         CHECK(one_byte[0] == '\0');
         angdroid_target_world_utf8_trim(NULL, 0, 1);
     }
+    /* Real 256-byte target output: one ASCII prefix plus wide CJK text.
+     * snprintf() cuts the 85th ideograph after two of its three bytes.
+     * The guard must leave 84 complete ideographs and an intact ASCII prefix. */
+    {
+        char source[512];
+        char output[256];
+        size_t i;
+        source[0] = 'X';
+        for (i = 0; i < 130; ++i)
+            memcpy(source + 1 + (i * 3), "水", 3);
+        source[1 + (130 * 3)] = '\0';
+        snprintf(output, sizeof output, "%s", source);
+        angdroid_target_world_utf8_trim(output, sizeof output, 1);
+        CHECK(strlen(output) == 1 + 84 * 3);
+        CHECK(output[0] == 'X');
+        CHECK(angdroid_utf8_display_columns(output) == 1 + 84 * 2);
+        angdroid_utf8_clip_columns(output, 10);
+        CHECK(strcmp(output, "X水水水水") == 0);
+        CHECK(angdroid_utf8_display_columns(output) == 9);
+    }
     puts("PASS: target-world terrain, visible traps, hallucination, pile prompts");
     return 0;
 }
