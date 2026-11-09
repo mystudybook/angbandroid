@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "../curses/unicode_display.h"
 #include "zh-tw-terrain-trap.h"
 
@@ -66,6 +67,38 @@ static inline const char *angdroid_target_world_trap_desc(const char *known,
  * this guard prevents malformed UTF-8 before the terminal even sees it.
  * Call only on NUL-terminated output from strnfmt(), never on saved data.
  */
+/* coords_desc() in target.c is the sole authority for player-relative
+ * distances and directions ("12 S, 35 W"). Translate only that exact
+ * presentation grammar; never recompute grids or change target coordinates.
+ * Return 0 and retain English for malformed/unknown forms or tiny buffers.
+ */
+static inline int angdroid_target_world_localize_coords(char *coords,
+    size_t capacity, int zh_tw)
+{
+    int vertical, horizontal;
+    char north_south, east_west, extra;
+    const char *ns, *ew;
+    char localized[64];
+    int bytes;
+
+    if (!coords || !capacity || !zh_tw) return 0;
+    if (sscanf(coords, "%d %c, %d %c%c", &vertical, &north_south,
+               &horizontal, &east_west, &extra) != 4 ||
+        vertical < 0 || horizontal < 0) return 0;
+    if (north_south == 'N') ns = "北";
+    else if (north_south == 'S') ns = "南";
+    else return 0;
+    if (east_west == 'E') ew = "東";
+    else if (east_west == 'W') ew = "西";
+    else return 0;
+    bytes = snprintf(localized, sizeof localized, "%d%s，%d%s",
+                     vertical, ns, horizontal, ew);
+    if (bytes < 0 || (size_t)bytes >= capacity ||
+        (size_t)bytes >= sizeof localized) return 0;
+    angdroid_utf8_copy_complete(coords, capacity, localized);
+    return 1;
+}
+
 static inline void angdroid_target_world_utf8_trim(char *text,
     size_t capacity, int zh_tw)
 {
