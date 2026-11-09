@@ -77,6 +77,22 @@ int main(void)
         CHECK(english_mode[1] == (char)0xE4);
         angdroid_target_world_utf8_trim(one_byte, sizeof one_byte, 1);
         CHECK(one_byte[0] == '\0');
+        /* Even a defective non-NUL-terminated caller cannot read beyond
+         * capacity or leave an incomplete leading CJK scalar behind. */
+        {
+            char missing_terminator[] = {
+                (char)0xE6, (char)0xB0, (char)0xB4
+            };
+            char complete_then_no_terminator[] = {
+                (char)0xE6, (char)0xB0, (char)0xB4, 'X'
+            };
+            angdroid_target_world_utf8_trim(missing_terminator,
+                sizeof missing_terminator, 1);
+            CHECK(missing_terminator[0] == '\0');
+            angdroid_target_world_utf8_trim(complete_then_no_terminator,
+                sizeof complete_then_no_terminator, 1);
+            CHECK(strcmp(complete_then_no_terminator, "水") == 0);
+        }
         angdroid_target_world_utf8_trim(NULL, 0, 1);
     }
     /* Real 256-byte target output: one ASCII prefix plus wide CJK text.
