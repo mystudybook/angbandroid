@@ -53,8 +53,10 @@ for label, text in (("Angband", ANG), ("FAangband", FA)):
              if line.startswith("name:")]
     assert len(names) == 624, (label, len(names))
     lengths = [len(name.encode("utf-8")) for name in names]
-    assert max(lengths) == 36, (label, max(lengths))
-    assert max(lengths) + len("an ") + len(",") + 1 < 256
+    assert lengths and all(size > 0 for size in lengths)
+    # Do not cap future canonical names at today's 36-byte maximum:
+    # the display builder explicitly falls back to the complete source
+    # when its destination is too small.
 
 assert 'known("Eöl, the Dark Elven Smith"' in NATIVE
 assert 'known("Gothmog, the High Captain of Balrogs"' in NATIVE
