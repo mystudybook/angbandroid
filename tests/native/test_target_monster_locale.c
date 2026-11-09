@@ -107,6 +107,29 @@ int main(void)
             "the blue dragon,", "blue dragon", 0, 1) == 1);
         CHECK(strcmp(clipped, "藍龍，") == 0);
     }
+    /* A first status must be all-or-nothing on byte-limited terminals.
+     * In particular do not display "嚴", "嚴重", or "嚴重受" for
+     * the complete state "嚴重受損". Preserve buffer canaries. */
+    {
+        char limited[32];
+        size_t cap;
+        for (cap = 1; cap < 13; ++cap) {
+            memset(limited, 'Q', sizeof limited);
+            angdroid_target_monster_status(limited, cap,
+                "badly damaged, confused", 1);
+            CHECK(limited[0] == '\0');
+            CHECK(limited[cap] == 'Q');
+        }
+        angdroid_target_monster_status(limited, 13,
+            "badly damaged, confused", 1);
+        CHECK(strcmp(limited, "嚴重受損") == 0);
+        angdroid_target_monster_status(limited, 22,
+            "badly damaged, confused", 1);
+        CHECK(strcmp(limited, "嚴重受損、混亂") == 0);
+        angdroid_target_monster_status(limited, 9,
+            "wounded, confused", 1);
+        CHECK(strcmp(limited, "受傷") == 0);
+    }
     for (i = 0; i < sizeof(statuses) / sizeof(statuses[0]); ++i) {
         angdroid_target_monster_status(result, sizeof(result), statuses[i].en, 1);
         CHECK(strcmp(result, statuses[i].zh) == 0);
