@@ -25,6 +25,7 @@ int main(void)
     check(0x20000u, 2); /* CJK extension B */
     check(0x303Fu, 1);
     check(0xE000u, 1);  /* Game private-use special keys */
-    puts("PASS: 14 native terminal width classification cases");
+    check(0x1F431u, 1); /* Cat emoji: current Java/C terminal contract */
+    puts("PASS: 15 native terminal width classification cases");
     return 0;
 }
