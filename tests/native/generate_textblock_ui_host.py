@@ -8,7 +8,8 @@ Call from the repository root:
 
 No fake production routines: extract actual display_area(), textui_textblock_place(),
 and textui_textblock_show() at current checkout, compile all three verbatim.
-Only the terminal, key input and textblock data collection are mocked.
+Only the terminal, key input, and textblock containers are mocked.
+Actual `z-textblock.c` new_line() and textblock_calculate_lines() are compiled too.
 """
 from pathlib import Path
 import sys
@@ -18,6 +19,14 @@ source = (root / "app/src/main/cpp/angband/ui-output.c").read_text(encoding="utf
 first = source.index("static void display_area(")
 last = source.index("\n/**\n * ------------------------------------------------------------------------\n * text_out hook", first)
 code = source[first:last]
+wrap_source = (root / "app/src/main/cpp/angband/z-textblock.c").read_text(encoding="utf-8")
+wrap_first = wrap_source.index("static void new_line(")
+wrap_last = wrap_source.index("\n/**\n * Output a textblock to file.", wrap_first)
+wrap_code = wrap_source[wrap_first:wrap_last]
+for name in ("static void new_line(", "size_t textblock_calculate_lines("):
+    if wrap_code.count(name) != 1:
+        raise ValueError("Expected exactly one production wrap function: " + name)
+
 for name in ("static void display_area(", "void textui_textblock_place(",
              "struct keypress textui_textblock_show("):
     if code.count(name) != 1:
@@ -43,11 +52,12 @@ prefix = r'''/* GENERATED, COMPILES ACTUAL PRODUCTION UI TEXTBLOCK FUNCTIONS. */
 #define KEYPRESS_NULL {0}
 #define SCREEN_REGION (region){0,0,7,3}
 #define mem_free(p) free(p)
+#define mem_realloc(p,n) realloc(p,n)
 #define W 18
 #define H 9
 typedef struct {int col,row,width,page_rows;} region;
 struct keypress {int code;};
-typedef struct {const wchar_t *text;const uint8_t *attrs;size_t length;} textblock;
+typedef struct {const wchar_t *text;const uint8_t *attrs;size_t strlen;} textblock;
 static wchar_t cells[H][W];
 static int cx,cy,unusable,painted,cleared,save_count,load_count,footer_count;
 static const int *input_keys;
@@ -109,24 +119,7 @@ static struct keypress inkey(void)
 static region region_calculate(region input){return input;}
 static const wchar_t *textblock_text(textblock *tb){return tb->text;}
 static const uint8_t *textblock_attrs(textblock *tb){return tb->attrs;}
-static size_t textblock_calculate_lines(textblock *tb,size_t **starts,
-                                       size_t **lengths,size_t width)
-{
- size_t n=0,at=0;
- *starts=NULL;*lengths=NULL;
- if(!tb || !tb->text || !width)return 0;
- while(at<tb->length){
-  angdroid_textblock_line line=angdroid_textblock_next_line(
-   tb->text,tb->attrs,tb->length,at,width);
-  size_t *s=(size_t*)realloc(*starts,(n+1)*sizeof(size_t));
-  size_t *l=(size_t*)realloc(*lengths,(n+1)*sizeof(size_t));
-  assert(s&&l&&line.next>at);
-  *starts=s;*lengths=l;
-  (*starts)[n]=at;(*lengths)[n++]=line.length;
-  at=line.next;
- }
- return n;
-}
+
 '''
 
 suffix = r'''
@@ -137,9 +130,9 @@ static textblock make_block(const wchar_t *s)
  static uint8_t attrs[1024];
  textblock tb;
  size_t i;
- tb.text=s;tb.length=wcslen(s);tb.attrs=attrs;
- assert(tb.length<sizeof attrs);
- for(i=0;i<tb.length;++i)attrs[i]=3;
+ tb.text=s;tb.strlen=wcslen(s);tb.attrs=attrs;
+ assert(tb.strlen<sizeof attrs);
+ for(i=0;i<tb.strlen;++i)attrs[i]=3;
  return tb;
 }
 int main(void)
@@ -208,6 +201,65 @@ int main(void)
   textui_textblock_place(&tb,area,NULL);
   CHECK(cleared==0);
  }
+ {
+  /* Actual z-textblock.c allocator and line splitter, no mock. */
+  textblock tb=make_block(L"天地玄黃");
+  size_t *st=NULL,*ln=NULL,n;
+  n=textblock_calculate_lines(&tb,&st,&ln,4);
+  CHECK(n==2);
+  CHECK(st[0]==0 && ln[0]==2);
+  CHECK(st[1]==2 && ln[1]==2);
+  free(st);free(ln);
+ }
+ {
+  textblock tb=make_block(L"hello world");
+  size_t *st=NULL,*ln=NULL,n;
+  n=textblock_calculate_lines(&tb,&st,&ln,6);
+  CHECK(n==2);
+  CHECK(st[0]==0 && ln[0]==5);
+  CHECK(st[1]==6 && ln[1]==5);
+  free(st);free(ln);
+ }
+ {
+  textblock tb=make_block(L"甲\n\n乙");
+  size_t *st=NULL,*ln=NULL,n;
+  n=textblock_calculate_lines(&tb,&st,&ln,3);
+  CHECK(n==3);
+  CHECK(st[0]==0 && ln[0]==1);
+  CHECK(st[1]==2 && ln[1]==0);
+  CHECK(st[2]==3 && ln[2]==1);
+  free(st);free(ln);
+ }
+ {
+  /* More than 24 rows must grow the real allocation safely. */
+  wchar_t rows[128];
+  uint8_t attrs[128];
+  size_t *st=NULL,*ln=NULL,n,i;
+  textblock tb;
+  for(i=0;i<60;++i){rows[i]=L'甲';attrs[i]=3;}
+  rows[60]=0;
+  tb.text=rows;tb.attrs=attrs;tb.strlen=60;
+  n=textblock_calculate_lines(&tb,&st,&ln,1);
+  CHECK(n==60);
+  for(i=0;i<n;++i){CHECK(st[i]==i);CHECK(ln[i]==1);}
+  free(st);free(ln);
+ }
+ {
+  textblock tb=make_block(L"甲乙");
+  uint8_t attr[2]={0x80,0x80};
+  size_t *st=NULL,*ln=NULL,n;
+  tb.attrs=attr;
+  n=textblock_calculate_lines(&tb,&st,&ln,2);
+  CHECK(n==1 && ln[0]==2);
+  free(st);free(ln);
+ }
+ {
+  textblock tb=make_block(L"甲乙");
+  size_t *st=NULL,*ln=NULL;
+  CHECK(textblock_calculate_lines(&tb,&st,&ln,0)==0);
+  CHECK(st==NULL&&ln==NULL);
+  CHECK(textblock_calculate_lines(NULL,&st,&ln,5)==0);
+ }
  puts("PASS: actual production textblock renderer/scroll/header/tiny pages");
  printf("Assertions: %u\n",checks);
  return 0;
@@ -215,5 +267,5 @@ int main(void)
 '''
 out = Path(sys.argv[1]) if len(sys.argv)>1 else root/'build/test_textblock_ui.generated.c'
 out.parent.mkdir(parents=True,exist_ok=True)
-out.write_text(prefix+code+suffix,encoding='utf-8')
-print('Generated from real ui-output.c: '+str(out))
+out.write_text(prefix+wrap_code+code+suffix,encoding='utf-8')
+print('Generated from real z-textblock.c and ui-output.c: '+str(out))
