@@ -142,6 +142,7 @@ run_check "Top-line Unicode message wrap safety" python3 "$ROOT/tests/test_messa
 run_check "Monster list, item origin and dynamic UTF-8 display strings" python3 "$ROOT/tests/test_dynamic_names_utf8_source.py"
 run_check "Monster hallucination and sort hint localized UI" python3 "$ROOT/tests/test_monster_list_special_locale_source.py"
 run_check "Monster list narrow-screen layout and row budget" python3 "$ROOT/tests/test_monster_list_compact_layout_source.py"
+run_check "Visible monster/object list distances in zh-TW" python3 "$ROOT/tests/test_list_relative_location_locale_source.py"
 run_check "Monster spell exact tags and UTF-8 message assembly" python3 "$ROOT/tests/test_mon_spell_render_utf8_source.py"
 run_check "Monster action templates and saving throw zh-TW" python3 "$ROOT/tests/test_mon_blow_actions_locale_source.py"
 run_check "Ranged out-of-range prompt and monster item-crush bilingual feedback" python3 "$ROOT/tests/test_combat_feedback_edge_locale_source.py"
