@@ -44,6 +44,20 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_textblock_pager_layout"
 "$BUILD_DIR/test_textblock_pager_layout"
 
+# UTF-8 file export must never split a CJK scalar at a byte boundary.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_file_text_wrap.c" \
+    -o "$BUILD_DIR/test_file_text_wrap"
+"$BUILD_DIR/test_file_text_wrap"
+
+# Extract the real z-textblock.c file-output function; mock only file I/O.
+python3 "$ROOT/tests/native/generate_file_text_out_host.py" \
+    "$BUILD_DIR/test_file_text_out.generated.c"
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$BUILD_DIR/test_file_text_out.generated.c" \
+    -o "$BUILD_DIR/test_file_text_out"
+"$BUILD_DIR/test_file_text_out"
+
 # Compile the actual ui-output.c display and pager functions with a fake Term
 # so UTF-8/wide-cell and scroll regressions fail without Android hardware.
 python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
