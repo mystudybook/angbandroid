@@ -38,6 +38,7 @@
 #include "z-form.h"
 #include "z-file.h"
 #include "textblock-column-layout.h"
+#include "zh-tw-file-text-wrap.h"
 
 #define TEXTBLOCK_LEN_INITIAL		128
 #define TEXTBLOCK_LEN_INCR(x)		((x) + 128)
@@ -353,6 +354,19 @@ ang_file *text_out_file = NULL;
  * You must be careful to end all file output with a newline character
  * to "flush" the stored line position.
  */
+/* File exports share the same UTF-8 renderer as other display-only prose.
+ * Keep all file API calls in this TU; the column-aware helper is pure C99. */
+static void angdroid_textblock_write_file_bytes(void *context,
+        const char *text, size_t length)
+{
+    file_write((ang_file *)context, text, length);
+}
+
+static void angdroid_textblock_write_file_char(void *context, char character)
+{
+    file_writec((ang_file *)context, character);
+}
+
 void text_out_to_file(uint8_t a, const char *str)
 {
 	const char *s;
@@ -366,6 +380,17 @@ void text_out_to_file(uint8_t a, const char *str)
 
 	/* Unused parameter */
 	(void)a;
+
+	/* The original byte-counting wrap splits a CJK character when a byte
+	 * limit falls in the middle of its UTF-8 encoding. Use complete Unicode
+	 * scalars and terminal columns only for non-ASCII export text; preserve
+	 * all existing ASCII/English wrapping and formatting below. */
+	if (angdroid_text_has_non_ascii(str)) {
+		angdroid_utf8_text_file_wrap(str, &pos, wrap, text_out_indent,
+			text_out_file, angdroid_textblock_write_file_bytes,
+			angdroid_textblock_write_file_char);
+		return;
+	}
 
 	/* Copy to a rewriteable string */
  	my_strcpy(buf, str, 1024);
