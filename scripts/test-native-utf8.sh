@@ -284,6 +284,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_monster_list_special_locale"
 "$BUILD_DIR/test_monster_list_special_locale"
 
+# Shared monster/object-list directions and CJK terminal-column budgets.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_list_relative_location_locale.c" \
+    -o "$BUILD_DIR/test_list_relative_location_locale"
+"$BUILD_DIR/test_list_relative_location_locale"
+
 # Narrow-screen monster list geometry, optional distance and sleep tags.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_monster_list_compact_layout.c" \
