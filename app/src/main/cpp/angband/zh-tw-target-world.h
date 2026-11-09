@@ -5,6 +5,9 @@
 #ifndef ANGDROID_ZH_TW_TARGET_WORLD_H
 #define ANGDROID_ZH_TW_TARGET_WORLD_H
 #include <string.h>
+#include <stddef.h>
+#include <stdint.h>
+#include "../curses/unicode_display.h"
 #include "zh-tw-terrain-trap.h"
 
 static inline const char *angdroid_target_world_intro(const char *en,
@@ -57,6 +60,34 @@ static inline const char *angdroid_target_world_trap_desc(const char *known,
 
 /* The hallucinating player may know there is something strange, but must not
  * be shown a name from a hidden monster or unrevealed feature. */
+/* strnfmt() is byte-limited and may end halfway through a UTF-8 glyph.
+ * Finish a zh-TW target-line buffer at the last complete scalar.  The
+ * terminal's Term_addstr() separately clips by visible screen columns;
+ * this guard prevents malformed UTF-8 before the terminal even sees it.
+ * Call only on NUL-terminated output from strnfmt(), never on saved data.
+ */
+static inline void angdroid_target_world_utf8_trim(char *text,
+    size_t capacity, int zh_tw)
+{
+    size_t offset = 0;
+    uint32_t scalar;
+    if (!zh_tw || !text || !capacity) return;
+    while (offset < capacity && text[offset]) {
+        size_t count = angdroid_utf8_next_scalar(text + offset, &scalar);
+        if (!count || count > capacity - offset ||
+            (count == 1 && scalar == 0xFFFDu &&
+             (unsigned char)text[offset] >= 0x80u)) {
+            text[offset] = '\0';
+            return;
+        }
+        offset += count;
+    }
+    if (offset == capacity) {
+        /* Defensive: strnfmt() normally guarantees a NUL. */
+        text[capacity - 1] = '\0';
+    }
+}
+
 static inline const char *angdroid_target_world_hallucination(int zh_tw)
 {
     return zh_tw ? "某種奇怪的東西" : "something strange";
