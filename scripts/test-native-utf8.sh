@@ -67,6 +67,15 @@ python3 "$ROOT/tests/native/generate_long_lore_text_host.py" \
     -o "$BUILD_DIR/test_long_lore"
 "$BUILD_DIR/test_long_lore"
 
+# Test the actual z-form.c vstrnfmt and z-textblock.c compound-format
+# callers against long CJK strings, including both colored and plain text.
+python3 "$ROOT/tests/native/generate_compound_utf8_format_host.py" \
+    "$BUILD_DIR/test_compound_format.generated.c"
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$BUILD_DIR/test_compound_format.generated.c" \
+    -o "$BUILD_DIR/test_compound_format"
+"$BUILD_DIR/test_compound_format"
+
 # Compile the actual ui-output.c display and pager functions with a fake Term
 # so UTF-8/wide-cell and scroll regressions fail without Android hardware.
 python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
