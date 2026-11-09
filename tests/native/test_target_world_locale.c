@@ -96,7 +96,9 @@ int main(void)
         angdroid_target_world_utf8_trim(NULL, 0, 1);
     }
     /* Real 256-byte target output: one ASCII prefix plus wide CJK text.
-     * snprintf() cuts the 85th ideograph after two of its three bytes.
+     * Simulate the byte limit of strnfmt() explicitly.  GCC correctly warns
+     * about a deliberately truncating snprintf("%s") under -Werror, so
+     * use an exact bounded copy to create the same incomplete UTF-8 tail.
      * The guard must leave 84 complete ideographs and an intact ASCII prefix. */
     {
         char source[512];
@@ -106,7 +108,8 @@ int main(void)
         for (i = 0; i < 130; ++i)
             memcpy(source + 1 + (i * 3), "水", 3);
         source[1 + (130 * 3)] = '\0';
-        snprintf(output, sizeof output, "%s", source);
+        memcpy(output, source, sizeof output - 1);
+        output[sizeof output - 1] = '\0';
         angdroid_target_world_utf8_trim(output, sizeof output, 1);
         CHECK(strlen(output) == 1 + 84 * 3);
         CHECK(output[0] == 'X');
