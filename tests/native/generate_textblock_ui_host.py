@@ -279,6 +279,49 @@ int main(void)
   CHECK(st[1]==2 && ln[1]==1);
   free(st);free(ln);
  }
+ {
+  /* Deterministic mixed-script stress: never lose a visible scalar when
+   * wrapping, including glyphs adjacent to a boundary or an empty row. */
+  static const wchar_t alphabet[]={L'甲',L'中',L'A',L'Z',L' ',L'\n',L'Ω',L'界'};
+  uint32_t state=0x51BADA55u;
+  unsigned iteration;
+  for(iteration=0;iteration<2000;++iteration) {
+   wchar_t input[76];
+   uint8_t attrs[76];
+   textblock tb;
+   size_t *starts=NULL,*lengths=NULL,n,k,j,previous=0;
+   size_t input_size=(iteration%63)+1;
+   size_t width=(iteration%16)+1;
+   unsigned char seenchars[76]={0};
+   for(k=0;k<input_size;++k) {
+    state=1664525u*state+1013904223u;
+    input[k]=alphabet[(state>>18)&7u];
+    attrs[k]=(state&32u)?0x80u:0u;
+   }
+   input[input_size]=0;
+   tb.text=input;tb.attrs=attrs;tb.strlen=input_size;
+   n=textblock_calculate_lines(&tb,&starts,&lengths,width);
+   CHECK(n>0 && n<=input_size);
+   CHECK(starts!=NULL && lengths!=NULL);
+   for(j=0;j<n;++j) {
+    size_t used=0;
+    CHECK(starts[j]>=previous && starts[j]<input_size);
+    CHECK(starts[j]+lengths[j]<=input_size);
+    for(k=starts[j];k<starts[j]+lengths[j];++k) {
+     CHECK(input[k]!=L'\n');
+     CHECK(!seenchars[k]);
+     seenchars[k]=1;
+     used += (size_t)(angdroid_is_wide_text(input[k],attrs[k])?2:1);
+    }
+    CHECK(used<=width || (width==1&&lengths[j]==1));
+    previous=starts[j]+lengths[j];
+   }
+   for(k=0;k<input_size;++k) {
+    if(!seenchars[k])CHECK(input[k]==L'\n'||input[k]==L' ');
+   }
+   free(starts);free(lengths);
+  }
+ }
  puts("PASS: actual production textblock renderer/scroll/header/tiny pages");
  printf("Assertions: %u\n",checks);
  return 0;
