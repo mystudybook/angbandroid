@@ -53,6 +53,40 @@ static inline void angdroid_utf8_text_file_wrap(
             continue;
         }
 
+        /* Keep short English words intact inside mixed Chinese prose.
+         * The old ASCII-only writer already wraps at spaces; without this,
+         * adding one Chinese word can split the next English word.
+         * Only pre-wrap if the entire next word fits a fresh line. */
+        if (codepoint == (uint32_t)' ' && *position > margin) {
+            const char *word = text;
+            int word_columns = 0;
+            int word_fits = 1;
+            int max_word_columns = wrap - margin;
+            while (*word == ' ') ++word;
+            while (*word) {
+                uint32_t word_scalar;
+                size_t bytes = angdroid_utf8_next_scalar(word,
+                    &word_scalar);
+                int cells;
+                if (word_scalar == (uint32_t)' ' ||
+                    word_scalar == (uint32_t)'\n') break;
+                cells = angdroid_terminal_columns(word_scalar);
+                if (cells > max_word_columns - word_columns) {
+                    word_fits = 0;
+                    break;
+                }
+                word_columns += cells;
+                word += bytes;
+            }
+            if (word_columns > 0 && word_fits &&
+                word_columns >= wrap - *position) {
+                write_char(context, '\n');
+                *position = 0;
+                while (*text == ' ') ++text;
+                continue;
+            }
+        }
+
         if (span > wrap - *position) {
             if (*position > margin) {
                 write_char(context, '\n');
