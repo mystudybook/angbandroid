@@ -37,6 +37,7 @@
 #include "z-virt.h"
 #include "z-form.h"
 #include "z-file.h"
+#include "textblock-column-layout.h"
 
 #define TEXTBLOCK_LEN_INITIAL		128
 #define TEXTBLOCK_LEN_INCR(x)		((x) + 128)
@@ -235,84 +236,30 @@ static void new_line(size_t **line_starts, size_t **line_lengths,
  * \param width The maximum permitted width of each line.
  * \return Number of lines in output.
  */
-size_t textblock_calculate_lines(textblock *tb, size_t **line_starts, size_t **line_lengths, size_t width)
+size_t textblock_calculate_lines(textblock *tb, size_t **line_starts,
+        size_t **line_lengths, size_t width)
 {
-	const wchar_t *text = NULL;
-	size_t text_offset = 0;
-	size_t alloc_lines = 0;
-	size_t total_lines = 0;
-	size_t current_line_index = 0;
-	size_t current_line_length = 0;
-	size_t breaking_char_offset = 0;
+    const wchar_t *text;
+    const uint8_t *attrs;
+    size_t alloc_lines = 0, total_lines = 0, offset = 0;
 
-	if (tb == NULL || line_starts == NULL || line_lengths == NULL || width == 0)
-		return 0;
+    if (!tb || !line_starts || !line_lengths || width == 0) return 0;
+    text = textblock_text(tb);
+    attrs = textblock_attrs(tb);
+    if (!text || tb->strlen == 0) return 0;
 
-	text = textblock_text(tb);
-
-	if (text == NULL || tb->strlen == 0)
-		return 0;
-
-	/* Start a line, since we have at least one. */
-	new_line(line_starts, line_lengths, &alloc_lines, &total_lines, 0, 0);
-
-	while (text_offset < tb->strlen) {
-		if (text[text_offset] == L'\n') {
-			(*line_lengths)[current_line_index] = current_line_length;
-			new_line(line_starts, line_lengths, &alloc_lines, &total_lines, text_offset + 1, 0);
-			current_line_index++;
-			current_line_length = 0;
-		}
-		else if (text[text_offset] == L' ') {
-			breaking_char_offset = text_offset;
-			current_line_length++;
-		}
-		else {
-			current_line_length++;
-		}
-
-		if (current_line_length == width) {
-			/* We're out of space on the line and need to break it. */
-
-			size_t const current_line_start = (*line_starts)[current_line_index];
-			size_t next_line_start_offset = 0;
-			size_t adjusted_line_length = 0;
-
-			if (breaking_char_offset > current_line_start) {
-				/* If we found a breaking character on the current line, break
-				 * there and start the next line on the next character. The loop
-				 * then backtracks to add the already-processed characters to
-				 * the next line. */
-				adjusted_line_length = breaking_char_offset - current_line_start;
-				next_line_start_offset = breaking_char_offset + 1;
-				text_offset = breaking_char_offset + 1;
-			}
-			else {
-				/* There was no breaking character on the current line, so we
-				 * just break at the current character. This can happen with a 
-				 * word that takes up the whole line, for example. */
-				adjusted_line_length = width;
-				next_line_start_offset = text_offset + 1;
-				text_offset++;
-			}
-
-			(*line_lengths)[current_line_index] = adjusted_line_length;
-			new_line(line_starts, line_lengths, &alloc_lines, &total_lines, next_line_start_offset, 0);
-			current_line_index++;
-			current_line_length = 0;
-		}
-		else {
-			/* There is still space on the line, so just add the character. */
-			(*line_lengths)[current_line_index] = current_line_length;
-			text_offset++;
-		}
-	}
-
-	/* Trim the last line if it doesn't contain any characters. */
-	if ((*line_lengths)[total_lines - 1] == 0)
-		total_lines--;
-
-	return total_lines;
+    /* Width is in physical terminal cells, not wchar_t codepoints.  In
+     * particular, do not treat Chinese lore paragraphs as one-cell glyphs.
+     * The helper returns wchar_t offsets for the existing renderers. */
+    while (offset < tb->strlen) {
+        angdroid_textblock_line line = angdroid_textblock_next_line(
+            text, attrs, tb->strlen, offset, width);
+        new_line(line_starts, line_lengths, &alloc_lines, &total_lines,
+            offset, line.length);
+        if (line.next <= offset) break;
+        offset = line.next;
+    }
+    return total_lines;
 }
 
 /**
