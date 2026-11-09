@@ -8,6 +8,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include "../curses/unicode_display.h"
 #include "zh-tw-faangband-monster-base.h"
 
 #define ANGDROID_ZH_TW_SYMBOL_TVAL_COUNT 36
@@ -72,11 +73,30 @@ static inline void angdroid_symbol_query_format(char *out, size_t capacity,
 {
     const char *label;
     const char *period;
+    int written;
     if (!out || !capacity) return;
     if (!canonical) canonical = "";
     label = (zh_tw && localized) ? localized : canonical;
     period = (zh_tw && strcmp(label, canonical) != 0) ? "。" : ".";
-    (void)snprintf(out, capacity, "%c - %s%s", sym, label, period);
+    written = snprintf(out, capacity, "%c - %s%s", sym, label, period);
+    if (written < 0) {
+        out[0] = '\0';
+    } else if ((size_t)written >= capacity) {
+        /* snprintf() truncates bytes, not Unicode scalars.  Drop any
+         * incomplete trailing UTF-8 sequence instead of passing malformed
+         * Chinese glyphs to Term_putstr() on narrow screens. */
+        size_t at = 0;
+        while (out[at]) {
+            uint32_t scalar;
+            size_t bytes = angdroid_utf8_next_scalar(out + at, &scalar);
+            if (!bytes || (bytes == 1 && scalar == 0xFFFDu &&
+                           (unsigned char)out[at] >= 0x80u)) {
+                out[at] = '\0';
+                break;
+            }
+            at += bytes;
+        }
+    }
 }
 
 /* Match both canonical monster base key and description. If upstream data
