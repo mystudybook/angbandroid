@@ -478,28 +478,32 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					break;
 				} else {
 					const char *arg;
-					char arg2[1024];
+					int written;
+					size_t remaining;
 
-					/* XXX There is a big bug here: if one
-					 * passes "%.0s" to strnfmt, then really we
-					 * should not dereference the arg at all.
-					 * But it does.  See bug #666.
-					 */
-
-					/* Get the next argument */
+					/* Do not stage narrow %s in a fixed 1024-byte
+					 * buffer.  That silently truncates long UTF-8 lore
+					 * before a dynamically growing caller can retry.
+					 * Apply the original printf field format directly
+					 * to the caller's output buffer instead. */
 					arg = va_arg(vp, const char *);
-
-					/* Hack -- convert NULL to EMPTY */
 					if (!arg) arg = "";
-
-					/* Prevent buffer overflows */
-					(void)my_strcpy(arg2, arg, sizeof(arg2));
-
-					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg2);
-
-					/* Done */
-					break;
+					remaining = max - n;
+					written = snprintf(buf + n, remaining, aux, arg);
+					if (written < 0) {
+						buf[0] = '\0';
+						return 0;
+					}
+					if ((size_t)written >= remaining) {
+						/* Report a full buffer so vformat() and the
+						 * textblock formatter retry with more space.
+						 * Never let n exceed the allocated capacity. */
+						n = max - 1;
+						buf[n] = '\0';
+						return n;
+					}
+					n += (size_t)written;
+					continue;
 				}
 			}
 
