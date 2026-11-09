@@ -662,6 +662,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_menu_flow"
 "$BUILD_DIR/test_store_menu_flow"
 
+# Equipment mentions share a 14-screen-column cell budget in zh-TW.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_inventory_equip_mention.c" \
+    -o "$BUILD_DIR/test_inventory_equip_mention"
+"$BUILD_DIR/test_inventory_equip_mention"
+
 # Visible object list must keep its popup in bounds and prioritize item names.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_object_list_compact_layout.c" \
