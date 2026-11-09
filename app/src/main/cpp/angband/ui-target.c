@@ -375,8 +375,8 @@ static ui_event target_recall_loop_object(struct object *obj, int y, int x,
 			}
 
 			angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
-                angdroid_zh_tw_enabled());
-            prt(out_val, 0, 0);
+				angdroid_zh_tw_enabled());
+			prt(out_val, 0, 0);
 			move_cursor_relative(y, x);
 			press = inkey_m();
 		}
@@ -484,8 +484,8 @@ static bool aux_hallucinate(struct chunk *c, struct player *p,
 			auxst->coord_desc);
 	}
 	angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
-                angdroid_zh_tw_enabled());
-            prt(out_val, 0, 0);
+		angdroid_zh_tw_enabled());
+	prt(out_val, 0, 0);
 	move_cursor_relative(auxst->grid.y, auxst->grid.x);
 
 	auxst->press.key = inkey();
@@ -583,8 +583,8 @@ static bool aux_monster(struct chunk *c, struct player *p,
 			}
 
 			angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
-                angdroid_zh_tw_enabled());
-            prt(out_val, 0, 0);
+				angdroid_zh_tw_enabled());
+			prt(out_val, 0, 0);
 
 			/* Place cursor */
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
@@ -662,8 +662,8 @@ static bool aux_monster(struct chunk *c, struct player *p,
 				(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
 
 			angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
-                angdroid_zh_tw_enabled());
-            prt(out_val, 0, 0);
+				angdroid_zh_tw_enabled());
+			prt(out_val, 0, 0);
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
 			auxst->press = inkey_m();
 
@@ -761,8 +761,8 @@ static bool aux_trap(struct chunk *c, struct player *p,
 		}
 
 		angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
-                angdroid_zh_tw_enabled());
-            prt(out_val, 0, 0);
+			angdroid_zh_tw_enabled());
+		prt(out_val, 0, 0);
 
 		/* Place cursor */
 		move_cursor_relative(auxst->grid.y, auxst->grid.x);
@@ -849,8 +849,8 @@ static bool aux_object(struct chunk *c, struct player *p,
 			}
 
 			angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
-                angdroid_zh_tw_enabled());
-            prt(out_val, 0, 0);
+				angdroid_zh_tw_enabled());
+			prt(out_val, 0, 0);
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
 			auxst->press = inkey_m();
 
@@ -877,8 +877,8 @@ static bool aux_object(struct chunk *c, struct player *p,
 
 					/* Describe the pile */
 					angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
-                angdroid_zh_tw_enabled());
-            prt(out_val, 0, 0);
+						angdroid_zh_tw_enabled());
+					prt(out_val, 0, 0);
 					auxst->press = inkey_m();
 
 					/* Load screen */
@@ -994,8 +994,8 @@ static bool aux_terrain(struct chunk *c, struct player *p,
 	}
 
 	angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
-                angdroid_zh_tw_enabled());
-            prt(out_val, 0, 0);
+		angdroid_zh_tw_enabled());
+	prt(out_val, 0, 0);
 	move_cursor_relative(auxst->grid.y, auxst->grid.x);
 	auxst->press = inkey_m();
 
