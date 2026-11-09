@@ -14,6 +14,8 @@ static inline size_t angdroid_inventory_equip_mention(char *dest,
     const size_t target_columns = 14;
     size_t columns, bytes;
     if (!dest || !capacity) return 0;
+    dest[0] = '\0';
+    if (!mention) return 0;
     columns = angdroid_menu_copy_columns(dest, capacity, mention,
         target_columns);
     bytes = 0;
