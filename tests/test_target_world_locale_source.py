@@ -101,6 +101,8 @@ assert "scalar == 0xFFFDu" in HDR
 assert "text[offset] = '\\0';" in HDR
 assert "if (!zh_tw || !text || !capacity) return;" in HDR
 assert "angdroid_fit_terminal_text(" in read("app/src/main/cpp/angband/ui-term.c")
+assert "angdroid_utf8_clip_columns(output, 10);" in read("tests/native/test_target_world_locale.c")
+assert "strlen(output) == 1 + 84 * 3" in read("tests/native/test_target_world_locale.c")
 assert "Term_addstr(-1, attr, str);" in read("app/src/main/cpp/angband/ui-output.c")
 assert '#include "zh-tw-target-world.h"' in TARGET
 assert "tests/native/test_target_world_locale.c" in NATIVE
