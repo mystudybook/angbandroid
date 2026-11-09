@@ -53,6 +53,32 @@ int main(void)
         "某種奇怪的東西") == 0);
     CHECK(strcmp(angdroid_target_world_hallucination(0),
         "something strange") == 0);
+    /* Simulate byte-sized strnfmt truncation midway through a Han character. */
+    {
+        char valid[32] = "繁體中文";
+        char broken_head[] = { (char)0xE7, (char)0xB9, '\0' };
+        char broken_after[] = { 'A', (char)0xE4, (char)0xB8, '\0' };
+        char malformed[] = { 'A', (char)0xFF, 'B', '\0' };
+        char literal_replacement[] = "\xEF\xBF\xBD";
+        char english_mode[] = { 'A', (char)0xE4, (char)0xB8, '\0' };
+        char one_byte[] = { '\0' };
+        angdroid_target_world_utf8_trim(valid, sizeof valid, 1);
+        CHECK(strcmp(valid, "繁體中文") == 0);
+        angdroid_target_world_utf8_trim(broken_head, sizeof broken_head, 1);
+        CHECK(broken_head[0] == '\0');
+        angdroid_target_world_utf8_trim(broken_after, sizeof broken_after, 1);
+        CHECK(strcmp(broken_after, "A") == 0);
+        angdroid_target_world_utf8_trim(malformed, sizeof malformed, 1);
+        CHECK(strcmp(malformed, "A") == 0);
+        angdroid_target_world_utf8_trim(literal_replacement,
+                                        sizeof literal_replacement, 1);
+        CHECK(strcmp(literal_replacement, "\xEF\xBF\xBD") == 0);
+        angdroid_target_world_utf8_trim(english_mode, sizeof english_mode, 0);
+        CHECK(english_mode[1] == (char)0xE4);
+        angdroid_target_world_utf8_trim(one_byte, sizeof one_byte, 1);
+        CHECK(one_byte[0] == '\0');
+        angdroid_target_world_utf8_trim(NULL, 0, 1);
+    }
     puts("PASS: target-world terrain, visible traps, hallucination, pile prompts");
     return 0;
 }
