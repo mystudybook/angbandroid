@@ -12,6 +12,14 @@ static int valid(const char *str){uint32_t cp;size_t n;while(*str){n=angdroid_ut
 int main(void){int pos;
  CHECK(!angdroid_text_has_non_ascii("ASCII words only"));
  CHECK(angdroid_text_has_non_ascii("A中文"));
+ reset();pos=0;angdroid_utf8_text_file_wrap("中文 hello",&pos,8,0,NULL,emit,put);
+ CHECK(strcmp(output,"中文\nhello")==0);CHECK(pos==5);CHECK(valid(output));
+ reset();pos=0;angdroid_utf8_text_file_wrap("中文 hello",&pos,11,0,NULL,emit,put);
+ CHECK(strcmp(output,"中文 hello")==0);CHECK(pos==10);
+ reset();pos=0;angdroid_utf8_text_file_wrap("中 hello",&pos,8,0,NULL,emit,put);
+ CHECK(strcmp(output,"中 hello")==0);CHECK(pos==8);
+ reset();pos=0;angdroid_utf8_text_file_wrap("中文  hello",&pos,8,0,NULL,emit,put);
+ CHECK(strcmp(output,"中文\nhello")==0);CHECK(valid(output));
  reset();pos=0;angdroid_utf8_text_file_wrap("中文中文",&pos,6,0,NULL,emit,put);
  CHECK(strcmp(output,"中文中\n文")==0);CHECK(pos==2);CHECK(valid(output));
  reset();pos=0;angdroid_utf8_text_file_wrap("中文中文",&pos,5,0,NULL,emit,put);
