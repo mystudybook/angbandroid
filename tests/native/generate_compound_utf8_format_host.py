@@ -93,6 +93,12 @@ int main(void){
  CHECK(strncmp(buf,"Name: ",6)==0);
  CHECK(memcmp(buf+6,lore,4500)==0);
  CHECK(strcmp(buf+4506," (42)")==0);
+ /* Native UTF-8 text in the format string itself must also survive. */
+ n=format_to(buf,sizeof(buf),"怪物：%s（%d）",lore,42);
+ CHECK(n==4517);
+ CHECK(memcmp(buf,"怪物：",9)==0);
+ CHECK(memcmp(buf+9,lore,4500)==0);
+ CHECK(strcmp(buf+4509,"（42）")==0);
 
  /* Small output buffers must accurately signal saturation for retries. */
  n=format_to(buf,10,"%s / %d",lore,7);
@@ -126,6 +132,10 @@ int main(void){
  CHECK(strncmp(captured,"Name: ",6)==0);
  CHECK(strcmp(captured+4506," (42)")==0);
  CHECK(captured_attr==COLOUR_WHITE);
+ text_out("怪物：%s（%d）",lore,42);
+ CHECK(strlen(captured)==4517);
+ CHECK(memcmp(captured,"怪物：",9)==0);
+ CHECK(strcmp(captured+4509,"（42）")==0);
  text_out_c(7,"Name: %s (%d)",lore,99);
  CHECK(strlen(captured)==4511);
  CHECK(strcmp(captured+4506," (99)")==0);
@@ -134,7 +144,7 @@ int main(void){
  CHECK(strlen(captured)==4500 && strcmp(captured,lore)==0);
  text_out("Damage %d (%s)",12,"fire");
  CHECK(strcmp(captured,"Damage 12 (fire)")==0);
- CHECK(capture_count==4);
+ CHECK(capture_count==5);
  printf("PASS: %u actual native compound-format UTF-8 assertions\n",checks);
  return 0;
 }
