@@ -60,6 +60,7 @@ run_check "Known scroll/flavor effect UTF-8 and punctuation" python3 "$ROOT/test
 run_check "Chest trap and money UI UTF-8 localization" python3 "$ROOT/tests/test_obj_desc_chest_money_utf8_source.py"
 run_check "Atomic numeric item details and status" python3 "$ROOT/tests/test_obj_desc_numeric_utf8_source.py"
 run_check "Inventory and equipment bilingual captions and selection invariants" python3 "$ROOT/tests/test_inventory_list_locale_source.py"
+run_check "Equipment mention 14-column and UTF-8 safety" python3 "$ROOT/tests/test_inventory_equip_mention_source.py"
 run_check "Rotated item-selection and compact shop prompts" python3 "$ROOT/tests/test_item_selection_rotation_source.py"
 run_check "Knowledge glyph strict Unicode input and bilingual autoinscriptions" python3 "$ROOT/tests/test_knowledge_glyph_codepoint_locale_source.py"
 run_check "Item picker numeric quiver tag, localized cancel hint and CJK recall titles" python3 "$ROOT/tests/test_item_picker_tag_locale_source.py"
