@@ -91,6 +91,17 @@ for section in (hall, trap, pile, terrain):
     assert "噪音=%d，氣味=%d" in section
     assert "auxst->coord_desc" in section
     assert "angdroid_zh_tw_enabled()" in section
+# Every use of the 256-byte target line must repair a truncated UTF-8 tail
+# before sending it to the Unicode-column-aware terminal renderer.
+assert "TARGET_OUT_VAL_SIZE 256" in read("app/src/main/cpp/angband/ui-target.h")
+assert TARGET.count("prt(out_val, 0, 0);") == 8
+assert TARGET.count("angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,") == 8
+assert "angdroid_utf8_next_scalar(text + offset, &scalar)" in HDR
+assert "scalar == 0xFFFDu" in HDR
+assert "text[offset] = '\\0';" in HDR
+assert "if (!zh_tw || !text || !capacity) return;" in HDR
+assert "angdroid_fit_terminal_text(" in read("app/src/main/cpp/angband/ui-term.c")
+assert "Term_addstr(-1, attr, str);" in read("app/src/main/cpp/angband/ui-output.c")
 assert '#include "zh-tw-target-world.h"' in TARGET
 assert "tests/native/test_target_world_locale.c" in NATIVE
 assert "tests/test_target_world_locale_source.py" in VERIFY
