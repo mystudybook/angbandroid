@@ -30,10 +30,15 @@ static inline int angdroid_target_monster_display(char *out, size_t capacity,
         return 0;
     }
     start = english_desc;
-    if (strncmp(start, "a ", 2) == 0) start += 2;
-    else if (strncmp(start, "an ", 3) == 0) start += 3;
-    else if (strncmp(start, "the ", 4) == 0) start += 4;
-    else if (strncmp(start, "The ", 4) == 0) start += 4;
+    /* Check the canonical race name before stripping display articles.
+     * Some proper names begin with "The " (e.g. "The Queen Ant").
+     * Stripping their actual first word would hide their translation. */
+    if (strncmp(start, race_name, strlen(race_name)) != 0) {
+        if (strncmp(start, "a ", 2) == 0) start += 2;
+        else if (strncmp(start, "an ", 3) == 0) start += 3;
+        else if (strncmp(start, "the ", 4) == 0) start += 4;
+        else if (strncmp(start, "The ", 4) == 0) start += 4;
+    }
     if (strncmp(start, race_name, strlen(race_name)) != 0) {
         angdroid_utf8_copy_complete(out, capacity, english_desc);
         return 0;
