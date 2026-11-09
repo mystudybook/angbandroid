@@ -55,10 +55,14 @@ static size_t vstrnfmt(char *dst,size_t cap,const char *fmt,va_list ap)
  return n<cap?n:cap-1;
 }
 static const char *last_text;
+static char last_copy[8000];
 static uint8_t last_attr;
 static unsigned hook_calls;
 static void capture(uint8_t attr,const char *text)
 {
+ size_t bytes=strlen(text);
+ assert(bytes<sizeof(last_copy));
+ memcpy(last_copy,text,bytes+1);
  last_attr=attr;last_text=text;++hook_calls;
 }
 static void (*text_out_hook)(uint8_t,const char*)=capture;
@@ -115,16 +119,16 @@ int main(void)
  CHECK(last_text==utf8&&last_attr==7);
  CHECK(formatter_calls==0);
  text_out("%s",(const char *)NULL);
- CHECK(last_text!=NULL&&strcmp(last_text,"")==0);
+ CHECK(last_text!=NULL&&strcmp(last_copy,"")==0);
  CHECK(formatter_calls==0);
  text_out_c(8,"%s",(const char *)NULL);
- CHECK(last_text!=NULL&&strcmp(last_text,"")==0&&last_attr==8);
+ CHECK(last_text!=NULL&&strcmp(last_copy,"")==0&&last_attr==8);
  CHECK(formatter_calls==0);
  text_out("Score: %d",42);
- CHECK(strcmp(last_text,"Score: 42")==0);
+ CHECK(strcmp(last_copy,"Score: 42")==0);
  CHECK(formatter_calls==1);
  text_out_c(3,"HP=%d",15);
- CHECK(strcmp(last_text,"HP=15")==0&&last_attr==3);
+ CHECK(strcmp(last_copy,"HP=15")==0&&last_attr==3);
  CHECK(formatter_calls==2);
  CHECK(hook_calls==6);
  printf("PASS: %u production plain-%%s lore assertions\n",checks);
