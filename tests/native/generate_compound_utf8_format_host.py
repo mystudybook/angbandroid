@@ -112,13 +112,13 @@ int main(void){
  /* This passes actual vstrnfmt() through real textblock_vappend_c(). */
  tb=make_tb();
  textblock_append(&tb,"Name: %s (%d)",lore,42);
- CHECK(tb.strlen==1509);
+ CHECK(tb.strlen==1511);
  CHECK(tb.text[0]==L'N');
  CHECK(tb.text[6]==L'中'&&tb.text[1505]==L'中');
- CHECK(tb.text[1508]==L')');
+ CHECK(tb.text[1510]==L')');
  textblock_append_c(&tb,6," %s (%d)","龍",5);
- CHECK(tb.attrs[1509]==6);
- CHECK(tb.strlen==1515);
+ CHECK(tb.attrs[1511]==6);
+ CHECK(tb.strlen==1517);
  free_tb(&tb);
 
  text_out("Name: %s (%d)",lore,42);
