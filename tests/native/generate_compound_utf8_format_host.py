@@ -79,6 +79,16 @@ static size_t format_to(char *buf,size_t cap,const char *format,...) {
  va_start(args,format);result=vstrnfmt(buf,cap,format,args);va_end(args);
  return result;
 }
+static int utf8_valid(const char *str) {
+ mbstate_t state={0}; wchar_t out; size_t size;
+ while(*str) {
+  size=mbrtowc(&out,str,MB_LEN_MAX,&state);
+  if(size==(size_t)-1 || size==(size_t)-2) return 0;
+  if(size==0) break;
+  str+=size;
+ }
+ return 1;
+}
 int main(void){
  char lore[7000],buf[15000];
  wchar_t wide_lore[1601];
@@ -107,6 +117,18 @@ int main(void){
  CHECK(strcmp(buf,"Cat: 貓🐱")==0);
  n=format_to(buf,10,"%ls",wide_lore);
  CHECK(n==9 && buf[9]==0);
+ /* Repeated precision/width combinations exercise the actual %ls parser
+  * and active Unicode hook; no intermediate-byte truncation is permitted. */
+ for(i=0;i<2000;++i){
+  char spec[40];
+  unsigned width=(unsigned)(i%33);
+  unsigned precision=(unsigned)((i*29)%75);
+  snprintf(spec,sizeof spec,"%%%u.%uls",width,precision);
+  n=format_to(buf,sizeof(buf),spec,wide_lore);
+  CHECK(n==strlen(buf));
+  CHECK(n>=width);
+  CHECK(utf8_valid(buf));
+ }
 
  /* New narrow %s path in the *real* formatter may fill large output. */
  n=format_to(buf,sizeof(buf),"Name: %s (%d)",lore,42);
