@@ -99,6 +99,42 @@ int main(void)
         CHECK(strcmp(output, "X水水水水") == 0);
         CHECK(angdroid_utf8_display_columns(output) == 9);
     }
+    /* target.c canonical distances: 12 S, 35 W; no changes to grid logic. */
+    {
+        char south_west[32] = "12 S, 35 W";
+        char north_east[32] = "0 N, 0 E";
+        char south_east[32] = "3 S, 1 E";
+        char north_west[32] = "99 N, 123 W";
+        char unknown[32] = "12 Q, 35 W";
+        char extra[32] = "12 S, 35 W!";
+        char tiny[8] = "12 S";
+        char english[32] = "12 S, 35 W";
+        CHECK(angdroid_target_world_localize_coords(
+            south_west, sizeof south_west, 1) == 1);
+        CHECK(strcmp(south_west, "12南，35西") == 0);
+        CHECK(angdroid_target_world_localize_coords(
+            north_east, sizeof north_east, 1) == 1);
+        CHECK(strcmp(north_east, "0北，0東") == 0);
+        CHECK(angdroid_target_world_localize_coords(
+            south_east, sizeof south_east, 1) == 1);
+        CHECK(strcmp(south_east, "3南，1東") == 0);
+        CHECK(angdroid_target_world_localize_coords(
+            north_west, sizeof north_west, 1) == 1);
+        CHECK(strcmp(north_west, "99北，123西") == 0);
+        CHECK(angdroid_target_world_localize_coords(
+            unknown, sizeof unknown, 1) == 0);
+        CHECK(strcmp(unknown, "12 Q, 35 W") == 0);
+        CHECK(angdroid_target_world_localize_coords(
+            extra, sizeof extra, 1) == 0);
+        CHECK(strcmp(extra, "12 S, 35 W!") == 0);
+        CHECK(angdroid_target_world_localize_coords(
+            tiny, sizeof tiny, 1) == 0);
+        CHECK(strcmp(tiny, "12 S") == 0);
+        CHECK(angdroid_target_world_localize_coords(
+            english, sizeof english, 0) == 0);
+        CHECK(strcmp(english, "12 S, 35 W") == 0);
+        CHECK(angdroid_target_world_localize_coords(NULL, 0, 1) == 0);
+    }
     puts("PASS: target-world terrain, visible traps, hallucination, pile prompts");
     return 0;
 }
