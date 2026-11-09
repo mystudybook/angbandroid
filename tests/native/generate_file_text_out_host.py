@@ -58,6 +58,12 @@ int main(void)
  text_out_indent=0;text_out_wrap=5;
  clear();text_out_to_file(0,"中文中文");
  CHECK(strcmp(mock.data,"中文\n中文")==0);CHECK(utf8_valid(mock.data));
+ text_out_wrap=8;
+ clear();text_out_to_file(0,"中文 hello");
+ CHECK(strcmp(mock.data,"中文\nhello")==0);CHECK(utf8_valid(mock.data));
+ text_out_wrap=11;
+ clear();text_out_to_file(0,"中文 hello");
+ CHECK(strcmp(mock.data,"中文 hello")==0);
  text_out_wrap=6;
  clear();text_out_to_file(0,"中文中文");
  CHECK(strcmp(mock.data,"中文中\n文")==0);CHECK(utf8_valid(mock.data));
