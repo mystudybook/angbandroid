@@ -44,6 +44,15 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_textblock_pager_layout"
 "$BUILD_DIR/test_textblock_pager_layout"
 
+# Compile the actual ui-output.c display and pager functions with a fake Term
+# so UTF-8/wide-cell and scroll regressions fail without Android hardware.
+python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
+    "$BUILD_DIR/test_textblock_ui.generated.c"
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$BUILD_DIR/test_textblock_ui.generated.c" \
+    -o "$BUILD_DIR/test_textblock_ui"
+"$BUILD_DIR/test_textblock_ui"
+
 # A real long FAangband monster description must wrap at CJK column boundaries.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_faangband_lore_textblock_columns.c" \
