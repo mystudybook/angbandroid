@@ -32,6 +32,7 @@ prefix = r'''/* GENERATED from actual z-form.c and z-textblock.c. */
 #include <assert.h>
 #include <ctype.h>
 #include <locale.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -44,6 +45,8 @@ prefix = r'''/* GENERATED from actual z-form.c and z-textblock.c. */
 #define TEXTBLOCK_LEN_INITIAL 128
 #define TEXTBLOCK_LEN_INCR(x) ((x)+128)
 #define text_wcslen wcslen
+static int text_wcsz(void){return MB_LEN_MAX;}
+static int text_wctomb(char *out,wchar_t wc){return wctomb(out,wc);}
 typedef struct {wchar_t *text;uint8_t *attrs;size_t strlen,size;} textblock;
 static void *mem_alloc(size_t n) {void *p=malloc(n);assert(p);return p;}
 static void *mem_zalloc(size_t n){void *p=calloc(1,n);assert(p);return p;}
@@ -78,14 +81,32 @@ static size_t format_to(char *buf,size_t cap,const char *format,...) {
 }
 int main(void){
  char lore[7000],buf[15000];
+ wchar_t wide_lore[1601];
  textblock tb;
  size_t n,i;
  const char *locale=setlocale(LC_CTYPE,"C.UTF-8");
  if(!locale)locale=setlocale(LC_CTYPE,"en_US.UTF-8");
  if(!locale)locale=setlocale(LC_CTYPE,"");
  CHECK(locale!=NULL);
- for(i=0;i<1500;++i)memcpy(lore+i*3,"中",3);
- lore[4500]=0;
+ for(i=0;i<1500;++i){memcpy(lore+i*3,"中",3);wide_lore[i]=L'中';}
+ lore[4500]=0;wide_lore[1500]=0;
+
+ /* Real %%ls is UTF-8, unlimited in wchar count and retains formatting. */
+ n=format_to(buf,sizeof(buf),"Name: %ls!",wide_lore);
+ CHECK(n==4507);
+ CHECK(strncmp(buf,"Name: ",6)==0);
+ CHECK(memcmp(buf+6,lore,4500)==0);
+ CHECK(strcmp(buf+4506,"!")==0);
+ n=format_to(buf,sizeof(buf),"%-8.3ls",L"中文");
+ CHECK(n==8); CHECK(strcmp(buf,"中     ")==0);
+ n=format_to(buf,sizeof(buf),"%8.2ls",L"中文");
+ CHECK(n==8); CHECK(strcmp(buf,"        ")==0);
+ n=format_to(buf,sizeof(buf),"%*.*ls",10,3,L"中文");
+ CHECK(n==10); CHECK(strcmp(buf,"       中")==0);
+ n=format_to(buf,sizeof(buf),"Cat: %ls",L"貓🐱");
+ CHECK(strcmp(buf,"Cat: 貓🐱")==0);
+ n=format_to(buf,10,"%ls",wide_lore);
+ CHECK(n==9 && buf[9]==0);
 
  /* New narrow %s path in the *real* formatter may fill large output. */
  n=format_to(buf,sizeof(buf),"Name: %s (%d)",lore,42);
@@ -126,6 +147,18 @@ int main(void){
  CHECK(tb.attrs[1511]==6);
  CHECK(tb.strlen==1517);
  free_tb(&tb);
+ tb=make_tb();
+ textblock_append(&tb,"中文：%ls",wide_lore);
+ CHECK(tb.strlen==1503);
+ CHECK(tb.text[0]==L'中' && tb.text[1]==L'文');
+ CHECK(tb.text[2]==L'：' && tb.text[3]==L'中');
+ CHECK(tb.text[1502]==L'中');
+ free_tb(&tb);
+
+ text_out_c(4,"Wide:%ls!",wide_lore);
+ CHECK(strlen(captured)==4506);
+ CHECK(memcmp(captured+5,lore,4500)==0);
+ CHECK(captured_attr==4);
 
  text_out("Name: %s (%d)",lore,42);
  CHECK(strlen(captured)==4511);
@@ -144,7 +177,7 @@ int main(void){
  CHECK(strlen(captured)==4500 && strcmp(captured,lore)==0);
  text_out("Damage %d (%s)",12,"fire");
  CHECK(strcmp(captured,"Damage 12 (fire)")==0);
- CHECK(capture_count==5);
+ CHECK(capture_count==6);
  printf("PASS: %u actual native compound-format UTF-8 assertions\n",checks);
  return 0;
 }
