@@ -32,6 +32,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_screen_text_wrap"
 "$BUILD_DIR/test_screen_text_wrap"
 
+# Long monster recall pages wrap on physical CJK columns, not codepoint count.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_textblock_column_layout.c" \
+    -o "$BUILD_DIR/test_textblock_column_layout"
+"$BUILD_DIR/test_textblock_column_layout"
+
 # Top-line message wrap preserves Chinese glyphs and original words.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_message_wrap_utf8.c" \
