@@ -90,6 +90,7 @@ run_check "Unmapped flavor zh-TW fallback and complete scroll titles" python3 "$
 run_check "Generated scroll title display and RNG isolation" python3 "$ROOT/tests/test_scroll_title_localization.py"
 run_check "Item lore and character export isolation" python3 "$ROOT/tests/test_item_story_localization.py"
 run_check "Ego knowledge names, clipping and recall titles" python3 "$ROOT/tests/test_ego_knowledge_screen.py"
+run_check "Artifact knowledge title and recall UTF-8 bounds" python3 "$ROOT/tests/test_artifact_knowledge_display_source.py"
 run_check "Symbol query tval and terrain display-only translation" python3 "$ROOT/tests/test_symbol_query_localization.py"
 run_check "Store columns on narrow/rotated terminals" python3 "$ROOT/tests/test_store_column_layout_source.py"
 run_check "Canonical shop title and inscription confirmation zh-TW safety" python3 "$ROOT/tests/test_store_inscription_locale_source.py"
