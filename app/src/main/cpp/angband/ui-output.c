@@ -112,11 +112,26 @@ static void display_area(const wchar_t *text, const uint8_t *attrs,
 	n_lines = MIN(n_lines, (size_t) area.page_rows);
 
 	for (i = 0; i < n_lines; i++) {
+		size_t columns = 0;
+		size_t available = (size_t)MAX(area.width, 0);
 		Term_erase(area.col, area.row + i, area.width);
+		Term_gotoxy(area.col, area.row + i);
 		for (j = 0; j < line_lengths[line_from + i]; j++) {
-			Term_putch(area.col + j, area.row + i,
-					attrs[line_starts[line_from + i] + j],
-					text[line_starts[line_from + i] + j]);
+			size_t offset = line_starts[line_from + i] + j;
+			wchar_t glyph = text[offset];
+			int attr = attrs[offset];
+			size_t span = angdroid_is_wide_text(glyph, attr) ? 2u : 1u;
+
+			/* Term_putch() is a fixed-cell API: it cannot emit a wide
+			 * text glyph without clobbering the next grid cell. The
+			 * stream API reserves both cells and advances correctly. */
+			if (span > available - columns) {
+				/* A 1-cell region cannot fit a CJK glyph. */
+				if (columns < available) Term_addch(attr, L'?');
+				break;
+			}
+			Term_addch(attr, angdroid_stream_glyph(glyph));
+			columns += span;
 		}
 	}
 }
