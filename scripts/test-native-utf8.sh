@@ -58,6 +58,15 @@ python3 "$ROOT/tests/native/generate_file_text_out_host.py" \
     -o "$BUILD_DIR/test_file_text_out"
 "$BUILD_DIR/test_file_text_out"
 
+# Use the actual native textblock append and text_out functions: an entire
+# lore string passed via %s must survive the formatter's 1024-byte limit.
+python3 "$ROOT/tests/native/generate_long_lore_text_host.py" \
+    "$BUILD_DIR/test_long_lore.generated.c"
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$BUILD_DIR/test_long_lore.generated.c" \
+    -o "$BUILD_DIR/test_long_lore"
+"$BUILD_DIR/test_long_lore"
+
 # Compile the actual ui-output.c display and pager functions with a fake Term
 # so UTF-8/wide-cell and scroll regressions fail without Android hardware.
 python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
