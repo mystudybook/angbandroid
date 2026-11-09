@@ -49,6 +49,7 @@
 #include "zh-tw-kind-lore.h"
 #include "zh-tw-monsters.h"
 #include "zh-tw-unique-monsters.h"
+#include "item-origin-display.h"
 
 /**
  * Describes the number of blows possible for given stat bonuses
@@ -2232,7 +2233,8 @@ static bool describe_effect(textblock *tb, const struct object *obj,
 static bool describe_origin(textblock *tb, const struct object *obj, bool terse)
 {
 	char loot_spot[80];
-	char name[80];
+	char name_buffer[256];
+	const char *name = name_buffer;
 	int origin;
 	const char *dropper = NULL;
 	const char *article;
@@ -2269,15 +2271,11 @@ static bool describe_origin(textblock *tb, const struct object *obj, bool terse)
 		dropper = "monster lost to history";
 	}
 	article = is_a_vowel(dropper[0]) ? "an " : "a ";
-	if (unique)
-		my_strcpy(name, dropper, sizeof(name));
-	else {
-		my_strcpy(name, article, sizeof(name));
-		my_strcat(name, dropper, sizeof(name));
-	}
-	if (comma) {
-		my_strcat(name, ",", sizeof(name));
-	}
+	/* Display only: never let a too-long, possibly multibyte source
+	 * be cut inside a name by a fixed-size English origin buffer. */
+	if (!angdroid_item_origin_monster_name(name_buffer,
+			sizeof(name_buffer), dropper, article, unique, comma))
+		name = dropper;
 
 	/* Only format the already-known item origin for display; keep the
 	 * canonical origin enum, monster data and exported records intact. */
