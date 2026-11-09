@@ -79,7 +79,11 @@ class InputUtf8SourceTest(unittest.TestCase):
         self.assertIn('tests/native/test_ui_input_utf8.c', RUN)
         self.assertIn('"$BUILD_DIR/test_ui_input_utf8"', RUN)
         self.assertIn('test_ui_input_utf8_source.py', VERIFY)
-        self.assertIn('angdroid_input_cursor_columns("A🐱B", 2)', NATIVE)
+        self.assertIn('angdroid_input_cursor_columns("A🐱B", 2) == 2', NATIVE)
+        native_width = (ROOT / 'tests/native/test_unicode_width.c').read_text(encoding='utf-8')
+        java_width = (ROOT / 'tests/java/org/rephial/xyangband/TerminalUnicodeTest.java').read_text(encoding='utf-8')
+        self.assertIn('check(0x1F431u, 1)', native_width)
+        self.assertIn('expect(0x1F431, 1)', java_width)
         self.assertIn('angdroid_input_prefill_fits(short_name, 6)', NATIVE)
 
 
