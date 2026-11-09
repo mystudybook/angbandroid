@@ -260,6 +260,25 @@ int main(void)
   CHECK(st==NULL&&ln==NULL);
   CHECK(textblock_calculate_lines(NULL,&st,&ln,5)==0);
  }
+ {
+  /* Exact cell edges: a one-column regression must change these rows. */
+  textblock tb=make_block(L"abcd");
+  size_t *st=NULL,*ln=NULL,n;
+  n=textblock_calculate_lines(&tb,&st,&ln,2);
+  CHECK(n==2);
+  CHECK(st[0]==0 && ln[0]==2);
+  CHECK(st[1]==2 && ln[1]==2);
+  free(st);free(ln);
+ }
+ {
+  textblock tb=make_block(L"A中B");
+  size_t *st=NULL,*ln=NULL,n;
+  n=textblock_calculate_lines(&tb,&st,&ln,3);
+  CHECK(n==2);
+  CHECK(st[0]==0 && ln[0]==2);
+  CHECK(st[1]==2 && ln[1]==1);
+  free(st);free(ln);
+ }
  puts("PASS: actual production textblock renderer/scroll/header/tiny pages");
  printf("Assertions: %u\n",checks);
  return 0;
