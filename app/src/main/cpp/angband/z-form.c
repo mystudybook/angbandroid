@@ -185,7 +185,6 @@
 size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 {
 	const char *s;
-	int i = 0, len = 0;
 
 	/* The argument is "long" */
 	bool do_long;
@@ -440,42 +439,85 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 			case 's':
 			{
 				if (do_long) {
-					const wchar_t *arg;
-					char arg2[1024];
+					const wchar_t *arg = va_arg(vp, const wchar_t *);
+					const char *dot;
+					size_t wide_len, max_chars, capacity, max_bytes;
+					size_t used = 0, index, precision = (size_t)-1;
+					char *utf8;
+					int bytes, converted, written;
+					size_t remaining;
 
-					/* XXX There is a big bug here: if one
-					 * passes "%.0s" to strnfmt, then really we
-					 * should not dereference the arg at all.
-					 * But it does.  See bug #666.
-					 */
-
-					/* Get the next argument */
-					arg = va_arg(vp, const wchar_t *);
-
-					/* Hack -- convert NULL to EMPTY */
 					if (!arg) arg = L"";
 
-					/* Prevent buffer overflows and convert string to char */
-					/* this really should use a wcstombs type function */
-					len = text_wcslen(arg);
-					if (len >= 768) {
-						len = 767;
+					/* The Android Unicode hook supplies a real UTF-8
+					 * encoder. Casting wchar_t to char discarded every
+					 * non-ASCII character, and the old fixed buffer
+					 * silently clipped any name longer than 767 chars. */
+					max_bytes = (size_t)text_wcsz();
+					if (max_bytes == 0) {
+						buf[0] = '\0';
+						return 0;
 					}
-					for (i = 0; i < len; ++i) {
-						arg2[i] = (char)arg[i];
-					}
-					arg2[len] = '\0';
 
-					/* Remove the l from aux, since we no longer have wchar_t
-					 * as input */
+					/* printf precision on a string is measured in
+					 * bytes. Never emit only part of a UTF-8 scalar,
+					 * including when the format contains a '*' width
+					 * or precision already expanded into aux. */
+					dot = strchr(aux, '.');
+					if (dot) {
+						unsigned digit;
+						precision = 0;
+						for (++dot; *dot >= '0' && *dot <= '9'; ++dot) {
+							digit = (unsigned)(*dot - '0');
+							if (precision > ((size_t)-1 - digit) / 10) {
+								precision = (size_t)-1;
+								break;
+							}
+							precision = precision * 10 + digit;
+						}
+					}
+
+					wide_len = text_wcslen(arg);
+					max_chars = wide_len;
+					if (max_chars > precision) max_chars = precision;
+					if (max_chars > ((size_t)-1 - 1) / max_bytes) {
+						buf[0] = '\0';
+						return 0;
+					}
+					capacity = max_chars * max_bytes + 1;
+					utf8 = mem_alloc(capacity);
+					for (index = 0; index < max_chars; ++index) {
+						converted = text_wctomb(utf8 + used, arg[index]);
+						if (converted <= 0) {
+							utf8[used++] = '?';
+							continue;
+						}
+						bytes = converted;
+						if ((size_t)bytes > capacity - used - 1 ||
+							(size_t)bytes > precision - used)
+							break;
+						used += (size_t)bytes;
+					}
+					utf8[used] = '\0';
+
+					/* Keep width/alignment/precision semantics from the
+					 * original narrow %s formatting route. */
 					aux[q-2] = 's';
 					aux[q-1] = '\0';
-
-					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg2);
-
-					/* Done */
-					break;
+					remaining = max - n;
+					written = snprintf(buf + n, remaining, aux, utf8);
+					mem_free(utf8);
+					if (written < 0) {
+						buf[0] = '\0';
+						return 0;
+					}
+					if ((size_t)written >= remaining) {
+						n = max - 1;
+						buf[n] = '\0';
+						return n;
+					}
+					n += (size_t)written;
+					continue;
 				} else {
 					const char *arg;
 					int written;
