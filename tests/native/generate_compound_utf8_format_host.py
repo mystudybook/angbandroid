@@ -77,7 +77,7 @@ static size_t format_to(char *buf,size_t cap,const char *format,...) {
  return result;
 }
 int main(void){
- char lore[7000],buf[15000],expected[8000];
+ char lore[7000],buf[15000];
  textblock tb;
  size_t n,i;
  const char *locale=setlocale(LC_CTYPE,"C.UTF-8");
