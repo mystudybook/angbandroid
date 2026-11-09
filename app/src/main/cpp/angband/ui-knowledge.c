@@ -1582,11 +1582,18 @@ static void get_artifact_display_name(char *o_name, size_t namelen, int a_idx)
 static void display_artifact(int col, int row, bool cursor, int oid)
 {
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
-	char o_name[80];
+	char o_name[512];
+	char clipped[256];
 
+	/* The complete artifact description is generated in a roomy display
+	 * buffer, then clipped at a whole glyph and the visible list edge.
+	 * The underlying artifact and its identification state are untouched. */
 	get_artifact_display_name(o_name, sizeof o_name, oid);
-
-	c_prt(attr, o_name, row, col);
+	if (Term && col >= 0 && col < Term->wid) {
+		angdroid_knowledge_clip_label(clipped, sizeof clipped,
+			o_name, col, Term->wid, Term->wid);
+		if (clipped[0]) c_prt(attr, clipped, row, col);
+	}
 }
 
 /**
@@ -1671,7 +1678,7 @@ static void desc_art_fake(int a_idx)
 	struct object object_body = OBJECT_NULL, known_object_body = OBJECT_NULL;
 	bool fake = false;
 
-	char header[120];
+	char header[512];
 
 	textblock *tb;
 	region area = { 0, 0, 0, 0 };
