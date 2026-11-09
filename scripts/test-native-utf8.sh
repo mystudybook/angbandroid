@@ -38,6 +38,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_textblock_column_layout"
 "$BUILD_DIR/test_textblock_column_layout"
 
+# Tiny native terminal windows may have fewer than two rows for the footer.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_textblock_pager_layout.c" \
+    -o "$BUILD_DIR/test_textblock_pager_layout"
+"$BUILD_DIR/test_textblock_pager_layout"
+
 # A real long FAangband monster description must wrap at CJK column boundaries.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_faangband_lore_textblock_columns.c" \
