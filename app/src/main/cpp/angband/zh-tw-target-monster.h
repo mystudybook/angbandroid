@@ -46,10 +46,16 @@ static inline int angdroid_target_monster_display(char *out, size_t capacity,
         return 0;
     }
     used = angdroid_utf8_append_complete(out, capacity, 0, name);
-    if (suffix[0] == ',')
-        used = angdroid_utf8_append_complete(out, capacity, used, "，");
-    if (strstr(suffix, "(offscreen)") != NULL)
-        angdroid_utf8_append_complete(out, capacity, used, "（畫面外）");
+    if (strstr(suffix, "(offscreen)") != NULL) {
+        /* A small target line must never show a dangling open bracket or
+         * a comma without the complete offscreen indication. */
+        const char *marker = suffix[0] == ',' ?
+            "，（畫面外）" : "（畫面外）";
+        if (strlen(marker) < capacity - used)
+            angdroid_utf8_append_complete(out, capacity, used, marker);
+    } else if (suffix[0] == ',') {
+        angdroid_utf8_append_complete(out, capacity, used, "，");
+    }
     return 1;
 }
 
@@ -121,8 +127,17 @@ static inline void angdroid_target_monster_status(char *out, size_t capacity,
             unknown[len] = '\0';
             translated = unknown;
         }
-        if (!first)
-            used = angdroid_utf8_append_complete(out, capacity, used, "、");
+        if (!first) {
+            size_t separator_bytes = strlen("、");
+            size_t remaining = capacity - used;
+            /* Append the separator and following status as one unit.
+             * Otherwise a narrow display leaves a dangling "、" or half
+             * of a translated condition at the end of the line. */
+            if (remaining <= separator_bytes ||
+                strlen(translated) >= remaining - separator_bytes) break;
+            used = angdroid_utf8_append_complete(
+                out, capacity, used, "、");
+        }
         used = angdroid_utf8_append_complete(out, capacity, used, translated);
         first = 0;
         if (!sep) break;
