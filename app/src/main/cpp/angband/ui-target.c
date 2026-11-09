@@ -1065,6 +1065,9 @@ static ui_event target_set_interactive_aux(int y, int x, int mode)
 	auxst.grid.x = x;
 	auxst.grid.y = y;
 	coords_desc(auxst.coord_desc, sizeof(auxst.coord_desc), y, x);
+	/* Convert only the display copy; target grid coordinates stay intact. */
+	angdroid_target_world_localize_coords(auxst.coord_desc,
+		sizeof(auxst.coord_desc), angdroid_zh_tw_enabled());
 
 	/* Apply the handlers in order until done */
 	ihandler = 0;
