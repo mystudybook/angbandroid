@@ -364,7 +364,8 @@ static void angdroid_textblock_write_file_bytes(void *context,
 
 static void angdroid_textblock_write_file_char(void *context, char character)
 {
-    file_writec((ang_file *)context, character);
+    /* Match the byte-based API used for the adjacent UTF-8 scalar writes. */
+    file_write((ang_file *)context, &character, 1);
 }
 
 void text_out_to_file(uint8_t a, const char *str)
