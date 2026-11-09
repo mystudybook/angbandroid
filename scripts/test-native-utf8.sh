@@ -38,6 +38,12 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_textblock_column_layout"
 "$BUILD_DIR/test_textblock_column_layout"
 
+# A real long FAangband monster description must wrap at CJK column boundaries.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_faangband_lore_textblock_columns.c" \
+    -o "$BUILD_DIR/test_faangband_lore_textblock_columns"
+"$BUILD_DIR/test_faangband_lore_textblock_columns"
+
 # Top-line message wrap preserves Chinese glyphs and original words.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_message_wrap_utf8.c" \
