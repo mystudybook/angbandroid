@@ -20,7 +20,7 @@ static inline int angdroid_text_has_non_ascii(const char *text)
     return 0;
 }
 
-/* Render only complete UTF-8 scalars. \`position\` is a display-column count
+/* Render only complete UTF-8 scalars. `position` is a display-column count
  * shared across successive text_out_to_file() calls. Invalid high bytes
  * become '?' rather than being written to the output stream. The legacy
  * English/ASCII renderer remains in charge of ASCII-only input. */
