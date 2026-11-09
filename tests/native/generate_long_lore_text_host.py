@@ -87,7 +87,13 @@ int main(void)
  textblock tb;
  char utf8[7200];
  size_t i;
- CHECK(setlocale(LC_CTYPE,"C.UTF-8")!=NULL);
+ /* Linux uses C.UTF-8; macOS commonly provides en_US.UTF-8. */
+ {
+  const char *locale=setlocale(LC_CTYPE,"C.UTF-8");
+  if(!locale)locale=setlocale(LC_CTYPE,"en_US.UTF-8");
+  if(!locale)locale=setlocale(LC_CTYPE,"");
+  CHECK(locale!=NULL);
+ }
  for(i=0;i<2000;++i)memcpy(utf8+i*3,"中",3);
  utf8[6000]=0;
 
