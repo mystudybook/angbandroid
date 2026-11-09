@@ -57,6 +57,26 @@ int main(void)
               "狗頭人領主穆加什", 1);
     name_case("Sauron, the Sorcerer", "Sauron, the Sorcerer", 1,
               "索倫，黑暗巫師", 1);
+    /* Canonical proper names can begin with "The "; this is part of the
+     * source race name, not a display article to strip before matching. */
+    name_case("The Queen Ant", "The Queen Ant", 1, "蟻后", 1);
+    name_case("The Balrog of Moria", "The Balrog of Moria", 1,
+              "摩瑞亞炎魔", 1);
+    name_case("The Phoenix", "The Phoenix", 1, "鳳凰", 1);
+    name_case("The Mouth of Sauron", "The Mouth of Sauron", 1,
+              "索倫之口", 1);
+    name_case("The Witch-King of Angmar", "The Witch-King of Angmar", 1,
+              "安格馬巫王", 1);
+    name_case("The Tarrasque", "The Tarrasque", 1, "塔拉斯克巨獸", 1);
+    name_case("The Queen Ant (offscreen)", "The Queen Ant", 1,
+              "蟻后（畫面外）", 1);
+    name_case("The Queen Ant, (offscreen)", "The Queen Ant", 1,
+              "蟻后，（畫面外）", 1);
+    name_case("The Phantom of Eilinel", "The Phantom of Eilinel", 0,
+              "艾莉妮爾的幻影", 1);
+    name_case("The Defiler", "The Defiler", 0, "褻瀆者", 1);
+    name_case("The Complainer", "The Complainer", 0, "抱怨者", 1);
+    name_case("The Ickiness", "The Ickiness", 0, "黏穢怪", 1);
     name_case("a scrawny cat", "scrawny cat", 0, "瘦弱的貓", 1);
     /* Do not reveal telepathically sensed/hidden monsters or convert pronouns. */
     name_case("it", "blue dragon", 0, "it", 0);
