@@ -31,6 +31,7 @@
 #include "../curses/unicode_display.h"
 #include "zh-tw-monster-list-ui.h"
 #include "monster-list-compact-layout.h"
+#include "zh-tw-list-location.h"
 
 /**
  * Format a section of the monster list: a header followed by monster list
@@ -124,13 +125,9 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 
 		/* Only display directions for the case of a single monster. */
 		if (list->entries[index].count[section] == 1) {
-			const char *direction1 =
-				(list->entries[index].dy[section] <= 0)	? "N" : "S";
-			const char *direction2 =
-				(list->entries[index].dx[section] <= 0) ? "W" : "E";
-			strnfmt(location, sizeof(location), " %d %s %d %s",
-					abs(list->entries[index].dy[section]), direction1,
-					abs(list->entries[index].dx[section]), direction2);
+			angdroid_list_relative_location(location,
+				sizeof(location), list->entries[index].dy[section],
+				list->entries[index].dx[section], zh_tw);
 		}
 
 		/* Reserve the symbol/space and only show distance when the
