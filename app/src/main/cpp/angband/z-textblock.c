@@ -100,8 +100,28 @@ static void textblock_vappend_c(textblock *tb, uint8_t attr, const char *fmt,
 		va_list vp)
 {
 	size_t temp_len = TEXTBLOCK_LEN_INITIAL;
-	char *temp_space = mem_zalloc(temp_len);
+	char *temp_space;
 	int new_length;
+
+	/* The stock vstrnfmt() formats each %s into an internal 1024-byte
+	 * temporary buffer. Resizing the outer buffer cannot recover a long
+	 * Chinese lore description once that inner buffer has truncated it.
+	 * A plain %s is the common monster/object lore path, so copy that
+	 * argument directly without reformatting or truncating UTF-8 bytes. */
+	if (strcmp(fmt, "%s") == 0) {
+		const char *plain = va_arg(vp, const char *);
+		if (!plain) plain = "";
+		new_length = text_mbstowcs(NULL, plain, 0);
+		assert(new_length >= 0);
+		textblock_resize_if_needed(tb, (size_t)new_length + 1);
+		text_mbstowcs(tb->text + tb->strlen, plain,
+			tb->size - tb->strlen);
+		memset(tb->attrs + tb->strlen, attr, (size_t)new_length);
+		tb->strlen += (size_t)new_length;
+		return;
+	}
+
+	temp_space = mem_zalloc(temp_len);
 
 	/* We have to format the incoming string in native (external) format
 	 * re-allocating the temporary space as necessary. Once it's been
@@ -493,19 +513,18 @@ void text_out(const char *fmt, ...)
 	char buf[1024];
 	va_list vp;
 
-	/* Begin the Varargs Stuff */
 	va_start(vp, fmt);
-
-	/* Do the va_arg fmt to the buffer */
-	(void)vstrnfmt(buf, sizeof(buf), fmt, vp);
-
-	/* End the Varargs Stuff */
+	if (strcmp(fmt, "%s") == 0) {
+		/* Preserve long UTF-8 lore passed as a single string. vstrnfmt()
+		 * can clip %s inside its fixed per-field temporary buffer. */
+		const char *plain = va_arg(vp, const char *);
+		text_out_hook(COLOUR_WHITE, plain ? plain : "");
+	} else {
+		(void)vstrnfmt(buf, sizeof(buf), fmt, vp);
+		text_out_hook(COLOUR_WHITE, buf);
+	}
 	va_end(vp);
-
-	/* Output now */
-	text_out_hook(COLOUR_WHITE, buf);
 }
-
 
 /**
  * Output text to the screen (in color) or to a file depending on the
@@ -516,18 +535,17 @@ void text_out_c(uint8_t a, const char *fmt, ...)
 	char buf[1024];
 	va_list vp;
 
-	/* Begin the Varargs Stuff */
 	va_start(vp, fmt);
-
-	/* Do the va_arg fmt to the buffer */
-	(void)vstrnfmt(buf, sizeof(buf), fmt, vp);
-
-	/* End the Varargs Stuff */
+	if (strcmp(fmt, "%s") == 0) {
+		const char *plain = va_arg(vp, const char *);
+		text_out_hook(a, plain ? plain : "");
+	} else {
+		(void)vstrnfmt(buf, sizeof(buf), fmt, vp);
+		text_out_hook(a, buf);
+	}
 	va_end(vp);
-
-	/* Output now */
-	text_out_hook(a, buf);
 }
+
 
 /**
  * Given a "formatted" chunk of text (i.e. one including tags like {red}{/})
