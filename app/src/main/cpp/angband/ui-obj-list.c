@@ -28,6 +28,7 @@
 #include "droid.h"
 #include "../curses/unicode_display.h"
 #include "object-list-compact-layout.h"
+#include "zh-tw-list-location.h"
 
 /**
  * Format a section of the object list: a header followed by object list entry
@@ -110,18 +111,15 @@ static void object_list_format_section(const object_list_t *list,
 		char location[20] = { '\0' };
 		uint8_t line_attr;
 		size_t full_width;
-		const char *direction_y = (list->entries[entry_index].dy <= 0) ? "N" : "S";
-		const char *direction_x = (list->entries[entry_index].dx <= 0) ? "W" : "E";
-
 		line_buffer[0] = '\0';
 
 		if (list->entries[entry_index].count[section] == 0)
 			continue;
 
 		/* Build the location string. */
-		strnfmt(location, sizeof(location), " %d %s %d %s",
-				abs(list->entries[entry_index].dy), direction_y,
-				abs(list->entries[entry_index].dx), direction_x);
+		angdroid_list_relative_location(location, sizeof(location),
+			list->entries[entry_index].dy, list->entries[entry_index].dx,
+			zh_tw);
 
 		/* Display the optional distance only when there is room for the
 		 * item count prefix and at least two wide name characters.
