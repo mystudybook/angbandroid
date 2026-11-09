@@ -109,6 +109,7 @@ assert TARGET.count("prt(out_val, 0, 0);") == 8
 assert TARGET.count("angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,") == 8
 assert "angdroid_utf8_next_scalar(text + offset, &scalar)" in HDR
 assert "scalar == 0xFFFDu" in HDR
+assert "if (!memchr(text, '\\0', capacity))" in HDR
 assert "text[offset] = '\\0';" in HDR
 assert "if (!zh_tw || !text || !capacity) return;" in HDR
 assert "angdroid_fit_terminal_text(" in read("app/src/main/cpp/angband/ui-term.c")
