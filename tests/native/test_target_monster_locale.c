@@ -72,6 +72,41 @@ int main(void)
     CHECK(angdroid_target_monster_display(small, sizeof(small),
         "a blue dragon", "blue dragon", 0, 1) == 1);
     CHECK(small[0] == '\0'); /* Too small for one complete Han character. */
+    /* A narrow target line may omit an entire status or offscreen marker,
+     * but must never leave a comma, opening parenthesis, or partial term. */
+    {
+        char clipped[64];
+        size_t capacity;
+        for (capacity = 10; capacity < 22; ++capacity) {
+            memset(clipped, 'Q', sizeof clipped);
+            angdroid_target_monster_status(clipped, capacity,
+                "unhurt, asleep", 1);
+            CHECK(strcmp(clipped, "未受傷") == 0);
+            CHECK(clipped[capacity] == 'Q');
+            memset(clipped, 'Q', sizeof clipped);
+            CHECK(angdroid_target_monster_display(clipped, capacity,
+                "the blue dragon (offscreen)", "blue dragon", 0, 1) == 1);
+            CHECK(strcmp(clipped, "藍龍") == 0);
+            CHECK(clipped[capacity] == 'Q');
+            memset(clipped, 'Q', sizeof clipped);
+            CHECK(angdroid_target_monster_display(clipped, capacity,
+                "The blue dragon, (offscreen)", "blue dragon", 0, 1) == 1);
+            CHECK(strcmp(clipped, "藍龍") == 0);
+            CHECK(clipped[capacity] == 'Q');
+        }
+        angdroid_target_monster_status(clipped, 22,
+            "unhurt, asleep", 1);
+        CHECK(strcmp(clipped, "未受傷、睡眠中") == 0);
+        CHECK(angdroid_target_monster_display(clipped, 22,
+            "the blue dragon (offscreen)", "blue dragon", 0, 1) == 1);
+        CHECK(strcmp(clipped, "藍龍（畫面外）") == 0);
+        CHECK(angdroid_target_monster_display(clipped, 25,
+            "The blue dragon, (offscreen)", "blue dragon", 0, 1) == 1);
+        CHECK(strcmp(clipped, "藍龍，（畫面外）") == 0);
+        CHECK(angdroid_target_monster_display(clipped, 10,
+            "the blue dragon,", "blue dragon", 0, 1) == 1);
+        CHECK(strcmp(clipped, "藍龍，") == 0);
+    }
     for (i = 0; i < sizeof(statuses) / sizeof(statuses[0]); ++i) {
         angdroid_target_monster_status(result, sizeof(result), statuses[i].en, 1);
         CHECK(strcmp(result, statuses[i].zh) == 0);
