@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "../curses/unicode_display.h"
 #include "zh-tw-terrain-trap.h"
