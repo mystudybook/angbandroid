@@ -19,7 +19,9 @@ int main(void)
     assert(angdroid_input_cursor_columns(text, 3) == 5);
     assert(angdroid_input_cursor_columns(text, 4) == 6);
     assert(angdroid_input_cursor_columns(text, 999) == 6);
-    assert(angdroid_input_cursor_columns("A🐱B", 2) == 3);
+    /* The native and Java terminal classifiers both treat U+1F431 as one
+     * cell.  Cursor positions must follow those actual terminal columns. */
+    assert(angdroid_input_cursor_columns("A🐱B", 2) == 2);
     /* Birth history wrapping starts from a scalar index; the cursor
      * must move three terminal cells across "A貓", not two bytes. */
     assert(angdroid_input_cursor_columns("龍A貓B", 3) -
