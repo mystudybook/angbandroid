@@ -56,6 +56,7 @@
 #include "zh-tw-inscription-confirm.h"
 #include "object-list-text.h"
 #include "inventory-list-display.h"
+#include "inventory-equip-mention.h"
 #include "item-selection-layout.h"
 #include "item-picker-tag-guard.h"
 
@@ -351,23 +352,12 @@ static void build_obj_list(int last, struct object **list, item_tester tester,
 
 		/* Show full slot labels for equipment (or quiver in subwindow) */
 		if (equip) {
+			/* The equipment column is 14 display cells, not 14 UTF-8
+			 * codepoints: clipping by codepoints misaligns CJK rows. */
 			const char *mention = equip_mention(player, i);
-			size_t u8len = utf8_strlen(mention);
-
-			if (u8len < 14) {
-				strnfmt(buf, sizeof(buf), "%s%*s", mention,
-					(int)(14 - u8len), " ");
-			} else {
-				char *mention_copy = string_make(mention);
-
-				if (u8len > 14) {
-					utf8_clipto(mention_copy, 14);
-				}
-				strnfmt(buf, sizeof(buf), "%s", mention_copy);
-				string_free(mention_copy);
-			}
-			my_strcpy(items[num_obj].equip_label, buf,
-					  sizeof(items[num_obj].equip_label));
+			angdroid_inventory_equip_mention(
+				items[num_obj].equip_label,
+				sizeof(items[num_obj].equip_label), mention);
 		} else if ((in_term || dead) && quiver) {
 			angdroid_inventory_slot_text(buf, sizeof(buf), i,
 				angdroid_zh_tw_enabled());
