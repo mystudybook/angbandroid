@@ -125,6 +125,7 @@ int main(void)
         char extra[32] = "12 S, 35 W!";
         char tiny[8] = "12 S";
         char english[32] = "12 S, 35 W";
+        char too_small[10] = "2 S, 3 W";
         CHECK(angdroid_target_world_localize_coords(
             south_west, sizeof south_west, 1) == 1);
         CHECK(strcmp(south_west, "12南，35西") == 0);
@@ -149,6 +150,10 @@ int main(void)
         CHECK(angdroid_target_world_localize_coords(
             english, sizeof english, 0) == 0);
         CHECK(strcmp(english, "12 S, 35 W") == 0);
+        CHECK(angdroid_target_world_localize_coords(
+            too_small, sizeof too_small, 1) == 0);
+        CHECK(strcmp(too_small, "2 S, 3 W") == 0);
+
         CHECK(angdroid_target_world_localize_coords(NULL, 0, 1) == 0);
     }
     puts("PASS: target-world terrain, visible traps, hallucination, pile prompts");
