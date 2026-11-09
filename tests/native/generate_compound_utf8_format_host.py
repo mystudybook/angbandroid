@@ -33,6 +33,7 @@ prefix = r'''/* GENERATED from actual z-form.c and z-textblock.c. */
 #include <ctype.h>
 #include <locale.h>
 #include <limits.h>
+#include "app/src/main/cpp/curses/unicode_utf8.h"
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -45,8 +46,12 @@ prefix = r'''/* GENERATED from actual z-form.c and z-textblock.c. */
 #define TEXTBLOCK_LEN_INITIAL 128
 #define TEXTBLOCK_LEN_INCR(x) ((x)+128)
 #define text_wcslen wcslen
-static int text_wcsz(void){return MB_LEN_MAX;}
-static int text_wctomb(char *out,wchar_t wc){return wctomb(out,wc);}
+/* Match the exact Android hook registered in common/angdroid.c. */
+static int text_wcsz(void){return 5;}
+static int text_wctomb(char *out,wchar_t wc){
+ size_t n=angdroid_encode_wide_utf8(&wc,1,out,5);
+ return n==(size_t)-1?-1:(int)n;
+}
 typedef struct {wchar_t *text;uint8_t *attrs;size_t strlen,size;} textblock;
 static void *mem_alloc(size_t n) {void *p=malloc(n);assert(p);return p;}
 static void *mem_zalloc(size_t n){void *p=calloc(1,n);assert(p);return p;}
