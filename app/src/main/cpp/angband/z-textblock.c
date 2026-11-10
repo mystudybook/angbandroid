@@ -395,8 +395,12 @@ void text_out_to_file(uint8_t a, const char *str)
 	/* Current position on the line */
 	static int pos = 0;
 
-	/* Wrap width */
-	int wrap = (text_out_wrap ? text_out_wrap : 75);
+	/* A non-positive width would make the ASCII loop emit endless empty
+	 * lines without consuming its input. Keep a usable display region. */
+	int wrap = (text_out_wrap > 0) ? text_out_wrap : 75;
+	int indent = text_out_indent > 0 ? text_out_indent : 0;
+
+	if (indent >= wrap) indent = wrap - 1;
 
 	/* Unused parameter */
 	(void)a;
@@ -406,7 +410,7 @@ void text_out_to_file(uint8_t a, const char *str)
 	 * scalars and terminal columns only for non-ASCII export text; preserve
 	 * all existing ASCII/English wrapping and formatting below. */
 	if (angdroid_text_has_non_ascii(str)) {
-		angdroid_utf8_text_file_wrap(str, &pos, wrap, text_out_indent,
+		angdroid_utf8_text_file_wrap(str, &pos, wrap, indent,
 			text_out_file, angdroid_textblock_write_file_bytes,
 			angdroid_textblock_write_file_char);
 		return;
@@ -420,25 +424,24 @@ void text_out_to_file(uint8_t a, const char *str)
 	/* Process the string */
 	while (*s) {
 		int n = 0;
-		int len = wrap - pos;
+		int len;
 		int l_space = -1;
-
-		/* In case we are already past the wrap point (which can happen with
-		 * punctuation at the end of the line), make sure we don't overrun.
-		 */
-		if (len < 0)
-			len = 0;
 
 		/* If we are at the start of the line... */
 		if (pos == 0) {
 			int i;
 
 			/* Output the indent */
-			for (i = 0; i < text_out_indent; i++) {
+			for (i = 0; i < indent; i++) {
 				file_writec(text_out_file, ' ');
 				pos++;
 			}
 		}
+
+		/* Count indentation against the wrapping width, not on top
+		 * of it. Previously the first ASCII row could exceed wrap. */
+		len = wrap - pos;
+		if (len < 0) len = 0;
 
 		/* Find length of line up to next newline or end-of-string */
 		while ((n < len) && !((s[n] == '\n') || (s[n] == '\0'))) {
@@ -452,7 +455,7 @@ void text_out_to_file(uint8_t a, const char *str)
 		/* If we have encountered no spaces */
 		if ((l_space == -1) && (n == len)) {
 			/* If we are at the start of a new line */
-			if (pos == text_out_indent) {
+			if (pos == indent) {
 				len = n;
 			} else if ((s[0] == ' ') || (s[0] == ',') || (s[0] == '.')) {
 				/* HACK - Output punctuation at the end of the line */
