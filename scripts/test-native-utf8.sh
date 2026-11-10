@@ -83,6 +83,15 @@ python3 "$ROOT/tests/native/generate_compound_utf8_format_host.py" \
     -o "$BUILD_DIR/test_compound_format"
 "$BUILD_DIR/test_compound_format"
 
+# Extract the real vformat(), vformat_kill() and strnfmt() from z-form.c.
+# Guard against use-after-free after cleanup and size_t capacity overflow.
+python3 "$ROOT/tests/native/generate_vformat_lifecycle_host.py" \
+    "$BUILD_DIR/test_vformat_lifecycle.generated.c"
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$BUILD_DIR/test_vformat_lifecycle.generated.c" \
+    -o "$BUILD_DIR/test_vformat_lifecycle"
+"$BUILD_DIR/test_vformat_lifecycle"
+
 # Compile the actual ui-output.c display and pager functions with a fake Term
 # so UTF-8/wide-cell and scroll regressions fail without Android hardware.
 python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
