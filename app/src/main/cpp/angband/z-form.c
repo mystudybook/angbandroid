@@ -842,6 +842,12 @@ char *vformat(const char *fmt, va_list vp)
 	/* Null format yields last result */
 	if (!fmt) return (format_buf);
 
+	/* Do not inspect alias ranges or allocate a scratch buffer with an
+	 * impossible capacity. A corrupted or synthetic near-SIZE_MAX
+	 * capacity must fail before any further pointer arithmetic. */
+	if (format_len > ((size_t)-1) / 2)
+		quit("Formatted string exceeds addressable memory");
+
 	/* If a format string or a narrow %s source points into the cached
 	 * buffer, do not overwrite or reallocate that source while retrying.
 	 * Reallocating can move it, invalidating the original va_list
