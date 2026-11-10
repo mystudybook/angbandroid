@@ -17,7 +17,7 @@ def cut(source, start, end):
     b = source.index(end, a)
     return source[a:b]
 
-formatter = cut(form, "size_t vstrnfmt(", "/**\n * Add a formatted string to the end of a string")
+formatter = cut(form, "size_t vstrnfmt(", "static char *format_buf = NULL;")
 resize_append = cut(block, "static void textblock_resize_if_needed(",
                     "/**\n * Add a graphics tile")
 append = cut(block, "void textblock_append(textblock *tb, const char *fmt, ...)",
@@ -299,6 +299,34 @@ int main(void){
  CHECK(n==9 && buf[9]==0);
  n=format_to(buf,sizeof(buf),"HP=%d CD=%.1f",23,1.5);
  CHECK(strcmp(buf,"HP=23 CD=1.5")==0);
+
+ /* In-place %s formatting used to be safe because arg2[] staged
+  * the source. Direct snprintf() must not erase an aliased argument. */
+ strcpy(buf,"Beast");
+ n=format_to(buf,sizeof(buf),"%s",buf);
+ CHECK(n==5 && strcmp(buf,"Beast")==0);
+ strcpy(buf,"A中文B");
+ n=format_to(buf,sizeof(buf),"%s",buf+1);
+ CHECK(n==7 && strcmp(buf,"中文B")==0);
+ strcpy(buf,"中");
+ n=format_to(buf,sizeof(buf),"%8s",buf);
+ CHECK(n==8 && strcmp(buf,"     中")==0);
+ strcpy(buf,"ABCDEF");
+ n=format_to(buf,sizeof(buf),"%.4s",buf);
+ CHECK(n==4 && strcmp(buf,"ABCD")==0);
+ strcpy(buf,lore);
+ n=format_to(buf,sizeof(buf),"%s",buf);
+ CHECK(n==4500 && strcmp(buf,lore)==0);
+ {
+  char joined[64]="中文";
+  size_t end=strlen(joined);
+  /* Both the source's NUL and destination start at joined+end.
+   * Use the actual production strnfcat(), not a model append. */
+  strnfcat(joined,sizeof(joined),&end,"%s",joined);
+  CHECK(end==12 && strcmp(joined,"中文中文")==0);
+  strnfcat(joined,sizeof(joined),&end,"%s",joined);
+  CHECK(end==36 && strcmp(joined,"中文中文中文中文")==0);
+ }
 
  /* This passes actual vstrnfmt() through real textblock_vappend_c(). */
  tb=make_tb();
