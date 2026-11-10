@@ -35,11 +35,12 @@ static void format_with_safe_precision(char *out, size_t capacity,
     if (precision >= 0) {
         size_t limit = (size_t)precision;
         size_t prefix = angdroid_utf8_precision_prefix_bytes(text, limit);
-        if (prefix < limit && text[prefix] != '\0') {
+        if ((prefix < limit && text[prefix] != '\0') ||
+            angdroid_utf8_prefix_contains_invalid(text, prefix)) {
             owned = malloc(prefix + 1);
             CHECK(owned != NULL);
-            memcpy(owned, text, prefix);
-            owned[prefix] = '\0';
+            CHECK(angdroid_utf8_copy_sanitized_prefix(
+                owned, text, prefix) == prefix);
             formatted = owned;
         }
     }
@@ -91,6 +92,57 @@ int main(void)
     CHECK(strcmp(output, "A") == 0);
     format_with_safe_precision(output, sizeof(output), "%.*s", "中文", -1);
     CHECK(strcmp(output, "中文") == 0);
+
+    {
+        char normalized[80];
+        const char *damaged = "A\x80" "中\xE4\xB8";
+        CHECK(angdroid_utf8_prefix_contains_invalid(damaged, 0) == 0);
+        CHECK(angdroid_utf8_prefix_contains_invalid(damaged, 1) == 0);
+        CHECK(angdroid_utf8_prefix_contains_invalid(damaged, 2) == 1);
+        CHECK(angdroid_utf8_prefix_contains_invalid("中文", 6) == 0);
+        CHECK(angdroid_utf8_prefix_contains_invalid("�", 3) == 0);
+        CHECK(angdroid_utf8_copy_sanitized_prefix(normalized, damaged, 7) == 7);
+        CHECK(strcmp(normalized, "A?中??") == 0);
+        CHECK(valid_utf8(normalized));
+        CHECK(angdroid_utf8_copy_sanitized_prefix(normalized, "�", 3) == 3);
+        CHECK(strcmp(normalized, "�") == 0);
+        CHECK(angdroid_utf8_copy_sanitized_prefix(normalized, "\xE4\xB8", 2) == 2);
+        CHECK(strcmp(normalized, "??") == 0);
+        format_with_safe_precision(output, sizeof(output), "%.*s", damaged, 7);
+        CHECK(strcmp(output, "A?中??") == 0);
+        CHECK(valid_utf8(output));
+        format_with_safe_precision(output, sizeof(output), "%.*s", damaged, 2);
+        CHECK(strcmp(output, "A?") == 0);
+        format_with_safe_precision(output, sizeof(output), "%8.*s", damaged, 4);
+        CHECK(strcmp(output, "      A?") == 0);
+        format_with_safe_precision(output, sizeof(output), "%.*s", "�", 3);
+        CHECK(strcmp(output, "�") == 0);
+    }
+
+    /* Malformed multibyte prefixes must remain valid after formatting. */
+    {
+        static const char *parts[] = {"中", "B", "\x80", "\xC0", "🐱", "\xE4\xB8", "�"};
+        unsigned seed = 0x201201u;
+        for (i = 0; i < 4000; ++i) {
+            char source[100];
+            size_t used = 0, j;
+            int precision = (int)(i % 72);
+            for (j = 0; j < 12; ++j) {
+                const char *part;
+                size_t bytes;
+                seed = seed * 1664525u + 1013904223u;
+                part = parts[(seed >> 16) % (sizeof(parts) / sizeof(parts[0]))];
+                bytes = strlen(part);
+                CHECK(used + bytes + 1 < sizeof(source));
+                memcpy(source + used, part, bytes);
+                used += bytes;
+            }
+            source[used] = '\0';
+            format_with_safe_precision(output, sizeof(output), "%.*s", source, precision);
+            CHECK(valid_utf8(output));
+            CHECK(strlen(output) <= (size_t)precision);
+        }
+    }
 
     for (i = 0; i < 4000; ++i) {
         const char *sample = i % 2 == 0 ? "A中文🐱B" : "繁體中文 ABC";
