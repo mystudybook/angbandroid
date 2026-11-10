@@ -276,6 +276,30 @@ int main(void){
  }
 
 
+ /* The former tmp[1024] clipped wide numeric, pointer and float
+  * fields even when vformat() or a textblock could grow the buffer. */
+ n=format_to(buf,sizeof(buf),"Value:%1500d!",42);
+ CHECK(n==1507);
+ CHECK(strncmp(buf,"Value:",6)==0);
+ CHECK(strcmp(buf+1504,"42!")==0);
+ n=format_to(buf,sizeof(buf),"%02000u",37u);
+ CHECK(n==2000);
+ CHECK(buf[0]=='0' && strcmp(buf+1998,"37")==0);
+ n=format_to(buf,sizeof(buf),"%.1300f",1.5);
+ CHECK(n==1302);
+ CHECK(strncmp(buf,"1.5",3)==0);
+ CHECK(buf[1301]=='0');
+ n=format_to(buf,sizeof(buf),"%1200c",'Z');
+ CHECK(n==1200);
+ CHECK(buf[0]==' ' && buf[1199]=='Z');
+ n=format_to(buf,sizeof(buf),"%1400p",(void *)&tb);
+ CHECK(n==1400);
+ CHECK(buf[0]==' ' && buf[1399]!=' ');
+ n=format_to(buf,10,"%1500d",42);
+ CHECK(n==9 && buf[9]==0);
+ n=format_to(buf,sizeof(buf),"HP=%d CD=%.1f",23,1.5);
+ CHECK(strcmp(buf,"HP=23 CD=1.5")==0);
+
  /* This passes actual vstrnfmt() through real textblock_vappend_c(). */
  tb=make_tb();
  textblock_append(&tb,"Name: %s (%d)",lore,42);
