@@ -129,6 +129,28 @@ int main(void){
  CHECK(n==0); CHECK(strcmp(buf,"")==0);
  n=format_to(buf,sizeof(buf),"%-8.*ls",-1,L"中文");
  CHECK(n==8); CHECK(strcmp(buf,"中文  ")==0);
+ /* Verify real vstrnfmt dynamic '*' parsing against libc's C99 rules,
+  * including negative precision, zero precision and negative width. */
+ {
+  int width, precision;
+  char expected[128];
+  for(width=-40;width<=40;++width) {
+   for(precision=-20;precision<=40;++precision) {
+    int n_expected=snprintf(expected,sizeof(expected),
+      "%*.*ls",width,precision,L"ABC");
+    n=format_to(buf,sizeof(buf),"%*.*ls",width,precision,L"ABC");
+    CHECK(n_expected>=0);
+    CHECK(n==(size_t)n_expected);
+    CHECK(strcmp(buf,expected)==0);
+    n_expected=snprintf(expected,sizeof(expected),
+      "%*.*s",width,precision,"example");
+    n=format_to(buf,sizeof(buf),"%*.*s",width,precision,"example");
+    CHECK(n_expected>=0);
+    CHECK(n==(size_t)n_expected);
+    CHECK(strcmp(buf,expected)==0);
+   }
+  }
+ }
  n=format_to(buf,sizeof(buf),"Cat: %ls",L"貓🐱");
  CHECK(strcmp(buf,"Cat: 貓🐱")==0);
  n=format_to(buf,10,"%ls",wide_lore);
