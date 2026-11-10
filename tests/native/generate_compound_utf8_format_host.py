@@ -376,6 +376,14 @@ int main(void){
  strcpy(buf,"Prefix:%s");
  n=format_to(buf,sizeof(buf),buf,"獸");
  CHECK(n==strlen("Prefix:獸") && strcmp(buf,"Prefix:獸")==0);
+ strcpy(buf,"純文字");
+ n=format_to(buf,sizeof(buf),buf);
+ CHECK(n==strlen("純文字") && strcmp(buf,"純文字")==0);
+ strcpy(buf,lore);
+ n=format_to(buf,sizeof(buf),"記錄：%s",buf);
+ CHECK(n==strlen("記錄：")+4500);
+ CHECK(memcmp(buf,"記錄：",9)==0);
+ CHECK(memcmp(buf+9,lore,4500)==0);
  strcpy(buf,"ABC");
  n=format_to(buf,4,"X%s",buf);
  CHECK(n==3 && strcmp(buf,"XAB")==0);
