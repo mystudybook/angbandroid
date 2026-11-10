@@ -319,6 +319,19 @@ int main(void){
  CHECK(tb.text[1502]==L'中');
  free_tb(&tb);
 
+ /* Real textblock and colored output entry points must also retain
+  * large numeric fields now that the inner 1024-byte staging is gone. */
+ tb=make_tb();
+ textblock_append(&tb,"%1500d",42);
+ CHECK(tb.strlen==1500);
+ CHECK(tb.text[0]==L' ');
+ CHECK(tb.text[1498]==L'4' && tb.text[1499]==L'2');
+ free_tb(&tb);
+ text_out_c(9,"Value:%1500d!",42);
+ CHECK(strlen(captured)==1507);
+ CHECK(strcmp(captured+1504,"42!")==0);
+ CHECK(captured_attr==9);
+
  text_out_c(4,"Wide:%ls!",wide_lore);
  CHECK(strlen(captured)==4506);
  CHECK(memcmp(captured+5,lore,4500)==0);
@@ -341,7 +354,7 @@ int main(void){
  CHECK(strlen(captured)==4500 && strcmp(captured,lore)==0);
  text_out("Damage %d (%s)",12,"fire");
  CHECK(strcmp(captured,"Damage 12 (fire)")==0);
- CHECK(capture_count==6);
+ CHECK(capture_count==7);
  printf("PASS: %u actual native compound-format UTF-8 assertions\n",checks);
  return 0;
 }
