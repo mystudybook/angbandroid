@@ -329,6 +329,24 @@ int main(void){
   CHECK(end==24 && strcmp(joined,"中文中文中文中文")==0);
  }
 
+ /* The preflight parser must stop where the real formatter rejects
+  * overlong directives, instead of reading non-existent later varargs. */
+ {
+  char invalid[256];
+  invalid[0]='%';
+  memset(invalid+1,'0',110);
+  strcpy(invalid+111,"d%s");
+  n=format_to(buf,sizeof(buf),invalid);
+  CHECK(n==0 && buf[0]==0);
+  /* A '*' can expand to 11 chars (INT_MIN) and exceed the same
+   * directive limit without a conversion argument being supplied. */
+  invalid[0]='%';
+  memset(invalid+1,'0',96);
+  strcpy(invalid+97,"*d%s");
+  n=format_to(buf,sizeof(buf),invalid,(-2147483647-1));
+  CHECK(n==0 && buf[0]==0);
+ }
+
  /* Prefix literals or earlier conversions must not overwrite %s source.
   * These cases previously failed even with the immediate %s guard. */
  strcpy(buf,"Beast");
