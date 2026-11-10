@@ -561,10 +561,12 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 							size_t safe_bytes =
 								angdroid_utf8_precision_prefix_bytes(
 									arg, precision);
-							if (safe_bytes < precision && arg[safe_bytes]) {
+							if ((safe_bytes < precision && arg[safe_bytes]) ||
+								angdroid_utf8_prefix_contains_invalid(
+									arg, safe_bytes)) {
 								safe_copy = mem_alloc(safe_bytes + 1);
-								memcpy(safe_copy, arg, safe_bytes);
-								safe_copy[safe_bytes] = '\0';
+								angdroid_utf8_copy_sanitized_prefix(
+									safe_copy, arg, safe_bytes);
 								formatted = safe_copy;
 							}
 						}
