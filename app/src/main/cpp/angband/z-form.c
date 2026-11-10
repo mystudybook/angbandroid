@@ -842,30 +842,44 @@ char *vformat(const char *fmt, va_list vp)
 	/* Null format yields last result */
 	if (!fmt) return (format_buf);
 
-	/* Keep going until successful */
-	while (1) {
-		va_list	args;
-		size_t len;
+	/* If a format string or a narrow %s source points into the cached
+	 * buffer, do not overwrite or reallocate that source while retrying.
+	 * Reallocating can move it, invalidating the original va_list
+	 * pointers before the next formatting attempt. */
+	{
+		bool aliased = angdroid_vstrnfmt_has_aliased_source(
+			fmt, format_buf, format_len, vp);
+		size_t capacity = format_len;
+		char *output = aliased ? mem_alloc(capacity) : format_buf;
 
-		/* Build the string */
-		va_copy(args, vp);
-		len = vstrnfmt(format_buf, format_len, fmt, args);
-		va_end(args);
+		/* Keep going until successful */
+		while (1) {
+			va_list args;
+			size_t len;
 
-		/* Success */
-		if (len < format_len-1) break;
+			va_copy(args, vp);
+			len = vstrnfmt(output, capacity, fmt, args);
+			va_end(args);
+			if (len < capacity - 1) break;
 
-		/* Avoid size_t wraparound before doubling. A zero-size
-		 * mem_realloc() returns NULL in Angband's allocator, leaving
-		 * the formatting buffer invalid on the next iteration. */
-		if (format_len > ((size_t)-1) / 2)
-			quit("Formatted string exceeds addressable memory");
-		format_len *= 2;
-		format_buf = mem_realloc(format_buf, format_len);
+			/* A saturated buffer must grow. Guard against overflow
+			 * rather than letting mem_realloc receive size zero. */
+			if (capacity > ((size_t)-1) / 2)
+				quit("Formatted string exceeds addressable memory");
+			capacity *= 2;
+			output = mem_realloc(output, capacity);
+			if (!aliased) format_buf = output;
+		}
+
+		/* Do not free any aliased source until all retries finish.
+		 * Regular non-aliased formatting still reuses the buffer. */
+		if (aliased) {
+			mem_free(format_buf);
+			format_buf = output;
+		}
+		format_len = capacity;
 	}
-
-	/* Return the new buffer */
-	return (format_buf);
+	return format_buf;
 }
 
 void vformat_kill(void)
