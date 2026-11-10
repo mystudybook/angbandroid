@@ -242,8 +242,9 @@ static bool angdroid_vstrnfmt_has_aliased_source(
 			} else {
 				const char *value = va_arg(args, const char *);
 				if (angdroid_format_string_overlaps_output(
-						value, buf, max))
+						value, buf, max)) {
 					aliased = true;
+				}
 			}
 			break;
 		case 'c':
@@ -269,6 +270,8 @@ static bool angdroid_vstrnfmt_has_aliased_source(
 			cursor += strlen(cursor);
 			break;
 		}
+		/* No need to inspect later varargs once staging is required. */
+		if (aliased) break;
 	}
 	va_end(args);
 	return aliased;
