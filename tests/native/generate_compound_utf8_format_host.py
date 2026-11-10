@@ -34,6 +34,7 @@ prefix = r'''/* GENERATED from actual z-form.c and z-textblock.c. */
 #include <locale.h>
 #include <limits.h>
 #include "app/src/main/cpp/curses/unicode_utf8.h"
+#include "app/src/main/cpp/angband/zh-tw-format-utf8.h"
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -195,6 +196,53 @@ int main(void){
  n=format_to(buf,sizeof(buf),"%.3s",lore);
  CHECK(n==3);
  CHECK(memcmp(buf,"中",3)==0);
+ /* Narrow %s precision is byte-based but must not cut UTF-8 scalars. */
+ n=format_to(buf,sizeof(buf),"%.1s","中文");
+ CHECK(n==0 && strcmp(buf,"")==0);
+ n=format_to(buf,sizeof(buf),"%.2s","中文");
+ CHECK(n==0 && strcmp(buf,"")==0);
+ n=format_to(buf,sizeof(buf),"%.3s","中文");
+ CHECK(n==3 && strcmp(buf,"中")==0);
+ n=format_to(buf,sizeof(buf),"%.4s","中文");
+ CHECK(n==3 && strcmp(buf,"中")==0);
+ n=format_to(buf,sizeof(buf),"%.5s","中文");
+ CHECK(n==3 && strcmp(buf,"中")==0);
+ n=format_to(buf,sizeof(buf),"%.6s","中文");
+ CHECK(n==6 && strcmp(buf,"中文")==0);
+ n=format_to(buf,sizeof(buf),"%8.2s","中文");
+ CHECK(n==8 && strcmp(buf,"        ")==0);
+ n=format_to(buf,sizeof(buf),"%-8.4s","中文");
+ CHECK(n==8 && strcmp(buf,"中     ")==0);
+ n=format_to(buf,sizeof(buf),"%.*s",2,"A中文");
+ CHECK(n==1 && strcmp(buf,"A")==0);
+ n=format_to(buf,sizeof(buf),"%.*s",4,"A中文");
+ CHECK(n==4 && strcmp(buf,"A中")==0);
+ n=format_to(buf,sizeof(buf),"%.*s",3,"🐱貓");
+ CHECK(n==0 && strcmp(buf,"")==0);
+ n=format_to(buf,sizeof(buf),"%.*s",4,"🐱貓");
+ CHECK(n==4 && strcmp(buf,"🐱")==0);
+ n=format_to(buf,sizeof(buf),"%.2s","abc");
+ CHECK(n==2 && strcmp(buf,"ab")==0);
+ n=format_to(buf,sizeof(buf),"%*.*s",-8,4,"中文");
+ CHECK(n==8 && strcmp(buf,"中     ")==0);
+ n=format_to(buf,sizeof(buf),"%.*s",2501,lore);
+ CHECK(n==2499 && utf8_valid(buf));
+ /* The formatter is source-extracted from z-form.c.  Exercise the
+  * 4-byte emoji boundary, mixed text, and padded widths repeatedly. */
+ {
+  static const char *sample="A中文🐱B";
+  int precision_bytes, field_width;
+  for(precision_bytes=0;precision_bytes<=20;++precision_bytes){
+   for(field_width=-20;field_width<=20;++field_width){
+    n=format_to(buf,sizeof(buf),"%*.*s",
+       field_width,precision_bytes,sample);
+    CHECK(n==strlen(buf));
+    CHECK(utf8_valid(buf));
+    CHECK(n>=(size_t)(field_width<0?-field_width:field_width));
+   }
+  }
+ }
+
 
  /* This passes actual vstrnfmt() through real textblock_vappend_c(). */
  tb=make_tb();
