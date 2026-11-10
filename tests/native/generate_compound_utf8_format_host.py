@@ -169,6 +169,24 @@ int main(void){
   CHECK(utf8_valid(buf));
  }
 
+ /* Fixed-capacity output must not terminate halfway through UTF-8.
+  * These calls exercise the real vstrnfmt() implementation for format
+  * literals, regular %s and wide %ls, not just a helper model. */
+ n=format_to(buf,3,"中文");
+ CHECK(n==2 && strcmp(buf,"??")==0);
+ n=format_to(buf,5,"%s","中文");
+ CHECK(n==4 && strcmp(buf,"中?")==0);
+ n=format_to(buf,6,"%ls",L"中文");
+ CHECK(n==5 && strcmp(buf,"中??")==0);
+ n=format_to(buf,4,"🐱");
+ CHECK(n==3 && strcmp(buf,"???")==0);
+ n=format_to(buf,5,"🐱");
+ CHECK(n==4 && strcmp(buf,"🐱")==0);
+ n=format_to(buf,1,"中文");
+ CHECK(n==0 && strcmp(buf,"")==0);
+ n=format_to(buf,3,"AB中");
+ CHECK(n==2 && strcmp(buf,"AB")==0);
+
  /* New narrow %s path in the *real* formatter may fill large output. */
  n=format_to(buf,sizeof(buf),"Name: %s (%d)",lore,42);
  CHECK(n==4511);
