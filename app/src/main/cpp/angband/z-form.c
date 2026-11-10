@@ -240,6 +240,10 @@ static bool angdroid_vstrnfmt_has_aliased_source(
 				last_is_dot = false;
 				++cursor;
 			} else if (*cursor == 'l') {
+				/* The core parser rejects a second 'l' before it
+				 * reads the conversion argument. Do not read one
+				 * during alias preflight either. */
+				if (long_arg) goto finished;
 				long_arg = true;
 				last_is_dot = false;
 				++directive_size;
@@ -413,6 +417,14 @@ static size_t angdroid_vstrnfmt_unaliased(char *buf, size_t max,
 			if (isalpha((unsigned char)*s)) {
 				/* Hack -- handle "long" request */
 				if (*s == 'l') {
+					/* Only one 'l' modifier is supported. With
+					 * multiple l's, the old parser could fetch long
+					 * instead of long long or hand a UTF-8 char *
+					 * to snprintf's wide-string conversion. */
+					if (do_long) {
+						buf[0] = '\0';
+						return 0;
+					}
 					/* Save the character */
 					aux[q++] = *s++;
 
