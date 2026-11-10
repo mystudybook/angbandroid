@@ -117,7 +117,16 @@ int main(void) {
  CHECK(strcmp(invoke("%s","恢復"),"恢復")==0);
  vformat_kill();
  CHECK(format_buf==NULL && format_len==0);
- CHECK(formatter_calls>=8);
+ /* Exercise restart/cleanup repeatedly, including a NULL format that
+  * returns the current cached text instead of creating an extra buffer. */
+ for(i=0;i<128;++i) {
+  CHECK(strcmp(invoke("第 %u 次",i),"第 0 次")!=0 || i==0);
+  CHECK(format_buf!=NULL && format_len==1024);
+  CHECK(strcmp(invoke(NULL),format_buf)==0);
+  vformat_kill();
+  CHECK(format_buf==NULL && format_len==0);
+ }
+ CHECK(formatter_calls>=136);
  printf("PASS: %u actual vformat lifecycle assertions\n",checks);
  return 0;
 }
