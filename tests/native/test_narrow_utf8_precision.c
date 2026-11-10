@@ -119,6 +119,33 @@ int main(void)
         CHECK(strcmp(output, "�") == 0);
     }
 
+    /* Fixed-capacity vstrnfmt() can stop inside the last UTF-8 scalar.
+     * The in-place repair must preserve max-1 bytes for callers using
+     * its byte count to append or decide whether to grow. */
+    {
+        const char *sample = "A中文🐱B 臺灣";
+        size_t limit, total = strlen(sample);
+        for (limit = 0; limit <= total; ++limit) {
+            memcpy(output, sample, limit);
+            output[limit] = '\0';
+            angdroid_utf8_repair_truncated_tail(output, limit);
+            CHECK(strlen(output) == limit);
+            CHECK(valid_utf8(output));
+        }
+        memcpy(output, "\xE4\xB8", 2);
+        output[2] = '\0';
+        angdroid_utf8_repair_truncated_tail(output, 2);
+        CHECK(strcmp(output, "??") == 0);
+        memcpy(output, "\xF0\x9F\x90", 3);
+        output[3] = '\0';
+        angdroid_utf8_repair_truncated_tail(output, 3);
+        CHECK(strcmp(output, "???") == 0);
+        memcpy(output, "中", 3);
+        output[3] = '\0';
+        angdroid_utf8_repair_truncated_tail(output, 3);
+        CHECK(strcmp(output, "中") == 0);
+    }
+
     /* Malformed multibyte prefixes must remain valid after formatting. */
     {
         static const char *parts[] = {"中", "B", "\x80", "\xC0", "🐱", "\xE4\xB8", "�"};
