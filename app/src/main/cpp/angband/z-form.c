@@ -531,6 +531,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					const char *formatted;
 					const char *dot;
 					char *safe_copy = NULL;
+					char *overlap_copy = NULL;
 					size_t precision = (size_t)-1;
 					size_t remaining;
 					int written;
@@ -574,7 +575,18 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					 * rather than its former fixed 1024-byte staging
 					 * buffer. The caller can retry with more space. */
 					remaining = max - n;
+					if (angdroid_format_string_overlaps_output(
+							formatted, buf + n, remaining)) {
+						/* A direct snprintf() from buf (or from its
+						 * existing prefix in strnfcat()) is undefined.
+						 * Preserve the source before overwriting it. */
+						size_t copy_length = strlen(formatted) + 1;
+						overlap_copy = mem_alloc(copy_length);
+						memcpy(overlap_copy, formatted, copy_length);
+						formatted = overlap_copy;
+					}
 					written = snprintf(buf + n, remaining, aux, formatted);
+					mem_free(overlap_copy);
 					mem_free(safe_copy);
 					if (written < 0) {
 						buf[0] = '\0';
