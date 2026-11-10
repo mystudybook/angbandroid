@@ -97,6 +97,26 @@ int main(void)
   CHECK(utf8_valid(mock.data));
   CHECK(mock.length>=1800);
  }
+ {
+  /* ASCII is also entitled to complete exports; the old path used
+   * my_strcpy(buf, str, 1024) and lost every byte after byte 1023. */
+  char original[2501], reconstructed[2501];
+  size_t i, j=0;
+  for(i=0;i<2500;++i)original[i]=(char)('A'+(i%26));
+  original[2500]=0;
+  text_out_wrap=75;text_out_indent=0;
+  clear();text_out_to_file(0,original);
+  for(i=0;i<mock.length;++i)
+    if(mock.data[i]!='\n'){
+      CHECK(j<2500);
+      reconstructed[j++]=mock.data[i];
+    }
+  reconstructed[j]=0;
+  CHECK(j==2500);
+  CHECK(strcmp(reconstructed,original)==0);
+  CHECK(mock.length>2500);
+  CHECK(utf8_valid(mock.data));
+ }
  printf("PASS: real text_out_to_file UTF-8 behavior (%u assertions)\n",checks);
  return 0;
 }
