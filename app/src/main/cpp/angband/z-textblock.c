@@ -453,7 +453,12 @@ void text_out_to_file(uint8_t a, const char *str)
 		}
 
 		/* If we have encountered no spaces */
-		if ((l_space == -1) && (n == len)) {
+		/* A fragment ending exactly at the remaining column limit
+		 * is already a complete line segment: do not insert a newline
+		 * before its final character on the next text_out_to_file()
+		 * call. Only pre-wrap when more characters remain. */
+		if ((l_space == -1) && (n == len) &&
+			(s[n] != '\0') && (s[n] != '\n')) {
 			/* If we are at the start of a new line */
 			if (pos == indent) {
 				len = n;
