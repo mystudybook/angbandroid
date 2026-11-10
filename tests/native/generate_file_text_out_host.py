@@ -32,8 +32,6 @@ static int text_out_indent=0;
 static void file_write(ang_file *f,const char *s,size_t n)
 {assert(f==&mock && n<sizeof(f->data)-f->length);memcpy(f->data+f->length,s,n);f->length+=n;f->data[f->length]=0;}
 static void file_writec(ang_file *f,char ch){file_write(f,&ch,1);}
-static void my_strcpy(char *dst,const char *src,size_t cap)
-{size_t n=strlen(src);if(n>=cap)n=cap-1;memcpy(dst,src,n);dst[n]=0;}
 '''
 
 suffix = r'''
