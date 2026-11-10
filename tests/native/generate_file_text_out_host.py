@@ -199,6 +199,37 @@ int main(void)
   clear();text_out_to_file(0,"ABCDE\n");
   CHECK(strcmp(mock.data,"ABCDE\n")==0);
  }
+ {
+  /* Exhaustively check consecutive chunks at exact column boundaries,
+   * including indentation and one-cell content regions. */
+  int width,margin;
+  for(width=1;width<=32;++width) {
+    for(margin=0;margin<width&&margin<=8;++margin) {
+      char first[48],expected[96];
+      int remaining=width-margin-1;
+      int index;
+      memset(first,'x',(size_t)remaining);
+      first[remaining]=0;
+      for(index=0;index<margin;++index)expected[index]=' ';
+      for(index=0;index<remaining;++index)expected[margin+index]='x';
+      expected[width-1]='Z';
+      expected[width]=0;
+
+      text_out_wrap=75;text_out_indent=0;
+      clear();
+      text_out_wrap=width;text_out_indent=margin;
+      text_out_to_file(0,first);
+      text_out_to_file(0,"Z");
+      CHECK(strcmp(mock.data,expected)==0);
+      text_out_to_file(0,"Q");
+      expected[width]='\n';
+      for(index=0;index<margin;++index)expected[width+1+index]=' ';
+      expected[width+1+margin]='Q';
+      expected[width+2+margin]=0;
+      CHECK(strcmp(mock.data,expected)==0);
+    }
+  }
+ }
  printf("PASS: real text_out_to_file UTF-8 behavior (%u assertions)\n",checks);
  return 0;
 }
