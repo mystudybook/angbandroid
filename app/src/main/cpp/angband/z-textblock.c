@@ -462,6 +462,15 @@ void text_out_to_file(uint8_t a, const char *str)
 			/* If we are at the start of a new line */
 			if (pos == indent) {
 				len = n;
+			} else if (s[0] == ' ' && pos >= wrap) {
+				/* An isolated space in the next output chunk is a
+				 * word separator, not one more display column after
+				 * an already full line. Wrap once and consume the
+				 * run of separators without exceeding the width. */
+				file_writec(text_out_file, '\n');
+				pos = 0;
+				while (*s == ' ') s++;
+				continue;
 			} else if ((s[0] == ' ') || (s[0] == ',') || (s[0] == '.')) {
 				/* HACK - Output punctuation at the end of the line */
 				len = 1;
