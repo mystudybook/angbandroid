@@ -119,6 +119,27 @@ int main(void)
         CHECK(strcmp(output, "�") == 0);
     }
 
+    /* The formatter must stage strings when the source aliases the
+     * destination, including a string ending at the append cursor. */
+    {
+        char data[64] = "Beast";
+        size_t end = strlen(data);
+        CHECK(angdroid_format_string_overlaps_output(
+            data, data, sizeof(data)) == 1);
+        CHECK(angdroid_format_string_overlaps_output(
+            data + 2, data, sizeof(data)) == 1);
+        CHECK(angdroid_format_string_overlaps_output(
+            data, data + end, sizeof(data) - end) == 1);
+        CHECK(angdroid_format_string_overlaps_output(
+            data + end, data, sizeof(data)) == 1);
+        CHECK(angdroid_format_string_overlaps_output(
+            data, data + end + 2, 4) == 0);
+        CHECK(angdroid_format_string_overlaps_output(
+            data, data, 0) == 0);
+        CHECK(angdroid_format_string_overlaps_output(
+            NULL, data, sizeof(data)) == 0);
+    }
+
     /* Fixed-capacity vstrnfmt() can stop inside the last UTF-8 scalar.
      * The in-place repair must preserve max-1 bytes for callers using
      * its byte count to append or decide whether to grow. */
