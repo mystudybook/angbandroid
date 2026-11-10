@@ -17,7 +17,8 @@ def cut(source, start, end):
     b = source.index(end, a)
     return source[a:b]
 
-formatter = cut(form, "size_t vstrnfmt(", "static char *format_buf = NULL;")
+formatter = cut(form, "static bool angdroid_vstrnfmt_has_aliased_source(",
+                "static char *format_buf = NULL;")
 resize_append = cut(block, "static void textblock_resize_if_needed(",
                     "/**\n * Add a graphics tile")
 append = cut(block, "void textblock_append(textblock *tb, const char *fmt, ...)",
