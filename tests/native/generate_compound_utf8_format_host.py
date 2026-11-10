@@ -325,7 +325,7 @@ int main(void){
   strnfcat(joined,sizeof(joined),&end,"%s",joined);
   CHECK(end==12 && strcmp(joined,"中文中文")==0);
   strnfcat(joined,sizeof(joined),&end,"%s",joined);
-  CHECK(end==36 && strcmp(joined,"中文中文中文中文")==0);
+  CHECK(end==24 && strcmp(joined,"中文中文中文中文")==0);
  }
 
  /* This passes actual vstrnfmt() through real textblock_vappend_c(). */
