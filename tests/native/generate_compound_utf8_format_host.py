@@ -118,6 +118,17 @@ int main(void){
  CHECK(n==8); CHECK(strcmp(buf,"        ")==0);
  n=format_to(buf,sizeof(buf),"%*.*ls",10,3,L"中文");
  CHECK(n==10); CHECK(strcmp(buf,"       中")==0);
+ /* Negative dynamic precision must be omitted, as in ISO C99 printf. */
+ n=format_to(buf,sizeof(buf),"%.*ls",-1,L"中文");
+ CHECK(n==6); CHECK(strcmp(buf,"中文")==0);
+ n=format_to(buf,sizeof(buf),"%*.*ls",-8,-1,L"中文");
+ CHECK(n==8); CHECK(strcmp(buf,"中文  ")==0);
+ n=format_to(buf,sizeof(buf),"%*.*s",-8,-1,"中文");
+ CHECK(n==8); CHECK(strcmp(buf,"中文  ")==0);
+ n=format_to(buf,sizeof(buf),"%.*ls",0,L"中文");
+ CHECK(n==0); CHECK(strcmp(buf,"")==0);
+ n=format_to(buf,sizeof(buf),"%-8.*ls",-1,L"中文");
+ CHECK(n==8); CHECK(strcmp(buf,"中文  ")==0);
  n=format_to(buf,sizeof(buf),"Cat: %ls",L"貓🐱");
  CHECK(strcmp(buf,"Cat: 貓🐱")==0);
  n=format_to(buf,10,"%ls",wide_lore);
