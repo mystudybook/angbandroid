@@ -855,8 +855,12 @@ char *vformat(const char *fmt, va_list vp)
 		/* Success */
 		if (len < format_len-1) break;
 
-		/* Grow the buffer */
-		format_len = format_len * 2;
+		/* Avoid size_t wraparound before doubling. A zero-size
+		 * mem_realloc() returns NULL in Angband's allocator, leaving
+		 * the formatting buffer invalid on the next iteration. */
+		if (format_len > ((size_t)-1) / 2)
+			quit("Formatted string exceeds addressable memory");
+		format_len *= 2;
 		format_buf = mem_realloc(format_buf, format_len);
 	}
 
@@ -866,7 +870,12 @@ char *vformat(const char *fmt, va_list vp)
 
 void vformat_kill(void)
 {
+	/* Angband's mem_free() is a plain free(); reset the cached
+	 * pointer and capacity so repeated shutdown or a later format()
+	 * starts with a fresh allocation, rather than using freed memory. */
 	mem_free(format_buf);
+	format_buf = NULL;
+	format_len = 0;
 }
 
 
