@@ -67,6 +67,13 @@ python3 "$ROOT/tests/native/generate_long_lore_text_host.py" \
     -o "$BUILD_DIR/test_long_lore"
 "$BUILD_DIR/test_long_lore"
 
+# Byte-limited narrow %s must keep UTF-8 glyphs complete, including
+# multibyte CJK, emoji, and dynamic printf precision.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_narrow_utf8_precision.c" \
+    -o "$BUILD_DIR/test_narrow_utf8_precision"
+"$BUILD_DIR/test_narrow_utf8_precision"
+
 # Test the actual z-form.c vstrnfmt and z-textblock.c compound-format
 # callers against long CJK strings, including both colored and plain text.
 python3 "$ROOT/tests/native/generate_compound_utf8_format_host.py" \
