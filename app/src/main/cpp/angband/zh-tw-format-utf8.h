@@ -10,6 +10,35 @@
 #include <stddef.h>
 #include "../curses/unicode_display.h"
 
+/* Repair an incomplete scalar at the byte boundary of a fixed-size
+ * format buffer. Keep the byte count unchanged, so vstrnfmt() can still
+ * return max - 1 to tell its dynamically resizing callers to retry.
+ * Whole UTF-8 scalars and ASCII output are never modified. */
+static inline void angdroid_utf8_repair_truncated_tail(char *text, size_t used)
+{
+    size_t position, start, expected = 0, i;
+    unsigned char lead;
+    if (!text || !used) return;
+    position = used;
+    while (position > 0 &&
+           ((unsigned char)text[position - 1] & 0xC0u) == 0x80u)
+        --position;
+    if (position == 0) {
+        for (i = 0; i < used; ++i) text[i] = '?';
+        return;
+    }
+    start = position - 1;
+    lead = (unsigned char)text[start];
+    if (lead >= 0xC2u && lead <= 0xDFu) expected = 2;
+    else if (lead >= 0xE0u && lead <= 0xEFu) expected = 3;
+    else if (lead >= 0xF0u && lead <= 0xF4u) expected = 4;
+    if (expected && used - start < expected) {
+        for (i = start; i < used; ++i) text[i] = '?';
+    } else if (!expected && position < used) {
+        for (i = position; i < used; ++i) text[i] = '?';
+    }
+}
+
 static inline size_t angdroid_utf8_precision_prefix_bytes(
     const char *text, size_t byte_limit)
 {
