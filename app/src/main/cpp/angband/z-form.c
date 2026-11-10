@@ -315,11 +315,18 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					/* Get the next argument */
 					arg = va_arg(vp, int);
 
-					/* Hack -- append the "length" */
-					snprintf(aux + q, sizeof(aux) - q, "%d", arg);
-
-					/* Hack -- accept the "length" */
-					while (aux[q]) q++;
+					/* C99 treats a negative dynamic precision as if
+					 * there were no precision at all.  Previously
+					 * "%.*ls" with -1 became "%.-1ls", which is
+					 * not a valid printf conversion and could lose
+					 * the entire translated string.  Negative field
+					 * widths still retain their '-' alignment flag. */
+					if (arg < 0 && q > 0 && aux[q - 1] == '.') {
+						aux[--q] = '\0';
+					} else {
+						snprintf(aux + q, sizeof(aux) - q, "%d", arg);
+						while (aux[q]) q++;
+					}
 
 					/* Skip the "*" */
 					s++;
