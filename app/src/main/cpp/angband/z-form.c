@@ -524,6 +524,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					if ((size_t)written >= remaining) {
 						n = max - 1;
 						buf[n] = '\0';
+						angdroid_utf8_repair_truncated_tail(buf, n);
 						return n;
 					}
 					n += (size_t)written;
@@ -585,6 +586,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					if ((size_t)written >= remaining) {
 						n = max - 1;
 						buf[n] = '\0';
+						angdroid_utf8_repair_truncated_tail(buf, n);
 						return n;
 					}
 					n += (size_t)written;
@@ -614,8 +616,12 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 	}
 
 
-	/* Terminate buffer */
+	/* Keep fixed-size translated text valid even when the final
+	 * UTF-8 scalar crosses the caller's byte limit. The byte count
+	 * remains unchanged so dynamic-buffer callers still retry. */
 	buf[n] = '\0';
+	if (n == max - 1)
+		angdroid_utf8_repair_truncated_tail(buf, n);
 
 	/* Return length */
 	return (n);
