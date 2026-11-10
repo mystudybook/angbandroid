@@ -199,8 +199,8 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 	/* Format sequence */
 	char aux[128];
 
-	/* Resulting string */
-	char tmp[1024];
+	/* Bytes produced by the current non-string format field. */
+	int formatted;
 
 	assert(max);
 	assert(fmt);
@@ -341,9 +341,6 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 		/* Terminate "aux" */
 		aux[q] = '\0';
 
-		/* Clear "tmp" */
-		tmp[0] = '\0';
-
 		/* Process the "format" symbol */
 		switch (aux[q - 1]) {
 			/* Simple Character -- standard format */
@@ -355,7 +352,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 				arg = va_arg(vp, int);
 
 				/* Format the argument */
-				snprintf(tmp, sizeof(tmp), aux, arg);
+				formatted = snprintf(buf + n, max - n, aux, arg);
 
 				/* Done */
 				break;
@@ -371,7 +368,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					arg = va_arg(vp, long);
 
 					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg);
+					formatted = snprintf(buf + n, max - n, aux, arg);
 				} else {
 					int arg;
 
@@ -379,7 +376,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					arg = va_arg(vp, int);
 
 					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg);
+					formatted = snprintf(buf + n, max - n, aux, arg);
 				}
 
 				/* Done */
@@ -396,7 +393,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					arg = va_arg(vp, unsigned long);
 
 					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg);
+					formatted = snprintf(buf + n, max - n, aux, arg);
 				} else {
 					unsigned int arg;
 
@@ -404,7 +401,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					arg = va_arg(vp, unsigned int);
 
 					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg);
+					formatted = snprintf(buf + n, max - n, aux, arg);
 				}
 
 				/* Done */
@@ -422,7 +419,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 				arg = va_arg(vp, double);
 
 				/* Format the argument */
-				snprintf(tmp, sizeof(tmp), aux, arg);
+				formatted = snprintf(buf + n, max - n, aux, arg);
 
 				/* Done */
 				break;
@@ -437,7 +434,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 				arg = va_arg(vp, void*);
 
 				/* Format the argument */
-				snprintf(tmp, sizeof(tmp), aux, arg);
+				formatted = snprintf(buf + n, max - n, aux, arg);
 
 				/* Done */
 				break;
@@ -605,14 +602,20 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 			}
 		}
 
-		/* Now append "tmp" to "buf" */
-		for (q = 0; tmp[q]; q++) {
-			/* Check total length */
-			if (n == max-1) break;
-
-			/* Save the character */
-			buf[n++] = tmp[q];
+		/* Numeric, character, float and pointer conversions must also
+		 * use the caller's buffer. A fixed 1024-byte staging area silently
+		 * truncated wide numeric fields and defeated vformat() retries. */
+		if (formatted < 0) {
+			buf[0] = '\0';
+			return 0;
 		}
+		if ((size_t)formatted >= max - n) {
+			n = max - 1;
+			buf[n] = '\0';
+			angdroid_utf8_repair_truncated_tail(buf, n);
+			return n;
+		}
+		n += (size_t)formatted;
 	}
 
 
