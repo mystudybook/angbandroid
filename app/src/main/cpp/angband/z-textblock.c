@@ -391,7 +391,6 @@ static void angdroid_textblock_write_file_char(void *context, char character)
 void text_out_to_file(uint8_t a, const char *str)
 {
 	const char *s;
-	char buf[1024];
 
 	/* Current position on the line */
 	static int pos = 0;
@@ -413,11 +412,10 @@ void text_out_to_file(uint8_t a, const char *str)
 		return;
 	}
 
-	/* Copy to a rewriteable string */
- 	my_strcpy(buf, str, 1024);
-
-	/* Current location within "buf" */
- 	s = buf;
+	/* The ASCII wrapping loop only reads the input; avoid copying
+	 * it into a fixed 1024-byte buffer, which silently clipped long
+	 * exported descriptions even after UTF-8 output was fixed. */
+	s = str;
 
 	/* Process the string */
 	while (*s) {
