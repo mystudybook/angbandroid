@@ -223,6 +223,20 @@ int main(void){
  CHECK(n==4 && strcmp(buf,"🐱")==0);
  n=format_to(buf,sizeof(buf),"%.2s","abc");
  CHECK(n==2 && strcmp(buf,"ab")==0);
+ /* Deliberately malformed input must not leak broken UTF-8 from
+  * precision-limited %s: bad bytes are replaced with ASCII '?'. */
+ n=format_to(buf,sizeof(buf),"%.*s",7,"A\x80" "中\xE4\xB8");
+ CHECK(n==7 && strcmp(buf,"A?中??")==0);
+ CHECK(utf8_valid(buf));
+ n=format_to(buf,sizeof(buf),"%.*s",4,"A\x80" "中\xE4\xB8");
+ CHECK(n==2 && strcmp(buf,"A?")==0);
+ n=format_to(buf,sizeof(buf),"%8.*s",4,"A\x80" "中\xE4\xB8");
+ CHECK(n==8 && strcmp(buf,"      A?")==0);
+ n=format_to(buf,sizeof(buf),"%.*s",3,"�");
+ CHECK(n==3 && strcmp(buf,"�")==0);
+ n=format_to(buf,sizeof(buf),"%.*s",1,"\xE4\xB8");
+ CHECK(n==1 && strcmp(buf,"?")==0);
+
  n=format_to(buf,sizeof(buf),"%*.*s",-8,4,"中文");
  CHECK(n==8 && strcmp(buf,"中     ")==0);
  n=format_to(buf,sizeof(buf),"%.*s",2501,lore);
