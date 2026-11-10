@@ -183,7 +183,101 @@
  * the given buffer to a length of zero, and return a "length" of zero.
  * The contents of "buf", except for "buf[0]", may then be undefined.
  */
-size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
+/* Before writing any prefix or earlier format field, inspect the original
+ * narrow %s arguments.  An argument may point inside 'buf', and writing
+ * even one literal byte can destroy it before the %s branch sees it.
+ *
+ * Match vstrnfmt's argument consumption, without formatting text or
+ * dereferencing string contents except when a potential overlap needs
+ * checking. Ordinary non-overlapping calls do not allocate memory. */
+static bool angdroid_vstrnfmt_has_aliased_source(
+	const char *fmt, const char *buf, size_t max, va_list vp)
+{
+	const char *cursor = fmt;
+	va_list args;
+	bool aliased = false;
+
+	/* Formatting with fmt itself inside buf also requires protection. */
+	if (angdroid_format_string_overlaps_output(fmt, buf, max))
+		return true;
+	if (!strchr(fmt, 's')) return false;
+
+	va_copy(args, vp);
+	while (*cursor) {
+		bool long_arg = false;
+		char conversion;
+
+		if (*cursor++ != '%') continue;
+		if (*cursor == '%') {
+			++cursor;
+			continue;
+		}
+		if (*cursor == 'n') {
+			(void)va_arg(args, size_t *);
+			++cursor;
+			continue;
+		}
+
+		/* Width and precision '*' arguments are consumed before the
+		 * conversion, including when their values are negative. */
+		while (*cursor) {
+			if (*cursor == '*') {
+				(void)va_arg(args, int);
+				++cursor;
+			} else if (*cursor == 'l') {
+				long_arg = true;
+				++cursor;
+			} else if (isalpha((unsigned char)*cursor)) {
+				break;
+			} else {
+				++cursor;
+			}
+		}
+		if (!*cursor) break;
+		conversion = *cursor++;
+		switch (conversion) {
+		case 's':
+			if (long_arg) {
+				(void)va_arg(args, const wchar_t *);
+			} else {
+				const char *value = va_arg(args, const char *);
+				if (angdroid_format_string_overlaps_output(
+						value, buf, max))
+					aliased = true;
+			}
+			break;
+		case 'c':
+		case 'd': case 'i':
+			if (long_arg && conversion != 'c')
+				(void)va_arg(args, long);
+			else
+				(void)va_arg(args, int);
+			break;
+		case 'u': case 'o': case 'x': case 'X':
+			if (long_arg) (void)va_arg(args, unsigned long);
+			else (void)va_arg(args, unsigned int);
+			break;
+		case 'f': case 'e': case 'E': case 'g': case 'G':
+			(void)va_arg(args, double);
+			break;
+		case 'p':
+			(void)va_arg(args, void *);
+			break;
+		default:
+			/* An invalid format makes the real formatter return an
+			 * error; no later argument can be formatted. */
+			cursor += strlen(cursor);
+			break;
+		}
+	}
+	va_end(args);
+	return aliased;
+}
+
+/* The existing parser/formatter writes directly into its destination.
+ * Its caller supplies a non-aliasing scratch buffer when necessary. */
+static size_t angdroid_vstrnfmt_unaliased(char *buf, size_t max,
+	const char *fmt, va_list vp)
 {
 	const char *s;
 
@@ -642,6 +736,30 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 	return (n);
 }
 
+
+/* Keep the legacy bounded length contract.  Allocate only when an input
+ * string or the format itself aliases the output buffer: %s may be preceded
+ * by literal text, padding, or numeric fields that would destroy its source
+ * before the conversion is reached. */
+size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
+{
+	char *scratch;
+	size_t result;
+	va_list args;
+
+	assert(max);
+	assert(fmt);
+	if (!angdroid_vstrnfmt_has_aliased_source(fmt, buf, max, vp))
+		return angdroid_vstrnfmt_unaliased(buf, max, fmt, vp);
+
+	scratch = mem_alloc(max);
+	va_copy(args, vp);
+	result = angdroid_vstrnfmt_unaliased(scratch, max, fmt, args);
+	va_end(args);
+	memcpy(buf, scratch, result + 1);
+	mem_free(scratch);
+	return result;
+}
 
 /**
  * Add a formatted string to the end of a string
