@@ -230,6 +230,55 @@ int main(void)
     }
   }
  }
+ {
+  /* A separate whitespace-only callback after an exact-fit line must
+   * not append a sixth display cell to a five-column row. */
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"ABCDE");text_out_to_file(0," ");
+  CHECK(strcmp(mock.data,"ABCDE\n")==0);
+ }
+ {
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"ABCDE");text_out_to_file(0,"   ");
+  text_out_to_file(0,"FG");
+  CHECK(strcmp(mock.data,"ABCDE\nFG")==0);
+ }
+ {
+  /* Multiple separators arrive in the same callback as the next word. */
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"ABCDE");text_out_to_file(0,"   FG");
+  CHECK(strcmp(mock.data,"ABCDE\nFG")==0);
+ }
+ {
+  /* Single-column and heavily indented lines must follow the same rule. */
+  text_out_wrap=1;text_out_indent=0;
+  clear();text_out_to_file(0,"A");text_out_to_file(0,"   ");
+  CHECK(strcmp(mock.data,"A\n")==0);
+ }
+ {
+  text_out_wrap=3;text_out_indent=2;
+  clear();text_out_to_file(0,"A");text_out_to_file(0," ");
+  CHECK(strcmp(mock.data,"  A\n")==0);
+ }
+ {
+  /* Preserve existing punctuation handling: comma and period may be
+   * placed one cell beyond wrap, unlike whitespace. */
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"ABCDE");text_out_to_file(0,",");
+  CHECK(strcmp(mock.data,"ABCDE,")==0);
+ }
+ {
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"ABCDE");text_out_to_file(0,".");
+  CHECK(strcmp(mock.data,"ABCDE.")==0);
+ }
+ {
+  /* The Unicode exporter already wraps and discards boundary spaces;
+   * ASCII output now observes the same whole-line behavior. */
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"中文A");text_out_to_file(0," ");
+  CHECK(strcmp(mock.data,"中文A\n")==0);
+ }
  printf("PASS: real text_out_to_file UTF-8 behavior (%u assertions)\n",checks);
  return 0;
 }
