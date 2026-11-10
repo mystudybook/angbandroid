@@ -328,6 +328,46 @@ int main(void){
   CHECK(end==24 && strcmp(joined,"中文中文中文中文")==0);
  }
 
+ /* Prefix literals or earlier conversions must not overwrite %s source.
+  * These cases previously failed even with the immediate %s guard. */
+ strcpy(buf,"Beast");
+ n=format_to(buf,sizeof(buf),"Name:%s",buf);
+ CHECK(n==10 && strcmp(buf,"Name:Beast")==0);
+ strcpy(buf,"中文");
+ n=format_to(buf,sizeof(buf),"名稱：%s",buf);
+ CHECK(strcmp(buf,"名稱：中文")==0 && n==strlen(buf));
+ strcpy(buf,"Cat");
+ n=format_to(buf,sizeof(buf),"#%d:%s",7,buf);
+ CHECK(n==6 && strcmp(buf,"#7:Cat")==0);
+ strcpy(buf,"ABC");
+ n=format_to(buf,sizeof(buf),"X%*.*s",8,2,buf);
+ CHECK(n==9 && strcmp(buf,"X      AB")==0);
+ strcpy(buf,"Meow");
+ n=format_to(buf,sizeof(buf),"(%ls) %s",L"貓",buf);
+ CHECK(strcmp(buf,"(貓) Meow")==0);
+ strcpy(buf,"Tiger");
+ n=format_to(buf,sizeof(buf),"%.1f:%s",1.5,buf);
+ CHECK(strcmp(buf,"1.5:Tiger")==0);
+ {
+  size_t position=0;
+  strcpy(buf,"回來");
+  n=format_to(buf,sizeof(buf),"!%n%s",&position,buf);
+  CHECK(n==7 && position==1 && strcmp(buf,"!回來")==0);
+ }
+ strcpy(buf,"Prefix:%s");
+ n=format_to(buf,sizeof(buf),buf,"獸");
+ CHECK(n==strlen("Prefix:獸") && strcmp(buf,"Prefix:獸")==0);
+ strcpy(buf,"ABC");
+ n=format_to(buf,4,"X%s",buf);
+ CHECK(n==3 && strcmp(buf,"XAB")==0);
+ {
+  char joined[128]="中文";
+  size_t end=strlen(joined);
+  strnfcat(joined,sizeof(joined),&end," + %s",joined);
+  CHECK(strcmp(joined,"中文 + 中文")==0);
+  CHECK(end==strlen(joined));
+ }
+
  /* This passes actual vstrnfmt() through real textblock_vappend_c(). */
  tb=make_tb();
  textblock_append(&tb,"Name: %s (%d)",lore,42);
