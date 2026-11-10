@@ -205,6 +205,8 @@ static bool angdroid_vstrnfmt_has_aliased_source(
 	va_copy(args, vp);
 	while (*cursor) {
 		bool long_arg = false;
+		bool last_is_dot = false;
+		size_t directive_size = 1;
 		char conversion;
 
 		if (*cursor++ != '%') continue;
@@ -221,15 +223,32 @@ static bool angdroid_vstrnfmt_has_aliased_source(
 		/* Width and precision '*' arguments are consumed before the
 		 * conversion, including when their values are negative. */
 		while (*cursor) {
+			/* Match the real formatter's 100-character directive
+			 * limit. Otherwise this lookahead may read varargs after
+			 * the formatter would have stopped on an invalid format. */
+			if (directive_size > 100) goto finished;
 			if (*cursor == '*') {
-				(void)va_arg(args, int);
+				int width = va_arg(args, int);
+				if (width < 0 && last_is_dot) {
+					/* Negative dynamic precision removes its dot. */
+					--directive_size;
+				} else {
+					int digits = snprintf(NULL, 0, "%d", width);
+					if (digits < 0) goto finished;
+					directive_size += (size_t)digits;
+				}
+				last_is_dot = false;
 				++cursor;
 			} else if (*cursor == 'l') {
 				long_arg = true;
+				last_is_dot = false;
+				++directive_size;
 				++cursor;
 			} else if (isalpha((unsigned char)*cursor)) {
 				break;
 			} else {
+				last_is_dot = (*cursor == '.');
+				++directive_size;
 				++cursor;
 			}
 		}
@@ -273,6 +292,7 @@ static bool angdroid_vstrnfmt_has_aliased_source(
 		/* No need to inspect later varargs once staging is required. */
 		if (aliased) break;
 	}
+	finished:
 	va_end(args);
 	return aliased;
 }
