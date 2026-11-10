@@ -115,6 +115,39 @@ int main(void)
   CHECK(mock.length>2500);
   CHECK(utf8_valid(mock.data));
  }
+ {
+  /* A negative line width previously caused an infinite newline loop
+   * because the ASCII scanner never advanced its input pointer. */
+  text_out_wrap=75;text_out_indent=0;
+  clear();text_out_wrap=-7;
+  text_out_to_file(0,"ABC");
+  CHECK(strcmp(mock.data,"ABC")==0);
+ }
+ {
+  /* The first row must count its indent against the total width.
+   * Old code produced "  ABCDE" (7 cells), despite a wrap of 5. */
+  text_out_wrap=5;text_out_indent=2;
+  clear();text_out_to_file(0,"ABCDEFGHIJK");
+  CHECK(strcmp(mock.data,"  ABC\n  DEF\n  GHI\n  JK")==0);
+ }
+ {
+  /* Unusable indentation is capped so at least one content cell
+   * remains, rather than emitting an oversized prefix per line. */
+  text_out_wrap=3;text_out_indent=99;
+  clear();text_out_to_file(0,"ABC");
+  CHECK(strcmp(mock.data,"  A\n  B\n  C")==0);
+ }
+ {
+  /* Width=1 cannot reserve a separate indent column. */
+  text_out_wrap=1;text_out_indent=1;
+  clear();text_out_to_file(0,"ABC");
+  CHECK(strcmp(mock.data,"A\nB\nC")==0);
+ }
+ {
+  text_out_wrap=3;text_out_indent=-10;
+  clear();text_out_to_file(0,"ABCD");
+  CHECK(strcmp(mock.data,"ABC\nD")==0);
+ }
  printf("PASS: real text_out_to_file UTF-8 behavior (%u assertions)\n",checks);
  return 0;
 }
