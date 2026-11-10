@@ -347,6 +347,26 @@ int main(void){
   CHECK(n==0 && buf[0]==0);
  }
 
+ /* Unsupported repeated 'l' modifiers must fail before va_arg().
+  * No conversion arguments are supplied: a preflight read would be UB.
+  * One 'l' is still valid for %ld, %lu and %ls. */
+ n=format_to(buf,sizeof(buf),"%lls");
+ CHECK(n==0 && buf[0]==0);
+ n=format_to(buf,sizeof(buf),"%lld");
+ CHECK(n==0 && buf[0]==0);
+ n=format_to(buf,sizeof(buf),"%llu");
+ CHECK(n==0 && buf[0]==0);
+ n=format_to(buf,sizeof(buf),"%lls%s");
+ CHECK(n==0 && buf[0]==0);
+ n=format_to(buf,sizeof(buf),"%lld:%s");
+ CHECK(n==0 && buf[0]==0);
+ n=format_to(buf,sizeof(buf),"%ld:%s",42L,"獸");
+ CHECK(n==strlen("42:獸") && strcmp(buf,"42:獸")==0);
+ n=format_to(buf,sizeof(buf),"%lu",42UL);
+ CHECK(n==2 && strcmp(buf,"42")==0);
+ n=format_to(buf,sizeof(buf),"%ls",L"貓");
+ CHECK(n==strlen("貓") && strcmp(buf,"貓")==0);
+
  /* Prefix literals or earlier conversions must not overwrite %s source.
   * These cases previously failed even with the immediate %s guard. */
  strcpy(buf,"Beast");
