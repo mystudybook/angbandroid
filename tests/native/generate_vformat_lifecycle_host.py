@@ -177,6 +177,34 @@ int main(void) {
   CHECK(reallocations>before_grow);
   vformat_kill();
  }
+ /* The aliased content itself may be 338 UTF-8 Chinese scalars.
+  * Growing to make room for a translated prefix must preserve all bytes. */
+ {
+  char chinese[1015], expected[1200];
+  char *cached;
+  unsigned j;
+  vformat_kill();
+  for(j=0;j<338;++j)memcpy(chinese+j*3,"中",3);
+  chinese[1014]=0;
+  cached=invoke("%s",chinese);
+  CHECK(strlen(cached)==1014 && format_len==1024);
+  snprintf(expected,sizeof(expected),"資料：%s（%d）",chinese,5);
+  CHECK(strcmp(invoke("資料：%s（%d）",cached,5),expected)==0);
+  CHECK(strlen(format_buf)==strlen(expected));
+  vformat_kill();
+ }
+ /* fmt can point to the middle, not just the start, of the cache. */
+ {
+  char expected[2000];
+  char *cached;
+  vformat_kill();
+  cached=invoke("%s","Ignore:Score:%01500d");
+  CHECK(format_len==1024);
+  snprintf(expected,sizeof(expected),"Score:%01500d",6);
+  CHECK(strcmp(invoke(cached+7,6),expected)==0);
+  CHECK(format_len>=strlen(expected)+1);
+  vformat_kill();
+ }
  /* Non-overlapping formats keep the existing static allocation. */
  {
   char *before;
