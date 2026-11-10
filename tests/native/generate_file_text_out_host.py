@@ -148,6 +148,57 @@ int main(void)
   clear();text_out_to_file(0,"ABCD");
   CHECK(strcmp(mock.data,"ABC\nD")==0);
  }
+ {
+  /* A new chunk finishing exactly in the final cell must not force a
+   * newline; prior code mistook n == len for more text beyond len. */
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"ABCD");text_out_to_file(0,"E");
+  CHECK(strcmp(mock.data,"ABCDE")==0);
+ }
+ {
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"ABCD");text_out_to_file(0,"E");
+  text_out_to_file(0,"F");
+  CHECK(strcmp(mock.data,"ABCDE\nF")==0);
+ }
+ {
+  /* Preserve the caller's one explicit newline at an exact boundary. */
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"ABCD");text_out_to_file(0,"E\n");
+  CHECK(strcmp(mock.data,"ABCDE\n")==0);
+ }
+ {
+  /* Text beginning with CJK takes two columns; a narrow following
+   * ASCII scalar still fits in column five across separate callbacks. */
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"中文");text_out_to_file(0,"A");
+  CHECK(strcmp(mock.data,"中文A")==0);
+ }
+ {
+  /* Conversely, a two-column CJK scalar must wrap if the preceding
+   * ASCII fragment has only one column of space. */
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"ABCD");text_out_to_file(0,"中文");
+  CHECK(strcmp(mock.data,"ABCD\n中文")==0);
+ }
+ {
+  /* Single-cell terminal: second call begins a new line. */
+  text_out_wrap=1;text_out_indent=0;
+  clear();text_out_to_file(0,"A");text_out_to_file(0,"B");
+  CHECK(strcmp(mock.data,"A\nB")==0);
+ }
+ {
+  /* Prior-indented fragment should also consume the last column. */
+  text_out_wrap=5;text_out_indent=2;
+  clear();text_out_to_file(0,"AB");text_out_to_file(0,"C");
+  CHECK(strcmp(mock.data,"  ABC")==0);
+ }
+ {
+  /* A newline exactly at the boundary must not produce a spare line. */
+  text_out_wrap=5;text_out_indent=0;
+  clear();text_out_to_file(0,"ABCDE\n");
+  CHECK(strcmp(mock.data,"ABCDE\n")==0);
+ }
  printf("PASS: real text_out_to_file UTF-8 behavior (%u assertions)\n",checks);
  return 0;
 }
