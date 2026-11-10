@@ -15,10 +15,20 @@ production = source[start:end]
 assert "void vformat_kill(void)" in production
 assert "format_buf = NULL;" in production
 assert "format_len = 0;" in production
-assert "if (format_len > ((size_t)-1) / 2)" in production
+assert "if (capacity > ((size_t)-1) / 2)" in production
+assert "angdroid_vstrnfmt_has_aliased_source(" in production
+
+preflight_start = source.index("static bool angdroid_vstrnfmt_has_aliased_source(")
+preflight_end = source.index("/* The existing parser/formatter",preflight_start)
+preflight = source[preflight_start:preflight_end]
+header = (root / "app/src/main/cpp/angband/zh-tw-format-utf8.h").read_text(encoding="utf-8")
+alias_start = header.index("static inline int angdroid_format_string_overlaps_output(")
+alias_end = header.index("/* Repair an incomplete scalar",alias_start)
+alias_helper = header[alias_start:alias_end]
 
 prefix = r'''/* Auto-generated from production z-form.c, do not edit directly. */
 #include <assert.h>
+#include <ctype.h>
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -27,11 +37,15 @@ prefix = r'''/* Auto-generated from production z-form.c, do not edit directly. *
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <wchar.h>
 static unsigned allocations, reallocations, frees, fatal_calls, formatter_calls;
 static bool simulate_saturated_output;
 static jmp_buf exit_to_test;
 static void *mem_zalloc(size_t n) {
  void *p=calloc(1,n); assert(p); ++allocations; return p;
+}
+static void *mem_alloc(size_t n) {
+ void *p=malloc(n); assert(p); ++allocations; return p;
 }
 static void *mem_realloc(void *p,size_t n) {
  void *new_ptr; assert(n);
@@ -104,7 +118,7 @@ int main(void) {
  simulate_saturated_output=true;
  previous_reallocs=reallocations;
  if(setjmp(exit_to_test)==0) {
-  invoke("%s","x");
+  invoke("%d",1);
   CHECK(0);
  }
  CHECK(fatal_calls==1);
@@ -129,6 +143,53 @@ int main(void) {
   CHECK(format_buf==NULL && format_len==0);
  }
  CHECK(allocations==frees);
+ /* Force the old 1024-byte static buffer to grow with a %s argument
+  * that points into it. The original must remain alive until all retries
+  * complete, including the first saturated formatting attempt. */
+ {
+  char seed[1016];
+  char expected[1200];
+  char *alias, *old_cache;
+  memset(seed,'X',1015); seed[1015]=0;
+  vformat_kill();
+  alias=invoke("%s",seed);
+  CHECK(strlen(alias)==1015 && format_len==1024);
+  old_cache=alias;
+  snprintf(expected,sizeof(expected),"名稱：%s [HP %d]",seed,17);
+  CHECK(strcmp(invoke("名稱：%s [HP %d]",alias,17),expected)==0);
+  CHECK(format_len>=strlen(expected)+1);
+  CHECK(format_buf!=old_cache);
+  CHECK(strcmp(invoke(NULL),expected)==0);
+  vformat_kill();
+ }
+ /* A format string itself can point into the static buffer. The
+  * resulting 1500-character field must survive output growth. */
+ {
+  char *fmt_ptr;
+  char expected[2000];
+  unsigned before_grow=reallocations;
+  vformat_kill();
+  fmt_ptr=invoke("%s","Health:%01500d");
+  CHECK(format_len==1024);
+  snprintf(expected,sizeof(expected),"Health:%01500d",7);
+  CHECK(strcmp(invoke(fmt_ptr,7),expected)==0);
+  CHECK(strlen(format_buf)==1507);
+  CHECK(reallocations>before_grow);
+  vformat_kill();
+ }
+ /* Non-overlapping formats keep the existing static allocation. */
+ {
+  char *before;
+  unsigned alloc_before;
+  vformat_kill();
+  before=invoke("First");
+  alloc_before=allocations;
+  CHECK(strcmp(invoke("Second"),"Second")==0);
+  CHECK(format_buf==before);
+  CHECK(allocations==alloc_before);
+  vformat_kill();
+ }
+ CHECK(allocations==frees);
  CHECK(formatter_calls>=136);
  printf("PASS: %u actual vformat lifecycle assertions\n",checks);
  return 0;
@@ -136,5 +197,5 @@ int main(void) {
 '''
 target = Path(sys.argv[1]) if len(sys.argv) > 1 else root / "build/test_vformat_lifecycle.generated.c"
 target.parent.mkdir(parents=True, exist_ok=True)
-target.write_text(prefix+production+suffix, encoding="utf-8")
+target.write_text(prefix+alias_helper+preflight+production+suffix, encoding="utf-8")
 print("Extracted vformat lifecycle source:",target)
