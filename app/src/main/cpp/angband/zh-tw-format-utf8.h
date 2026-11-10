@@ -8,7 +8,31 @@
 #define ANGDROID_ZH_TW_FORMAT_UTF8_H
 
 #include <stddef.h>
+#include <stdint.h>
+#include <string.h>
 #include "../curses/unicode_display.h"
+
+/* snprintf() requires that its %s source not overlap its destination.
+ * Previous versions staged every narrow %s into a local array; the direct
+ * output path needs to preserve that property for in-place string copies
+ * and strnfcat() calls that append the original buffer. Compare addresses
+ * only as unsigned integers: relational pointer comparisons between
+ * unrelated C objects are undefined. The source's terminating NUL counts
+ * as overlapping, since snprintf() may overwrite it before reading. */
+static inline int angdroid_format_string_overlaps_output(
+    const char *source, const char *destination, size_t output_capacity)
+{
+    uintptr_t source_address, destination_address;
+
+    if (!source || !destination || !output_capacity) return 0;
+    source_address = (uintptr_t)(const void *)source;
+    destination_address = (uintptr_t)(const void *)destination;
+
+    if (source_address >= destination_address)
+        return source_address - destination_address < output_capacity;
+
+    return destination_address - source_address <= strlen(source);
+}
 
 /* Repair an incomplete scalar at the byte boundary of a fixed-size
  * format buffer. Keep the byte count unchanged, so vstrnfmt() can still
