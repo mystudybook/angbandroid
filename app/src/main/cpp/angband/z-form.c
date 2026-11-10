@@ -16,6 +16,7 @@
  *    are included in all such copies.  Other copyrights may also apply.
  */
 #include "z-form.h"
+#include "zh-tw-format-utf8.h"
 #include "z-type.h"
 #include "z-util.h"
 #include "z-virt.h"
@@ -529,26 +530,57 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					continue;
 				} else {
 					const char *arg;
-					int written;
+					const char *formatted;
+					const char *dot;
+					char *safe_copy = NULL;
+					size_t precision = (size_t)-1;
 					size_t remaining;
+					int written;
 
-					/* Do not stage narrow %s in a fixed 1024-byte
-					 * buffer.  That silently truncates long UTF-8 lore
-					 * before a dynamically growing caller can retry.
-					 * Apply the original printf field format directly
-					 * to the caller's output buffer instead. */
+					/* Never split a multibyte glyph when printf applies
+					 * a byte-based %.Ns precision to translated prose.
+					 * The ordinary printf flags and column padding
+					 * remain in charge after selecting a safe prefix. */
 					arg = va_arg(vp, const char *);
 					if (!arg) arg = "";
+					formatted = arg;
+					dot = strchr(aux, '.');
+					if (dot) {
+						const char *digit = dot + 1;
+						precision = 0;
+						while (*digit >= '0' && *digit <= '9') {
+							unsigned value = (unsigned)(*digit - '0');
+							if (precision > ((size_t)-1 - value) / 10) {
+								precision = (size_t)-1;
+								break;
+							}
+							precision = precision * 10 + value;
+							++digit;
+						}
+						if (precision != (size_t)-1) {
+							size_t safe_bytes =
+								angdroid_utf8_precision_prefix_bytes(
+									arg, precision);
+							if (safe_bytes < precision && arg[safe_bytes]) {
+								safe_copy = mem_alloc(safe_bytes + 1);
+								memcpy(safe_copy, arg, safe_bytes);
+								safe_copy[safe_bytes] = '\0';
+								formatted = safe_copy;
+							}
+						}
+					}
+
+					/* Write directly to the caller's output buffer,
+					 * rather than its former fixed 1024-byte staging
+					 * buffer. The caller can retry with more space. */
 					remaining = max - n;
-					written = snprintf(buf + n, remaining, aux, arg);
+					written = snprintf(buf + n, remaining, aux, formatted);
+					mem_free(safe_copy);
 					if (written < 0) {
 						buf[0] = '\0';
 						return 0;
 					}
 					if ((size_t)written >= remaining) {
-						/* Report a full buffer so vformat() and the
-						 * textblock formatter retry with more space.
-						 * Never let n exceed the allocated capacity. */
 						n = max - 1;
 						buf[n] = '\0';
 						return n;
