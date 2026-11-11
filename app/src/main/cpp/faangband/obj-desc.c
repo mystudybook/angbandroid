@@ -24,6 +24,9 @@
 #include "obj-knowledge.h"
 #include "obj-tval.h"
 #include "obj-util.h"
+#include "droid.h"
+#include "obj-desc-artifact-zh-tw.h"
+#include "../angband/obj-desc-suffix-utf8.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -333,8 +336,19 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	end = obj_desc_name_format(buf, max, end, basename, modstr, plural);
 
 	/* Append extra names of various kinds */
-	if (object_is_known_artifact(obj))
-		strnfcat(buf, max, &end, " %s", obj->artifact->name);
+	if (object_is_known_artifact(obj)) {
+		/* Only explicitly opted-in, known on-screen artifact names use
+		 * localized display text. Spoilers and terse dumps stay English. */
+		bool translated_ui = (mode & ODESC_ZH_TW) &&
+			!(mode & (ODESC_SPOIL | ODESC_TERSE)) &&
+			angdroid_zh_tw_enabled();
+		const char *artifact_name = angdroid_faangband_artifact_ui_name(
+			obj->artifact->name, translated_ui);
+		/* Append the suffix as one UTF-8 unit or not at all; never leave
+		 * a space, partial quote or truncated Chinese code point. */
+		(void)angdroid_obj_desc_append_suffix_atomic(buf, max,
+			&end, artifact_name, true);
+	}
 	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store))
 		strnfcat(buf, max, &end, " %s", obj->ego->name);
 	else if (aware && !obj->artifact &&
