@@ -96,6 +96,14 @@ assert "obj->ego && store" in section
 assert "angdroid_faangband_known_ego_ui_name(" in section
 assert "angdroid_zh_tw_item_suffix(" in section
 assert "angdroid_obj_desc_append_suffix_atomic(" in section
+assert "else if (!translated_base && aware && !obj->artifact &&" in section
+assert 'strnfcat(buf, max, &end, " %s", ego_name);' in section
+# When a known effect has already become a complete Chinese kind name, the
+# final English "of ..." suffix must not be appended a second time.
+assert section.index("if (!translated_base) {") < section.index(
+    "else if (!translated_base && aware && !obj->artifact &&"
+)
+
 
 # User-facing source is only opted-in; terse/English/export/spoiler stay as is.
 assert "ODESC_ZH_TW" not in EXPORT
