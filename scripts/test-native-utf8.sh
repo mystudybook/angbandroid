@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband's actual object-description UI: all 126 names, explicit
+# locale selection, exact buffer fit and atomic UTF-8 suffixes.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_artifact_name_ui.c" \
+    -o "$BUILD_DIR/test_faangband_artifact_name_ui"
+"$BUILD_DIR/test_faangband_artifact_name_ui"
+
 # All 41 FAangband-only artifact names with English/standard fallback.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_artifact_names_locale.c" \
