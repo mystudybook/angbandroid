@@ -66,6 +66,10 @@ assert "menu->filter_list, cursor, n, menu->count" in keyboard
 assert "angdroid_fa_menu_page_rows(" in keyboard
 assert "angdroid_fa_menu_selection_key(" in keyboard
 assert "angdroid_fa_menu_add_key(" in keyboard
+assert "size_t tag_capacity;" in keyboard
+assert "reserved = nkeys < remaining ? nkeys : remaining;" in keyboard
+assert "tag_capacity = sizeof(buf) - reserved;" in keyboard
+assert "buf, tag_capacity, &used, sel" in keyboard
 assert "if (oid < 0) continue;" in keyboard
 assert "temp[current++] = sel;" not in keyboard
 assert "oid = menu->filter_list[oid]" not in keyboard
