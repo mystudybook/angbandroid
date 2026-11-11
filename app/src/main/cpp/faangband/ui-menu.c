@@ -927,8 +927,23 @@ static void keys_to_ui(struct menu *menu)
 
 	/* Preserve existing command/switch keys. my_strcat() bounds the
 	 * remaining space; never use a separate unbounded temporary array. */
-	if (menu->cmd_keys)
-		my_strcat(buf, menu->cmd_keys, sizeof(buf));
+	if (menu->cmd_keys) {
+		if ((menu->flags & MN_ALLOW_EMPTY_INPUT) && n <= 0) {
+			/* Empty stores have no stock to Buy/Get/Examine.
+			 * Do not advertise those buttons on the Android ribbon;
+			 * Sell, Help, Inspect inventory, and other commands remain. */
+			const char *key = menu->cmd_keys;
+			for (; *key; ++key) {
+				if (angdroid_menu_empty_shop_key_visible(
+					menu->flags, MN_ALLOW_EMPTY_INPUT, n, *key)) {
+					char one[2] = { *key, '\0' };
+					my_strcat(buf, one, sizeof(buf));
+				}
+			}
+		} else {
+			my_strcat(buf, menu->cmd_keys, sizeof(buf));
+		}
+	}
 	if (menu->switch_keys)
 		my_strcat(buf, menu->switch_keys, sizeof(buf));
 
