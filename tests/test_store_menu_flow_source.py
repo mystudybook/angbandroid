@@ -11,9 +11,11 @@ menu = (ROOT / "app/src/main/cpp/angband/ui-menu.c").read_text(encoding="utf-8")
 menu_h = (ROOT / "app/src/main/cpp/angband/ui-menu.h").read_text(encoding="utf-8")
 store = (ROOT / "app/src/main/cpp/angband/ui-store.c").read_text(encoding="utf-8")
 
+if "MN_MOUSE_ROW_ACTION = 0x100" not in menu_h:
+    raise SystemExit("FAIL: store row mouse callback flag missing")
 if "MN_ALLOW_EMPTY_INPUT = 0x80" not in menu_h:
     raise SystemExit("FAIL: missing explicit empty-menu command opt-in")
-if "menu->flags |= MN_ALLOW_EMPTY_INPUT;" not in store:
+if "menu->flags |= MN_ALLOW_EMPTY_INPUT | MN_MOUSE_ROW_ACTION;" not in store:
     raise SystemExit("FAIL: empty shop cannot opt into Sell/Help command dispatch")
 
 dispatch = menu.split("static bool menu_handle_action(", 1)[1].split(
