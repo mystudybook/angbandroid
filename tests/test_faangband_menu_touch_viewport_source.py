@@ -80,7 +80,7 @@ for tag in ("scroll_get_tag", "object_skin_get_tag", "column_get_tag"):
 row = MENU.split("static void display_menu_row(struct menu *menu, int pos, int top,\n"
     "                             bool cursor, int row, int col, int width)\n{", 1)[1].split(
     "void menu_refresh(", 1)[0]
-assert "menu->skin->get_tag(menu, pos - top)" in row
+assert "fa_menu_relative_tags_paged(menu) ? pos - top : pos" in row
 
 ensure = MENU.split("void menu_ensure_cursor_valid(", 1)[1].split(
     "static bool menu_calc_size(", 1)[0]
