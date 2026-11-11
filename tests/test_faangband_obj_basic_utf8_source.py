@@ -57,7 +57,13 @@ assert "ODESC_ZH_TW" not in EXPORT
 assert "ODESC_ZH_TW" not in SPOILER
 
 # Source contains exactly the 11 canonical Angband-compatible gold kinds.
-items = re.findall(r"^name:(.*)\n(?:(?!^name:).)*?^type:gold$", SRC, re.M | re.S)
+items = []
+for block in re.split(r"(?=^name:)", SRC, flags=re.M):
+    if not block.startswith("name:"):
+        continue
+    name = block.splitlines()[0][5:]
+    if re.search(r"^type:gold$", block, re.M):
+        items.append(name)
 source_gold = set(items)
 known_gold = {
     "copper", "silver", "garnets", "gold", "opals",
