@@ -956,6 +956,7 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 	while (!(in.type & notify)) {
 		ui_event out = EVENT_EMPTY;
 		int cursor = menu->cursor;
+		bool touch_select_dispatched = false;
 
 		menu_refresh(menu, popup);
         
@@ -965,10 +966,24 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 
 		/* Handle mouse & keyboard commands */
 		if (in.type == EVT_MOUSE) {
-			if (!no_act && menu_handle_action(menu, &in)) {
-				continue;
+			if (region_inside(&menu->active, &in)) {
+				/* Resolve the tapped visible row before dispatching a callback.
+				 * Stock, inventory and equipment handlers must never receive
+				 * the cursor from the previous selection. */
+				menu_handle_mouse(menu, &in, &out);
+				if (out.type == EVT_SELECT && !no_act) {
+					/* If the mouse handler bubbles the event upstream, do not
+					 * invoke it again as EVT_SELECT for the same tap. */
+					touch_select_dispatched = true;
+					if (menu_handle_action(menu, &in))
+						continue;
+				}
+			} else {
+				/* Keep shopkeeper/header and outside context actions. */
+				if (!no_act && menu_handle_action(menu, &in))
+					continue;
+				menu_handle_mouse(menu, &in, &out);
 			}
-			menu_handle_mouse(menu, &in, &out);
 		} else if (in.type == EVT_KBRD) {
 			/* Command key */
 			if (!no_act && menu->cmd_keys &&
@@ -1013,7 +1028,8 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 		}
 
 		/* If we've selected an item, then send that event out */
-		if (out.type == EVT_SELECT && !no_act && menu_handle_action(menu, &out))
+		if (out.type == EVT_SELECT && !no_act &&
+			!touch_select_dispatched && menu_handle_action(menu, &out))
 			continue;
 
 		/* Notify about the outgoing type */
