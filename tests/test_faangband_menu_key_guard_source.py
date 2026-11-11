@@ -80,6 +80,8 @@ assert "temp[current++] = sel;" not in keyboard
 assert "oid = menu->filter_list[oid]" not in keyboard
 assert "my_strcat(buf, menu->cmd_keys, sizeof(buf));" in keyboard
 assert "my_strcat(buf, menu->switch_keys, sizeof(buf));" in keyboard
+assert "(menu->flags & MN_ALLOW_EMPTY_INPUT) && n <= 0" in keyboard
+assert "angdroid_menu_empty_shop_key_visible(" in keyboard
 assert "soft_kbd_replace(buf);" in keyboard
 assert "strdeldup(buf);" in keyboard
 
