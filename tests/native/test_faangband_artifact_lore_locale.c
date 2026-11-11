@@ -67,7 +67,7 @@ static void test_catalog(void)
     CHECK(strcmp(angdroid_zh_tw_faangband_artifact_flavor(
         "of Beguiling"), "每個生物都有自身的弱點……") == 0);
     CHECK(strcmp(angdroid_zh_tw_faangband_artifact_flavor(
-        "of Nargothrond"), "這頂王冠曾由芬羅德·費拉剛佩戴，後來傳給他的弟弟歐羅隹斯。") == 0);
+        "of Nargothrond"), "這頂王冠曾由芬羅德·費拉剛佩戴，後來傳給他的弟弟歐羅德瑞斯。") == 0);
     CHECK(strstr(angdroid_zh_tw_faangband_artifact_flavor(
         "'Narsil'"), "魔苟斯") != NULL);
     CHECK(strstr(angdroid_zh_tw_faangband_artifact_flavor(
