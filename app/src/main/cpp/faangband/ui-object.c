@@ -362,7 +362,7 @@ static void set_obj_names(bool terse, const struct player *p)
 			} else {
 				object_desc(items[i].o_name,
 					sizeof(items[i].o_name), obj,
-					ODESC_PREFIX | ODESC_FULL, p);
+					ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, p);
 			}
 		}
 
@@ -1537,7 +1537,7 @@ void display_object_recall(struct object *obj)
 
 	textblock *tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 
 	clear_from(0);
 	textui_textblock_place(tb, SCREEN_REGION, header_buf);
@@ -1574,7 +1574,7 @@ void display_object_recall_interactive(struct object *obj)
 
 	tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 	textui_textblock_show(tb, SCREEN_REGION, header_buf);
 	textblock_free(tb);
 }
@@ -1602,7 +1602,7 @@ void textui_obj_examine(void)
 	/* Display info */
 	tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL | ODESC_ZH_TW, player);
 
 	textui_textblock_show(tb, local_area, header_buf);
 	textblock_free(tb);
