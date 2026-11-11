@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband's legacy grammar had unbounded literal buf[end++] writes.
+# This C99 regression covers original grammar, tiny buffers and UTF-8 edges.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_obj_desc_name_utf8.c" \
+    -o "$BUILD_DIR/test_faangband_obj_desc_name_utf8"
+"$BUILD_DIR/test_faangband_obj_desc_name_utf8"
+
 # FAangband assigned flavor appearance, identified effect, and scroll
 # random-title display, including C99 buffer and privacy regressions.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
