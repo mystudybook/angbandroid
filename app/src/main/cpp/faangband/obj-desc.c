@@ -411,7 +411,7 @@ static size_t obj_desc_chest(const struct object *obj, char *buf, size_t max,
 	if (obj->pval && !obj->known->pval) return end;
 
 	/* Describe the traps */
-	strnfcat(buf, max, &end, " (%s)", chest_trap_name(obj));
+	(void)angdroid_faangband_append_detailf(buf, max, &end, " (%s)", chest_trap_name(obj));
 
 	return end;
 }
@@ -432,12 +432,12 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 	/* Display damage dice if they are known */
 	if (kf_has(obj->kind->kind_flags, KF_SHOW_DICE) &&
 		(!p || (p->obj_k->dd && p->obj_k->ds))) {
-		strnfcat(buf, max, &end, " (%dd%d)", obj->dd, obj->ds);
+		(void)angdroid_faangband_append_detailf(buf, max, &end, " (%dd%d)", obj->dd, obj->ds);
 	}
 
 	/* Display shooting power as part of the multiplier */
 	if (kf_has(obj->kind->kind_flags, KF_SHOW_MULT)) {
-		strnfcat(buf, max, &end, " (x%d)",
+		(void)angdroid_faangband_append_detailf(buf, max, &end, " (x%d)",
 				 obj->pval + obj->modifiers[OBJ_MOD_MIGHT]);
 	}
 
@@ -451,27 +451,27 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 			|| (!object_has_standard_to_h(obj)
 			&& !obj->artifact && !obj->ego))) {
 		/* In general show full combat bonuses */
-		strnfcat(buf, max, &end, " (%+d,%+d)", obj->to_h, obj->to_d);
+		(void)angdroid_faangband_append_detailf(buf, max, &end, " (%+d,%+d)", obj->to_h, obj->to_d);
 	} else if (obj->to_h < 0 && object_has_standard_to_h(obj)) {
 		/* Special treatment for body armor with only a to-hit penalty */
-		strnfcat(buf, max, &end, " (%+d)", obj->to_h);
+		(void)angdroid_faangband_append_detailf(buf, max, &end, " (%+d)", obj->to_h);
 	} else if (obj->to_d != 0 && (!p || p->obj_k->to_d)) {
 		/* To-dam rune known only */
-		strnfcat(buf, max, &end, " (%+d)", obj->to_d);
+		(void)angdroid_faangband_append_detailf(buf, max, &end, " (%+d)", obj->to_d);
 	} else if (obj->to_h != 0 && (!p || p->obj_k->to_h)) {
 		/* To-hit rune known only */
-		strnfcat(buf, max, &end, " (%+d)", obj->to_h);
+		(void)angdroid_faangband_append_detailf(buf, max, &end, " (%+d)", obj->to_h);
 	}
 
 	/* Show armor bonuses */
 	if (!p || p->obj_k->to_a) {
 		if (obj_desc_show_armor(obj, p)) {
-			strnfcat(buf, max, &end, " [%d,%+d]", ac, to_a);
+			(void)angdroid_faangband_append_detailf(buf, max, &end, " [%d,%+d]", ac, to_a);
 		} else if (obj->to_a) {
-			strnfcat(buf, max, &end, " [%+d]", to_a);
+			(void)angdroid_faangband_append_detailf(buf, max, &end, " [%+d]", to_a);
 		}
 	} else if (obj_desc_show_armor(obj, p)) {
-		strnfcat(buf, max, &end, " [%d]", ac);
+		(void)angdroid_faangband_append_detailf(buf, max, &end, " [%d]", ac);
 	}
 
 	return end;
@@ -485,7 +485,7 @@ static size_t obj_desc_light(const struct object *obj, char *buf, size_t max,
 {
 	/* Fuelled light sources get number of remaining turns appended */
 	if (tval_is_light(obj) && !of_has(obj->flags, OF_NO_FUEL))
-		strnfcat(buf, max, &end, " (%d turns)", obj->timeout);
+		(void)angdroid_faangband_append_detailf(buf, max, &end, " (%d turns)", obj->timeout);
 
 	return end;
 }
@@ -522,13 +522,10 @@ static size_t obj_desc_mods(const struct object *obj, char *buf, size_t max,
 
 	if (!num_mods) return end;
 
-	/* Print the modifiers */
-	strnfcat(buf, max, &end, " <");
-	for (j = 0; j < num_mods; j++) {
-		if (j) strnfcat(buf, max, &end, ", ");
-		strnfcat(buf, max, &end, "%+d", mods[j]);
-	}
-	strnfcat(buf, max, &end, ">");
+	/* Treat the complete <+N, -M> list as a single, optional
+	 * display unit rather than appending an opening '<' first. */
+	(void)angdroid_faangband_append_modifiers(
+		buf, max, &end, mods, (size_t)num_mods);
 
 	return end;
 }
@@ -543,14 +540,14 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
 
 	/* Wands and staffs have charges, others may be charging */
 	if (aware && tval_can_have_charges(obj)) {
-		strnfcat(buf, max, &end, " (%d charge%s)", obj->pval,
+		(void)angdroid_faangband_append_detailf(buf, max, &end, " (%d charge%s)", obj->pval,
 				 PLURAL(obj->pval));
 	} else if (obj->timeout > 0) {
 		if (tval_is_rod(obj) && obj->number > 1)
-			strnfcat(buf, max, &end, " (%d charging)", number_charging(obj));
+			(void)angdroid_faangband_append_detailf(buf, max, &end, " (%d charging)", number_charging(obj));
 		else if (tval_is_rod(obj) || obj->activation || obj->effect)
 			/* Artifacts, single rods */
-			strnfcat(buf, max, &end, " (charging)");
+			(void)angdroid_faangband_append_detailf(buf, max, &end, " (charging)");
 	}
 
 	return end;
