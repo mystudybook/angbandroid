@@ -22,6 +22,7 @@
 #include "ui-event.h"
 #include "ui-input.h"
 #include "ui-menu.h"
+#include "ui-menu-resize-guard.h"
 
 #include "droid.h"
 
@@ -593,6 +594,13 @@ void menu_refresh(struct menu *menu, bool reset_screen)
 	int oid = menu->cursor;
 	region *loc = &menu->active;
 
+	/* A resize can leave a previously valid region partly off-screen.
+	 * Never invoke the item skin with an invalid rectangle. */
+	if (!Term || !angdroid_fa_menu_region_visible(
+		Term->wid, Term->hgt, loc->col, loc->row,
+		loc->width, loc->page_rows))
+		return;
+
 	if (reset_screen) {
 		screen_load();
 		screen_save();
@@ -847,7 +855,15 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 	ui_event in = EVENT_EMPTY;
 	bool no_act = (menu->flags & MN_NO_ACTION) ? true : false;
 
-	assert(menu->active.width != 0 && menu->active.page_rows != 0);
+	/* The initial layout can already be empty when an Android phone is
+	 * extremely narrow. Do not assert, render, or enter a dead input loop. */
+	if (!Term || !angdroid_fa_menu_region_visible(
+		Term->wid, Term->hgt,
+		menu->active.col, menu->active.row,
+		menu->active.width, menu->active.page_rows)) {
+		in.type = EVT_ESCAPE;
+		return in;
+	}
 
 	notify |= (EVT_SELECT | EVT_ESCAPE | EVT_SWITCH);
 	if (popup)
@@ -891,6 +907,20 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 			menu_calc_size(menu);
 			if (menu->row_funcs->resize)
 				menu->row_funcs->resize(menu);
+
+			/* Repaint even when the cursor has not moved. The store,
+			 * equipment, inventory and generic menus share this loop.
+			 * If the new viewport cannot contain one valid menu row,
+			 * return cancellation safely instead of using stale bounds. */
+			if (!Term || !angdroid_fa_menu_region_visible(
+				Term->wid, Term->hgt,
+				menu->active.col, menu->active.row,
+				menu->active.width, menu->active.page_rows)) {
+				if (popup) screen_load();
+				in.type = EVT_ESCAPE;
+				return in;
+			}
+			menu_refresh(menu, popup);
 		}
 
 		/* Redraw menu here if cursor has moved */
