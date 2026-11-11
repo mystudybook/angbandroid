@@ -988,9 +988,11 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 		if (in.type == EVT_MOUSE) {
 			if (region_inside(&menu->active, &in)) {
 				menu_handle_mouse(menu, &in, &out);
-				if (out.type == EVT_SELECT && !no_act) {
-					/* The callback may return false to bubble the event
-					 * upstream. Never invoke it again for this one tap. */
+				if (out.type == EVT_SELECT && !no_act &&
+					(menu->flags & MN_MOUSE_ROW_ACTION)) {
+					/* Store rows need raw mouse coordinates. Inventory
+					 * and equipment rows instead need EVT_SELECT below.
+					 * Never dispatch both to the same row handler. */
 					touch_select_dispatched = true;
 					if (menu_handle_action(menu, &in))
 						continue;
