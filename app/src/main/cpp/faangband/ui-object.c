@@ -1043,7 +1043,7 @@ static void item_menu_browser(int oid, void *data, const region *local_area)
 
 	/* The quiver footer must be outside the selectable item rows, even
 	 * after scrolling, switching item lists, or Android screen rotation.
-	 * Do not call Term_gotoxy() or print outside the terminal. */
+	 * Do not move the cursor or print outside the terminal. */
 	if (!Term || !local_area || local_area->page_rows <= 0)
 		return;
 	col = local_area->col;
