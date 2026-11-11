@@ -723,9 +723,11 @@ bool menu_handle_mouse(struct menu *menu, const ui_event *in,
 	if (in->mouse.button == 2) {
 		out->type = EVT_ESCAPE;
 	} else if (!region_inside(&menu->active, in)) {
-		/* A click to the left of the active region is 'back' */
-		if (!region_inside(&menu->active, in)
-				&& in->mouse.x < menu->active.col) {
+		/* The left margin acts as Back only next to list rows.
+		 * Shop headers above the list have their own context actions. */
+		if (angdroid_menu_back_margin_hit(
+				in->mouse.y, in->mouse.x, menu->active.row,
+				menu->active.col, menu->active.page_rows)) {
 			out->type = EVT_ESCAPE;
 		} else if (menu->context_hook) {
 			return (*menu->context_hook)(menu, in, out);
