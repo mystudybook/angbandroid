@@ -10,6 +10,7 @@ ANG = (ROOT / "variant_lib/angband/gamedata/artifact.txt").read_text(encoding="u
 STANDARD = (CPP / "zh-tw-artifact-lore.h").read_text(encoding="utf-8")
 HEADER = (CPP / "zh-tw-faangband-artifact-lore.h").read_text(encoding="utf-8")
 INFO = (CPP / "obj-info.c").read_text(encoding="utf-8")
+FA_INFO = (ROOT / "app/src/main/cpp/faangband/obj-info.c").read_text(encoding="utf-8")
 SAVE = (CPP / "save-charoutput.c").read_text(encoding="utf-8")
 OBJ = (CPP / "obj-desc.c").read_text(encoding="utf-8")
 NATIVE = (ROOT / "scripts/test-native-utf8.sh").read_text(encoding="utf-8")
@@ -73,6 +74,13 @@ assert section.index("angdroid_zh_tw_artifact_flavor(") < section.index(
 assert "if (!translated)" in section and "if (translated) flavor = translated;" in section
 assert "const char *flavor = obj->artifact->text;" in section
 assert "angdroid_zh_tw_enabled() && !(mode & OINFO_SPOIL)" in INFO
+# The real FAangband game builds a separate obj-info.c engine.
+assert '#include "../angband/zh-tw-faangband-artifact-lore.h"' in FA_INFO
+assert "angdroid_zh_tw_faangband_artifact_flavor(" in FA_INFO
+assert "obj->artifact && obj->known->artifact && obj->artifact->text" in FA_INFO
+assert "if (!terse) describe_flavor_text(tb, obj, ego," in FA_INFO
+assert "angdroid_zh_tw_enabled() && !(mode & OINFO_SPOIL)" in FA_INFO
+
 assert "zh-tw-faangband-artifact-lore.h" not in SAVE
 assert "zh-tw-faangband-artifact-lore.h" not in OBJ
 assert "tests/native/test_faangband_artifact_lore_locale.c" in NATIVE
