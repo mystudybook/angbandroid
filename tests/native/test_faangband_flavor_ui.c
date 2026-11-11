@@ -232,8 +232,8 @@ int main(void)
     CHECK(!angdroid_faangband_ui_scroll(tiny, sizeof(tiny),
         "\"foo bar\"", "Recall", true, false, 1));
     CHECK(tiny[0] == '\0');
-    CHECK(!angdroid_faangband_ui_scroll(text, sizeof(text),
-        "\"foo bar\"", "Recall", true, false, 1) == false);
+    CHECK(angdroid_faangband_ui_scroll(text, sizeof(text),
+        "\"foo bar\"", "Recall", true, false, 1));
     CHECK(!angdroid_faangband_ui_scroll(text, 0,
         "\"foo bar\"", "Recall", true, false, 1));
     CHECK(!angdroid_faangband_ui_scroll(NULL, 0,
