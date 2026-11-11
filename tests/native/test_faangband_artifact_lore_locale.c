@@ -59,7 +59,7 @@ static void test_catalog(void)
     for (i = 0; i < sizeof(names) / sizeof(names[0]); ++i) {
         const char *text = angdroid_zh_tw_faangband_artifact_flavor(names[i]);
         CHECK(text != NULL);
-        CHECK(*text != '\\0');
+        CHECK(*text != '\0');
         CHECK(strlen(text) > 12);
         CHECK(angdroid_zh_tw_artifact_flavor(names[i]) == NULL);
         for (j = 0; j < i; ++j) CHECK(strcmp(names[i], names[j]) != 0);
@@ -84,6 +84,6 @@ static void test_catalog(void)
 int main(void)
 {
     test_catalog();
-    printf("PASS: 41 FAangband artifact lore entries and Angband fallback (%lu assertions)\\n", checks);
+    printf("PASS: 41 FAangband artifact lore entries and Angband fallback (%lu assertions)\n", checks);
     return 0;
 }
