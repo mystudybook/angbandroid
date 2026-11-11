@@ -80,7 +80,8 @@ assert "soft_kbd_flash(buf);" in hints
 
 for line in (
     "navigation_all_small_menus();", "page_navigation();",
-    "relative_tag_modes();", "INT_MAX", "INT_MIN",
+    "relative_tag_modes();", "hidden_entries_tag_only();",
+    "INT_MAX", "INT_MIN",
     "count <= 12", "mask < 2048",
 ):
     assert line in C_TEST, line
