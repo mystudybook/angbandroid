@@ -92,6 +92,9 @@ assert "for (cap = 0; cap <= 64; ++cap)" in TEST
 assert "CHECK(storage[cap + 1] == '#');" in TEST
 assert "angdroid_utf8_next_scalar(" in TEST
 assert "money_catalog()" in TEST
+assert "chest_cases()" in TEST
+assert "angdroid_obj_desc_append_chest_status(" in TEST
+assert 'CHECK(strcmp(out + end - strlen("）"), "）") == 0);' in TEST
 assert 'strcmp(out, "未知物品") == 0' in TEST
 assert 'strcmp(out, "（空）") == 0' in TEST
 assert "tests/native/test_faangband_obj_basic_utf8.c" in RUNNER
