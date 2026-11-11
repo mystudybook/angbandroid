@@ -43,6 +43,8 @@ assert "guard[0] == 'Z'" in TEST
 assert "out[end] == '\\0'" in TEST
 assert "angdroid_utf8_next_scalar(" in TEST
 assert "CHECK(scalar != 0xFFFDu)" in TEST
+assert "const char invalid[] = { (char)0xE4, 'X', 0 };" in TEST
+assert 'expect(invalid, NULL, false, "?X");' in TEST
 assert "中文" in TEST
 assert "大馬士革鋼" in TEST
 assert "Sto" not in formatter
