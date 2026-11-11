@@ -55,6 +55,15 @@ assert "event->mouse.y == angdroid_store_menu_screen_row(" in handler
 assert "m->active.row + oid" not in handler
 assert "if ((event->mouse.y == 0) || (event->mouse.y == 1))" in handler
 assert "event->mouse.button == 2" in handler
+popup_select = handler.split("if (event->type == EVT_SELECT) {", 1)[1].split(
+    "} else if (event->type == EVT_MOUSE)", 1
+)[0]
+assert "(void)context_menu_store_item(ctx, oid, 1, popup_row);" in popup_select
+assert "if (purchased)" not in popup_select
+for repaint in ("store_display_recalc(ctx);", "store_menu_recalc(m);", "store_redraw(ctx);"):
+    assert repaint in popup_select, repaint
+assert popup_select.index("cmdq_pop(CTX_STORE);") < popup_select.index(
+    "store_display_recalc(ctx);")
 
 for test in (
     "stock_touch_after_scrolling();", "filtered_inventory_view();",
