@@ -1377,7 +1377,9 @@ static void store_menu_init(struct store_context *ctx, struct store *store, bool
 	menu_init(menu, MN_SKIN_SCROLL, &store_menu);
 	menu->context_hook = store_menu_context_exit;
 	/* Empty shops must still accept Sell, Help, Options and header taps. */
-	menu->flags |= MN_ALLOW_EMPTY_INPUT;
+	/* Store stock rows use EVT_MOUSE coordinates for their context
+	 * popups; generic item pickers use EVT_SELECT instead. */
+	menu->flags |= MN_ALLOW_EMPTY_INPUT | MN_MOUSE_ROW_ACTION;
 	menu_setpriv(menu, 0, ctx);
 
 	/* Calculate the positions of things and draw */
