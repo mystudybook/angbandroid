@@ -214,6 +214,12 @@ int main(void)
         "sword", "Azure", "Healing", false, false, 1));
     CHECK(!angdroid_faangband_ui_flavored_object(tiny, sizeof(tiny),
         "potion", "Azure", "Healing", true, false, 1));
+    CHECK(tiny[0] == '\0');
+    CHECK(!angdroid_faangband_ui_flavored_object(text, sizeof(text),
+        "potion", NULL, "Healing", true, false, 1));
+    CHECK(text[0] == '\0');
+    CHECK(!angdroid_faangband_ui_flavored_object(NULL, 0,
+        "potion", "Azure", "Healing", true, false, 1));
 
     /* Runtime scroll title stays identical; only the wrapper is Chinese. */
     CHECK(angdroid_faangband_ui_scroll(text, sizeof(text),
