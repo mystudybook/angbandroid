@@ -202,7 +202,12 @@ enum
 
 	/* Allow keyboard and header-click commands without a selected row.
 	 * Store menus opt in; selection events still require valid items. */
-	MN_ALLOW_EMPTY_INPUT = 0x80
+	MN_ALLOW_EMPTY_INPUT = 0x80,
+
+	/* Only menus whose row handler explicitly processes EVT_MOUSE should
+	 * receive a raw item tap. Normal inventory/equipment menus instead
+	 * receive one EVT_SELECT, so their item callback is not skipped. */
+	MN_MOUSE_ROW_ACTION = 0x100
 };
 
 
