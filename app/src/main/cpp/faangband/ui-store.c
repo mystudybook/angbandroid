@@ -136,6 +136,8 @@ struct store_context {
 	struct object **list;	/* List of objects (unused) */
 	int flags;				/* Display flags */
 	bool inspect_only;		/* Only allow looking */
+	/* The old cursor no longer names the same item after stock refresh. */
+	bool stock_changed;
 
 	/* Places for the various things displayed onscreen */
 	unsigned int scr_places_x[LOC_MAX];
@@ -660,7 +662,7 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 {
 	struct store *store = ctx->store;
 
-	struct object *obj = ctx->list[item];
+	struct object *obj;
 	struct object *dummy = NULL;
 
 	char o_name[80];
@@ -668,6 +670,12 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 	int amt, num;
 
 	int32_t price;
+
+	if (!store || !ctx->list || !angdroid_store_stock_index_valid(
+		item, store->stock_num, z_info->store_inven_max) ||
+		!ctx->list[item])
+		return false;
+	obj = ctx->list[item];
 
 	/* Clear all current messages */
 	msg_flag = false;
@@ -818,7 +826,10 @@ static void store_examine(struct store_context *ctx, int item)
 	region area = { 0, 0, 0, 0 };
 	uint32_t odesc_flags = ODESC_PREFIX | ODESC_FULL;
 
-	if (item < 0) return;
+	if (!ctx->list || !angdroid_store_stock_index_valid(
+		item, ctx->store->stock_num, z_info->store_inven_max) ||
+		!ctx->list[item])
+		return;
 
 	/* Get the actual object */
 	obj = ctx->list[item];
@@ -874,7 +885,13 @@ static void store_menu_set_selections(struct menu *menu, bool knowledge_menu)
 static void store_menu_recalc(struct menu *m)
 {
 	struct store_context *ctx = menu_priv(m);
-	menu_setpriv(m, ctx->store->stock_num, ctx);
+	/* The displayed list is only allocated for store_inven_max entries. */
+	menu_setpriv(m, MAX(0, MIN(ctx->store->stock_num,
+		z_info->store_inven_max)), ctx);
+	/* menu_setpriv() validates bounds, but a reordered slot can contain
+	 * a different object at the same index. Require a fresh tap/key. */
+	angdroid_store_clear_stale_selection(ctx->stock_changed,
+		&m->cursor, &m->top);
 }
 
 /**
@@ -936,6 +953,10 @@ static int store_get_stock(struct menu *m)
 	int no_act = m->flags & MN_NO_ACTION;
 	int selected;
 
+	/* An empty shop still accepts Sell/Help, but no stock selection. */
+	if (!ctx->list || ctx->store->stock_num <= 0)
+		return -1;
+
 	/* Selection-only nested menu; canceled/invalidated inputs must not
 	 * buy or examine the previously highlighted stock index. */
 	m->flags |= MN_NO_ACTION;
@@ -946,8 +967,8 @@ static int store_get_stock(struct menu *m)
 	selected = angdroid_store_selected_index(
 		e.type == EVT_SELECT, m->cursor,
 		ctx->store->stock_num, z_info->store_inven_max);
-	return selected >= 0 && ctx->list && ctx->list[selected]
-		? selected : -1;
+	return !ctx->stock_changed && selected >= 0 &&
+		ctx->list && ctx->list[selected] ? selected : -1;
 }
 
 /** Enum for context menu entries */
@@ -1026,12 +1047,21 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 {
 	bool home = store_is_home(ctx->store);
 
-	struct menu *m = menu_dynamic_new();
-	struct object *obj = ctx->list[oid];
+	struct menu *m;
+	struct object *obj;
 	menu_iter mod_iter;
 	int selected;
 	char *labels;
 	char header[120];
+
+	/* Verify a real item before indexing the stock array or allocating
+	 * a modal popup. Empty-store header actions use a different menu. */
+	if (!ctx->list || !angdroid_store_stock_index_valid(
+		oid, ctx->store->stock_num, z_info->store_inven_max) ||
+		!ctx->list[oid])
+		return false;
+	obj = ctx->list[oid];
+	m = menu_dynamic_new();
 
 	object_desc(header, sizeof(header), obj,
 		ODESC_PREFIX | ODESC_FULL | ((home) ? 0 : ODESC_STORE) | ODESC_ZH_TW, player);
@@ -1074,6 +1104,14 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 
 	screen_load();
 
+	/* Never execute the popup's result against a different stock item if
+	 * the inventory changed while the dialog was open. */
+	if (ctx->stock_changed || !ctx->list ||
+		!angdroid_store_stock_index_valid(
+			oid, ctx->store->stock_num, z_info->store_inven_max) ||
+		ctx->list[oid] != obj)
+		return false;
+
 	switch (selected) {
 		case ACT_EXAMINE:
 			store_examine(ctx, oid);
@@ -1094,7 +1132,11 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 	bool processed = true;
 	struct store_context *ctx = menu_priv(m);
 	struct store *store = ctx->store;
-	
+
+	/* This is a new user input; an intervening stock refresh will set
+	 * stock_changed again, including while a nested popup is active. */
+	ctx->stock_changed = false;
+
 	if (event->type == EVT_SELECT) {
 		int popup_row = angdroid_store_menu_screen_row(
 			oid, m->top, m->active.row, m->active.page_rows);
@@ -1283,12 +1325,15 @@ static void store_menu_init(struct store_context *ctx, struct store *store, bool
 	ctx->store = store;
 	ctx->flags = STORE_INIT_CHANGE;
 	ctx->inspect_only = inspect_only;
+	ctx->stock_changed = false;
 	ctx->list = mem_zalloc(sizeof(struct object *) * z_info->store_inven_max);
 
 	store_stock_list(ctx->store, ctx->list, z_info->store_inven_max);
 
 	/* Init the menu structure */
 	menu_init(menu, MN_SKIN_SCROLL, &store_menu);
+	/* Empty shops must still accept Sell, Help, Options and header taps. */
+	menu->flags |= MN_ALLOW_EMPTY_INPUT;
 	menu_setpriv(menu, 0, ctx);
 
 	/* Calculate the positions of things and draw */
@@ -1339,6 +1384,11 @@ static void refresh_stock(game_event_type type, game_event_data *unused, void *u
 	struct menu *menu = &ctx->menu;
 
 	store_stock_list(ctx->store, ctx->list, z_info->store_inven_max);
+
+	/* A fast queued second tap refers to the old list arrangement.
+	 * Drop stale input, then clear the selected slot identity. */
+	ctx->stock_changed = true;
+	Term_flush();
 
 	/* Display the store */
 	store_display_recalc(ctx);
