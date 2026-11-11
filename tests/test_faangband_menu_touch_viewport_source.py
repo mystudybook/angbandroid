@@ -94,9 +94,14 @@ assert "angdroid_fa_menu_clamp_top(" in ensure
 mouse = MENU.split("bool menu_handle_mouse(", 1)[1].split(
     "static bool menu_handle_action(", 1)[0]
 assert "menu->skin->get_cursor(" in mouse
-assert "is_valid_row(menu, new_cursor)" in mouse
-assert "== MN_ROW_VALID" in mouse
-assert "angdroid_fa_menu_source_index(" in mouse
+assert "fa_menu_navigation_is_valid(menu, new_cursor)" in mouse
+assert "menu->skin->get_cursor(" in mouse
+# Visible-row validity and filtered source mapping are both performed by
+# the shared navigation adapter, not redundantly in the tap handler.
+adapter = MENU.split("static int fa_menu_navigation_is_valid(", 1)[1].split(
+    "static int get_cursor_key(", 1)[0]
+assert "angdroid_fa_menu_source_index(" in adapter
+assert "== MN_ROW_VALID" in adapter
 
 select = MENU.split("ui_event menu_select(", 1)[1].split(
     "const menu_iter *menu_find_iter(", 1)[0]
