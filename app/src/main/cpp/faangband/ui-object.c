@@ -50,6 +50,9 @@
 #include "ui-options.h"
 #include "ui-output.h"
 #include "ui-prefs.h"
+#include "../angband/object-list-text.h"
+#include "../angband/inventory-equip-mention.h"
+#include "../angband/item-selection-layout.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -64,7 +67,7 @@ struct object_menu_data {
 	char label[80];
 	char equip_label[80];
 	struct object *object;
-	char o_name[80];
+	char o_name[256];
 	char key;
 };
 
@@ -136,107 +139,134 @@ wchar_t object_char(const struct object *obj)
  * Used by show_inven(), show_equip(), show_quiver() and show_floor().
  * Mode flags are documented in object.h
  */
-static void show_obj(int obj_num, int row, int col, bool cursor,
-					 olist_detail_t mode)
+/* Keep at least twelve terminal cells for the item shortcut/name on
+ * narrow screens. Extra columns are optional and never overlap CJK text. */
+static olist_detail_t fa_object_list_visible_extras(
+    olist_detail_t mode, int width)
 {
-	int attr;
-	int label_attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
-	int ex_offset_ctr;
-	char buf[80];
-	struct object *obj = items[obj_num].object;
-	bool show_label = mode & (OLIST_WINDOW | OLIST_DEATH) ? true : false;
-	int label_size = show_label ? strlen(items[obj_num].label) : 0;
-	int equip_label_size = strlen(items[obj_num].equip_label);
+    angdroid_object_list_extras fit = angdroid_object_list_fit_extras(
+        width, 12, (mode & OLIST_PRICE) != 0, (mode & OLIST_FAIL) != 0,
+        (mode & OLIST_RECHARGE) != 0, (mode & OLIST_WEIGHT) != 0);
+    if (!fit.price) mode &= ~OLIST_PRICE;
+    if (!fit.fail) mode &= ~OLIST_FAIL;
+    if (!fit.recharge) mode &= ~OLIST_RECHARGE;
+    if (!fit.weight) mode &= ~OLIST_WEIGHT;
+    return mode;
+}
 
-	/* Clear the line */
-	prt("", row + obj_num, MAX(col - 1, 0));
+/* Numeric columns are fixed-width; never print a partial price/failure or
+ * cross the active menu row boundary on a phone or after rotation. */
+static void fa_object_list_put_detail(const char *text, int row, int col,
+                                     int offset, int row_width, int reserved)
+{
+    size_t columns;
+    if (!Term || !text || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid) return;
+    row_width = MIN(row_width, Term->wid - col);
+    columns = angdroid_utf8_display_columns(text);
+    if (angdroid_object_list_detail_fits(
+            offset, row_width, reserved, columns))
+        put_str(text, row, col + offset);
+}
 
-	/* If we have no label then we won't display anything */
-	if (!strlen(items[obj_num].label)) return;
+/* Display one item: coordinate and truncation units are terminal cells,
+ * never raw UTF-8 bytes. Do not mutate the saved o_name on render. */
+static void show_obj(int obj_num, int row, int col, bool cursor,
+                     olist_detail_t mode, int row_width)
+{
+    int attr;
+    int label_attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
+    int ex_offset_ctr;
+    char buf[80];
+    char label[sizeof(items[obj_num].label)];
+    char equip_label[sizeof(items[obj_num].equip_label)];
+    char name[sizeof(items[obj_num].o_name)];
+    struct object *obj = items[obj_num].object;
+    bool show_label = (mode & (OLIST_WINDOW | OLIST_DEATH)) != 0;
+    size_t available, label_size, equip_label_size;
 
-	/* Print the label */
-	if (show_label)
-		c_put_str(label_attr, items[obj_num].label, row + obj_num, col);
+    if (!Term || col < 0 || col >= Term->wid ||
+        row + obj_num < 0 || row + obj_num >= Term->hgt)
+        return;
+    row_width = MIN(row_width, Term->wid - col);
+    if (row_width <= 0) return;
+    prt("", row + obj_num, MAX(col - 1, 0));
+    if (!items[obj_num].label[0]) return;
 
-	/* Print the equipment label */
-	c_put_str(label_attr, items[obj_num].equip_label, row + obj_num,
-			  col + label_size);
+    available = angdroid_object_list_cell_budget(ex_offset, row_width);
+    label_size = angdroid_menu_copy_columns(label, sizeof(label),
+        show_label ? items[obj_num].label : "", available);
+    equip_label_size = angdroid_menu_copy_columns(
+        equip_label, sizeof(equip_label), items[obj_num].equip_label,
+        available - label_size);
+    (void)angdroid_menu_copy_columns(
+        name, sizeof(name), items[obj_num].o_name,
+        available - label_size - equip_label_size);
 
-	/* Limit object name */
-	if (label_size + equip_label_size + strlen(items[obj_num].o_name) >
-		(size_t)ex_offset) {
-		int truncate = ex_offset - label_size - equip_label_size;
+    if (label[0])
+        c_put_str(label_attr, label, row + obj_num, col);
+    if (equip_label[0])
+        c_put_str(label_attr, equip_label, row + obj_num,
+            col + (int)label_size);
 
-		if (truncate < 0) truncate = 0;
-		if ((size_t)truncate > sizeof(items[obj_num].o_name) - 1)
-			truncate = sizeof(items[obj_num].o_name) - 1;
+    if (obj) {
+        attr = obj->kind->base->attr;
+        if (tval_is_book_k(obj->kind) &&
+            player_object_to_book(player, obj) == NULL)
+            attr = COLOUR_SLATE;
+    } else {
+        attr = COLOUR_SLATE;
+    }
+    if (name[0])
+        c_put_str(attr, name, row + obj_num,
+            col + (int)(label_size + equip_label_size));
+    if (!obj) return;
 
-		items[obj_num].o_name[truncate] = '\0';
-	}
+    /* Keep each field's reserved offset even if the field is unavailable. */
+    ex_offset_ctr = ex_offset;
 
-	/* Item kind determines the color of the output */
-	if (obj) {
-		attr = obj->kind->base->attr;
+    if (mode & OLIST_PRICE) {
+        struct store *store = store_at(cave, player->grid);
+        if (store) {
+            int price = price_item(store, obj, true, obj->number);
+            strnfmt(buf, sizeof(buf), "%6d au", price);
+            fa_object_list_put_detail(buf, row + obj_num, col,
+                ex_offset_ctr, row_width, 9);
+        }
+        ex_offset_ctr += 9;
+    }
 
-		/* Unreadable books are a special case */
-		if (tval_is_book_k(obj->kind) &&
-			(player_object_to_book(player, obj) == NULL)) {
-			attr = COLOUR_SLATE;
-		}
-	} else {
-		attr = COLOUR_SLATE;
-	}
+    if (mode & OLIST_FAIL) {
+        if (obj_can_fail(obj)) {
+            int fail = (9 + get_use_device_chance(obj)) / 10;
+            if (object_effect_is_known(obj))
+                strnfmt(buf, sizeof(buf), "%4d%% fail", fail);
+            else
+                my_strcpy(buf, "    ? fail", sizeof(buf));
+            fa_object_list_put_detail(buf, row + obj_num, col,
+                ex_offset_ctr, row_width, 10);
+        }
+        ex_offset_ctr += 10;
+    }
 
-	/* Object name */
-	c_put_str(attr, items[obj_num].o_name, row + obj_num,
-			  col + label_size + equip_label_size);
+    if (mode & OLIST_RECHARGE) {
+        int fail = 1000 / recharge_failure_chance(
+            obj, player->upkeep->recharge_pow);
+        if (object_effect_is_known(obj))
+            strnfmt(buf, sizeof(buf), "%2d.%1d%% fail", fail / 10, fail % 10);
+        else
+            my_strcpy(buf, "    ? fail", sizeof(buf));
+        fa_object_list_put_detail(buf, row + obj_num, col,
+            ex_offset_ctr, row_width, 10);
+        ex_offset_ctr += 10;
+    }
 
-	/* If we don't have an object, we can skip the rest of the output */
-	if (!obj) return;
-
-	/* Extra fields */
-	ex_offset_ctr = ex_offset;
-
-	/* Price */
-	if (mode & OLIST_PRICE) {
-		struct store *store = store_at(cave, player->grid);
-		if (store) {
-			int price = price_item(store, obj, true, obj->number);
-
-			strnfmt(buf, sizeof(buf), "%6d au", price);
-			put_str(buf, row + obj_num, col + ex_offset_ctr);
-			ex_offset_ctr += 9;
-		}
-	}
-
-	/* Failure chance for magic devices and activations */
-	if (mode & OLIST_FAIL && obj_can_fail(obj)) {
-		int fail = (9 + get_use_device_chance(obj)) / 10;
-		if (object_effect_is_known(obj))
-			strnfmt(buf, sizeof(buf), "%4d%% fail", fail);
-		else
-			my_strcpy(buf, "    ? fail", sizeof(buf));
-		put_str(buf, row + obj_num, col + ex_offset_ctr);
-		ex_offset_ctr += 10;
-	}
-
-	/* Failure chances for recharging an item; see effect_handler_RECHARGE */
-	if (mode & OLIST_RECHARGE) {
-		int fail = 1000 / recharge_failure_chance(obj, player->upkeep->recharge_pow);
-		if (object_effect_is_known(obj))
-			strnfmt(buf, sizeof(buf), "%2d.%1d%% fail", fail / 10, fail % 10);
-		else
-			my_strcpy(buf, "    ? fail", sizeof(buf));
-		put_str(buf, row + obj_num, col + ex_offset_ctr);
-		ex_offset_ctr += 10;
-	}
-
-	/* Weight */
-	if (mode & OLIST_WEIGHT) {
-		int weight = obj->number * object_weight_one(obj);
-		strnfmt(buf, sizeof(buf), "%4d.%1d lb", weight / 10, weight % 10);
-		put_str(buf, row + obj_num, col + ex_offset_ctr);
-	}
+    if (mode & OLIST_WEIGHT) {
+        int weight = obj->number * object_weight_one(obj);
+        strnfmt(buf, sizeof(buf), "%4d.%1d lb", weight / 10, weight % 10);
+        fa_object_list_put_detail(buf, row + obj_num, col,
+            ex_offset_ctr, row_width, 9);
+    }
 }
 
 /**
