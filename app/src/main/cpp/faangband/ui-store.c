@@ -571,7 +571,11 @@ static bool store_sell(struct store_context *ctx)
 	/* Get an item */
 	player->upkeep->command_wrk = USE_INVEN;
 
-	if (!get_item(&obj, prompt, reject, CMD_DROP, tester, get_mode))
+	/* Keep the original command and tester, translate only the prompts. */
+	if (!get_item(&obj,
+			angdroid_store_ui_text(prompt, angdroid_zh_tw_enabled()),
+			angdroid_store_ui_text(reject, angdroid_zh_tw_enabled()),
+			CMD_DROP, tester, get_mode))
 		return false;
 
 	/* Cannot remove stickied objects */
