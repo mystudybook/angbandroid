@@ -816,80 +816,61 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 static void keys_to_ui(struct menu *menu)
 {
 	char buf[256] = "";
-
-	if (menu->inscriptions) {
-		int i, j;
-		char used[20];
-		for (i = 0, j = 0; i < 10; i++) {
-			if (menu->inscriptions[i]) {
-				used[j++] = ('0' + i);
-			}
-		}
-		used[j] = '\0';
-		my_strcat(buf, used, sizeof(buf));
-	}
-
-	int cursor, current;
-	char temp[256];
+	size_t used = 0;
+	int cursor;
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 
-	//plog_fmt("count: %d", menu->count);
+	/* Numeric inscription aliases are separate from the visible tags. */
+	if (menu->inscriptions) {
+		for (cursor = 0; cursor < 10; cursor++) {
+			if (menu->inscriptions[cursor])
+				(void)angdroid_fa_menu_add_key(
+					buf, sizeof(buf), &used, (char)('0' + cursor));
+		}
+	}
 
-	for (cursor = 0, current = 0; cursor < n; cursor++) {
-
-		int oid = 0;
+	/* A filtered view changes the actual row index on *each* iteration.
+	 * The old code always read filter_list[0] and wrote temp[256]
+	 * without a capacity check. A crowded inventory could corrupt memory
+	 * while updating the Android soft keyboard. */
+	for (cursor = 0; cursor < n; cursor++) {
+		int oid = angdroid_fa_menu_source_index(
+			menu->filter_list, cursor, n, menu->count);
 		menu_row_validity_t row_valid = MN_ROW_VALID;
 		char sel = 0;
-
-		if (menu->filter_list) {
-			oid = menu->filter_list[oid];
-		}
-		else {
-			oid = cursor;
-		}
-
-		if (menu->row_funcs->valid_row) {
+		if (oid < 0) continue;
+		if (menu->row_funcs->valid_row)
 			row_valid = menu->row_funcs->valid_row(menu, oid);
-		}
-
-		if (row_valid != MN_ROW_VALID) {
-			continue;
-		}
-
+		if (row_valid != MN_ROW_VALID) continue;
 		if (!(menu->flags & MN_NO_TAGS)) {
 			if (menu->flags & MN_REL_TAGS) {
-				sel = menu->skin->get_tag(menu, cursor);
-			}
-			else if (menu->selections && !(menu->flags & MN_PVT_TAGS)
-				&& cursor < strlen(menu->selections)) {
-				sel = menu->selections[cursor];
-			}
-			else if (menu->row_funcs->get_tag) {
+				int page = angdroid_fa_menu_page_rows(
+					n, menu->top, menu->active.page_rows);
+				if (cursor < menu->top ||
+					cursor >= menu->top + page) continue;
+				sel = menu->skin->get_tag(menu, cursor - menu->top);
+			} else if (menu->selections &&
+				!(menu->flags & MN_PVT_TAGS)) {
+				sel = angdroid_fa_menu_selection_key(
+					menu->selections, cursor);
+			} else if (menu->row_funcs->get_tag) {
 				sel = menu->row_funcs->get_tag(menu, oid);
 			}
 		}
-
-		if (sel != 0) {
-			temp[current++] = sel;
-		}
+		if (sel && !angdroid_fa_menu_add_key(
+			buf, sizeof(buf), &used, sel))
+			break;
 	}
-	temp[current] = '\0';
-	my_strcat(buf, temp, sizeof(buf));
 
-	if (menu->cmd_keys) {
+	/* Preserve existing command/switch keys. my_strcat() bounds the
+	 * remaining space; never use a separate unbounded temporary array. */
+	if (menu->cmd_keys)
 		my_strcat(buf, menu->cmd_keys, sizeof(buf));
-	}
-	if (menu->switch_keys) {
+	if (menu->switch_keys)
 		my_strcat(buf, menu->switch_keys, sizeof(buf));
-	}
 
 	strdeldup(buf);
-
-	//plog_fmt("Keys %s\n", buf);
-
-	if (strlen(buf) > 0) {
-		soft_kbd_flash(buf);
-	}
+	if (buf[0]) soft_kbd_flash(buf);
 }
 
 /**
