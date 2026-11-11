@@ -25,6 +25,10 @@
 #include "ui-menu-resize-guard.h"
 #include "ui-menu-cell-text.h"
 #include "ui-menu-key-guard.h"
+#include "ui-menu-viewport.h"
+#include "../angband/menu-hit-test.h"
+#include "../angband/menu-column-width.h"
+#include "../angband/menu-compact-layout.h"
 #include "../curses/unicode_display.h"
 
 #include "droid.h"
@@ -199,10 +203,8 @@ static const menu_iter menu_iter_strings =
  */
 static int scrolling_get_cursor(int row, int col, int n, int top, region *loc)
 {
-	int cursor = row - loc->row + top;
-	if (cursor >= n) cursor = n - 1;
-
-	return cursor;
+	return angdroid_menu_scrolling_hit(
+		row, loc->row, loc->page_rows, top, n);
 }
 
 
@@ -292,10 +294,8 @@ static const menu_skin menu_skin_scroll =
  */
 static int object_skin_get_cursor(int row, int col, int n, int top, region *loc)
 {
-	int cursor = row - loc->row + top;
-	if (cursor >= n) cursor = n - 1;
-
-	return cursor;
+	return angdroid_menu_scrolling_hit(
+		row, loc->row, loc->page_rows, top, n);
 }
 
 
@@ -384,61 +384,54 @@ static const menu_skin menu_skin_object =
 
 static int columns_get_cursor(int row, int col, int n, int top, region *loc)
 {
-	int w, h, cursor;
-        int rows_per_page = loc->page_rows;
-        int cols = (n + rows_per_page - 1) / rows_per_page;
-	int colw = 23;
+	int rows = loc->page_rows;
+	int cols, colw;
 
-	Term_get_size(&w, &h);
-
-	if ((colw * cols) > (w - col))
-		colw = (w - col) / cols;
-
-	cursor = (row - loc->row) + rows_per_page * ((col - loc->col) / colw);
-	if (cursor < 0) cursor = 0;	/* assert: This should never happen */
-	if (cursor >= n) cursor = n - 1;
-
-	return cursor;
+	if (rows <= 0 || n <= 0 || loc->width <= 0) return -1;
+	/* On a phone there is no room to interact with unreadable one-cell
+	 * columns. Match the single scrolling layout used by drawing. */
+	if (angdroid_menu_use_compact_columns(n, rows, loc->width, 8))
+		return angdroid_menu_scrolling_hit(
+			row, loc->row, rows, top, n);
+	cols = 1 + (n - 1) / rows;
+	colw = angdroid_menu_fit_column_width(23, loc->width, 0, cols);
+	return angdroid_menu_columns_hit(
+		row, col, loc->row, loc->col, rows, loc->width, colw, n);
 }
 
 static void display_columns(struct menu *menu, int cursor, int *top, region *loc)
 {
 	int c, r;
-	int w, h;
 	int n = menu->filter_list ? menu->filter_count : menu->count;
-	int col = loc->col;
-	int row = loc->row;
-	int rows_per_page = loc->page_rows;
-	int cols = (n + rows_per_page - 1) / rows_per_page;
-	int colw = 23;
+	int col = loc->col, row = loc->row;
+	int rows = loc->page_rows, cols, colw;
 
-	Term_get_size(&w, &h);
-
-	if ((colw * cols) > (w - col))
-		colw = (w - col) / cols;
-
-	for (c = 0; c < cols; c++) {
-		for (r = 0; r < rows_per_page; r++) {
-			int pos = c * rows_per_page + r;
-			bool is_cursor = (pos == cursor);
-
+	if (rows <= 0 || n <= 0 || loc->width <= 0) return;
+	if (angdroid_menu_use_compact_columns(n, rows, loc->width, 8)) {
+		display_scrolling(menu, cursor, top, loc);
+		return;
+	}
+	cols = 1 + (n - 1) / rows;
+	colw = angdroid_menu_fit_column_width(23, loc->width, 0, cols);
+	for (c = 0; c < cols && c < loc->width / colw; c++) {
+		for (r = 0; r < rows; r++) {
+			int pos = c * rows + r;
 			if (pos < n)
-				display_menu_row(menu, pos, 0, is_cursor,
-						row + r, col + c * colw, colw);
+				display_menu_row(menu, pos, 0, pos == cursor,
+					row + r, col + c * colw, colw);
 		}
 	}
-
-	if (menu->cursor >= 0)
-		Term_gotoxy(col + (cursor / rows_per_page) * colw + menu->cursor_x_offset,
-				row + (cursor % rows_per_page) - *top);
+	if (cursor >= 0 && cursor < n) {
+		int dx = (cursor / rows) * colw + menu->cursor_x_offset;
+		int dy = cursor % rows;
+		if (dx >= 0 && dx < loc->width)
+			Term_gotoxy(col + dx, row + dy);
+	}
 }
 
 static char column_get_tag(struct menu *menu, int pos)
 {
-	if (menu->selections)
-		return menu->selections[pos];
-
-	return 0;
+	return angdroid_fa_menu_selection_key(menu->selections, pos);
 }
 
 static ui_event column_process_direction(struct menu *m, int dir)
@@ -449,7 +442,10 @@ static ui_event column_process_direction(struct menu *m, int dir)
 
 	region *loc = &m->active;
 	int rows_per_page = loc->page_rows;
-	int cols = (n + rows_per_page - 1) / rows_per_page;
+	if (rows_per_page <= 0 || n <= 0) return out;
+	if (angdroid_menu_use_compact_columns(
+			n, rows_per_page, loc->width, 8))
+		return scroll_process_direction(m, dir);
 
 	if (ddx[dir])
 		m->cursor += ddx[dir] * rows_per_page;
@@ -457,10 +453,13 @@ static ui_event column_process_direction(struct menu *m, int dir)
 		m->cursor += ddy[dir];
 
 	/* Adjust to the correct locations (roughly) */
-	if (m->cursor > n)
+	if (m->cursor >= n)
 		m->cursor = m->cursor % rows_per_page;
 	else if (m->cursor < 0)
-		m->cursor = (rows_per_page * cols) + m->cursor;
+		m->cursor = n - 1;
+	/* No column navigation may leave the selected position outside the
+	 * available rows (including a partially filled final column). */
+	m->cursor = angdroid_fa_menu_clamp_cursor(m->cursor, n);
 
 	out.type = EVT_MOVE;
 	return out;
