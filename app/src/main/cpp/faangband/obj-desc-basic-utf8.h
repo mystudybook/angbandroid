@@ -7,6 +7,7 @@
 #include <string.h>
 #include "../angband/obj-desc-name-utf8.h"
 #include "../angband/obj-desc-chest-money-utf8.h"
+#include "../angband/obj-desc-suffix-utf8.h"
 
 /* Like my_strcpy(), but never stop halfway through a UTF-8 code point.
  * Invalid input bytes become '?' through the common scalar-safe helper.
@@ -36,7 +37,17 @@ static inline size_t angdroid_faangband_basic_item_text(char *out,
             (prefix ? "an unknown item" : "unknown item");
     else
         label = translated_ui ? "（空）" : "(nothing)";
-    return angdroid_faangband_copy_utf8(out, cap, label);
+    /* Unlike a raw flavor, this label contains semantic punctuation.
+     * A narrow column must never show only '（' or part of 'unknown'. */
+    if (!out || !cap) return 0;
+    out[0] = '\0';
+    {
+        size_t end = 0;
+        if (angdroid_obj_desc_append_suffix_atomic(
+                out, cap, &end, label, false))
+            return end;
+    }
+    return 0;
 }
 
 /* Reuse the source-complete Angband money dictionary: FAangband's 11
