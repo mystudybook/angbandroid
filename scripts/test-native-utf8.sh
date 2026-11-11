@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband complete early descriptions: null/unknown item, tiny flavor
+# copy and 11 exact source money-kind labels with UTF-8 boundaries.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_obj_basic_utf8.c" \
+    -o "$BUILD_DIR/test_faangband_obj_basic_utf8"
+"$BUILD_DIR/test_faangband_obj_basic_utf8"
+
 # FAangband combat/charges/status/inscriptions: append whole Unicode-safe
 # bracket and brace groups; assert numeric and small-buffer behavior.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
