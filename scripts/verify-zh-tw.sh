@@ -68,6 +68,7 @@ run_check "UI-only item name localization and export isolation" python3 "$ROOT/t
 run_check "Known-item classifiers and translated artifact/ego grammar" python3 "$ROOT/tests/test_item_name_grammar_localization.py"
 run_check "FAangband 38 shared artifact variant source-exact stories" python3 "$ROOT/tests/test_faangband_shared_artifact_lore_source.py"
 run_check "FAangband 41 exclusive artifact lore stories and UI guard" python3 "$ROOT/tests/test_faangband_artifact_lore_source.py"
+run_check "FAangband Unicode menu resize redraw and invalid rectangle safety" python3 "$ROOT/tests/test_faangband_menu_resize_source.py"
 run_check "FAangband short object-list row budgets and immediate store repaint" python3 "$ROOT/tests/test_faangband_object_list_row_budget_source.py"
 run_check "FAangband ground object distances and store rotation UI guard" python3 "$ROOT/tests/test_faangband_object_list_location_source.py"
 run_check "FAangband dungeon item prefixes and store Unicode terminal columns" python3 "$ROOT/tests/test_faangband_dungeon_store_columns_source.py"
