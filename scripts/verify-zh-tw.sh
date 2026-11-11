@@ -68,6 +68,7 @@ run_check "UI-only item name localization and export isolation" python3 "$ROOT/t
 run_check "Known-item classifiers and translated artifact/ego grammar" python3 "$ROOT/tests/test_item_name_grammar_localization.py"
 run_check "FAangband 38 shared artifact variant source-exact stories" python3 "$ROOT/tests/test_faangband_shared_artifact_lore_source.py"
 run_check "FAangband 41 exclusive artifact lore stories and UI guard" python3 "$ROOT/tests/test_faangband_artifact_lore_source.py"
+run_check "FAangband bounded object grammar and UTF-8 buffer safety" python3 "$ROOT/tests/test_faangband_obj_desc_name_utf8_source.py"
 run_check "FAangband 155 flavors, scroll titles and unknown-item secrecy" python3 "$ROOT/tests/test_faangband_flavor_ui_source.py"
 run_check "FAangband 359 item kinds and 118 ego UI label source guards" python3 "$ROOT/tests/test_faangband_item_ego_ui_source.py"
 run_check "FAangband all 126 artifact names, safe UI and source coverage" python3 "$ROOT/tests/test_faangband_artifact_names_source.py"
