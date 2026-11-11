@@ -143,6 +143,8 @@ struct store_context {
 	bool inspect_only;		/* Only allow looking */
 	/* A changed stock list invalidates a previous row's identity. */
 	bool stock_changed;
+	/* Explicit Exit in the shopkeeper popup is not a cancel or a tap-Back. */
+	bool exit_requested;
 
 	/* Places for the various things displayed onscreen */
 	unsigned int scr_places_x[LOC_MAX];
@@ -1089,6 +1091,8 @@ static int context_menu_store(struct store_context *ctx, const int oid, int mx, 
 			textui_obj_examine();
 			break;
 		case ACT_EXIT:
+			/* Let menu_handle_mouse turn this header action into Escape. */
+			ctx->exit_requested = true;
 			return false;
 	}
 
@@ -1346,6 +1350,21 @@ static void store_menu_resize(struct menu *m)
 	store_redraw(ctx);
 }
 
+/* The shopkeeper menu is above the item list, so a deliberate Exit
+ * must work at every header X coordinate without misclassifying Cancel
+ * or a tap on the first column as a generic Back gesture. */
+static bool store_menu_context_exit(struct menu *m,
+	const ui_event *in, ui_event *out)
+{
+	struct store_context *ctx = menu_priv(m);
+
+	if (!ctx || !ctx->exit_requested || in->type != EVT_MOUSE)
+		return false;
+	ctx->exit_requested = false;
+	out->type = EVT_ESCAPE;
+	return true;
+}
+
 static region store_menu_region = { 1, 4, -1, -2 };
 static const menu_iter store_menu =
 {
@@ -1367,12 +1386,14 @@ static void store_menu_init(struct store_context *ctx, struct store *store, bool
 	ctx->flags = STORE_INIT_CHANGE;
 	ctx->inspect_only = inspect_only;
 	ctx->stock_changed = false;
+	ctx->exit_requested = false;
 	ctx->list = mem_zalloc(sizeof(struct object *) * z_info->store_inven_max);
 
 	store_stock_list(ctx->store, ctx->list, z_info->store_inven_max);
 
 	/* Init the menu structure */
 	menu_init(menu, MN_SKIN_SCROLL, &store_menu);
+	menu->context_hook = store_menu_context_exit;
 	/* A store can have no stock and still support Sell/Help/Exit. */
 	menu->flags |= MN_ALLOW_EMPTY_INPUT;
 	menu_setpriv(menu, 0, ctx);
