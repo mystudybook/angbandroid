@@ -30,6 +30,7 @@
 #include "zh-tw-class-book-names.h"
 #include "zh-tw-ego-names.h"
 #include "zh-tw-artifact-names.h"
+#include "zh-tw-faangband-artifact-names.h"
 #include "zh-tw-flavor-names.h"
 #include "zh-tw-scroll-title.h"
 #include "zh-tw-flavored-object.h"
@@ -450,6 +451,8 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		bool chinese_suffix_done = false;
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled()) {
 			const char *localized = angdroid_zh_tw_artifact_name(artifact_name);
+			if (!localized)
+				localized = angdroid_zh_tw_faangband_artifact_name(artifact_name);
 			if (localized) artifact_name = localized;
 			translated_suffix = localized;
 		}
