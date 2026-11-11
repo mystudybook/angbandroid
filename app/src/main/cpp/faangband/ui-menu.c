@@ -587,11 +587,12 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 	int oid = pos;
 	menu_row_validity_t row_valid = MN_ROW_VALID;
 
-	/* Each row is a physical cell region. Never forward a negative width
-	 * to a skin when a three-cell shortcut cannot fit after rotation. */
-	if (!Term || angdroid_fa_menu_visible_columns(
-			Term->wid, Term->hgt, row, col, width) <= 0)
-		return;
+	/* Each row is a physical cell region. Never forward a negative
+	 * or overlong width to the row skin after a terminal resize. */
+	if (!Term) return;
+	width = angdroid_fa_menu_visible_columns(
+		Term->wid, Term->hgt, row, col, width);
+	if (width <= 0) return;
 
 	if (menu->filter_list)
 		oid = menu->filter_list[oid];
