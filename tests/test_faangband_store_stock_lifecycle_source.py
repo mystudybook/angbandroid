@@ -19,6 +19,7 @@ def section(text, begin, end):
 
 
 assert '#include "../angband/menu-action-guard.h"' in MENU
+assert "MN_MOUSE_ROW_ACTION = 0x100" in MENU_H
 assert "MN_ALLOW_EMPTY_INPUT = 0x80" in MENU_H
 assert "angdroid_menu_allow_empty_input(" in (
     SHARED / "menu-action-guard.h").read_text(encoding="utf-8")
@@ -38,7 +39,7 @@ context = section(STORE, "struct store_context {", "\n};")
 assert "bool stock_changed;" in context
 initializer = section(STORE, "static void store_menu_init(", "\n/**\n * Display contents")
 assert "ctx->stock_changed = false;" in initializer
-assert "menu->flags |= MN_ALLOW_EMPTY_INPUT;" in initializer
+assert "menu->flags |= MN_ALLOW_EMPTY_INPUT | MN_MOUSE_ROW_ACTION;" in initializer
 handler = section(STORE, "static bool store_menu_handle(", "\n/* The native menu driver")
 assert "ctx->stock_changed = false;" in handler
 assert handler.index("ctx->stock_changed = false;") < handler.index("if (event->type == EVT_SELECT)")
