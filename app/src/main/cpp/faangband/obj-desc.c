@@ -347,12 +347,32 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	}
 
 	if (!translated_base) {
-		/* If no complete Chinese display label fits, preserve the
-		 * original English formatter, including spoilers and exports. */
-		if (prefix)
-			end = obj_desc_name_prefix(buf, max, end, obj,
-				basename, modstr, terse, balanced, number);
-		end = obj_desc_name_format(buf, max, end, basename, modstr, plural);
+		if (translated_ui) {
+			/* A name that fails Chinese translation can still have a long
+			 * English canonical fallback. Build the WHOLE fallback first:
+			 * copying the truncated beginning and then appending Ego/status
+			 * details can otherwise leave misleading fragments on mobile. */
+			char english_base[512] = "";
+			size_t whole = 0;
+			if (prefix)
+				whole = obj_desc_name_prefix(english_base,
+					sizeof(english_base), whole, obj,
+					basename, modstr, terse, balanced, number);
+			whole = obj_desc_name_format(english_base,
+				sizeof(english_base), whole, basename, modstr, plural);
+			if (!whole || whole >= sizeof(english_base) - 1 ||
+				!angdroid_obj_desc_append_suffix_atomic(
+					buf, max, &end, english_base, false))
+				return end;
+		} else {
+			/* English, spoiler, and terse paths retain their original
+			 * streaming formatter and overflow-safe UTF-8 handling. */
+			if (prefix)
+				end = obj_desc_name_prefix(buf, max, end, obj,
+					basename, modstr, terse, balanced, number);
+			end = obj_desc_name_format(buf, max, end,
+				basename, modstr, plural);
+		}
 	}
 
 	/* Append extra names of various kinds */
@@ -730,6 +750,10 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 
 	/* Copy the base name to the buffer */
 	end = obj_desc_name(buf, max, end, obj, prefix, mode, terse, p);
+
+	/* A failed whole-name fallback in a very narrow Chinese UI leaves
+	 * an empty label; never append an orphan (+N), <N> or {status}. */
+	if (translated_ui && end == 0) return 0;
 
 	/* Combat properties */
 	if (mode & ODESC_COMBAT) {
