@@ -11,7 +11,7 @@ static unsigned long checks;
 
 int main(void)
 {
-    static const struct { const char *name, *fa, *standard; } cases[] = {
+    static const struct artifact_source_pair { const char *name, *fa, *standard; } cases[] = {
         { "'Angrist'",
           "Forged from meteoric iron by Telchar, greatest of Dwarven smiths, and used by Beren to gouge a Silmaril out of Morgoth's crown, this long chopping dagger slices through ordinary metal as easily as its name, \"Iron Cleaver\", suggests.",
           "Forged by Telchar, greatest of Dwarven smiths, and used by Beren to gouge a Silmaril out of Morgoth's crown, this long chopping dagger slices through ordinary metal as easily as its name, \"Iron Cleaver\", suggests." },
@@ -133,7 +133,7 @@ int main(void)
     CHECK(ANGDROID_ZH_TW_FAANGBAND_ARTIFACT_VARIANTS == 38);
     CHECK(sizeof(cases) / sizeof(cases[0]) == 38);
     for (i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
-        const struct { const char *name, *fa, *standard; } *item = &cases[i];
+        const struct artifact_source_pair *item = &cases[i];
         char changed[1024];
         const char *fa_story = item->fa;
         allow = true;
