@@ -62,6 +62,11 @@ for expr in ("items[i].label", "items[i].equip_label", "items[i].o_name"):
     assert f"angdroid_utf8_display_columns({expr})" in names
 assert "strlen(items[i].o_name)" not in names
 assert "ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW" in names
+assert '#include "droid.h"' in UI
+assert "if (terse && !angdroid_zh_tw_enabled()) {" in names
+assert "ODESC_PREFIX | ODESC_FULL | ODESC_TERSE" in names
+assert "if (terse && !angdroid_zh_tw_enabled())" in names
+assert "if (Term->wid < 50) terse = true;" in UI
 
 list_body = UI[UI.index("static void show_obj_list("):
                UI.index("void show_inven(", UI.index("static void show_obj_list("))]
