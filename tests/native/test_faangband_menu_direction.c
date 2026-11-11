@@ -72,6 +72,37 @@ static void navigation_all_small_menus(void)
     }
 }
 
+/* Hidden entries (value 2) are still available by explicit tags,
+ * but directional navigation must land only on visible entries (value 1). */
+struct visible_rows {
+    int count;
+    const unsigned char *state;
+};
+
+static int only_visible(void *context, int row)
+{
+    const struct visible_rows *r = (const struct visible_rows *)context;
+    CHECK(row >= 0 && row < r->count);
+    return r->state[row] == 1;
+}
+
+static void hidden_entries_tag_only(void)
+{
+    const unsigned char state[] = {2, 0, 1, 2, 0, 1};
+    const unsigned char none[] = {2, 2, 2, 2};
+    struct visible_rows rows = {6, state};
+    struct visible_rows hidden = {4, none};
+
+    CHECK(angdroid_menu_find_valid_cursor(
+        0, 6, 1, &rows, only_visible) == 2);
+    CHECK(angdroid_menu_find_valid_cursor(
+        3, 6, 1, &rows, only_visible) == 5);
+    CHECK(angdroid_menu_find_valid_cursor(
+        3, 6, -1, &rows, only_visible) == 2);
+    CHECK(angdroid_menu_find_valid_cursor(
+        0, 4, 1, &hidden, only_visible) == -1);
+}
+
 static void page_navigation(void)
 {
     int count, rows, cursor;
@@ -133,6 +164,7 @@ static void relative_tag_modes(void)
 int main(void)
 {
     navigation_all_small_menus();
+    hidden_entries_tag_only();
     page_navigation();
     relative_tag_modes();
     printf("PASS: FA direction, last-page selection, column shortcuts (%lu checks)\n",
