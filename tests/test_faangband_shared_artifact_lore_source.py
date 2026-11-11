@@ -11,6 +11,7 @@ FA = (ROOT / "variant_lib/faangband/gamedata/artifact.txt").read_text(encoding="
 HEADER = (CPP / "zh-tw-faangband-artifact-variants.h").read_text(encoding="utf-8")
 STANDARD = (CPP / "zh-tw-artifact-lore.h").read_text(encoding="utf-8")
 INFO = (CPP / "obj-info.c").read_text(encoding="utf-8")
+FA_INFO = (ROOT / "app/src/main/cpp/faangband/obj-info.c").read_text(encoding="utf-8")
 INIT = (CPP / "obj-init.c").read_text(encoding="utf-8")
 SAVE = (CPP / "save-charoutput.c").read_text(encoding="utf-8")
 NATIVE = (ROOT / "scripts/test-native-utf8.sh").read_text(encoding="utf-8")
@@ -77,6 +78,26 @@ assert section.index("angdroid_zh_tw_faangband_variant_artifact_lore(") < sectio
 assert section.count("if (!translated && allow_standard)") == 2
 assert "if (translated) flavor = translated;" in section
 assert "angdroid_zh_tw_enabled() && !(mode & OINFO_SPOIL)" in INFO
+
+# The FAangband game compiles its own Native obj-info.c, not Angband's.
+assert '#include "droid.h"' in FA_INFO
+assert '#include "../angband/zh-tw-artifact-lore.h"' in FA_INFO
+assert '#include "../angband/zh-tw-faangband-artifact-lore.h"' in FA_INFO
+assert '#include "../angband/zh-tw-faangband-artifact-variants.h"' in FA_INFO
+fa_start = FA_INFO.index("if (obj->artifact && obj->known->artifact &&")
+fa_end = FA_INFO.index('textblock_append(tb, "%s\\n\\n", flavor);', fa_start)
+fa_section = FA_INFO[fa_start:fa_end]
+assert "obj->artifact->text" in fa_section
+assert "if (zh_tw)" in fa_section
+assert "bool allow_standard = true;" in fa_section
+assert "obj->artifact->name, flavor, &allow_standard" in fa_section
+assert fa_section.index("angdroid_zh_tw_faangband_variant_artifact_lore(") < fa_section.index(
+    "angdroid_zh_tw_artifact_flavor(")
+assert fa_section.count("if (!translated && allow_standard)") == 2
+assert "if (translated) flavor = translated;" in fa_section
+assert "if (!terse) describe_flavor_text(tb, obj, ego," in FA_INFO
+assert "angdroid_zh_tw_enabled() && !(mode & OINFO_SPOIL)" in FA_INFO
+
 assert "zh-tw-faangband-artifact-variants.h" not in SAVE
 assert "tests/native/test_faangband_shared_artifact_lore.c" in NATIVE
 assert "tests/test_faangband_shared_artifact_lore_source.py" in VERIFY
