@@ -25,6 +25,7 @@ static void expect(const char *fmt, const char *modifier, bool plural,
 static void original_grammar(void)
 {
     char out[32];
+    const char invalid[] = { (char)0xE4, 'X', 0 };
     size_t end;
     expect("& Sword~", NULL, false, "Sword");
     expect("& Sword~", NULL, true, "Swords");
@@ -41,6 +42,8 @@ static void original_grammar(void)
     expect("a|broken", NULL, false, "a");
     expect("#", NULL, true, "");
     expect("", NULL, false, "");
+    /* A truncated multi-byte sequence is never copied as broken UTF-8. */
+    expect(invalid, NULL, false, "?X");
 
     strcpy(out, "ABC");
     end = angdroid_obj_desc_name_format_safe(
