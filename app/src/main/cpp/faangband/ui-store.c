@@ -49,6 +49,12 @@
 #include "ui-spell.h"
 #include "ui-command.h"
 #include "ui-store.h"
+#include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/zh-tw-store-names.h"
+#include "../angband/store-column-layout.h"
+#include "../angband/store-detail-text.h"
+#include "../angband/menu-text-fit.h"
 #include "z-debug.h"
 
 
@@ -96,6 +102,22 @@ enum
 
 	LOC_MAX
 };
+
+/* Store rows may occupy a smaller region than the terminal.
+ * Render by terminal display columns and preserve full UTF-8 glyphs. */
+static void fa_store_put_clipped(int attr, const char *text,
+    int row, int col, int columns)
+{
+    char clipped[512];
+    if (!Term || !text || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid || columns <= 0)
+        return;
+    columns = MIN(columns, Term->wid - col);
+    angdroid_menu_copy_columns(clipped, sizeof(clipped),
+        text, (size_t)columns);
+    if (clipped[0])
+        c_put_str(attr, clipped, row, col);
+}
 
 /* State flags */
 #define STORE_GOLD_CHANGE      0x01
@@ -207,58 +229,54 @@ static void prt_welcome(const struct owner *proprietor)
  */
 static void store_display_recalc(struct store_context *ctx)
 {
-	int wid, hgt;
-	region loc;
+    int wid, hgt, content_height;
+    bool show_help;
+    region loc;
+    angdroid_store_column_layout columns;
+    struct menu *m = &ctx->menu;
 
-	struct menu *m = &ctx->menu;
-	struct store *store = ctx->store;
+    Term_get_size(&wid, &hgt);
+    columns = angdroid_store_columns(
+        wid, 1, store_is_home(ctx->store));
+    /* Keep signed negative coordinates out of unsigned screen arrays. */
+    text_out_wrap = MAX(1, columns.width - 2);
+    ctx->scr_places_x[LOC_PRICE] =
+        columns.price_col >= 0 ? columns.price_col : 0;
+    ctx->scr_places_x[LOC_WEIGHT] =
+        columns.weight_col >= 0 ? columns.weight_col : 0;
+    ctx->scr_places_x[LOC_AU] = columns.gold_col;
+    ctx->scr_places_x[LOC_OWNER] = columns.owner_end;
 
-	Term_get_size(&wid, &hgt);
+    /* A portrait viewport cannot safely fit the multi-line help footer.
+     * Preserve selectable stock rows instead of assigning negative Y. */
+    show_help = (ctx->flags & STORE_SHOW_HELP) &&
+        wid >= 70 && hgt >= 16;
+    content_height = show_help ? hgt - 3 : hgt;
+    ctx->scr_places_y[LOC_OWNER] =
+        angdroid_store_safe_row(1, hgt);
+    ctx->scr_places_y[LOC_HEADER] =
+        angdroid_store_safe_row(3, hgt);
+    ctx->scr_places_y[LOC_MORE] =
+        angdroid_store_safe_row(content_height - 3, hgt);
+    ctx->scr_places_y[LOC_AU] =
+        angdroid_store_safe_row(content_height - 1, hgt);
 
-	/* Clip the width at a max of 104 (enough room for an 80-char item name) */
-	if (wid > 104) wid = 104;
-
-	/* Clip the text_out function at two smaller than the screen width */
-	text_out_wrap = wid - 2;
-
-
-	/* X co-ords first */
-	ctx->scr_places_x[LOC_PRICE] = wid - 14;
-	ctx->scr_places_x[LOC_AU] = wid - 26;
-	ctx->scr_places_x[LOC_OWNER] = wid - 2;
-	ctx->scr_places_x[LOC_WEIGHT] = wid - 14;
-
-	/* Add space for prices */
-	if (!store_is_home(store))
-		ctx->scr_places_x[LOC_WEIGHT] -= 10;
-
-	/* Then Y */
-	ctx->scr_places_y[LOC_OWNER] = 1;
-	ctx->scr_places_y[LOC_HEADER] = 3;
-
-	/* If we are displaying help, make the height smaller */
-	if (ctx->flags & (STORE_SHOW_HELP))
-		hgt -= 3;
-
-	ctx->scr_places_y[LOC_MORE] = hgt - 3;
-	ctx->scr_places_y[LOC_AU] = hgt - 1;
-
-	loc = m->boundary;
-
-	/* If we're displaying the help, then put it with a line of padding */
-	if (ctx->flags & (STORE_SHOW_HELP)) {
-		ctx->scr_places_y[LOC_HELP_CLEAR] = hgt - 1;
-		ctx->scr_places_y[LOC_HELP_PROMPT] = hgt;
-		loc.page_rows = -5;
-	} else {
-		ctx->scr_places_y[LOC_HELP_CLEAR] = hgt - 2;
-		ctx->scr_places_y[LOC_HELP_PROMPT] = hgt - 1;
-		loc.page_rows = -2;
-	}
-
-	menu_layout(m, &loc);
+    loc = m->boundary;
+    if (show_help) {
+        ctx->scr_places_y[LOC_HELP_CLEAR] =
+            angdroid_store_safe_row(content_height - 1, hgt);
+        ctx->scr_places_y[LOC_HELP_PROMPT] =
+            angdroid_store_safe_row(content_height, hgt);
+        loc.page_rows = -5;
+    } else {
+        ctx->scr_places_y[LOC_HELP_CLEAR] =
+            angdroid_store_safe_row(hgt - 2, hgt);
+        ctx->scr_places_y[LOC_HELP_PROMPT] =
+            angdroid_store_safe_row(hgt - 1, hgt);
+        loc.page_rows = -2;
+    }
+    menu_layout(m, &loc);
 }
-
 
 /**
  * Redisplay a single store entry
