@@ -541,7 +541,14 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 		int end = angdroid_menu_visible_tag_end(
 			n, top, menu->active.page_rows, paged);
 		for (i = first; i < end; i++) {
-			char c = menu->skin->get_tag(menu, paged ? i - first : i);
+			char c;
+
+			/* A relative shortcut is generated from a rendered row. Hidden
+			 * rows have no visible tag, so accepting one here would conflict
+			 * with both the screen and Android's soft-key hint. Explicit
+			 * absolute/inscription tags still follow their original path. */
+			if (!fa_menu_navigation_is_valid(menu, i)) continue;
+			c = menu->skin->get_tag(menu, paged ? i - first : i);
 
 			if ((menu->flags & MN_CASELESS_TAGS) && c)
 				c = toupper((unsigned char) c);
