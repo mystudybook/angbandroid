@@ -33,9 +33,10 @@ assert "menu->row_funcs->valid_row(menu, oid)" in valid
 
 selection = MENU.split("static int get_cursor_key(", 1)[1].split(
     "static menu_row_style_t menu_row_style_for_validity", 1)[0]
-assert "angdroid_fa_menu_page_rows(" in selection
+assert "angdroid_menu_visible_tag_first(" in selection
+assert "angdroid_menu_visible_tag_end(" in selection
 assert "(menu->flags & MN_INSCRIP_TAGS) && menu->inscriptions &&" in selection
-assert "for (i = 0; i < page; i++)" in selection
+assert "for (i = first; i < end; i++)" in selection
 assert "for (i = 0; i < n && menu->selections[i]; i++)" in selection
 assert "angdroid_fa_menu_source_index(" in selection
 assert "if (oid < 0) continue;" in selection
@@ -64,7 +65,8 @@ assert "char buf[256] = \"\";" in keyboard
 assert "size_t used = 0;" in keyboard
 assert "angdroid_fa_menu_source_index(" in keyboard
 assert "menu->filter_list, cursor, n, menu->count" in keyboard
-assert "angdroid_fa_menu_page_rows(" in keyboard
+assert "angdroid_menu_visible_tag_first(" in keyboard
+assert "angdroid_menu_visible_tag_end(" in keyboard
 assert "angdroid_fa_menu_selection_key(" in keyboard
 assert "angdroid_fa_menu_add_key(" in keyboard
 assert "size_t tag_capacity;" in keyboard
