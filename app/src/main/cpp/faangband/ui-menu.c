@@ -1002,11 +1002,14 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 				 * the cursor from the previous selection. */
 				menu_handle_mouse(menu, &in, &out);
 				if (out.type == EVT_SELECT && !no_act &&
-					menu_handle_action(menu, &in))
-					continue;
-				/* Item selection handlers often only understand EVT_SELECT.
-				 * If a raw mouse event was not handled, allow that separate
-				 * selection event to reach the handler exactly once below. */
+					(menu->flags & MN_MOUSE_ROW_ACTION)) {
+					/* A shop needs mouse coordinates, but an object picker
+					 * needs EVT_SELECT to set its selected item. Deliver one
+					 * or the other, never both for the same screen tap. */
+					touch_select_dispatched = true;
+					if (menu_handle_action(menu, &in))
+						continue;
+				}
 			} else {
 				/* Keep shopkeeper/header and outside context actions. */
 				if (!no_act && menu_handle_action(menu, &in))
@@ -1058,6 +1061,7 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 
 		/* If we've selected an item, then send that event out */
 		if (out.type == EVT_SELECT && !no_act &&
+			!touch_select_dispatched &&
 			menu_handle_action(menu, &out))
 			continue;
 
