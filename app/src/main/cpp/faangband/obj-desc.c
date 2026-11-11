@@ -33,6 +33,7 @@
 #include "../angband/obj-desc-name-utf8.h"
 #include "obj-desc-details-utf8.h"
 #include "obj-desc-basic-utf8.h"
+#include "../angband/obj-desc-effect-utf8.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -382,20 +383,22 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 					buf, max, &end, suffix_display, !translated_base);
 			} else {
 				/* Malformed supplemental label: retain original source. */
-				strnfcat(buf, max, &end, " %s", ego_name);
+				(void)angdroid_obj_desc_append_suffix_atomic(
+					buf, max, &end, ego_name, true);
 			}
 		} else {
 			/* Preserve exact original English formatting for exports,
 			 * spoilers, locale-off, and unknown ego translations. */
-			strnfcat(buf, max, &end, " %s", ego_name);
+			(void)angdroid_obj_desc_append_suffix_atomic(
+					buf, max, &end, ego_name, true);
 		}
 	}
 	else if (!translated_base && aware && !obj->artifact &&
 			 (obj->kind->flavor || obj->kind->tval == TV_SCROLL)) {
-		if (terse)
-			strnfcat(buf, max, &end, " '%s'", obj->kind->name);
-		else
-			strnfcat(buf, max, &end, " of %s", obj->kind->name);
+		/* Append the complete English effect and its apostrophes / "of "
+		 * together. The original branch already guarantees awareness. */
+		(void)angdroid_obj_desc_append_flavor_effect(
+			buf, max, &end, obj->kind->name, terse);
 	}
 
 	return end;
@@ -414,16 +417,17 @@ static bool obj_desc_show_armor(const struct object *obj,
  * Special descriptions for types of chest traps
  */
 static size_t obj_desc_chest(const struct object *obj, char *buf, size_t max,
-							 size_t end)
+							 size_t end, bool translated_ui)
 {
 	if (!tval_is_chest(obj)) return end;
 
-	/* The chest is unopened, but we know nothing about its trap/lock */
+	/* Do not reveal an unknown trap or a lock status prematurely. */
 	if (obj->pval && !obj->known->pval) return end;
 
-	/* Describe the traps */
-	(void)angdroid_faangband_append_detailf(buf, max, &end, " (%s)", chest_trap_name(obj));
-
+	/* Both English and Chinese labels are appended with matched brackets,
+	 * or omitted on narrow screens without changing trap knowledge. */
+	(void)angdroid_obj_desc_append_chest_status(
+		buf, max, &end, chest_trap_name(obj), translated_ui);
 	return end;
 }
 
@@ -730,7 +734,7 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 	/* Combat properties */
 	if (mode & ODESC_COMBAT) {
 		if (tval_is_chest(obj))
-			end = obj_desc_chest(obj, buf, max, end);
+			end = obj_desc_chest(obj, buf, max, end, translated_ui);
 		else if (tval_is_light(obj))
 			end = obj_desc_light(obj, buf, max, end, translated_ui);
 
