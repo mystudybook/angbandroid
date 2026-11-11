@@ -29,6 +29,7 @@
 #include "../curses/unicode_display.h"
 #include "../angband/object-list-compact-layout.h"
 #include "../angband/zh-tw-list-location.h"
+#include "obj-list-row-budget.h"
 
 /**
  * Format a section of the object list: a header followed by object list entry
@@ -58,9 +59,9 @@ static void object_list_format_section(const object_list_t *list,
 									   object_list_section_t section,
 									   int lines_to_display, int max_width,
 									   const char *prefix, bool show_others,
-									   size_t *max_width_result)
+									   bool show_overflow, size_t *max_width_result)
 {
-	int remaining_object_total = 0;
+	int remaining_object_total;
 	int line_count = 0;
 	int entry_index;
 	int total;
@@ -178,15 +179,12 @@ static void object_list_format_section(const object_list_t *list,
 	if (max_width_result != NULL)
 		*max_width_result = max_line_length;
 
-	/* Bail since we don't have enough room to display the remaining count or
-	 * since we've displayed them all. */
-	if (lines_to_display <= 0 ||
-		lines_to_display >= list->total_entries[section])
-		return;
-
-	/* Count the remaining objects, starting where we left off in the above
-	 * loop. */
-	remaining_object_total = total - entry_index;
+	/* The same distinct object can appear in both LOS and non-LOS. Never
+	 * count the other section's hidden rows in this section's summary.
+	 * The row planner explicitly reserves a line for this summary. */
+	remaining_object_total = angdroid_fa_list_undisplayed(
+		list->total_entries[section], line_count);
+	if (!show_overflow || remaining_object_total <= 0) return;
 
 	if (tb != NULL)
 		textblock_append(tb, zh_tw ? "%6s……另有 %d 件物品。\n" :
@@ -243,69 +241,49 @@ static void object_list_format_textblock(const object_list_t *list,
 										 size_t *max_height_result,
 										 size_t *max_width_result)
 {
-	int header_lines = 1;
-	int lines_remaining;
-	int los_lines_to_display;
-	int no_los_lines_to_display;
+	struct angdroid_fa_object_rows budget;
+	int near_total, distant_total;
 	size_t max_los_line = 0;
 	size_t max_no_los_line = 0;
 
-	if (list == NULL || list->entries == NULL)
-		return;
-
+	if (list == NULL || list->entries == NULL) return;
 	if (object_list_format_special(list, tb, max_lines, max_width,
-								   max_height_result, max_width_result))
+		max_height_result, max_width_result)) return;
+
+	near_total = list->total_entries[OBJECT_LIST_SECTION_LOS];
+	distant_total = list->total_entries[OBJECT_LIST_SECTION_NO_LOS];
+
+	/* Preferred height describes the complete list, independent of the
+	 * number of rows that currently fit a phone viewport. */
+	if (max_height_result)
+		*max_height_result = (size_t)1 + near_total +
+			(distant_total > 0 ? (size_t)(2 + distant_total) : 0);
+
+	/* A zero-height popup must not append even a header. Also avoid the
+	 * previous signed/unsigned underflow when the LOS count is large. */
+	if (max_lines <= 0) {
+		if (max_width_result) *max_width_result = 0;
 		return;
-
-	los_lines_to_display = list->total_entries[OBJECT_LIST_SECTION_LOS];
-	no_los_lines_to_display = list->total_entries[OBJECT_LIST_SECTION_NO_LOS];
-                                                          
-	if (list->total_entries[OBJECT_LIST_SECTION_NO_LOS] > 0)
-		header_lines += 2;
-
- 	if (max_height_result != NULL)
-		*max_height_result = header_lines + los_lines_to_display + 
-			no_los_lines_to_display;
-
-	lines_remaining = max_lines - header_lines - 
-		list->total_entries[OBJECT_LIST_SECTION_LOS];
-
-	/* Remove non-los lines as needed */
-	if (lines_remaining < list->total_entries[OBJECT_LIST_SECTION_NO_LOS])
-		no_los_lines_to_display = MAX(lines_remaining - 1, 0);
-
-	/* If we don't even have enough room for the NO_LOS header, start removing
-	 * LOS lines, leaving one for the "...others". */
-	if (lines_remaining < 0)
-		los_lines_to_display = list->total_entries[OBJECT_LIST_SECTION_LOS] -
-                        abs(lines_remaining) - 1;
-
-	/* Display only headers if we don't have enough space. */
-	if (header_lines >= max_lines) {
-		los_lines_to_display = 0;
-		no_los_lines_to_display = 0;
 	}
-        
+	budget = angdroid_fa_list_row_budget(
+		max_lines, near_total, distant_total);
+
 	object_list_format_section(list, tb, OBJECT_LIST_SECTION_LOS,
-							   los_lines_to_display, max_width,
-							   (angdroid_zh_tw_enabled() ? "視野內" : "You can see"),
-							   false, &max_los_line);
+		budget.near_rows, max_width,
+		angdroid_zh_tw_enabled() ? "視野內" : "You can see",
+		false, budget.near_overflow, &max_los_line);
 
-	if (list->total_entries[OBJECT_LIST_SECTION_NO_LOS] > 0) {
-         bool show_others = list->total_objects[OBJECT_LIST_SECTION_LOS] > 0;
-
-         if (tb != NULL)
-			 textblock_append(tb, "\n");
-
-         object_list_format_section(list, tb, OBJECT_LIST_SECTION_NO_LOS,
-									no_los_lines_to_display, max_width,
-									(angdroid_zh_tw_enabled() ? "感知範圍內" : "You are aware of"),
-									show_others,
-									&max_no_los_line);
+	/* Never output a blank divider and a distant header without at least
+	 * one associated item row in the currently visible textblock. */
+	if (budget.show_distant) {
+		bool show_others = list->total_objects[OBJECT_LIST_SECTION_LOS] > 0;
+		if (tb) textblock_append(tb, "\n");
+		object_list_format_section(list, tb, OBJECT_LIST_SECTION_NO_LOS,
+			budget.distant_rows, max_width,
+			angdroid_zh_tw_enabled() ? "感知範圍內" : "You are aware of",
+			show_others, budget.distant_overflow, &max_no_los_line);
 	}
-
-                                                                        
-	if (max_width_result != NULL)
+	if (max_width_result)
 		*max_width_result = MAX(max_los_line, max_no_los_line);
 }
 
