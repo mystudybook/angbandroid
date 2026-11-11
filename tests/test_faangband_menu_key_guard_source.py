@@ -34,6 +34,7 @@ assert "menu->row_funcs->valid_row(menu, oid)" in valid
 selection = MENU.split("static int get_cursor_key(", 1)[1].split(
     "static menu_row_style_t menu_row_style_for_validity", 1)[0]
 assert "angdroid_fa_menu_page_rows(" in selection
+assert "(menu->flags & MN_INSCRIP_TAGS) && menu->inscriptions &&" in selection
 assert "for (i = 0; i < page; i++)" in selection
 assert "for (i = 0; i < n && menu->selections[i]; i++)" in selection
 assert "angdroid_fa_menu_source_index(" in selection
