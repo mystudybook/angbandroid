@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband filtered item menus: independent screen-to-source row mapping,
+# bounded soft keyboard hints and visible-page relative shortcuts.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_key_guard.c" \
+    -o "$BUILD_DIR/test_faangband_menu_key_guard"
+"$BUILD_DIR/test_faangband_menu_key_guard"
+
 # FAangband generic menu title/row/prompt clipping: physical cell
 # width 0..48, every buffer capacity, and invalid terminal geometry.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
