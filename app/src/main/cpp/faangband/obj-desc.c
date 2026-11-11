@@ -407,7 +407,7 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 			strnfcat(buf, max, &end, " %s", ego_name);
 		}
 	}
-	else if (aware && !obj->artifact &&
+	else if (!translated_base && aware && !obj->artifact &&
 			 (obj->kind->flavor || obj->kind->tval == TV_SCROLL)) {
 		if (terse)
 			strnfcat(buf, max, &end, " '%s'", obj->kind->name);
