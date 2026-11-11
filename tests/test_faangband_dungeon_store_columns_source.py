@@ -40,7 +40,7 @@ assert "ascii_prefix" in NAME
 # Shop owner, row and numeric cells are all bounded by screen geometry.
 for header in (
     "store-column-layout.h", "store-detail-text.h", "menu-text-fit.h",
-    "zh-tw-ui.h", "zh-tw-store-names.h",
+    "zh-tw-ui.h", "zh-tw-store-names.h", "zh-tw-store-text.h",
 ):
     assert f'#include "../angband/{header}"' in STORE
 assert '#include "droid.h"' in STORE
@@ -111,6 +111,18 @@ assert "angdroid_utf8_next_scalar(owner_name + used, &cp)" in welcome
 assert "width > sizeof(short_name) - used - 1" in welcome
 assert "short_name[used] = '\\0';" in welcome
 assert "short_name[j] =" not in welcome
+
+help_text = STORE.split("static void store_display_help(", 1)[1].split(
+    "\n}\n", 1)[0]
+assert "bool zh_tw = angdroid_zh_tw_enabled();" in help_text
+assert help_text.count("angdroid_store_ui_text(") >= 12
+assert 'text_out(" examines")' not in help_text
+assert 'text_out(" exits the building.")' not in help_text
+sell = STORE.split("static bool store_sell(", 1)[1].split(
+    "\n}\n", 1)[0]
+assert "angdroid_store_ui_text(prompt, angdroid_zh_tw_enabled())" in sell
+assert "angdroid_store_ui_text(reject, angdroid_zh_tw_enabled())" in sell
+assert "CMD_DROP, tester, get_mode" in sell
 
 for en in ("Your Home", "Home Inventory", "Store Inventory", "Weight", "Price"):
     assert '{ "' + en + '",' in LOCALE or '{"' + en + '",' in LOCALE
