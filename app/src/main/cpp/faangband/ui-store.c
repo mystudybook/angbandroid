@@ -1231,6 +1231,18 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 	return false;
 }
 
+/* The native menu driver calls this after EVT_RESIZE.  Recalculate
+ * header and footer positions as well as the menu bounds before repaint. */
+static void store_menu_resize(struct menu *m)
+{
+	struct store_context *ctx = menu_priv(m);
+
+	if (!ctx) return;
+	store_display_recalc(ctx);
+	ctx->flags |= STORE_FRAME_CHANGE | STORE_GOLD_CHANGE;
+	store_redraw(ctx);
+}
+
 static region store_menu_region = { 1, 4, -1, -2 };
 static const menu_iter store_menu =
 {
@@ -1238,7 +1250,7 @@ static const menu_iter store_menu =
 	NULL,
 	store_display_entry,
 	store_menu_handle,
-	NULL
+	store_menu_resize
 };
 
 /**
