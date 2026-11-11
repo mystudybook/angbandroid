@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband hidden/filtered entries: only actually visible rows may
+# emit relative shortcuts or Android soft keyboard hints.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_visibility_contract.c" \
+    -o "$BUILD_DIR/test_faangband_menu_visibility_contract"
+"$BUILD_DIR/test_faangband_menu_visibility_contract"
+
 # FAangband keyboard arrow/page movement and multi-column vs. compact
 # screen-relative shortcuts; compile the production navigation helpers.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
