@@ -77,6 +77,7 @@ static int num_head;
 static size_t max_len;
 static int ex_width;
 static int ex_offset;
+static olist_detail_t olist_render_mode;
 
 /**
  * ------------------------------------------------------------------------
@@ -331,23 +332,12 @@ static void build_obj_list(int last, struct object **list, item_tester tester,
 
 		/* Show full slot labels for equipment (or quiver in subwindow) */
 		if (equip) {
-			const char *mention = equip_mention(player, i);
-			size_t u8len = utf8_strlen(mention);
-
-			if (u8len < 14) {
-				strnfmt(buf, sizeof(buf), "%s%*s", mention,
-					(int)(14 - u8len), " ");
-			} else {
-				char *mention_copy = string_make(mention);
-
-				if (u8len > 14) {
-					utf8_clipto(mention_copy, 14);
-				}
-				strnfmt(buf, sizeof(buf), "%s", mention_copy);
-				string_free(mention_copy);
-			}
-			my_strcpy(items[num_obj].equip_label, buf,
-					  sizeof(items[num_obj].equip_label));
+			/* This is a 14-terminal-cell label, not fourteen Unicode
+			 * scalars; never clip in the middle of a Chinese glyph. */
+			angdroid_inventory_equip_mention(
+				items[num_obj].equip_label,
+				sizeof(items[num_obj].equip_label),
+				equip_mention(player, i));
 		} else if ((in_term || dead) && quiver) {
 			strnfmt(buf, sizeof(buf), "Slot %-9d: ", i);
 			my_strcpy(items[num_obj].equip_label, buf,
@@ -398,8 +388,9 @@ static void set_obj_names(bool terse, const struct player *p)
 
 		/* Max length of label + object name */
 		max_len = MAX(max_len,
-					  strlen(items[i].label) + strlen(items[i].equip_label) +
-					  strlen(items[i].o_name));
+					  angdroid_utf8_display_columns(items[i].label) +
+					  angdroid_utf8_display_columns(items[i].equip_label) +
+					  angdroid_utf8_display_columns(items[i].o_name));
 	}
 }
 
@@ -433,10 +424,13 @@ static void show_obj_list(olist_detail_t mode)
 	if (mode & OLIST_QUIVER && player->upkeep->quiver[0] != NULL)
 		max_len = MAX(max_len, 24);
 
-	/* Width of extra fields */
+	/* Narrow terminals must reserve name cells before optional price,
+	 * device failure, recharge and weight columns. */
+	mode = fa_object_list_visible_extras(mode, Term->wid);
 	if (mode & OLIST_WEIGHT) ex_width += 9;
 	if (mode & OLIST_PRICE) ex_width += 9;
 	if (mode & OLIST_FAIL) ex_width += 10;
+	if (mode & OLIST_RECHARGE) ex_width += 10;
 
 	/* Determine beginning row and column */
 	if (in_term) {
@@ -452,11 +446,12 @@ static void show_obj_list(olist_detail_t mode)
 	}
 
 	/* Column offset of the first extra field */
-	ex_offset = MIN(max_len, (size_t)(Term->wid - 1 - ex_width - col));
+	ex_offset = angdroid_object_list_name_offset(
+		Term->wid, col, ex_width, max_len);
 
 	/* Output the list */
 	for (i = 0; i < num_obj; i++)
-		show_obj(i, row, col, false, mode);
+		show_obj(i, row, col, false, mode, Term->wid - col);
 
 	/* For the inventory: print the quiver count */
 	if (mode & OLIST_QUIVER) {
@@ -971,7 +966,7 @@ static void get_item_display(struct menu *menu, int oid, bool cursor, int row,
 					  int col, int width)
 {
 	/* Print it */
-	show_obj(oid, row - oid, col, cursor, olist_mode);
+	show_obj(oid, row - oid, col, cursor, olist_render_mode, width);
 }
 
 /**
