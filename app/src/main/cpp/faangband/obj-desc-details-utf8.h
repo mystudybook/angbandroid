@@ -113,6 +113,9 @@ static inline bool angdroid_faangband_append_modifiers(
             group[used++] = ',';
             group[used++] = ' ';
         }
+        /* Always reserve both the closing '>' and trailing NUL.
+         * Check before subtracting to avoid unsigned underflow. */
+        if (sizeof(group) - used <= 2) return false;
         written = snprintf(group + used, sizeof(group) - used,
             "%+d", values[i]);
         if (written < 0 || (size_t)written >= sizeof(group) - used - 2)
