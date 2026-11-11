@@ -87,7 +87,7 @@ assert "obj->kind->flavor->text, obj->kind->name, aware," in block
 assert "translated_base = angdroid_obj_desc_append_suffix_atomic(" in block
 assert "if (localized_kind && !translated_base) {" in block
 assert "if (!translated_base) {" in block
-assert "end = obj_desc_name_format(buf, max, end, basename, modstr, plural);" in block
+assert "end = obj_desc_name_format(buf, max, end,\\n\\t\\t\\t\\tbasename, modstr, plural);" in block
 assert "else if (!translated_base && aware && !obj->artifact &&" in block
 assert "if (object_is_known_artifact(obj)) {" in block
 assert "obj->known->ego && !(mode & ODESC_NOEGO)" in block
