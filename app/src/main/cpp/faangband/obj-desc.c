@@ -26,6 +26,8 @@
 #include "obj-util.h"
 #include "droid.h"
 #include "obj-desc-artifact-zh-tw.h"
+#include "obj-desc-item-zh-tw.h"
+#include "../angband/zh-tw-item-grammar.h"
 #include "../angband/obj-desc-suffix-utf8.h"
 
 /**
@@ -326,14 +328,48 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	const char *basename = obj_desc_get_basename(obj, aware, terse,
 		mode, p);
 	const char *modstr = obj_desc_get_modstr(obj->kind);
+	const char *localized_kind = NULL;
+	bool translated_base = false;
+	bool translated_ui = (mode & ODESC_ZH_TW) &&
+		!(mode & (ODESC_SPOIL | ODESC_TERSE)) &&
+		angdroid_zh_tw_enabled();
+	bool show_flavor = !terse && (obj->kind->flavor || tval_is_jewelry(obj));
+	if (store || (aware && p && !OPT(p, show_flavors)))
+		show_flavor = false;
 
-	/* Quantity prefix */
-	if (prefix)
-		end = obj_desc_name_prefix(buf, max, end, obj, basename, modstr, terse,
-			balanced, number);
+	/* Only identified, already-visible kind labels can be translated.
+	 * Unidentified flavored objects continue to use the original name.
+	 * Never replace any canonical game string or regenerate appearance. */
+	if (translated_ui && aware && !show_flavor && obj->kind->name)
+		localized_kind = angdroid_faangband_known_kind_ui_name(
+			obj->kind->name, tval_find_name(obj->tval), true);
 
-	/* Base name */
-	end = obj_desc_name_format(buf, max, end, basename, modstr, plural);
+	if (localized_kind) {
+		char known_display[256];
+		char named_effect[160];
+		const char *display_kind = localized_kind;
+		/* The name of an identified flavored kind is an effect. Supply
+		 * the Chinese noun only when the source kind is identified. */
+		if (obj->kind->flavor &&
+			angdroid_zh_tw_identified_flavor_name(
+				named_effect, sizeof(named_effect),
+				tval_find_name(obj->tval), localized_kind))
+			display_kind = named_effect;
+		if (angdroid_zh_tw_known_item_name(known_display,
+				sizeof(known_display), tval_find_name(obj->tval),
+				display_kind, prefix, number))
+			translated_base = angdroid_obj_desc_append_suffix_atomic(
+				buf, max, &end, known_display, false);
+	}
+
+	if (!translated_base) {
+		/* Canonical English fallback, including all unknown flavors,
+		 * spoiler calls, and unchanged export/terse paths. */
+		if (prefix)
+			end = obj_desc_name_prefix(buf, max, end, obj,
+				basename, modstr, terse, balanced, number);
+		end = obj_desc_name_format(buf, max, end, basename, modstr, plural);
+	}
 
 	/* Append extra names of various kinds */
 	if (object_is_known_artifact(obj)) {
@@ -349,8 +385,27 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		(void)angdroid_obj_desc_append_suffix_atomic(buf, max,
 			&end, artifact_name, true);
 	}
-	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store))
-		strnfcat(buf, max, &end, " %s", obj->ego->name);
+	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store)) {
+		/* Ego name only after the original identification/store checks.
+		 * Keep the original spelling for English and spoiler output. */
+		const char *ego_name = obj->ego->name;
+		const char *localized = angdroid_faangband_known_ego_ui_name(
+			ego_name, translated_ui);
+		if (localized) {
+			char suffix_display[192];
+			if (angdroid_zh_tw_item_suffix(suffix_display,
+					sizeof(suffix_display), localized)) {
+				(void)angdroid_obj_desc_append_suffix_atomic(
+					buf, max, &end, suffix_display, !translated_base);
+			} else {
+				(void)angdroid_obj_desc_append_suffix_atomic(
+					buf, max, &end, ego_name, true);
+			}
+		} else {
+			(void)angdroid_obj_desc_append_suffix_atomic(
+				buf, max, &end, ego_name, true);
+		}
+	}
 	else if (aware && !obj->artifact &&
 			 (obj->kind->flavor || obj->kind->tval == TV_SCROLL)) {
 		if (terse)
