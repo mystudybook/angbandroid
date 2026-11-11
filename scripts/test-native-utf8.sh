@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband stage complete fallback names before appending multiple atomic
+# combat/charge/inscription groups at widths 0..128 and 0..32.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_narrow_desc_chain.c" \
+    -o "$BUILD_DIR/test_faangband_narrow_desc_chain"
+"$BUILD_DIR/test_faangband_narrow_desc_chain"
+
 # FAangband complete early descriptions: null/unknown item, tiny flavor
 # copy and 11 exact source money-kind labels with UTF-8 boundaries.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
