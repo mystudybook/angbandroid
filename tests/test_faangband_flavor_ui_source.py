@@ -18,6 +18,7 @@ ITEM = read(FA / "obj-desc-item-zh-tw.h")
 OBJ = read(FA / "obj-desc.c")
 EXPORT = read(FA / "save-charoutput.c")
 SPOILER = read(FA / "ui-spoil.c")
+FLAVOR_RUNTIME = read(FA / "obj-util.c")
 RUNNER = read(ROOT / "scripts/test-native-utf8.sh")
 VERIFY = read(ROOT / "scripts/verify-zh-tw.sh")
 C_TEST = read(ROOT / "tests/native/test_faangband_flavor_ui.c")
@@ -98,6 +99,16 @@ assert 'source_kind, tval, true);' in HELPER
 assert 'source_kind, "scroll", true);' in HELPER
 assert "if (!angdroid_zh_tw_scroll_title(" in HELPER
 assert "if (length >= capacity) return false;" in HELPER
+# Source implementation ties the assigned scroll flavor to the existing
+# per-game scroll_adj array, populated under seed_flavor.  Display code
+# must not call flavor_init(), randname_make() or the RNG.
+assert 'Rand_value = seed_flavor;' in FLAVOR_RUNTIME
+assert 'f->text = scroll_adj[k_info[i].sval];' in FLAVOR_RUNTIME
+assert 'randname_make(RANDNAME_SCROLL' in FLAVOR_RUNTIME
+assert 'scroll_adj[MAX_TITLES][18]' in FLAVOR_RUNTIME
+assert 'seed_flavor' not in OBJ
+assert 'randname_make(' not in HELPER
+assert 'flavor_init(' not in OBJ
 assert "ODESC_ZH_TW" not in EXPORT
 assert "ODESC_ZH_TW" not in SPOILER
 assert "test_faangband_flavor_ui.c" in RUNNER
