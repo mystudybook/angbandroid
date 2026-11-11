@@ -198,7 +198,11 @@ enum
 	MN_NO_ACTION = 0x20,
 
 	/* Tags can be selected via an inscription */
-	MN_INSCRIP_TAGS = 0x40
+	MN_INSCRIP_TAGS = 0x40,
+
+	/* Store menus may dispatch header touches and keyboard commands even
+	 * when no item is selected. Never allow empty EVT_SELECT actions. */
+	MN_ALLOW_EMPTY_INPUT = 0x80
 };
 
 
