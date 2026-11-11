@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband dungeon list and store share Unicode-safe name and cell
+# geometry helpers with the original Angband engine.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_dungeon_store_columns.c" \
+    -o "$BUILD_DIR/test_faangband_dungeon_store_columns"
+"$BUILD_DIR/test_faangband_dungeon_store_columns"
+
 # FAangband object lists use terminal cell budgets, complete UTF-8
 # Chinese names, 14-cell equipment labels and resize-safe geometry.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
