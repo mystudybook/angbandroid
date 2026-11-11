@@ -78,7 +78,7 @@ assert "temp[current++] = sel;" not in keyboard
 assert "oid = menu->filter_list[oid]" not in keyboard
 assert "my_strcat(buf, menu->cmd_keys, sizeof(buf));" in keyboard
 assert "my_strcat(buf, menu->switch_keys, sizeof(buf));" in keyboard
-assert "soft_kbd_flash(buf);" in keyboard
+assert "soft_kbd_replace(buf);" in keyboard
 assert "strdeldup(buf);" in keyboard
 
 for test in (
