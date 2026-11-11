@@ -24,6 +24,7 @@
 #include "ui-menu.h"
 #include "ui-menu-resize-guard.h"
 #include "ui-menu-cell-text.h"
+#include "ui-menu-key-guard.h"
 #include "../curses/unicode_display.h"
 
 #include "droid.h"
@@ -479,13 +480,12 @@ static const menu_skin menu_skin_column =
 
 static bool is_valid_row(struct menu *menu, int cursor)
 {
-	int oid;
 	int count = menu->filter_list ? menu->filter_count : menu->count;
+	int oid = angdroid_fa_menu_source_index(
+		menu->filter_list, cursor, count, menu->count);
 
-	if (cursor < 0 || cursor >= count)
+	if (oid < 0)
 		return false;
-
-	oid = menu->filter_list ? menu->filter_list[cursor] : cursor;
 
 	if (menu->row_funcs->valid_row)
 		return menu->row_funcs->valid_row(menu, oid);
@@ -523,7 +523,9 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 	if (menu->flags & MN_NO_TAGS) {
 		return -1;
 	} else if (menu->flags & MN_REL_TAGS) {
-		for (i = 0; i < n; i++) {
+		int page = angdroid_fa_menu_page_rows(
+			n, top, menu->active.page_rows);
+		for (i = 0; i < page; i++) {
 			char c = menu->skin->get_tag(menu, i);
 
 			if ((menu->flags & MN_CASELESS_TAGS) && c)
@@ -533,7 +535,7 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 				return i + menu->top;
 		}
 	} else if (!(menu->flags & MN_PVT_TAGS) && menu->selections) {
-		for (i = 0; menu->selections[i]; i++) {
+		for (i = 0; i < n && menu->selections[i]; i++) {
 			char c = menu->selections[i];
 
 			if (menu->flags & MN_CASELESS_TAGS)
@@ -544,8 +546,11 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 		}
 	} else if (menu->row_funcs->get_tag) {
 		for (i = 0; i < n; i++) {
-			int oid = menu->filter_list ? menu->filter_list[i] : i;
-			char c = menu->row_funcs->get_tag(menu, oid);
+			int oid = angdroid_fa_menu_source_index(
+				menu->filter_list, i, n, menu->count);
+			char c;
+			if (oid < 0) continue;
+			c = menu->row_funcs->get_tag(menu, oid);
 
 			if ((menu->flags & MN_CASELESS_TAGS) && c)
 				c = toupper((unsigned char) c);
@@ -584,7 +589,9 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 {
 	int flags = menu->flags;
 	char sel = 0;
-	int oid = pos;
+	int count = menu->filter_list ? menu->filter_count : menu->count;
+	int oid = angdroid_fa_menu_source_index(
+		menu->filter_list, pos, count, menu->count);
 	menu_row_validity_t row_valid = MN_ROW_VALID;
 
 	/* Each row is a physical cell region. Never forward a negative
@@ -592,10 +599,7 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 	if (!Term) return;
 	width = angdroid_fa_menu_visible_columns(
 		Term->wid, Term->hgt, row, col, width);
-	if (width <= 0) return;
-
-	if (menu->filter_list)
-		oid = menu->filter_list[oid];
+	if (width <= 0 || oid < 0) return;
 
 	if (menu->row_funcs->valid_row)
 		row_valid = menu->row_funcs->valid_row(menu, oid);
@@ -607,7 +611,7 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 		if (flags & MN_REL_TAGS)
 			sel = menu->skin->get_tag(menu, pos);
 		else if (menu->selections && !(flags & MN_PVT_TAGS))
-			sel = menu->selections[pos];
+			sel = angdroid_fa_menu_selection_key(menu->selections, pos);
 		else if (menu->row_funcs->get_tag)
 			sel = menu->row_funcs->get_tag(menu, oid);
 	}
@@ -648,8 +652,11 @@ void menu_refresh(struct menu *menu, bool reset_screen)
 		screen_save();
 	}
 
-	if (menu->filter_list && menu->cursor >= 0)
-		oid = menu->filter_list[oid];
+	if (menu->browse_hook)
+		oid = angdroid_fa_menu_source_index(menu->filter_list,
+			menu->cursor,
+			menu->filter_list ? menu->filter_count : menu->count,
+			menu->count);
 
 	if (menu->title)
 		fa_menu_put_clipped(COLOUR_WHITE, menu->title,
@@ -724,10 +731,10 @@ bool menu_handle_mouse(struct menu *menu, const ui_event *in,
 static bool menu_handle_action(struct menu *m, const ui_event *in)
 {
 	if (m->row_funcs->row_handler) {
-		int oid = m->cursor;
-		if (m->filter_list)
-			oid = m->filter_list[m->cursor];
-
+		int oid = angdroid_fa_menu_source_index(
+			m->filter_list, m->cursor,
+			m->filter_list ? m->filter_count : m->count, m->count);
+		if (oid < 0) return false;
 		return m->row_funcs->row_handler(m, in, oid);
 	}
 
