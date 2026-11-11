@@ -27,7 +27,9 @@ assert "if (!no_act && menu_handle_action(menu, &in))" in mouse
 assert "menu_handle_mouse(menu, &in, &out);" in mouse
 assert "out.type == EVT_SELECT && !no_act &&" in select
 assert "menu_handle_action(menu, &out)" in select
-assert "touch_select_dispatched" not in select
+assert "(menu->flags & MN_MOUSE_ROW_ACTION)" in inside
+assert "touch_select_dispatched = true;" in inside
+assert "!touch_select_dispatched &&" in select
 assert "get_item_action" in OBJECT
 item_handler = OBJECT.split("static bool get_item_action(", 1)[1].split(
     "static void item_menu_browser(", 1)[0]
