@@ -76,7 +76,7 @@ assert "angdroid_menu_visible_tag_end(" in hints
 assert "if (cursor < first || cursor >= end) continue;" in hints
 assert "paged ? cursor - first : cursor" in hints
 assert "tag_capacity" in hints
-assert "soft_kbd_flash(buf);" in hints
+assert "soft_kbd_replace(buf);" in hints
 
 for line in (
     "navigation_all_small_menus();", "page_navigation();",
