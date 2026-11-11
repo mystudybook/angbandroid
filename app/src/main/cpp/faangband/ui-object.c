@@ -50,6 +50,7 @@
 #include "ui-options.h"
 #include "ui-output.h"
 #include "ui-prefs.h"
+#include "droid.h"
 #include "../angband/object-list-text.h"
 #include "../angband/inventory-equip-mention.h"
 #include "../angband/item-selection-layout.h"
@@ -374,7 +375,11 @@ static void set_obj_names(bool terse, const struct player *p)
 			else
 				strnfmt(items[i].o_name, sizeof(items[i].o_name), "(nothing)");
 		} else {
-			if (terse) {
+			/* ODESC_TERSE deliberately bypasses translations in
+			 * obj-desc.c. Do not silently revert to English only because a
+			 * Chinese phone has fewer than 50 terminal columns: the row
+			 * renderer now clips complete wide glyphs by terminal cells. */
+			if (terse && !angdroid_zh_tw_enabled()) {
 				object_desc(items[i].o_name,
 					sizeof(items[i].o_name), obj,
 					ODESC_PREFIX | ODESC_FULL | ODESC_TERSE,
