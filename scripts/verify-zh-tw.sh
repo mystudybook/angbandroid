@@ -70,6 +70,7 @@ run_check "FAangband 38 shared artifact variant source-exact stories" python3 "$
 run_check "FAangband 41 exclusive artifact lore stories and UI guard" python3 "$ROOT/tests/test_faangband_artifact_lore_source.py"
 run_check "FAangband replaces Android soft keyboard hints across paging and rotation" python3 "$ROOT/tests/test_faangband_soft_kbd_replace_source.py"
 run_check "FAangband filtered column repaint and CJK popup bounds" python3 "$ROOT/tests/test_faangband_menu_repaint_popup_source.py"
+run_check "FAangband store touches and inventory cursor dispatch" python3 "$ROOT/tests/test_faangband_store_touch_source.py"
 run_check "FAangband hidden/disabled relative shortcut visibility parity" python3 "$ROOT/tests/test_faangband_menu_visibility_source.py"
 run_check "FAangband bounded keyboard direction and compact relative key tags" python3 "$ROOT/tests/test_faangband_menu_direction_source.py"
 run_check "FAangband blank menu touches and rotated scroll/column viewport" python3 "$ROOT/tests/test_faangband_menu_touch_viewport_source.py"
