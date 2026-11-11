@@ -219,39 +219,32 @@ static void display_scrolling(struct menu *menu, int cursor, int *top, region *l
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 	int i;
 
-	/* Keep a certain distance from the top when possible */
-	if ((cursor <= *top) && (*top > 0))
-		*top = cursor - 1;
-
-	/* Keep a certain distance from the bottom when possible */
-	if (cursor >= *top + (rows_per_page - 1))
-		*top = cursor - (rows_per_page - 1) + 1;
-
-	/* Limit the top to legal places */
-	*top = MIN(*top, n - rows_per_page);
-	*top = MAX(*top, 0);
+	/* Clamp both the cursor and scroll origin after a filter update or
+	 * rotation. Do not let a stale top position render an empty final page. */
+	*top = angdroid_fa_menu_clamp_top(*top, cursor, n, rows_per_page);
 
 	for (i = 0; i < rows_per_page; i++) {
 		/* Blank all lines */
 		Term_erase(col, row + i, loc->width);
-		if (i < n) {
-			/* Redraw the line if it's within the number of menu items */
+		if (*top < n && i < n - *top) {
+			/* Only paint actual rows after scrolling; blank rows stay blank. */
 			bool is_curs = (i == cursor - *top);
 			display_menu_row(menu, i + *top, *top, is_curs, row + i, col,
 							loc->width);
 		}
 	}
 
-	if (menu->cursor >= 0)
+	if (cursor >= *top && cursor < n &&
+		cursor - *top < rows_per_page &&
+		menu->cursor_x_offset >= 0 &&
+		menu->cursor_x_offset < loc->width)
 		Term_gotoxy(col + menu->cursor_x_offset, row + cursor - *top);
 }
 
 static char scroll_get_tag(struct menu *menu, int pos)
 {
-	if (menu->selections)
-		return menu->selections[pos - menu->top];
-
-	return 0;
+	return angdroid_fa_menu_selection_key(
+		menu->selections, pos - menu->top);
 }
 
 static ui_event scroll_process_direction(struct menu *m, int dir)
@@ -310,39 +303,32 @@ static void object_skin_display(struct menu *menu, int cursor, int *top, region 
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 	int i;
 
-	/* Keep a certain distance from the top when possible */
-	if ((cursor <= *top) && (*top > 0))
-		*top = cursor - 1;
-
-	/* Keep a certain distance from the bottom when possible */
-	if (cursor >= *top + (rows_per_page - 1))
-		*top = cursor - (rows_per_page - 1) + 1;
-
-	/* Limit the top to legal places */
-	*top = MIN(*top, n - rows_per_page);
-	*top = MAX(*top, 0);
+	/* Clamp both the cursor and scroll origin after a filter update or
+	 * rotation. Do not let a stale top position render an empty final page. */
+	*top = angdroid_fa_menu_clamp_top(*top, cursor, n, rows_per_page);
 
 	for (i = 0; i < rows_per_page; i++) {
 		/* Blank all lines */
 		Term_erase(col, row + i, loc->width);
-		if (i < n) {
-			/* Redraw the line if it's within the number of menu items */
+		if (*top < n && i < n - *top) {
+			/* Only paint actual rows after scrolling; blank rows stay blank. */
 			bool is_curs = (i == cursor - *top);
 			display_menu_row(menu, i + *top, *top, is_curs, row + i, col,
 							loc->width);
 		}
 	}
 
-	if (menu->cursor >= 0)
+	if (cursor >= *top && cursor < n &&
+		cursor - *top < rows_per_page &&
+		menu->cursor_x_offset >= 0 &&
+		menu->cursor_x_offset < loc->width)
 		Term_gotoxy(col + menu->cursor_x_offset, row + cursor - *top);
 }
 
 static char object_skin_get_tag(struct menu *menu, int pos)
 {
-	if (menu->selections)
-		return menu->selections[pos - menu->top];
-
-	return 0;
+	return angdroid_fa_menu_selection_key(
+		menu->selections, pos - menu->top);
 }
 
 static ui_event object_skin_process_direction(struct menu *m, int dir)
@@ -1053,19 +1039,25 @@ void menu_release_filter(struct menu *menu)
 
 void menu_ensure_cursor_valid(struct menu *m)
 {
-	int row;
 	int count = m->filter_list ? m->filter_count : m->count;
+	int row, start, found = -1;
 
-	for (row = m->cursor; row < count; row++) {
-		if (is_valid_row(m, row)) {
-			m->cursor = row;
-			return;
-		}
+	if (count <= 0) {
+		m->cursor = -1;
+		m->top = 0;
+		return;
 	}
-
-	/* If we've run off the end, without finding a valid row, put cursor
-	 * on the last row */
-	m->cursor = count - 1;
+	start = angdroid_fa_menu_clamp_cursor(m->cursor, count);
+	/* Preserve the selection if valid; otherwise try the following
+	 * visible rows before wrapping. No negative cursor enters a callback. */
+	for (row = start; row < count; row++)
+		if (is_valid_row(m, row)) { found = row; break; }
+	if (found < 0)
+		for (row = 0; row < start; row++)
+			if (is_valid_row(m, row)) { found = row; break; }
+	m->cursor = found;
+	m->top = found < 0 ? 0 : angdroid_fa_menu_clamp_top(
+		m->top, found, count, m->active.page_rows);
 }
 
 /* ======================== MENU INITIALIZATION ==================== */
