@@ -281,62 +281,69 @@ static void store_display_recalc(struct store_context *ctx)
 /**
  * Redisplay a single store entry
  */
-static void store_display_entry(struct menu *menu, int oid, bool cursor, int row,
-								int col, int width)
+static void store_display_entry(struct menu *menu, int oid,
+    bool cursor, int row, int col, int width)
 {
-	struct object *obj;
-	int32_t x;
-	uint32_t desc = ODESC_PREFIX;
+    struct store_context *ctx = menu_priv(menu);
+    struct store *store = ctx->store;
+    angdroid_store_column_layout columns;
+    struct object *obj;
+    uint32_t desc = ODESC_PREFIX | ODESC_ZH_TW;
+    int name_width;
+    int32_t x;
+    char o_name[256];
+    char out_val[160];
+    uint8_t colour;
 
-	char o_name[80];
-	char out_val[160];
-	uint8_t colour;
-	int16_t obj_weight;
+    assert(store);
+    if (!Term || !ctx->list || oid < 0 || oid >= store->stock_num ||
+        !ctx->list[oid] || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid || width <= 0)
+        return;
+    obj = ctx->list[oid];
+    columns = angdroid_store_columns(
+        Term->wid, 1, store_is_home(store));
+    width = MIN(width, Term->wid - col);
+    name_width = angdroid_store_name_budget(columns, col, width);
 
-	struct store_context *ctx = menu_priv(menu);
-	struct store *store = ctx->store;
-	assert(store);
+    /* Home descriptions retain the actual inscriptions. The screen name
+     * is shortened only in the temporary buffer, never in game data. */
+    if (store_is_home(store))
+        desc |= ODESC_FULL;
+    else
+        desc |= ODESC_FULL | ODESC_STORE;
+    object_desc(o_name, sizeof(o_name), obj, desc, player);
+    fa_store_put_clipped(obj->kind->base->attr,
+        o_name, row, col, name_width);
 
-	/* Get the object */
-	obj = ctx->list[oid];
+    colour = curs_attrs[CURS_KNOWN][(int)cursor];
+    if (columns.weight_col >= 0 &&
+        columns.weight_col >= col &&
+        columns.weight_col < col + width) {
+        int weight = object_weight_one(obj);
+        int budget = MIN(10, col + width - columns.weight_col);
+        if (angdroid_store_weight_text(
+                out_val, sizeof(out_val), weight, angdroid_zh_tw_enabled()) &&
+            angdroid_utf8_display_columns(out_val) <= (size_t)budget)
+            fa_store_put_clipped(colour, out_val, row,
+                columns.weight_col, budget);
+    }
 
-	/* Describe the object - preserving insriptions in the home */
-	if (store_is_home(store)) {
-		desc |= ODESC_FULL;
-	} else {
-		desc |= ODESC_FULL | ODESC_STORE;
-	}
-	object_desc(o_name, sizeof(o_name), obj, desc | ODESC_ZH_TW, player);
-
-	/* Display the object */
-	c_put_str(obj->kind->base->attr, o_name, row, col);
-
-	/* Show weights */
-	colour = curs_attrs[CURS_KNOWN][(int)cursor];
-	obj_weight = object_weight_one(obj);
-	strnfmt(out_val, sizeof out_val, "%3d.%d lb", obj_weight / 10,
-			obj_weight % 10);
-	c_put_str(colour, out_val, row, ctx->scr_places_x[LOC_WEIGHT]);
-
-	/* Describe an object (fully) in a store */
-	if (!store_is_home(store)) {
-		/* Extract the "minimum" price */
-		x = price_item(store, obj, false, 1);
-
-		/* Make sure the player can afford it */
-		if (player->au < x)
-			colour = curs_attrs[CURS_UNKNOWN][(int)cursor];
-
-		/* Actually draw the price */
-		if (tval_can_have_charges(obj) && (obj->number > 1))
-			strnfmt(out_val, sizeof out_val, "%9ld avg", (long)x);
-		else
-			strnfmt(out_val, sizeof out_val, "%9ld    ", (long)x);
-
-		c_put_str(colour, out_val, row, ctx->scr_places_x[LOC_PRICE]);
-	}
+    if (!store_is_home(store) && columns.price_col >= 0 &&
+        columns.price_col >= col &&
+        columns.price_col < col + width) {
+        int budget = MIN(14, col + width - columns.price_col);
+        x = price_item(store, obj, false, 1);
+        if (player->au < x)
+            colour = curs_attrs[CURS_UNKNOWN][(int)cursor];
+        if (angdroid_store_price_text(out_val, sizeof(out_val),
+                (long)x, tval_can_have_charges(obj) && obj->number > 1,
+                angdroid_zh_tw_enabled()) &&
+            angdroid_utf8_display_columns(out_val) <= (size_t)budget)
+            fa_store_put_clipped(colour, out_val, row,
+                columns.price_col, budget);
+    }
 }
-
 
 /**
  * Display store (after clearing screen)
