@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband keyboard arrow/page movement and multi-column vs. compact
+# screen-relative shortcuts; compile the production navigation helpers.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_direction.c" \
+    -o "$BUILD_DIR/test_faangband_menu_direction"
+"$BUILD_DIR/test_faangband_menu_direction"
+
 # FAangband blank-row mouse hits, narrow/compact columns and rotated
 # scroll positions; these helpers run without an Android SDK.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
