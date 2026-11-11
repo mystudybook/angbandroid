@@ -56,7 +56,7 @@ row = UI.split("static void display_menu_row(struct menu *menu, int pos, int top
     "                             bool cursor, int row, int col, int width)\n{", 1)[1].split(
     "void menu_refresh(", 1)[0]
 assert "width = angdroid_fa_menu_visible_columns(" in row
-assert "if (width <= 0) return;" in row
+assert "if (width <= 0 || oid < 0) return;" in row
 assert "if (width <= 3) {" in row
 assert 'fa_menu_put_clipped(color, format("%c) ", sel),' in row
 assert "width -= 3;" in row
