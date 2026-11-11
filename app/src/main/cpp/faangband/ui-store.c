@@ -562,6 +562,9 @@ static bool store_sell(struct store_context *ctx)
 	const char *prompt = OPT(player, birth_no_selling) ? "Give which item? " : "Sell which item? ";
 
 	assert(store);
+	/* The knowledge-only shop is read-only, even with a key queued from
+	 * another menu. Header/info actions are unaffected. */
+	if (ctx->inspect_only) return false;
 
 	/* Clear all current messages */
 	msg_flag = false;
