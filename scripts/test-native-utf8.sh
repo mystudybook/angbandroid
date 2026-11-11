@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband shared menus: repaint on rotation, close impossible
+# rectangles safely and prevent signed coordinate overflow.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_resize_guard.c" \
+    -o "$BUILD_DIR/test_faangband_menu_resize_guard"
+"$BUILD_DIR/test_faangband_menu_resize_guard"
+
 # FAangband ground-item LOS/non-LOS lists must not overflow the
 # terminal when 0..24 rows are available or miscount hidden sections.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
