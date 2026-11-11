@@ -23,6 +23,7 @@
 #include "ui-input.h"
 #include "ui-menu.h"
 #include "ui-menu-resize-guard.h"
+#include "../curses/unicode_display.h"
 
 #include "droid.h"
 
@@ -1042,9 +1043,17 @@ static bool menu_calc_size(struct menu *menu)
 		if (menu->active.page_rows > 1) {
 			menu->active.page_rows--;
 		} else {
-			int offset = strlen(menu->prompt) + 2;
-			menu->active.col += offset;
-			menu->active.width -= offset;
+			/* The prompt is rendered in terminal cells, not UTF-8 bytes.
+			 * A long Chinese prompt must never create negative widths. */
+			size_t cells = angdroid_utf8_display_columns(menu->prompt);
+			if (menu->active.width <= 2 ||
+				cells >= (size_t)(menu->active.width - 2)) {
+				menu->active.width = 0;
+			} else {
+				int offset = (int)cells + 2;
+				menu->active.col += offset;
+				menu->active.width -= offset;
+			}
 		}
 	}
 
