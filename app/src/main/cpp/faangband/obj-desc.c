@@ -27,6 +27,7 @@
 #include "droid.h"
 #include "obj-desc-artifact-zh-tw.h"
 #include "obj-desc-item-zh-tw.h"
+#include "obj-desc-flavor-zh-tw.h"
 #include "../angband/zh-tw-item-grammar.h"
 #include "../angband/obj-desc-suffix-utf8.h"
 
@@ -329,6 +330,7 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		mode, p);
 	const char *modstr = obj_desc_get_modstr(obj->kind);
 	const char *localized_kind = NULL;
+	char flavored_display[256];
 	bool translated_base = false;
 	bool translated_ui = (mode & ODESC_ZH_TW) &&
 		!(mode & (ODESC_SPOIL | ODESC_TERSE)) &&
@@ -337,6 +339,28 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	if (store || (aware && p && !OPT(p, show_flavors)))
 		show_flavor = false;
 
+	/* An unidentified flavored kind must display only its assigned
+	 * appearance; the randomized mapping is never regenerated. A kind
+	 * effect is permitted only after the original awareness check. */
+	if (translated_ui && show_flavor && obj->kind->flavor &&
+			!obj->artifact && !obj->ego) {
+		bool ready;
+		if (obj->tval == TV_SCROLL)
+			ready = angdroid_faangband_ui_scroll(
+				flavored_display, sizeof(flavored_display),
+				obj->kind->flavor->text, obj->kind->name, aware,
+				prefix, number);
+		else
+			ready = angdroid_faangband_ui_flavored_object(
+				flavored_display, sizeof(flavored_display),
+				tval_find_name(obj->tval),
+				obj->kind->flavor->text, obj->kind->name, aware,
+				prefix, number);
+		if (ready)
+			translated_base = angdroid_obj_desc_append_suffix_atomic(
+				buf, max, &end, flavored_display, false);
+	}
+
 	/* Only identified, already-visible kind labels can be translated.
 	 * Unidentified flavored objects continue to use the original name.
 	 * Never replace any canonical game string or regenerate appearance. */
@@ -344,7 +368,7 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		localized_kind = angdroid_faangband_known_kind_ui_name(
 			obj->kind->name, tval_find_name(obj->tval), true);
 
-	if (localized_kind) {
+	if (localized_kind && !translated_base) {
 		char known_display[256];
 		char named_effect[160];
 		const char *display_kind = localized_kind;
