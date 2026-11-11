@@ -163,17 +163,22 @@ static void prt_welcome(const struct owner *proprietor)
 	char short_name[20];
 	const char *owner_name = proprietor->name;
 
-	int j;
+	size_t used = 0;
 
 	if (one_in_(2))
 		return;
 
-	/* Get the first name of the store owner (stop before the first space) */
-	for (j = 0; owner_name[j] && owner_name[j] != ' '; j++)
-		short_name[j] = owner_name[j];
-
-	/* Truncate the name */
-	short_name[j] = '\0';
+	/* Preserve the owner's first name without overrunning this 20-byte
+	 * message-local buffer or cutting a multibyte Unicode scalar. */
+	while (owner_name[used] && owner_name[used] != ' ') {
+		uint32_t cp;
+		size_t width = angdroid_utf8_next_scalar(owner_name + used, &cp);
+		if (!width || width > sizeof(short_name) - used - 1)
+			break;
+		memcpy(short_name + used, owner_name + used, width);
+		used += width;
+	}
+	short_name[used] = '\0';
 
 	if (one_in_(3)) {
 		size_t i = randint0(N_ELEMENTS(comment_hint));
@@ -480,17 +485,29 @@ static void store_redraw(struct store_context *ctx)
 	if (ctx->flags & (STORE_FRAME_CHANGE)) {
 		store_display_frame(ctx);
 
-		if (ctx->flags & STORE_SHOW_HELP)
+		/* Multiline help requires a wide/tall surface. On phones,
+		 * keep the stock rows and display only a one-line shortcut. */
+		if ((ctx->flags & STORE_SHOW_HELP) &&
+			Term->wid >= 70 && Term->hgt >= 16)
 			store_display_help(ctx);
 		else
-			prt("Press '?' for help.", ctx->scr_places_y[LOC_HELP_PROMPT], 1);
+			fa_store_put_clipped(COLOUR_WHITE,
+				angdroid_zh_tw_enabled() ? "按 ? 查看說明" :
+				"Press '?' for help.",
+				ctx->scr_places_y[LOC_HELP_PROMPT], 1,
+				Term->wid - 2);
 
 		ctx->flags &= ~(STORE_FRAME_CHANGE);
 	}
 
 	if (ctx->flags & (STORE_GOLD_CHANGE)) {
-		prt(format("Gold Remaining: %9ld", (long)player->au),
-				ctx->scr_places_y[LOC_AU], ctx->scr_places_x[LOC_AU]);
+		char gold_text[80];
+		strnfmt(gold_text, sizeof(gold_text),
+			angdroid_zh_tw_enabled() ? "剩餘金幣：%9ld" :
+			"Gold Remaining: %9ld", (long)player->au);
+		fa_store_put_clipped(COLOUR_WHITE, gold_text,
+			ctx->scr_places_y[LOC_AU], ctx->scr_places_x[LOC_AU],
+			Term->wid - (int)ctx->scr_places_x[LOC_AU]);
 		ctx->flags &= ~(STORE_GOLD_CHANGE);
 	}
 }
