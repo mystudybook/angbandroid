@@ -24,6 +24,11 @@ for name, fragment in checks.items():
     if fragment not in function:
         raise SystemExit(f"FAIL: native menu hint integration missing {name}")
 
+if "soft_kbd_replace(buf);" not in function:
+    raise SystemExit("FAIL: empty menu must clear/replace stale Android shortcuts")
+if "soft_kbd_flash(buf);" in function or "if (strlen(buf) > 0)" in function:
+    raise SystemExit("FAIL: old soft keyboard hint accumulation survived")
+
 for forbidden in ("menu->filter_list[oid]", "temp[current++]"):
     if forbidden in function:
         raise SystemExit(f"FAIL: unsafe legacy shortcut hint pattern: {forbidden}")
