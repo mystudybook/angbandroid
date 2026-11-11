@@ -1189,14 +1189,13 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 		 * visible page. Never put a popup outside the current list. */
 		int popup_row = angdroid_store_menu_screen_row(
 			oid, m->top, m->active.row, m->active.page_rows);
-		bool purchased;
 
 		if (!ctx->list || !angdroid_store_stock_index_valid(
 			oid, store->stock_num, z_info->store_inven_max) ||
 			!ctx->list[oid] || popup_row < 0)
 			return false;
 
-		purchased = context_menu_store_item(ctx, oid, 1, popup_row);
+		(void)context_menu_store_item(ctx, oid, 1, popup_row);
 		ctx->flags |= (STORE_FRAME_CHANGE | STORE_GOLD_CHANGE);
 
 		/* Let the game handle any core commands (equipping, etc) */
@@ -1206,13 +1205,13 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 		notice_stuff(player);
 		handle_stuff(player);
 
-		if (purchased) {
-			/* Display the store */
-			store_display_recalc(ctx);
-			store_menu_recalc(m);
-			store_redraw(ctx);
-		}
-
+		/* A modal popup restores its previous screen even after Cancel or
+		 * Examine. Always redraw against the current stock generation so
+		 * an intervening stock refresh cannot leave stale header/gold data.
+		 * menu_select() redraws the item rows when control returns. */
+		store_display_recalc(ctx);
+		store_menu_recalc(m);
+		store_redraw(ctx);
 		return true;
 	} else if (event->type == EVT_MOUSE) {
 		if (event->mouse.button == 2) {
