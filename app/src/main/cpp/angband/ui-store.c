@@ -810,6 +810,13 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		if (amt <= 0) return false;
 	}
 
+	/* A quantity dialog can outlive the row from which it started. */
+	if (ctx->stock_changed || !ctx->list ||
+		!angdroid_store_stock_index_valid(
+			item, store->stock_num, z_info->store_inven_max) ||
+		ctx->list[item] != obj)
+		return false;
+
 	/* Get desired object */
 	dummy = object_new();
 	object_copy_amt(dummy, obj, amt);
@@ -855,6 +862,16 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		/* The temporary stack exists even if the player rejects the
 		 * final price. Release it before returning from cancellation. */
 		if (!response) {
+			object_delete(NULL, NULL, &dummy);
+			return false;
+		}
+
+		/* Revalidate after the confirmation screen before queueing a
+		 * command that otherwise might retain a dangling stock pointer. */
+		if (ctx->stock_changed || !ctx->list ||
+			!angdroid_store_stock_index_valid(
+				item, store->stock_num, z_info->store_inven_max) ||
+			ctx->list[item] != obj) {
 			object_delete(NULL, NULL, &dummy);
 			return false;
 		}
@@ -1029,7 +1046,7 @@ static int store_get_stock(struct menu *m)
 	selected = angdroid_store_selected_index(
 		e.type == EVT_SELECT, m->cursor, ctx->store->stock_num,
 		z_info->store_inven_max);
-	if (selected < 0 || !ctx->list[selected])
+	if (ctx->stock_changed || selected < 0 || !ctx->list[selected])
 		return -1;
 	return selected;
 }
@@ -1162,6 +1179,15 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 	string_free(labels);
 
 	screen_load();
+
+	/* Even an unchanged index can now refer to another product after a
+	 * store refresh while the native popup was open. Reject that result
+	 * before Examine/Buy receives a stale or freed object pointer. */
+	if (ctx->stock_changed || !ctx->list ||
+		!angdroid_store_stock_index_valid(
+			oid, store->stock_num, z_info->store_inven_max) ||
+		ctx->list[oid] != obj)
+		return false;
 
 	switch (selected) {
 		case ACT_EXAMINE:
