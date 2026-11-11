@@ -80,6 +80,60 @@ static void money_catalog(void)
     CHECK(out[0] == '\0');
 }
 
+static void chest_cases(void)
+{
+    static const char *traps[][2] = {
+        { "locked", "已上鎖" },
+        { "unlocked", "已解鎖" },
+        { "disarmed", "已解除陷阱" },
+        { "empty", "空箱" },
+        { "multiple traps", "多重陷阱" },
+        { "gas trap", "氣體陷阱" },
+        { "poison needle", "毒針" },
+        { "a strange rune", "奇異符文" },
+        { "summoning runes", "召喚符文" },
+        { "explosion device", "爆炸裝置" },
+        { "gleaming black runes", "閃亮的黑色符文" }
+    };
+    char out[128];
+    size_t i, cap, end;
+    for (i = 0; i < sizeof(traps)/sizeof(traps[0]); ++i) {
+        strcpy(out, "寶箱");
+        end = strlen(out);
+        CHECK(angdroid_obj_desc_append_chest_status(
+            out, sizeof(out), &end, traps[i][0], true));
+        CHECK(strstr(out, traps[i][1]) != NULL);
+        CHECK(end == strlen(out));
+        CHECK(strcmp(out + end - strlen("）"), "）") == 0);
+        strcpy(out, "Chest");
+        end = strlen(out);
+        CHECK(angdroid_obj_desc_append_chest_status(
+            out, sizeof(out), &end, traps[i][0], false));
+        CHECK(strncmp(out, "Chest (", strlen("Chest (")) == 0);
+        CHECK(out[end - 1] == ')');
+    }
+    for (cap = 0; cap <= 64; ++cap) {
+        char memory[70];
+        char *dst = memory + 1;
+        size_t start = strlen("箱"), used = start;
+        bool accepted;
+        memset(memory, '#', sizeof(memory));
+        if (cap > start) memcpy(dst, "箱", start + 1);
+        accepted = angdroid_obj_desc_append_chest_status(
+            dst, cap, &used, "gleaming black runes", true);
+        CHECK(memory[0] == '#');
+        CHECK(memory[cap + 1] == '#');
+        CHECK(memory[69] == '#');
+        if (accepted) {
+            CHECK(used < cap && used > start);
+            CHECK(strcmp(dst + used - strlen("）"), "）") == 0);
+        } else {
+            CHECK(used == start);
+            if (cap > start) CHECK(strcmp(dst, "箱") == 0);
+        }
+    }
+}
+
 static void boundaries(void)
 {
     const char *flavors[] = { "金幣😀", "天藍色", "Damascene Steel", "& # ~ |" };
@@ -134,6 +188,7 @@ int main(void)
 {
     basic_cases();
     money_catalog();
+    chest_cases();
     boundaries();
     printf("PASS: FAangband final basic/unknown/money UTF-8 (%lu checks)\n",
         checks);
