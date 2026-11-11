@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband combat/charges/status/inscriptions: append whole Unicode-safe
+# bracket and brace groups; assert numeric and small-buffer behavior.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_obj_details_utf8.c" \
+    -o "$BUILD_DIR/test_faangband_obj_details_utf8"
+"$BUILD_DIR/test_faangband_obj_details_utf8"
+
 # FAangband's legacy grammar had unbounded literal buf[end++] writes.
 # This C99 regression covers original grammar, tiny buffers and UTF-8 edges.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
