@@ -61,14 +61,11 @@ resize = STORE.split("static void store_menu_resize(", 1)[1].split(
 assert "store_display_recalc(ctx);" in resize
 assert "STORE_FRAME_CHANGE | STORE_GOLD_CHANGE" in resize
 assert "store_redraw(ctx);" in resize
-assert "menu_refresh(m, false);" in resize
-assert resize.index("store_redraw(ctx);") < resize.index("menu_refresh(m, false);")
-assert "m->active.page_rows > 0" in resize
-assert "m->active.width > 0" in resize
-assert "m->active.page_rows <= Term->hgt - m->active.row" in resize
-assert "m->active.width <= Term->wid - m->active.col" in resize
+assert "menu_refresh(m, false);" not in resize
 assert "store_menu_handle,\n\tstore_menu_resize" in STORE
 assert "menu->row_funcs->resize(menu);" in MENU
+assert "angdroid_fa_menu_region_visible(" in MENU
+assert "menu_refresh(menu, popup);" in MENU
 assert "if (cursor != menu->cursor)" in MENU
 
 recalc = STORE.split("static void store_display_recalc(", 1)[1].split(
