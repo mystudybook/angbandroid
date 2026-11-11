@@ -73,7 +73,7 @@ assert "size_t tag_capacity;" in keyboard
 assert "reserved = nkeys < remaining ? nkeys : remaining;" in keyboard
 assert "tag_capacity = sizeof(buf) - reserved;" in keyboard
 assert "buf, tag_capacity, &used, sel" in keyboard
-assert "if (oid < 0) continue;" in keyboard
+assert "if (oid < 0 || !fa_menu_navigation_is_valid(menu, cursor))" in keyboard
 assert "temp[current++] = sel;" not in keyboard
 assert "oid = menu->filter_list[oid]" not in keyboard
 assert "my_strcat(buf, menu->cmd_keys, sizeof(buf));" in keyboard
