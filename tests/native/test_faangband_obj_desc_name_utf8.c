@@ -34,7 +34,7 @@ static void original_grammar(void)
     expect("& Sta|ff|ves|", NULL, true, "Staves");
     expect("& # Ring~", "Adamantium", false, "Adamantium Ring");
     expect("& # Ring~", "精金", true, "精金 Rings");
-    expect("a # of #", "紅寶石", false, "a 紅寶石 of ");
+    expect("a # of #", "紅寶石", false, "a 紅寶石 of 紅寶石");
     expect("魔法|長劍|短劍|", NULL, false, "魔法長劍");
     expect("魔法|長劍|短劍|", NULL, true, "魔法短劍");
     expect("~", NULL, true, "s");
