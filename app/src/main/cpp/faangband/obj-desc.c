@@ -31,6 +31,7 @@
 #include "../angband/zh-tw-item-grammar.h"
 #include "../angband/obj-desc-suffix-utf8.h"
 #include "../angband/obj-desc-name-utf8.h"
+#include "obj-desc-details-utf8.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -559,7 +560,7 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
  * Add player-defined inscriptions or game-defined descriptions
  */
 static size_t obj_desc_inscrip(const struct object *obj, char *buf,
-		size_t max, size_t end, const struct player *p)
+		size_t max, size_t end, const struct player *p, bool translated_ui)
 {
 	const char *u[6] = { 0, 0, 0, 0, 0, 0 };
 	int n = 0;
@@ -571,35 +572,29 @@ static size_t obj_desc_inscrip(const struct object *obj, char *buf,
 	/* Use special inscription, if any */
 	if (!object_flavor_is_aware(obj)) {
 		if (tval_can_have_charges(obj) && (obj->pval == 0))
-			u[n++] = "empty";
+			u[n++] = angdroid_faangband_status_ui_name("empty", translated_ui);
 		if (object_flavor_was_tried(obj))
-			u[n++] = "tried";
+			u[n++] = angdroid_faangband_status_ui_name("tried", translated_ui);
 	}
 
 	/* Note curses */
 	if (obj->known->curses)
-		u[n++] = "cursed";
+		u[n++] = angdroid_faangband_status_ui_name("cursed", translated_ui);
 
 	/* Note ignore */
 	if (p && ignore_item_ok(p, obj))
-		u[n++] = "ignore";
+		u[n++] = angdroid_faangband_status_ui_name("ignore", translated_ui);
 
 	/* Note unknown properties */
 	if (!object_runes_known(obj) && (obj->known->notice & OBJ_NOTICE_ASSESSED))
-		u[n++] = "??";
+		u[n++] = angdroid_faangband_status_ui_name("??", translated_ui);
 
-	if (n) {
-		int i;
-		for (i = 0; i < n; i++) {
-			if (i == 0)
-				strnfcat(buf, max, &end, " {");
-			strnfcat(buf, max, &end, "%s", u[i]);
-			if (i < n - 1)
-				strnfcat(buf, max, &end, ", ");
-		}
-
-		strnfcat(buf, max, &end, "}");
-	}
+	/* All visible notes (including player-owned Unicode text) and
+	 * engine markers fit as one { ... } unit, or are omitted together.
+	 * No leaked leading '{' and no partial UTF-8 user inscription. */
+	if (n)
+		(void)angdroid_faangband_append_inscription(
+			buf, max, &end, u, (size_t)n);
 
 	return end;
 }
@@ -610,16 +605,23 @@ static size_t obj_desc_inscrip(const struct object *obj, char *buf,
  * and "??" to not fully known unflavored items 
  */
 static size_t obj_desc_aware(const struct object *obj, char *buf, size_t max,
-							 size_t end)
+							 size_t end, bool translated_ui)
 {
-	if (!object_flavor_is_aware(obj)) {
-		strnfcat(buf, max, &end, " {unseen}");
-	} else if (!object_runes_known(obj)) {
-		strnfcat(buf, max, &end, " {??}");
-	} else if (obj->known->curses) {
-		strnfcat(buf, max, &end, " {cursed}");
-	}
+	const char *marker = NULL;
+	if (!object_flavor_is_aware(obj))
+		marker = "unseen";
+	else if (!object_runes_known(obj))
+		marker = "??";
+	else if (obj->known->curses)
+		marker = "cursed";
 
+	if (marker) {
+		const char *labels[1];
+		labels[0] = angdroid_faangband_status_ui_name(
+			marker, translated_ui);
+		(void)angdroid_faangband_append_inscription(
+			buf, max, &end, labels, 1);
+	}
 	return end;
 }
 
@@ -704,10 +706,13 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 
 		end = obj_desc_charges(obj, buf, max, end, mode);
 
+		bool translated_ui = (mode & ODESC_ZH_TW) &&
+			!(mode & (ODESC_SPOIL | ODESC_TERSE)) &&
+			angdroid_zh_tw_enabled();
 		if (mode & ODESC_STORE)
-			end = obj_desc_aware(obj, buf, max, end);
+			end = obj_desc_aware(obj, buf, max, end, translated_ui);
 		else
-			end = obj_desc_inscrip(obj, buf, max, end, p);
+			end = obj_desc_inscrip(obj, buf, max, end, p, translated_ui);
 	}
 
 	return end;
