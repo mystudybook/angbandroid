@@ -243,8 +243,7 @@ static void display_scrolling(struct menu *menu, int cursor, int *top, region *l
 
 static char scroll_get_tag(struct menu *menu, int pos)
 {
-	return angdroid_fa_menu_selection_key(
-		menu->selections, pos - menu->top);
+	return angdroid_fa_menu_selection_key(menu->selections, pos);
 }
 
 static ui_event scroll_process_direction(struct menu *m, int dir)
@@ -327,8 +326,7 @@ static void object_skin_display(struct menu *menu, int cursor, int *top, region 
 
 static char object_skin_get_tag(struct menu *menu, int pos)
 {
-	return angdroid_fa_menu_selection_key(
-		menu->selections, pos - menu->top);
+	return angdroid_fa_menu_selection_key(menu->selections, pos);
 }
 
 static ui_event object_skin_process_direction(struct menu *m, int dir)
@@ -595,7 +593,7 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 
 	if (!(flags & MN_NO_TAGS)) {
 		if (flags & MN_REL_TAGS)
-			sel = menu->skin->get_tag(menu, pos);
+			sel = menu->skin->get_tag(menu, pos - top);
 		else if (menu->selections && !(flags & MN_PVT_TAGS))
 			sel = angdroid_fa_menu_selection_key(menu->selections, pos);
 		else if (menu->row_funcs->get_tag)
@@ -692,7 +690,13 @@ bool menu_handle_mouse(struct menu *menu, const ui_event *in,
 		new_cursor = menu->skin->get_cursor(in->mouse.y, in->mouse.x,
 				count, menu->top, &menu->active);
 	
-		if (is_valid_row(menu, new_cursor)) {
+		/* Hidden rows can be selected by an explicit tag, but a tap on
+		 * blank/hidden screen cells must not select them. */
+		if (is_valid_row(menu, new_cursor) &&
+			(!menu->row_funcs->valid_row ||
+			menu->row_funcs->valid_row(menu,
+				angdroid_fa_menu_source_index(menu->filter_list,
+					new_cursor, count, menu->count)) == MN_ROW_VALID)) {
 			if (new_cursor == menu->cursor || !(menu->flags & MN_DBL_TAP))
 				out->type = EVT_SELECT;
 			else
@@ -903,6 +907,7 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 	if (popup)
 		screen_save();
 
+	menu_ensure_cursor_valid(menu);
 	/* Stop on first unhandled event */
 	while (!(in.type & notify)) {
 		ui_event out = EVENT_EMPTY;
@@ -941,6 +946,7 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 			menu_calc_size(menu);
 			if (menu->row_funcs->resize)
 				menu->row_funcs->resize(menu);
+			menu_ensure_cursor_valid(menu);
 
 			/* Repaint even when the cursor has not moved. The store,
 			 * equipment, inventory and generic menus share this loop.
