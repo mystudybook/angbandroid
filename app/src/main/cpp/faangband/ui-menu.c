@@ -875,12 +875,12 @@ static void keys_to_ui(struct menu *menu)
 	for (cursor = 0; cursor < n; cursor++) {
 		int oid = angdroid_fa_menu_source_index(
 			menu->filter_list, cursor, n, menu->count);
-		menu_row_validity_t row_valid = MN_ROW_VALID;
 		char sel = 0;
-		if (oid < 0) continue;
-		if (menu->row_funcs->valid_row)
-			row_valid = menu->row_funcs->valid_row(menu, oid);
-		if (row_valid != MN_ROW_VALID) continue;
+		/* One visibility rule for the Android hint, tap target, keyboard
+		 * arrows and auto-generated relative shortcuts. A hidden entry
+		 * remains available only through a deliberate explicit tag. */
+		if (oid < 0 || !fa_menu_navigation_is_valid(menu, cursor))
+			continue;
 		if (!(menu->flags & MN_NO_TAGS)) {
 			if (menu->flags & MN_REL_TAGS) {
 				bool paged = fa_menu_relative_tags_paged(menu);
