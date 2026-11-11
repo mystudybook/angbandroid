@@ -24,6 +24,11 @@ for name, fragment in checks.items():
     if fragment not in function:
         raise SystemExit(f"FAIL: native menu hint integration missing {name}")
 
+if "angdroid_menu_empty_shop_key_visible(" not in function:
+    raise SystemExit("FAIL: stock-only keys still advertised in empty shops")
+if "(menu->flags & MN_ALLOW_EMPTY_INPUT) && n <= 0" not in function:
+    raise SystemExit("FAIL: empty shop hint filter leaks to normal menus")
+
 if "soft_kbd_replace(buf);" not in function:
     raise SystemExit("FAIL: empty menu must clear/replace stale Android shortcuts")
 if "soft_kbd_flash(buf);" in function or "if (strlen(buf) > 0)" in function:
