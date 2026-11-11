@@ -642,6 +642,7 @@ static struct object **floor_list;
 static struct object **throwing_list;
 static olist_detail_t olist_mode = 0;
 static int item_mode;
+static int item_prompt_columns;
 static cmd_code item_cmd;
 static bool newmenu = false;
 static bool allow_all = false;
@@ -1086,14 +1087,54 @@ static void item_menu_browser(int oid, void *data, const region *local_area)
 /**
  * Display list items to choose from
  */
+/* Recompute menu coordinates on terminal rotation.  Item names, labels
+ * and prompts use terminal columns, and optional details yield to the name
+ * on phones with fewer cells.  No item identity or selection keys change. */
+static void fa_item_menu_resize(struct menu *m)
+{
+    int width, height;
+    bool footer;
+    angdroid_item_selection_layout layout;
+
+    Term_get_size(&width, &height);
+    olist_render_mode = fa_object_list_visible_extras(olist_mode, width);
+    ex_width = 0;
+    if (olist_render_mode & OLIST_PRICE) ex_width += 9;
+    if (olist_render_mode & OLIST_FAIL) ex_width += 10;
+    if (olist_render_mode & OLIST_RECHARGE) ex_width += 10;
+    if (olist_render_mode & OLIST_WEIGHT) ex_width += 9;
+
+    footer = (olist_mode & OLIST_QUIVER) &&
+        player->upkeep->command_wrk == USE_INVEN &&
+        player->upkeep->quiver_cnt > 0;
+    if (!angdroid_item_selection_region(width, height,
+            item_prompt_columns, max_len,
+            angdroid_utf8_display_columns(header), ex_width, m->count,
+            footer, &layout)) {
+        area.col = 0;
+        area.row = 1;
+        area.width = 0;
+        area.page_rows = 0;
+        menu_layout(m, &area);
+        return;
+    }
+
+    area.col = layout.col;
+    area.row = layout.row;
+    area.width = layout.width;
+    area.page_rows = layout.page_rows;
+    ex_offset = angdroid_object_list_name_offset(
+        width, area.col, ex_width, max_len);
+    menu_layout(m, &area);
+}
+
 static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 {
 	menu_iter menu_f = { get_item_tag, get_item_validity, get_item_display,
-						 get_item_action, 0 };
+						 get_item_action, fa_item_menu_resize };
 	struct menu *m = menu_new(MN_SKIN_OBJECT, &menu_f);
 	ui_event evt = { 0 };
-	int ex_offset_ctr = 0;
-	int row, inscrip;
+	int inscrip;
 	struct object *obj = NULL;
 
 	/* Set up the menu */
@@ -1129,36 +1170,10 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	if (mode & OLIST_QUIVER && player->upkeep->quiver[0] != NULL)
 		max_len = MAX(max_len, 24);
 
-	if (olist_mode & OLIST_WEIGHT) {
-		ex_width += 9;
-		ex_offset_ctr += 9;
-	}
-	if (olist_mode & OLIST_PRICE) {
-		ex_width += 9;
-		ex_offset_ctr += 9;
-	}
-	if (olist_mode & OLIST_FAIL) {
-		ex_width += 10;
-		ex_offset_ctr += 10;
-	}
-
-	/* Set up the menu region */
-	area.page_rows = m->count;
-	area.row = 1;
-	area.col = MIN(Term->wid - 1 - (int) max_len - ex_width, prompt_size - 2);
-	if (area.col <= 3)
-		area.col = 0;
-	ex_offset = MIN(max_len, (size_t)(Term->wid - 1 - ex_width - area.col));
-	while (strlen(header) < max_len + ex_width + ex_offset_ctr) {
-		my_strcat(header, " ", sizeof(header));
-		if (strlen(header) > sizeof(header) - 2) break;
-	}
-	area.width = MAX(max_len, strlen(header));
-
-	for (row = area.row; row < area.row + area.page_rows; row++)
-		prt("", row, MAX(0, area.col - 1));
-
-	menu_layout(m, &area);
+	/* Device rotation and Chinese labels change the available cell width.
+	 * The shared region helper clamps dimensions and rows to the terminal. */
+	item_prompt_columns = prompt_size;
+	fa_item_menu_resize(m);
 
 	/* Choose */
 	evt = menu_select(m, 0, true);
