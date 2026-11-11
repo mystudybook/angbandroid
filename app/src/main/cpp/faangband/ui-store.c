@@ -277,8 +277,10 @@ static void store_display_recalc(struct store_context *ctx)
     } else {
         ctx->scr_places_y[LOC_HELP_CLEAR] =
             angdroid_store_safe_row(hgt - 2, hgt);
+        /* The last row belongs to Gold Remaining. Keep the compact
+         * help shortcut one row above it, outside the stock menu. */
         ctx->scr_places_y[LOC_HELP_PROMPT] =
-            angdroid_store_safe_row(hgt - 1, hgt);
+            angdroid_store_safe_row(hgt - 2, hgt);
         loc.page_rows = -2;
     }
     menu_layout(m, &loc);
@@ -492,7 +494,7 @@ static void store_redraw(struct store_context *ctx)
 		if ((ctx->flags & STORE_SHOW_HELP) &&
 			Term->wid >= 70 && Term->hgt >= 16)
 			store_display_help(ctx);
-		else
+		else if (Term->hgt >= 7)
 			fa_store_put_clipped(COLOUR_WHITE,
 				angdroid_zh_tw_enabled() ? "按 ? 查看說明" :
 				"Press '?' for help.",
@@ -1237,10 +1239,22 @@ static void store_menu_resize(struct menu *m)
 {
 	struct store_context *ctx = menu_priv(m);
 
-	if (!ctx) return;
+	if (!ctx || !Term) return;
 	store_display_recalc(ctx);
 	ctx->flags |= STORE_FRAME_CHANGE | STORE_GOLD_CHANGE;
 	store_redraw(ctx);
+
+	/* Term_clear() above erases the goods. The menu driver only refreshes
+	 * automatically when cursor selection changes, so a pure resize left
+	 * blank stock rows until the next key. Redraw immediately, but do not
+	 * access a menu region that collapsed on an extremely short screen. */
+	if (m->active.row >= 0 && m->active.row < Term->hgt &&
+		m->active.col >= 0 && m->active.col < Term->wid &&
+		m->active.page_rows > 0 &&
+		m->active.page_rows <= Term->hgt - m->active.row &&
+		m->active.width > 0 &&
+		m->active.width <= Term->wid - m->active.col)
+		menu_refresh(m, false);
 }
 
 static region store_menu_region = { 1, 4, -1, -2 };
