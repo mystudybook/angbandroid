@@ -27,6 +27,7 @@ extern int Term_control_quantity(const char *msg, int max_value, int initial_val
 /* For control keys in android */
 extern void soft_kbd_flash(const char *keys);
 extern void soft_kbd_linger(const char *keys);
+extern void soft_kbd_replace(const char *keys);
 extern void soft_kbd_clear(int force);
 extern void soft_kbd_flush();
 extern void soft_kbd_append(const char *keys);
