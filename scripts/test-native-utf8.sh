@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband ground-item list direction, zero/huge distance, CJK
+# display widths, and popup geometry at rotation boundaries.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_object_list_location.c" \
+    -o "$BUILD_DIR/test_faangband_object_list_location"
+"$BUILD_DIR/test_faangband_object_list_location"
+
 # FAangband dungeon list and store share Unicode-safe name and cell
 # geometry helpers with the original Angband engine.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
