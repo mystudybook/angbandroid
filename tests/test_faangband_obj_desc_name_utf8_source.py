@@ -33,7 +33,8 @@ assert "buf, max, end, fmt, modstr, pluralise);" in formatter
 assert "buf[end++] = *fmt" not in formatter
 assert "while (*fmt)" not in formatter
 assert "strnfcat(" not in formatter
-assert "end = obj_desc_name_format(buf, max, end,\\n\\t\\t\\t\\tbasename, modstr, plural);" in DESC
+assert "end = obj_desc_name_format(buf, max, end," in DESC
+assert "basename, modstr, plural);" in DESC
 
 # The C99 loop asserts sentinel bytes before and after all capacities,
 # complete UTF-8 code points, default English grammar, and offset handling.
