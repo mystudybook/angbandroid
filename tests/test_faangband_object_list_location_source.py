@@ -45,8 +45,8 @@ assert "…另有" in section or "……另有" in section
 
 formatall = LIST.split("static void object_list_format_textblock(", 1)[1].split(
     "void object_list_show_subwindow(", 1)[0]
-assert '(angdroid_zh_tw_enabled() ? "視野內" : "You can see")' in formatall
-assert '(angdroid_zh_tw_enabled() ? "感知範圍內" :' in formatall
+assert 'angdroid_zh_tw_enabled() ? "視野內" : "You can see"' in formatall
+assert 'angdroid_zh_tw_enabled() ? "感知範圍內" :' in formatall
 assert "ODESC_ALTNUM" not in formatall  # Engine count lives in obj-list.c
 
 subwindow = LIST.split("void object_list_show_subwindow(", 1)[1].split(
