@@ -1038,55 +1038,59 @@ static bool get_item_action(struct menu *menu, const ui_event *event, int oid)
  */
 static void item_menu_browser(int oid, void *data, const region *local_area)
 {
-	char tmp_val[80];
-	int count, j, i = num_obj;
-	int quiver_slots = (player->upkeep->quiver_cnt + z_info->quiver_slot_size - 1)
-		/ z_info->quiver_slot_size;
+	int i = num_obj, j, quiver_slots, col, max_columns;
+	char tmp_val[80], label[16], visible[80];
 
-	/* Set up to output below the menu */
-	text_out_hook = text_out_to_screen;
-	text_out_wrap = 0;
-	text_out_indent = local_area->col - 1;
-	text_out_pad = 1;
-	prt("", local_area->row + local_area->page_rows, MAX(0, local_area->col - 1));
-	Term_gotoxy(local_area->col, local_area->row + local_area->page_rows);
+	/* The quiver footer must be outside the selectable item rows, even
+	 * after scrolling, switching item lists, or Android screen rotation.
+	 * Do not call Term_gotoxy() or print outside the terminal. */
+	if (!Term || !local_area || local_area->page_rows <= 0)
+		return;
+	col = local_area->col;
+	if (col < 0 || col >= Term->wid)
+		return;
+	max_columns = MIN(local_area->width, Term->wid - col);
+	if (max_columns <= 0 || !(olist_mode & OLIST_QUIVER) ||
+		player->upkeep->command_wrk != USE_INVEN)
+		return;
 
-	/* If we're printing pack slots the quiver takes up */
-	if (olist_mode & OLIST_QUIVER && player->upkeep->command_wrk == USE_INVEN) {
-		/* Quiver may take multiple lines */
-		for (j = 0; j < quiver_slots; j++, i++) {
-			const char *fmt = "in Quiver: %d missile%s\n";
-			char letter = all_letters_nohjkl[i];
+	/* Avoid divide-by-zero in malformed or not-yet-initialized data. */
+	if (z_info->quiver_slot_size <= 0 || player->upkeep->quiver_cnt <= 0)
+		return;
+	quiver_slots = player->upkeep->quiver_cnt /
+		z_info->quiver_slot_size +
+		(player->upkeep->quiver_cnt % z_info->quiver_slot_size != 0);
+	for (j = 0; j < quiver_slots; ++j, ++i) {
+		int line = angdroid_item_selection_footer_row(local_area->row,
+			local_area->page_rows, Term->hgt, j);
+		int count;
+		size_t label_cols;
+		if (line < 0 || i >= (int)strlen(all_letters_nohjkl))
+			break;
+		if (j == quiver_slots - 1)
+			count = player->upkeep->quiver_cnt -
+				z_info->quiver_slot_size * (quiver_slots - 1);
+		else
+			count = z_info->quiver_slot_size;
 
-			/* Number of missiles in this "slot" */
-			if (j == quiver_slots - 1)
-				count = player->upkeep->quiver_cnt - (z_info->quiver_slot_size *
-													  (quiver_slots - 1));
-			else
-				count = z_info->quiver_slot_size;
-
-			/* Print the (disabled) label */
-			strnfmt(tmp_val, sizeof(tmp_val), "%c) ", letter);
-			text_out_c(COLOUR_SLATE, tmp_val, local_area->row + i, local_area->col);
-
-			/* Print the count */
-			strnfmt(tmp_val, sizeof(tmp_val), fmt, count,
-					count == 1 ? "" : "s");
-			text_out_c(COLOUR_L_UMBER, tmp_val, local_area->row + i, local_area->col + 3);
-		}
+		prt("", line, MAX(col - 1, 0));
+		strnfmt(label, sizeof(label), "%c) ", all_letters_nohjkl[i]);
+		label_cols = angdroid_menu_copy_columns(
+			visible, sizeof(visible), label, (size_t)max_columns);
+		if (visible[0])
+			c_put_str(COLOUR_SLATE, visible, line, col);
+		if (angdroid_zh_tw_enabled())
+			strnfmt(tmp_val, sizeof(tmp_val), "箭袋：%d 支彈藥", count);
+		else
+			strnfmt(tmp_val, sizeof(tmp_val),
+				"in Quiver: %d missile%s",
+				count, count == 1 ? "" : "s");
+		(void)angdroid_menu_copy_columns(visible, sizeof(visible),
+			tmp_val, (size_t)max_columns - label_cols);
+		if (visible[0])
+			c_put_str(COLOUR_L_UMBER, visible, line,
+				col + (int)label_cols);
 	}
-
-	/* Always print a blank line */
-	prt("", local_area->row + i, MAX(0, local_area->col - 1));
-
-	/* Blank out whole tiles */
-	while ((tile_height > 1) && ((local_area->row + i) % tile_height != 0)) {
-		i++;
-		prt("", local_area->row + i, MAX(0, local_area->col - 1));
-	}
-
-	text_out_pad = 0;
-	text_out_indent = 0;
 }
 
 /**
