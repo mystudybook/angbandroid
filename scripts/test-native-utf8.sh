@@ -231,6 +231,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_spells_locale"
 "$BUILD_DIR/test_faangband_spells_locale"
 
+# FAangband-exclusive artifact stories: canonical English and unknown-name fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_artifact_lore_locale.c" \
+    -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
+"$BUILD_DIR/test_faangband_artifact_lore_locale"
+
 # All 41 FAangband-only artifact names with English/standard fallback.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_artifact_names_locale.c" \
