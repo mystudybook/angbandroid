@@ -817,6 +817,7 @@ static void keys_to_ui(struct menu *menu)
 {
 	char buf[256] = "";
 	size_t used = 0;
+	size_t tag_capacity;
 	int cursor;
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 
@@ -827,6 +828,23 @@ static void keys_to_ui(struct menu *menu)
 				(void)angdroid_fa_menu_add_key(
 					buf, sizeof(buf), &used, (char)('0' + cursor));
 		}
+	}
+
+	/* Keep room at the end of the hint for fixed commands and
+	 * screen switching even if thousands of rows have selectable tags. */
+	{
+		size_t reserved = 0, remaining = sizeof(buf) - used - 1;
+		if (menu->cmd_keys) {
+			size_t nkeys = strlen(menu->cmd_keys);
+			reserved = nkeys < remaining ? nkeys : remaining;
+		}
+		remaining -= reserved;
+		if (menu->switch_keys) {
+			size_t nkeys = strlen(menu->switch_keys);
+			reserved += nkeys < remaining ? nkeys : remaining;
+		}
+		/* buf has one NUL slot. The tag loop must leave fixed keys room. */
+		tag_capacity = sizeof(buf) - reserved;
 	}
 
 	/* A filtered view changes the actual row index on *each* iteration.
@@ -858,7 +876,7 @@ static void keys_to_ui(struct menu *menu)
 			}
 		}
 		if (sel && !angdroid_fa_menu_add_key(
-			buf, sizeof(buf), &used, sel))
+			buf, tag_capacity, &used, sel))
 			break;
 	}
 
