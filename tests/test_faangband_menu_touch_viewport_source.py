@@ -54,8 +54,12 @@ cols_hit = MENU.split("static int columns_get_cursor(", 1)[1].split(
     "static void display_columns(", 1)[0]
 cols_draw = MENU.split("static void display_columns(", 1)[1].split(
     "static char column_get_tag(", 1)[0]
+assert "rows <= 0 || n <= 0 || loc->width <= 0" in cols_hit
+assert "if (rows <= 0 || loc->width <= 0) return;" in cols_draw
+assert "for (r = 0; r < rows; ++r)" in cols_draw
+assert "fa_menu_erase_clipped(row + r, col, loc->width);" in cols_draw
+assert "if (n <= 0) return;" in cols_draw
 for func in (cols_hit, cols_draw):
-    assert "rows <= 0 || n <= 0 || loc->width <= 0" in func
     assert "angdroid_menu_use_compact_columns(n, rows, loc->width, 8)" in func
     assert "angdroid_menu_fit_column_width(23, loc->width, 0, cols)" in func
 assert "angdroid_menu_scrolling_hit(" in cols_hit
