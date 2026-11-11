@@ -89,7 +89,7 @@ assert "angdroid_zh_tw_identified_flavor_name(" in section
 assert "angdroid_zh_tw_known_item_name(" in section
 assert "translated_base = angdroid_obj_desc_append_suffix_atomic(" in section
 assert "if (!translated_base) {" in section
-assert "end = obj_desc_name_format(buf, max, end, basename, modstr, plural);" in section
+assert "end = obj_desc_name_format(buf, max, end,\\n\\t\\t\\t\\tbasename, modstr, plural);" in section
 assert "if (object_is_known_artifact(obj)) {" in section
 assert "obj->known->ego && !(mode & ODESC_NOEGO)" in section
 assert "obj->ego && store" in section
