@@ -361,9 +361,9 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 				buf, max, &end, flavored_display, false);
 	}
 
-	/* Only identified, already-visible kind labels can be translated.
-	 * Unidentified flavored objects continue to use the original name.
-	 * Never replace any canonical game string or regenerate appearance. */
+	/* When the appearance is not being displayed, a kind label may
+	 * be translated only after identification. Unknown appearances above
+	 * never reveal a kind effect. Canonical game strings remain intact. */
 	if (translated_ui && aware && !show_flavor && obj->kind->name)
 		localized_kind = angdroid_faangband_known_kind_ui_name(
 			obj->kind->name, tval_find_name(obj->tval), true);
@@ -387,8 +387,8 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 	}
 
 	if (!translated_base) {
-		/* Canonical English fallback, including all unknown flavors,
-		 * spoiler calls, and unchanged export/terse paths. */
+		/* If no complete Chinese display label fits, preserve the
+		 * original English formatter, including spoilers and exports. */
 		if (prefix)
 			end = obj_desc_name_prefix(buf, max, end, obj,
 				basename, modstr, terse, balanced, number);
