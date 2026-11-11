@@ -255,6 +255,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_menu_popup_filter"
 "$BUILD_DIR/test_faangband_menu_popup_filter"
 
+# Shopkeeper header touches must not trigger the item-list Back margin.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_menu_header_back.c" \
+    -o "$BUILD_DIR/test_menu_header_back"
+"$BUILD_DIR/test_menu_header_back"
+
 # FAangband empty shops, refreshed stock identity and cancel-safe purchases.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_store_stock_lifecycle.c" \
