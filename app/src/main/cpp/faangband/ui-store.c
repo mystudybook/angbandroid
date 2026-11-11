@@ -288,7 +288,7 @@ static void store_display_entry(struct menu *menu, int oid, bool cursor, int row
 	} else {
 		desc |= ODESC_FULL | ODESC_STORE;
 	}
-	object_desc(o_name, sizeof(o_name), obj, desc, player);
+	object_desc(o_name, sizeof(o_name), obj, desc | ODESC_ZH_TW, player);
 
 	/* Display the object */
 	c_put_str(obj->kind->base->attr, o_name, row, col);
@@ -550,7 +550,7 @@ static bool store_sell(struct store_context *ctx)
 
 	/* Get a full description */
 	object_desc(o_name, sizeof(o_name), temp_obj,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
 
 	/* Real store */
 	if (!store_is_home(store)) {
@@ -704,7 +704,7 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 		/* Describe the object (fully) */
 		object_desc(o_name, sizeof(o_name), dummy,
-			ODESC_PREFIX | ODESC_FULL | ODESC_STORE, player);
+			ODESC_PREFIX | ODESC_FULL | ODESC_STORE | ODESC_ZH_TW, player);
 
 		/* Extract the price for the entire stack */
 		price = price_item(store, dummy, false, dummy->number);
@@ -773,7 +773,7 @@ static void store_examine(struct store_context *ctx, int item)
 
 	/* Show full info in most stores, but normal info in player home */
 	tb = object_info(obj, OINFO_NONE);
-	object_desc(header, sizeof(header), obj, odesc_flags, player);
+	object_desc(header, sizeof(header), obj, odesc_flags | ODESC_ZH_TW, player);
 
 	textui_textblock_show(tb, area, header);
 	textblock_free(tb);
@@ -974,7 +974,7 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 	char header[120];
 
 	object_desc(header, sizeof(header), obj,
-		ODESC_PREFIX | ODESC_FULL | ((home) ? 0 : ODESC_STORE), player);
+		ODESC_PREFIX | ODESC_FULL | ((home) ? 0 : ODESC_STORE) | ODESC_ZH_TW, player);
 
 	labels = string_make(lower_case);
 	m->selections = labels;
