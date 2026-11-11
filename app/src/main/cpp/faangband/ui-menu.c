@@ -29,6 +29,7 @@
 #include "../angband/menu-hit-test.h"
 #include "../angband/menu-column-width.h"
 #include "../angband/menu-compact-layout.h"
+#include "../angband/menu-valid-cursor.h"
 #include "../curses/unicode_display.h"
 
 #include "droid.h"
@@ -487,6 +488,13 @@ static bool no_valid_row(struct menu *menu, int count)
 	return true;
 }
 
+/* Bridge the FA menu view to the bounded shared navigation helper.
+ * A horizontal move has dy == 0, so looping by dy alone can hang. */
+static int fa_menu_navigation_is_valid(void *context, int row)
+{
+	return is_valid_row((struct menu *)context, row);
+}
+
 /* 
  * Return a new position in the menu based on the key
  * pressed and the flags and various handler functions.
@@ -743,63 +751,61 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 {
 	bool eat = false;
 	int count = menu->filter_list ? menu->filter_count : menu->count;
-
-	/* Get the new cursor position from the menu item tags */
 	int new_cursor = get_cursor_key(menu, menu->top, in->key);
+
+	/* Explicit tag selection may target an offscreen row, but only if the
+	 * filtered/source index still maps to a valid item. */
 	if (new_cursor >= 0 && is_valid_row(menu, new_cursor)) {
 		if (!(menu->flags & MN_DBL_TAP) || new_cursor == menu->cursor)
 			out->type = EVT_SELECT;
 		else
 			out->type = EVT_MOVE;
-
 		menu->cursor = new_cursor;
 	} else if (in->key.code == ESCAPE) {
-		/* Escape stops us here */
 		out->type = EVT_ESCAPE;
 	} else if (count <= 0) {
-		/* Menus with no rows can't be navigated or used, so eat keypresses */
 		eat = true;
 	} else if (in->key.code == ' ') {
-		/* Try existing, known keys */
-		int rows = menu->active.page_rows;
-		int total = count;
-
-		if (rows < total) {
-			/* Go to start of next page */
-			menu->cursor += menu->active.page_rows;
-			if (menu->cursor >= total - 1) menu->cursor = 0;
-			menu->top = menu->cursor;
-	
+		/* Reaching count - 1 is legal. The former >= count - 1 check
+		 * jumped over the last item and even allowed disabled rows. */
+		int target = angdroid_menu_page_next_cursor(
+			menu->cursor, count, menu->active.page_rows);
+		int next = target < 0 ? -1 : angdroid_menu_find_valid_cursor(
+			target, count, 1, menu, fa_menu_navigation_is_valid);
+		if (next >= 0) {
+			menu->cursor = next;
+			menu->top = angdroid_fa_menu_clamp_top(
+				next, next, count, menu->active.page_rows);
 			out->type = EVT_MOVE;
 		} else {
 			eat = true;
 		}
 	} else if (in->key.code == KC_ENTER) {
-		out->type = EVT_SELECT;
+		/* A filtered list may become empty after a stock change. Enter
+		 * must not act on a stale or invalid selected item. */
+		if (is_valid_row(menu, menu->cursor))
+			out->type = EVT_SELECT;
+		else
+			eat = true;
 	} else {
-		/* Try directional movement */
 		int dir = target_dir(in->key);
-
 		if (dir && !no_valid_row(menu, count)) {
+			int previous = menu->cursor;
 			*out = menu->skin->process_dir(menu, dir);
-
 			if (out->type == EVT_MOVE) {
-				while (!is_valid_row(menu, menu->cursor)) {
-					/* Loop around */
-					if (menu->cursor > count - 1)
-						menu->cursor = 0;
-					else if (menu->cursor < 0)
-						menu->cursor = count - 1;
-					else
-						menu->cursor += ddy[dir];
+				int direction = ddy[dir] ? ddy[dir] : ddx[dir];
+				int next = angdroid_menu_find_valid_cursor(
+					menu->cursor, count, direction,
+					menu, fa_menu_navigation_is_valid);
+				if (next >= 0) {
+					menu->cursor = next;
+				} else {
+					menu->cursor = previous;
+					out->type = EVT_NONE;
 				}
-			
-				assert(menu->cursor >= 0);
-				assert(menu->cursor < count);
 			}
 		}
 	}
-
 	return eat;
 }
 
