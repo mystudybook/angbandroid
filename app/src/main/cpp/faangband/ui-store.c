@@ -55,6 +55,8 @@
 #include "../angband/zh-tw-store-text.h"
 #include "../angband/store-column-layout.h"
 #include "../angband/store-detail-text.h"
+#include "../angband/store-menu-row.h"
+#include "../angband/store-stock-guard.h"
 #include "../angband/menu-text-fit.h"
 #include "z-debug.h"
 
@@ -927,27 +929,25 @@ static bool store_process_command_key(struct keypress kp)
 /**
  * Select an item from the store's stock, and return the stock index
  */
-static int store_get_stock(struct menu *m, int oid)
+static int store_get_stock(struct menu *m)
 {
+	struct store_context *ctx = menu_priv(m);
 	ui_event e;
 	int no_act = m->flags & MN_NO_ACTION;
+	int selected;
 
-	/* Set a flag to make sure that we get the selection or escape
-	 * without running the menu handler */
+	/* Selection-only nested menu; canceled/invalidated inputs must not
+	 * buy or examine the previously highlighted stock index. */
 	m->flags |= MN_NO_ACTION;
 	e = menu_select(m, 0, true);
-	if (!no_act) {
+	if (!no_act)
 		m->flags &= ~MN_NO_ACTION;
-	}
 
-	if (e.type == EVT_SELECT) {
-		return m->cursor;
-	} else if (e.type == EVT_ESCAPE) {
-		return -1;
-	}
-
-	/* if we do not have a new selection, just return the original item */
-	return oid;
+	selected = angdroid_store_selected_index(
+		e.type == EVT_SELECT, m->cursor,
+		ctx->store->stock_num, z_info->store_inven_max);
+	return selected >= 0 && ctx->list && ctx->list[selected]
+		? selected : -1;
 }
 
 /** Enum for context menu entries */
@@ -1096,9 +1096,18 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 	struct store *store = ctx->store;
 	
 	if (event->type == EVT_SELECT) {
-		/* Hack -- there's no mouse event coordinates to use for */
-		/* menu_store_item, so fake one as if mouse clicked on letter */
-		bool purchased = context_menu_store_item(ctx, oid, 1, m->active.row + oid);
+		int popup_row = angdroid_store_menu_screen_row(
+			oid, m->top, m->active.row, m->active.page_rows);
+		bool purchased;
+
+		/* A shrink, filter update, or rotation may invalidate an existing
+		 * stock row. Never dereference or open a popup for stale data. */
+		if (!ctx->list || !angdroid_store_stock_index_valid(
+			oid, store->stock_num, z_info->store_inven_max) ||
+			!ctx->list[oid] || popup_row < 0)
+			return false;
+
+		purchased = context_menu_store_item(ctx, oid, 1, popup_row);
 		ctx->flags |= (STORE_FRAME_CHANGE | STORE_GOLD_CHANGE);
 
 		/* Let the game handle any core commands (equipping, etc) */
@@ -1129,8 +1138,13 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 					return false;
 
 				action = true;
-			} else if ((oid >= 0) && (event->mouse.y == m->active.row + oid)) {
-				/* if press is on a list item, so store item context */
+			} else if (region_inside(&m->active, event) &&
+				ctx->list && angdroid_store_stock_index_valid(
+					oid, store->stock_num, z_info->store_inven_max) &&
+				ctx->list[oid] &&
+				event->mouse.y == angdroid_store_menu_screen_row(
+					oid, m->top, m->active.row, m->active.page_rows)) {
+				/* Only the selected visible stock row may open this popup. */
 				context_menu_store_item(ctx, oid, event->mouse.x,
 										event->mouse.y);
 				action = true;
@@ -1170,7 +1184,7 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 					prt("Get which item? (Esc to cancel, Enter to select)",
 						0, 0);
 				}
-				oid = store_get_stock(m, oid);
+				oid = store_get_stock(m);
 				prt("", 0, 0);
 				if (oid >= 0) {
 					store_purchase(ctx, oid, false);
@@ -1182,7 +1196,7 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 				msg_flag = false;
 				prt("Examine which item? (ESC to cancel, Enter to select)",
 					0, 0);
-				oid = store_get_stock(m, oid);
+				oid = store_get_stock(m);
 				prt("", 0, 0);
 				if (oid >= 0) {
 					store_examine(ctx, oid);
