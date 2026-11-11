@@ -255,6 +255,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_menu_popup_filter"
 "$BUILD_DIR/test_faangband_menu_popup_filter"
 
+# FAangband empty shops, refreshed stock identity and cancel-safe purchases.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_store_stock_lifecycle.c" \
+    -o "$BUILD_DIR/test_faangband_store_stock_lifecycle"
+"$BUILD_DIR/test_faangband_store_stock_lifecycle"
+
 # FAangband store + inventory: match taps to scrolled visible rows, not old cursors.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_store_touch_flow.c" \
