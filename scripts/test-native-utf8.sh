@@ -243,6 +243,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband popup geometry after rotation and filtered source selection.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_popup_filter.c" \
+    -o "$BUILD_DIR/test_faangband_menu_popup_filter"
+"$BUILD_DIR/test_faangband_menu_popup_filter"
+
 # FAangband hidden/filtered entries: only actually visible rows may
 # emit relative shortcuts or Android soft keyboard hints.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
