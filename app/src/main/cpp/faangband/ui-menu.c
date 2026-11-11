@@ -31,6 +31,7 @@
 #include "../angband/menu-compact-layout.h"
 #include "../angband/menu-valid-cursor.h"
 #include "../angband/menu-visible-tags.h"
+#include "../angband/menu-popup-layout.h"
 #include "../curses/unicode_display.h"
 
 #include "droid.h"
@@ -392,11 +393,18 @@ static void display_columns(struct menu *menu, int cursor, int *top, region *loc
 	int col = loc->col, row = loc->row;
 	int rows = loc->page_rows, cols, colw;
 
-	if (rows <= 0 || n <= 0 || loc->width <= 0) return;
-	if (angdroid_menu_use_compact_columns(n, rows, loc->width, 8)) {
+	if (rows <= 0 || loc->width <= 0) return;
+	if (n > 0 &&
+		angdroid_menu_use_compact_columns(n, rows, loc->width, 8)) {
 		display_scrolling(menu, cursor, top, loc);
 		return;
 	}
+	/* A changed filter or rotated viewport may leave previously painted
+	 * columns behind. Wipe the full cell region before drawing the new set,
+	 * even when the filtered view now contains zero rows. */
+	for (r = 0; r < rows; ++r)
+		fa_menu_erase_clipped(row + r, col, loc->width);
+	if (n <= 0) return;
 	cols = 1 + (n - 1) / rows;
 	colw = angdroid_menu_fit_column_width(23, loc->width, 0, cols);
 	for (c = 0; c < cols && c < loc->width / colw; c++) {
@@ -1314,7 +1322,8 @@ size_t menu_dynamic_longest_entry(struct menu *m)
 	struct menu_entry *entry;
 
 	for (entry = menu_priv(m); entry; entry = entry->next) {
-		current = strlen(entry->text);
+		current = entry->text ?
+			angdroid_utf8_display_columns(entry->text) : 0;
 		if (current > biggest)
 			biggest = current;
 	}
@@ -1324,28 +1333,26 @@ size_t menu_dynamic_longest_entry(struct menu *m)
 
 void menu_dynamic_calc_location(struct menu *m, int mx, int my)
 {
-	region r;
+	region r = {0, 0, 0, 0};
+	angdroid_menu_popup_box popup;
 
-	/* work out display region */
-	r.width = menu_dynamic_longest_entry(m) + 3 + 2; /* +3 for tag, 2 for pad */
-	if (mx > Term->wid - r.width - 1) {
-		r.col = Term->wid - r.width - 1;
-	} else {
-		r.col = mx + 1;
+	/* Reuse the bounded popup layout from Angband: FAangband also needs
+	 * CJK cell widths, long-list paging and safe post-rotation anchors. */
+	if (!Term || !angdroid_menu_popup_bounds(
+		Term->wid, Term->hgt, mx, my, menu_dynamic_longest_entry(m),
+		m->count, &popup)) {
+		/* Never pass a zero-size region to region_calculate(), where zero
+		 * means fill the remaining screen. menu_select() cancels safely. */
+		m->boundary = r;
+		m->boundary.width = Term && Term->wid > 0 ? 1 : 0;
+		m->boundary.page_rows = Term && Term->hgt > 0 ? 1 : 0;
+		m->active = r;
+		return;
 	}
-	r.page_rows = m->count;
-	if (my > Term->hgt - r.page_rows - 1) {
-		if (my - r.page_rows - 1 <= 0) {
-			/* menu has too many items, so put in upper right corner */
-			r.row = 1;
-			r.col = Term->wid - r.width - 1;
-		} else {
-			r.row = Term->hgt - r.page_rows - 1;
-		}
-	} else {
-		r.row = my + 1;
-	}
-
+	r.col = popup.col;
+	r.row = popup.row;
+	r.width = popup.width;
+	r.page_rows = popup.page_rows;
 	menu_layout(m, &r);
 }
 
@@ -1353,17 +1360,23 @@ int menu_dynamic_select(struct menu *m)
 {
 	ui_event e = menu_select(m, 0, true);
 	struct menu_entry *entry;
-	int cursor = m->cursor;
+	int cursor;
 
-	if (e.type == EVT_ESCAPE)
+	/* A filtered cursor is a view position, not a linked-list index.
+	 * Never return a stale row after filtering or an empty popup. */
+	if (e.type != EVT_SELECT || !is_valid_row(m, m->cursor))
 		return -1;
+	cursor = angdroid_fa_menu_source_index(
+		m->filter_list, m->cursor,
+		m->filter_list ? m->filter_count : m->count, m->count);
+	if (cursor < 0) return -1;
 
-	for (entry = menu_priv(m); cursor; cursor--) {
+	entry = menu_priv(m);
+	while (cursor-- > 0) {
+		if (!entry) return -1;
 		entry = entry->next;
-		assert(entry);
-	}	
-
-	return entry->value;
+	}
+	return entry ? entry->value : -1;
 }
 
 void menu_dynamic_free(struct menu *m)
