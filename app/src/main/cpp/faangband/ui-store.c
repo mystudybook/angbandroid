@@ -754,6 +754,14 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		if (amt <= 0) return false;
 	}
 
+	/* The displayed row can change while the quantity prompt is open.
+	 * Never copy from an object removed/replaced by a stock refresh. */
+	if (ctx->stock_changed || !ctx->list ||
+		!angdroid_store_stock_index_valid(
+			item, store->stock_num, z_info->store_inven_max) ||
+		ctx->list[item] != obj)
+		return false;
+
 	/* Get desired object */
 	dummy = object_new();
 	object_copy_amt(dummy, obj, amt);
@@ -793,7 +801,20 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		screen_load();
 
 		/* Negative response, so give up */
-		if (!response) return false;
+		if (!response) {
+			object_delete(NULL, NULL, &dummy);
+			return false;
+		}
+
+		/* A stock mutation during confirmation invalidates the item
+		 * identity. Do not queue a command using a dangling pointer. */
+		if (ctx->stock_changed || !ctx->list ||
+			!angdroid_store_stock_index_valid(
+				item, store->stock_num, z_info->store_inven_max) ||
+			ctx->list[item] != obj) {
+			object_delete(NULL, NULL, &dummy);
+			return false;
+		}
 
 		cmdq_push(CMD_BUY);
 		cmd_set_arg_item(cmdq_peek(), "item", obj);
