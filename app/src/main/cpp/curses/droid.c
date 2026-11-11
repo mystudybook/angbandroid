@@ -1,6 +1,7 @@
 #include "angband.h"
 #include "curses.h"
 #include "droid.h"
+#include "soft-kbd-replace.h"
 
 static char soft_kbd_buffer[256] = "";
 static bool flashing_keys = true;
@@ -52,6 +53,18 @@ void soft_kbd_flash(const char *keys)
 	flashing_keys = true;
 	my_strcat(soft_kbd_buffer, keys, sizeof(soft_kbd_buffer));
 	strdeldup(soft_kbd_buffer);
+}
+
+/* A menu replaces its complete hint set when its filter, page or
+ * viewport changes. Do not inherit keys from a lingering outer prompt.
+ * inkey_ex() will flush this updated buffer before waiting for input. */
+void soft_kbd_replace(const char *keys)
+{
+    size_t length = angdroid_soft_kbd_replace_buffer(
+        soft_kbd_buffer, sizeof(soft_kbd_buffer), keys);
+    flashing_keys = true;
+    if (!length)
+        Term_control_keys("${clear}");
 }
 
 void soft_kbd_linger(const char *keys)
