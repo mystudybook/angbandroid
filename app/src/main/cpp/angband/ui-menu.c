@@ -925,11 +925,9 @@ static void keys_to_ui(struct menu *menu)
 
 	strdeldup(buf);
 
-	//plog_fmt("Keys %s\n", buf);
-
-	if (strlen(buf) > 0) {
-		soft_kbd_flash(buf);
-	}
+	/* A filtered or empty menu replaces its previous shortcut set.
+	 * Otherwise the Android ribbon may retain keys from another page. */
+	soft_kbd_replace(buf);
 }
 
 /**
