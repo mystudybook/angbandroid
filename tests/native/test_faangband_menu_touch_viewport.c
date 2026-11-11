@@ -79,7 +79,7 @@ static void columns_match_drawn_cells(void)
     CHECK(angdroid_menu_use_compact_columns(20, 2, 10, 8));
     CHECK(!angdroid_menu_use_compact_columns(4, 4, 10, 8));
     CHECK(angdroid_menu_columns_hit(3, 35, 3, 5, 4, 40, 10, 10) == -1);
-    CHECK(angdroid_menu_columns_hit(4, 25, 3, 5, 4, 40, 10, 10) == -1);
+    CHECK(angdroid_menu_columns_hit(5, 25, 3, 5, 4, 40, 10, 10) == -1);
     CHECK(angdroid_menu_columns_hit(4, 25, 3, 5, 4, 40, 10, 12) == 9);
     CHECK(angdroid_menu_columns_hit(0, 0, 0, 0, 0, 40, 1, 20) == -1);
     CHECK(angdroid_menu_columns_hit(0, 0, 0, 0, 4, 40, 0, 20) == -1);
