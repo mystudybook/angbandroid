@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband object lists use terminal cell budgets, complete UTF-8
+# Chinese names, 14-cell equipment labels and resize-safe geometry.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_inventory_columns.c" \
+    -o "$BUILD_DIR/test_faangband_inventory_columns"
+"$BUILD_DIR/test_faangband_inventory_columns"
+
 # FAangband stage complete fallback names before appending multiple atomic
 # combat/charge/inscription groups at widths 0..128 and 0..32.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
