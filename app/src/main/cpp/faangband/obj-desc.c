@@ -481,12 +481,17 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
  * Describe remaining light for refuellable lights
  */
 static size_t obj_desc_light(const struct object *obj, char *buf, size_t max,
-							 size_t end)
+							 size_t end, bool translated_ui)
 {
-	/* Fuelled light sources get number of remaining turns appended */
-	if (tval_is_light(obj) && !of_has(obj->flags, OF_NO_FUEL))
-		(void)angdroid_faangband_append_detailf(buf, max, &end, " (%d turns)", obj->timeout);
-
+	/* Keep the original number of turns; localize only its visible unit. */
+	if (tval_is_light(obj) && !of_has(obj->flags, OF_NO_FUEL)) {
+		if (translated_ui)
+			(void)angdroid_faangband_append_detailf(
+					buf, max, &end, "（剩餘 %d 回合）", obj->timeout);
+		else
+			(void)angdroid_faangband_append_detailf(
+					buf, max, &end, " (%d turns)", obj->timeout);
+	}
 	return end;
 }
 
@@ -534,20 +539,37 @@ static size_t obj_desc_mods(const struct object *obj, char *buf, size_t max,
  * Describe charges or charging status for re-usable items with magic effects
  */
 static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
-		size_t end, uint32_t mode)
+		size_t end, uint32_t mode, bool translated_ui)
 {
 	bool aware = object_flavor_is_aware(obj) || (mode & ODESC_STORE);
 
-	/* Wands and staffs have charges, others may be charging */
+	/* Only show the charge count when it was already visible before.
+	 * The UI translation does not affect knowledge or charging state. */
 	if (aware && tval_can_have_charges(obj)) {
-		(void)angdroid_faangband_append_detailf(buf, max, &end, " (%d charge%s)", obj->pval,
-				 PLURAL(obj->pval));
+		if (translated_ui)
+			(void)angdroid_faangband_append_detailf(
+					buf, max, &end, "（剩餘 %d 次）", obj->pval);
+		else
+			(void)angdroid_faangband_append_detailf(
+					buf, max, &end, " (%d charge%s)",
+					obj->pval, PLURAL(obj->pval));
 	} else if (obj->timeout > 0) {
-		if (tval_is_rod(obj) && obj->number > 1)
-			(void)angdroid_faangband_append_detailf(buf, max, &end, " (%d charging)", number_charging(obj));
-		else if (tval_is_rod(obj) || obj->activation || obj->effect)
-			/* Artifacts, single rods */
-			(void)angdroid_faangband_append_detailf(buf, max, &end, " (charging)");
+		if (tval_is_rod(obj) && obj->number > 1) {
+			if (translated_ui)
+				(void)angdroid_faangband_append_detailf(
+						buf, max, &end, "（%d 根充能中）", number_charging(obj));
+			else
+				(void)angdroid_faangband_append_detailf(
+						buf, max, &end, " (%d charging)", number_charging(obj));
+		} else if (tval_is_rod(obj) || obj->activation || obj->effect) {
+			/* Artifacts and single rods retain their prior state check. */
+			if (translated_ui)
+				(void)angdroid_faangband_append_detailf(
+						buf, max, &end, "（充能中）");
+			else
+				(void)angdroid_faangband_append_detailf(
+						buf, max, &end, " (charging)");
+		}
 	}
 
 	return end;
@@ -656,6 +678,8 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 	bool prefix = mode & ODESC_PREFIX ? true : false;
 	bool spoil = mode & ODESC_SPOIL ? true : false;
 	bool terse = mode & ODESC_TERSE ? true : false;
+	bool translated_ui = (mode & ODESC_ZH_TW) && !spoil && !terse &&
+		angdroid_zh_tw_enabled();
 
 	size_t end = 0;
 
@@ -692,7 +716,7 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 		if (tval_is_chest(obj))
 			end = obj_desc_chest(obj, buf, max, end);
 		else if (tval_is_light(obj))
-			end = obj_desc_light(obj, buf, max, end);
+			end = obj_desc_light(obj, buf, max, end, translated_ui);
 
 		end = obj_desc_combat(obj->known, buf, max, end, mode, p);
 	}
@@ -701,11 +725,8 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 	if (mode & ODESC_EXTRA) {
 		end = obj_desc_mods(obj->known, buf, max, end);
 
-		end = obj_desc_charges(obj, buf, max, end, mode);
+		end = obj_desc_charges(obj, buf, max, end, mode, translated_ui);
 
-		bool translated_ui = (mode & ODESC_ZH_TW) &&
-			!(mode & (ODESC_SPOIL | ODESC_TERSE)) &&
-			angdroid_zh_tw_enabled();
 		if (mode & ODESC_STORE)
 			end = obj_desc_aware(obj, buf, max, end, translated_ui);
 		else
