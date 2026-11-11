@@ -23,6 +23,8 @@ for path in ("object-list-text.h", "inventory-equip-mention.h",
 # Item name generation now has enough bytes for the base, Flavor, artifact
 # and suffix. Screen text is clipped only in temporary row-local buffers.
 assert "char o_name[256];" in UI
+helpers = UI[UI.index("static olist_detail_t fa_object_list_visible_extras("):
+             UI.index("static void wipe_obj_list(")]
 first = UI[UI.index("static void show_obj("):
            UI.index("static void wipe_obj_list(")]
 assert "int row_width)" in first
@@ -38,12 +40,12 @@ assert "label_size + equip_label_size + strlen(items[obj_num].o_name)" not in UI
 assert "row_width = MIN(row_width, Term->wid - col);" in first
 assert "if (row_width <= 0) return;" in first
 assert "fa_object_list_put_detail(buf, row + obj_num, col," in first
-assert "angdroid_object_list_detail_fits(" in first
-assert "angdroid_utf8_display_columns(text)" in first
+assert "angdroid_object_list_detail_fits(" in helpers
+assert "angdroid_utf8_display_columns(text)" in helpers
 assert "ex_offset_ctr += 9;" in first
 assert "ex_offset_ctr += 10;" in first
-assert "fa_object_list_visible_extras(" in first
-assert "angdroid_object_list_fit_extras(" in first
+assert "fa_object_list_visible_extras(" in helpers
+assert "angdroid_object_list_fit_extras(" in helpers
 
 build = UI[UI.index("static void build_obj_list("):
            UI.index("static void set_obj_names(")]
