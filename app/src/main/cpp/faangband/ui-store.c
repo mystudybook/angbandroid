@@ -1165,8 +1165,6 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 	if (event->type == EVT_SELECT) {
 		int popup_row = angdroid_store_menu_screen_row(
 			oid, m->top, m->active.row, m->active.page_rows);
-		bool purchased;
-
 		/* A shrink, filter update, or rotation may invalidate an existing
 		 * stock row. Never dereference or open a popup for stale data. */
 		if (!ctx->list || !angdroid_store_stock_index_valid(
@@ -1174,7 +1172,7 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 			!ctx->list[oid] || popup_row < 0)
 			return false;
 
-		purchased = context_menu_store_item(ctx, oid, 1, popup_row);
+		(void)context_menu_store_item(ctx, oid, 1, popup_row);
 		ctx->flags |= (STORE_FRAME_CHANGE | STORE_GOLD_CHANGE);
 
 		/* Let the game handle any core commands (equipping, etc) */
@@ -1184,13 +1182,13 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 		notice_stuff(player);
 		handle_stuff(player);
 
-		if (purchased) {
-			/* Display the store */
-			store_display_recalc(ctx);
-			store_menu_recalc(m);
-			store_redraw(ctx);
-		}
-
+		/* The popup restores its saved screen even on Examine or Cancel.
+		 * A stock-change callback may have repainted underneath that
+		 * snapshot; always restore the current frame, hints and prices.
+		 * The outer menu loop will draw the current stock rows next. */
+		store_display_recalc(ctx);
+		store_menu_recalc(m);
+		store_redraw(ctx);
 		return true;
 	} else if (event->type == EVT_MOUSE) {
 		if (event->mouse.button == 2) {
