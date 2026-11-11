@@ -57,7 +57,9 @@ assert "if (menu->browse_hook && oid >= 0)" in refresh
 action = MENU.split("static bool menu_handle_action(", 1)[1].split(
     "bool menu_handle_keypress(", 1)[0]
 assert "angdroid_fa_menu_source_index(" in action
-assert "if (oid < 0) return false;" in action
+assert "if (oid < 0 || !is_valid_row(m, m->cursor))" in action
+assert "angdroid_menu_allow_empty_input(m->flags," in action
+assert "row_handler(m, in, -1)" in action
 
 keyboard = MENU.split("static void keys_to_ui(", 1)[1].split(
     "ui_event menu_select(", 1)[0]
