@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband ground-item LOS/non-LOS lists must not overflow the
+# terminal when 0..24 rows are available or miscount hidden sections.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_object_list_row_budget.c" \
+    -o "$BUILD_DIR/test_faangband_object_list_row_budget"
+"$BUILD_DIR/test_faangband_object_list_row_budget"
+
 # FAangband ground-item list direction, zero/huge distance, CJK
 # display widths, and popup geometry at rotation boundaries.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
