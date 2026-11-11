@@ -920,7 +920,9 @@ static void keys_to_ui(struct menu *menu)
 		my_strcat(buf, menu->switch_keys, sizeof(buf));
 
 	strdeldup(buf);
-	if (buf[0]) soft_kbd_flash(buf);
+	/* Hints for the current filtered page replace old modal/lingering keys.
+	 * An empty page must actively clear the previous Android shortcut bar. */
+	soft_kbd_replace(buf);
 }
 
 /**
