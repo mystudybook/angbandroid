@@ -398,12 +398,13 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 				(void)angdroid_obj_desc_append_suffix_atomic(
 					buf, max, &end, suffix_display, !translated_base);
 			} else {
-				(void)angdroid_obj_desc_append_suffix_atomic(
-					buf, max, &end, ego_name, true);
+				/* Malformed supplemental label: retain original source. */
+				strnfcat(buf, max, &end, " %s", ego_name);
 			}
 		} else {
-			(void)angdroid_obj_desc_append_suffix_atomic(
-				buf, max, &end, ego_name, true);
+			/* Preserve exact original English formatting for exports,
+			 * spoilers, locale-off, and unknown ego translations. */
+			strnfcat(buf, max, &end, " %s", ego_name);
 		}
 	}
 	else if (aware && !obj->artifact &&
