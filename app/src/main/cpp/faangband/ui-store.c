@@ -674,7 +674,8 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 	int32_t price;
 
-	if (!store || !ctx->list || !angdroid_store_stock_index_valid(
+	if (ctx->inspect_only || !store || !ctx->list ||
+		!angdroid_store_stock_index_valid(
 		item, store->stock_num, z_info->store_inven_max) ||
 		!ctx->list[item])
 		return false;
