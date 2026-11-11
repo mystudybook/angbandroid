@@ -32,17 +32,22 @@
 #include "../angband/obj-desc-suffix-utf8.h"
 #include "../angband/obj-desc-name-utf8.h"
 #include "obj-desc-details-utf8.h"
+#include "obj-desc-basic-utf8.h"
 
 /**
  * Puts the object base kind's name into buf.
  */
 void object_base_name(char *buf, size_t max, int tval, bool plural)
 {
-	struct object_base *kb = &kb_info[tval];
+	struct object_base *kb;
 	size_t end = 0;
 
-	if (kb->name && kb->name[0]) 
-		(void) obj_desc_name_format(buf, max, end, kb->name, NULL, plural);
+	/* An absent base name must still leave a valid, empty output. */
+	if (!buf || !max) return;
+	buf[0] = '\0';
+	kb = &kb_info[tval];
+	if (kb->name && kb->name[0])
+		(void)obj_desc_name_format(buf, max, end, kb->name, NULL, plural);
 }
 
 
@@ -56,13 +61,19 @@ void object_base_name(char *buf, size_t max, int tval, bool plural)
 void object_kind_name(char *buf, size_t max, const struct object_kind *kind,
 					  bool easy_know)
 {
-	/* If not aware, the plain flavour (e.g. Copper) will do. */
-	if (!easy_know && !kind->aware && kind->flavor)
-		my_strcpy(buf, kind->flavor->text, max);
+	if (!buf || !max) return;
+	buf[0] = '\0';
+	if (!kind) return;
 
-	/* Use proper name (Healing, or whatever) */
+	/* Preserve the assigned, unidentified appearance literally.
+	 * Unlike my_strcpy(), never leave half of a UTF-8 character. */
+	if (!easy_know && !kind->aware && kind->flavor)
+		(void)angdroid_faangband_copy_utf8(buf, max,
+			kind->flavor->text);
+
+	/* The original English kind grammar is still handled unchanged. */
 	else
-		(void) obj_desc_name_format(buf, max, 0, kind->name, NULL, false);
+		(void)obj_desc_name_format(buf, max, 0, kind->name, NULL, false);
 }
 
 
@@ -683,21 +694,26 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 
 	size_t end = 0;
 
-	/* Simple description for null item */
-	if (!obj || !obj->known)
-		return strnfmt(buf, max, "(nothing)");
+	/* strnfmt() in this variant asserts(max). Some UI layouts request a
+	 * zero-width description, which must never crash the Native engine. */
+	if (!buf || !max) return 0;
+	buf[0] = '\0';
 
-	/* Unknown itema and cash get straightforward descriptions */
-	if (obj->known && obj->kind != obj->known->kind) {
-		if (prefix)
-			return strnfmt(buf, max, "an unknown item");
-		return strnfmt(buf, max, "unknown item");
-	}
+	/* These special cases previously bypassed all Chinese display logic
+	 * and could split a multibyte character at max - 1. */
+	if (!obj || !obj->known)
+		return angdroid_faangband_basic_item_text(
+			buf, max, false, prefix, translated_ui);
+
+	/* Do not infer or reveal a hidden object's true kind. */
+	if (obj->kind != obj->known->kind)
+		return angdroid_faangband_basic_item_text(
+			buf, max, true, prefix, translated_ui);
 
 	if (tval_is_money(obj))
-		return strnfmt(buf, max, "%d gold pieces worth of %s%s",
-				obj->pval, obj->kind->name,
-				ignore_item_ok(p, obj) ? " {ignore}" : "");
+		return angdroid_faangband_money_text(
+			buf, max, obj->pval, obj->kind->name,
+			ignore_item_ok(p, obj), translated_ui);
 
 	/* Egos and kinds whose name we know are seen */
 	if (obj->known->ego && !spoil)
