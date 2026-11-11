@@ -41,7 +41,8 @@ start = DESC.index("static size_t obj_desc_chest(")
 stop = DESC.index("static size_t obj_desc_inscrip(", start)
 details = DESC[start:stop]
 assert "angdroid_faangband_append_detailf(" in details
-assert details.count("angdroid_faangband_append_detailf(") == 18
+assert details.count("angdroid_faangband_append_detailf(") == 17
+assert "angdroid_obj_desc_append_chest_status(" in details
 assert "angdroid_faangband_append_modifiers(" in details
 assert "strnfcat(buf, max, &end," not in details
 assert 'if (!((obj->notice & OBJ_NOTICE_ASSESSED) || spoil)) return end;' in details
