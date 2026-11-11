@@ -30,6 +30,7 @@
 #include "../angband/menu-column-width.h"
 #include "../angband/menu-compact-layout.h"
 #include "../angband/menu-valid-cursor.h"
+#include "../angband/menu-visible-tags.h"
 #include "../curses/unicode_display.h"
 
 #include "droid.h"
@@ -460,6 +461,17 @@ static const menu_skin menu_skin_column =
 };
 
 
+/* Column skins show all shortcuts when columns fit. In compact portrait
+ * mode the same skin falls back to a scrolling page, whose tags must be
+ * relative to that page rather than to all inventory items. */
+static bool fa_menu_relative_tags_paged(const struct menu *menu)
+{
+	int n = menu->filter_list ? menu->filter_count : menu->count;
+	return menu->skin != &menu_skin_column ||
+		angdroid_menu_use_compact_columns(
+			n, menu->active.page_rows, menu->active.width, 8);
+}
+
 /* ================== GENERIC HELPER FUNCTIONS ============== */
 
 static bool is_valid_row(struct menu *menu, int cursor)
@@ -515,16 +527,18 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 	if (menu->flags & MN_NO_TAGS) {
 		return -1;
 	} else if (menu->flags & MN_REL_TAGS) {
-		int page = angdroid_fa_menu_page_rows(
-			n, top, menu->active.page_rows);
-		for (i = 0; i < page; i++) {
-			char c = menu->skin->get_tag(menu, i);
+		bool paged = fa_menu_relative_tags_paged(menu);
+		int first = angdroid_menu_visible_tag_first(n, top, paged);
+		int end = angdroid_menu_visible_tag_end(
+			n, top, menu->active.page_rows, paged);
+		for (i = first; i < end; i++) {
+			char c = menu->skin->get_tag(menu, paged ? i - first : i);
 
 			if ((menu->flags & MN_CASELESS_TAGS) && c)
 				c = toupper((unsigned char) c);
 
 			if (c && c == (char)key.code)
-				return i + menu->top;
+				return i;
 		}
 	} else if (!(menu->flags & MN_PVT_TAGS) && menu->selections) {
 		for (i = 0; i < n && menu->selections[i]; i++) {
@@ -601,7 +615,8 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 
 	if (!(flags & MN_NO_TAGS)) {
 		if (flags & MN_REL_TAGS)
-			sel = menu->skin->get_tag(menu, pos - top);
+			sel = menu->skin->get_tag(menu,
+				fa_menu_relative_tags_paged(menu) ? pos - top : pos);
 		else if (menu->selections && !(flags & MN_PVT_TAGS))
 			sel = angdroid_fa_menu_selection_key(menu->selections, pos);
 		else if (menu->row_funcs->get_tag)
@@ -858,11 +873,14 @@ static void keys_to_ui(struct menu *menu)
 		if (row_valid != MN_ROW_VALID) continue;
 		if (!(menu->flags & MN_NO_TAGS)) {
 			if (menu->flags & MN_REL_TAGS) {
-				int page = angdroid_fa_menu_page_rows(
-					n, menu->top, menu->active.page_rows);
-				if (cursor < menu->top ||
-					cursor >= menu->top + page) continue;
-				sel = menu->skin->get_tag(menu, cursor - menu->top);
+				bool paged = fa_menu_relative_tags_paged(menu);
+				int first = angdroid_menu_visible_tag_first(
+					n, menu->top, paged);
+				int end = angdroid_menu_visible_tag_end(
+					n, menu->top, menu->active.page_rows, paged);
+				if (cursor < first || cursor >= end) continue;
+				sel = menu->skin->get_tag(menu,
+					paged ? cursor - first : cursor);
 			} else if (menu->selections &&
 				!(menu->flags & MN_PVT_TAGS)) {
 				sel = angdroid_fa_menu_selection_key(
