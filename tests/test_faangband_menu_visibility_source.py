@@ -73,7 +73,7 @@ assert "angdroid_menu_visible_tag_first(" in hints
 assert "angdroid_menu_visible_tag_end(" in hints
 assert "paged ? cursor - first : cursor" in hints
 assert "buf, tag_capacity, &used, sel" in hints
-assert "soft_kbd_flash(buf);" in hints
+assert "soft_kbd_replace(buf);" in hints
 assert "row_valid != MN_ROW_VALID" not in hints
 
 for test in (
