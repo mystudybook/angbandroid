@@ -504,7 +504,16 @@ static bool no_valid_row(struct menu *menu, int count)
  * A horizontal move has dy == 0, so looping by dy alone can hang. */
 static int fa_menu_navigation_is_valid(void *context, int row)
 {
-	return is_valid_row((struct menu *)context, row);
+	struct menu *menu = (struct menu *)context;
+	int count = menu->filter_list ? menu->filter_count : menu->count;
+	int oid = angdroid_fa_menu_source_index(
+		menu->filter_list, row, count, menu->count);
+
+	if (oid < 0) return false;
+	/* Hidden choices may be invoked by an explicit tag, but they have
+	 * no rendered row and must not become the arrow/page/Enter cursor. */
+	return !menu->row_funcs->valid_row ||
+		menu->row_funcs->valid_row(menu, oid) == MN_ROW_VALID;
 }
 
 /* 
@@ -798,7 +807,7 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 	} else if (in->key.code == KC_ENTER) {
 		/* A filtered list may become empty after a stock change. Enter
 		 * must not act on a stale or invalid selected item. */
-		if (is_valid_row(menu, menu->cursor))
+		if (fa_menu_navigation_is_valid(menu, menu->cursor))
 			out->type = EVT_SELECT;
 		else
 			eat = true;
@@ -1081,10 +1090,10 @@ void menu_ensure_cursor_valid(struct menu *m)
 	/* Preserve the selection if valid; otherwise try the following
 	 * visible rows before wrapping. No negative cursor enters a callback. */
 	for (row = start; row < count; row++)
-		if (is_valid_row(m, row)) { found = row; break; }
+		if (fa_menu_navigation_is_valid(m, row)) { found = row; break; }
 	if (found < 0)
 		for (row = 0; row < start; row++)
-			if (is_valid_row(m, row)) { found = row; break; }
+			if (fa_menu_navigation_is_valid(m, row)) { found = row; break; }
 	m->cursor = found;
 	m->top = found < 0 ? 0 : angdroid_fa_menu_clamp_top(
 		m->top, found, count, m->active.page_rows);
