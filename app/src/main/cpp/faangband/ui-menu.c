@@ -489,17 +489,6 @@ static bool is_valid_row(struct menu *menu, int cursor)
 	return true;
 }
 
-static bool no_valid_row(struct menu *menu, int count)
-{
-	int i;
-
-	for (i = 0; i < count; i++)
-		if (is_valid_row(menu, i))
-			return false;
-
-	return true;
-}
-
 /* Bridge the FA menu view to the bounded shared navigation helper.
  * A horizontal move has dy == 0, so looping by dy alone can hang. */
 static int fa_menu_navigation_is_valid(void *context, int row)
@@ -514,6 +503,15 @@ static int fa_menu_navigation_is_valid(void *context, int row)
 	 * no rendered row and must not become the arrow/page/Enter cursor. */
 	return !menu->row_funcs->valid_row ||
 		menu->row_funcs->valid_row(menu, oid) == MN_ROW_VALID;
+}
+
+static bool no_valid_row(struct menu *menu, int count)
+{
+	int i;
+	for (i = 0; i < count; i++)
+		if (fa_menu_navigation_is_valid(menu, i))
+			return false;
+	return true;
 }
 
 /* 
@@ -731,11 +729,7 @@ bool menu_handle_mouse(struct menu *menu, const ui_event *in,
 	
 		/* Hidden rows can be selected by an explicit tag, but a tap on
 		 * blank/hidden screen cells must not select them. */
-		if (is_valid_row(menu, new_cursor) &&
-			(!menu->row_funcs->valid_row ||
-			menu->row_funcs->valid_row(menu,
-				angdroid_fa_menu_source_index(menu->filter_list,
-					new_cursor, count, menu->count)) == MN_ROW_VALID)) {
+		if (fa_menu_navigation_is_valid(menu, new_cursor)) {
 			if (new_cursor == menu->cursor || !(menu->flags & MN_DBL_TAP))
 				out->type = EVT_SELECT;
 			else
