@@ -350,52 +350,62 @@ static void store_display_entry(struct menu *menu, int oid,
  */
 static void store_display_frame(struct store_context *ctx)
 {
-	char buf[80];
-	struct store *store = ctx->store;
-	struct owner *proprietor = store->owner;
+    char buf[160];
+    struct store *store = ctx->store;
+    struct owner *proprietor = store->owner;
+    bool home = store_is_home(store);
+    angdroid_store_column_layout layout =
+        angdroid_store_columns(Term->wid, 1, home);
+    int owner_row = ctx->scr_places_y[LOC_OWNER];
+    int header_row = ctx->scr_places_y[LOC_HEADER];
 
-	/* Clear screen */
-	Term_clear();
+    Term_clear();
+    if (home) {
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_game_ui_text("Your Home", angdroid_zh_tw_enabled()),
+            owner_row, 1, MAX(0, layout.width - 2));
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_game_ui_text("Home Inventory",
+                angdroid_zh_tw_enabled()),
+            header_row, 1, layout.name_cols);
+    } else {
+        const char *shop = angdroid_store_display_name(
+            store->name, angdroid_zh_tw_enabled());
+        const char *owner_name = proprietor->name;
+        const char *owner_race = proprietor->race->name;
+        size_t owner_cols, summary_cols;
 
-	/* The "Home" is special */
-	if (store_is_home(store)) {
-		/* Put the owner name */
-		put_str("Your Home", ctx->scr_places_y[LOC_OWNER], 1);
+        strnfmt(buf, sizeof(buf), "%s (%s)", owner_name, owner_race);
+        owner_cols = angdroid_utf8_display_columns(buf);
+        fa_store_put_clipped(COLOUR_WHITE, buf,
+            owner_row, 1, MAX(0, layout.width - 2));
 
-		/* Label the object descriptions */
-		put_str("Home Inventory", ctx->scr_places_y[LOC_HEADER], 1);
+        /* A right-aligned stock/price summary is optional: do not
+         * overwrite the shopkeeper's name in a portrait window. */
+        strnfmt(buf, sizeof(buf), "%s (%ld)",
+            shop, (long)proprietor->max_cost);
+        summary_cols = angdroid_utf8_display_columns(buf);
+        if (summary_cols + owner_cols + 4 <= (size_t)layout.width) {
+            int summary_col = layout.width - 2 - (int)summary_cols;
+            fa_store_put_clipped(COLOUR_WHITE, buf,
+                owner_row, summary_col, (int)summary_cols);
+        }
 
-		/* Show weight header */
-		put_str("Weight", ctx->scr_places_y[LOC_HEADER],
-				ctx->scr_places_x[LOC_WEIGHT] + 2);
-	} else {
-		/* Normal stores */
-		const char *store_name = store->name;
-		const char *owner_name = proprietor->name;
-		const char *owner_race = proprietor->race->name;
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_game_ui_text(
+                "Store Inventory", angdroid_zh_tw_enabled()),
+            header_row, 1, layout.name_cols);
+    }
 
-		/* Put the owner name */
-		strnfmt(buf, sizeof(buf), "%s (%s)", owner_name, owner_race);
-		put_str(buf, ctx->scr_places_y[LOC_OWNER], 1);
-
-		/* Show the max price in the store (above prices) */
-		strnfmt(buf, sizeof(buf), "%s (%ld)", store_name,
-				(long)proprietor->max_cost);
-		prt(buf, ctx->scr_places_y[LOC_OWNER],
-			ctx->scr_places_x[LOC_OWNER] - strlen(buf));
-
-		/* Label the object descriptions */
-		put_str("Store Inventory", ctx->scr_places_y[LOC_HEADER], 1);
-
-		/* Showing weight label */
-		put_str("Weight", ctx->scr_places_y[LOC_HEADER],
-				ctx->scr_places_x[LOC_WEIGHT] + 2);
-
-		/* Label the asking price (in stores) */
-		put_str("Price", ctx->scr_places_y[LOC_HEADER], ctx->scr_places_x[LOC_PRICE] + 4);
-	}
+    if (layout.weight_col >= 0)
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_game_ui_text("Weight", angdroid_zh_tw_enabled()),
+            header_row, layout.weight_col + 2, 8);
+    if (layout.price_col >= 0)
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_game_ui_text("Price", angdroid_zh_tw_enabled()),
+            header_row, layout.price_col + 4, 10);
 }
-
 
 /**
  * Display help.
