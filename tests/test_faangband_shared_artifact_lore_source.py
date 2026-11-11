@@ -13,6 +13,7 @@ STANDARD = (CPP / "zh-tw-artifact-lore.h").read_text(encoding="utf-8")
 INFO = (CPP / "obj-info.c").read_text(encoding="utf-8")
 FA_INFO = (ROOT / "app/src/main/cpp/faangband/obj-info.c").read_text(encoding="utf-8")
 INIT = (CPP / "obj-init.c").read_text(encoding="utf-8")
+FA_INIT = (ROOT / "app/src/main/cpp/faangband/obj-init.c").read_text(encoding="utf-8")
 SAVE = (CPP / "save-charoutput.c").read_text(encoding="utf-8")
 NATIVE = (ROOT / "scripts/test-native-utf8.sh").read_text(encoding="utf-8")
 VERIFY = (ROOT / "scripts/verify-zh-tw.sh").read_text(encoding="utf-8")
@@ -36,6 +37,7 @@ divergent = {name for name in ang.keys() & fa.keys()
 assert len(ang) == 138 and len(fa) == 126
 assert len(divergent) == 38
 assert len(ang.keys() & fa.keys()) == 85
+assert sum(ang[n] == fa[n] for n in ang.keys() & fa.keys()) == 47
 assert "ANGDROID_ZH_TW_FAANGBAND_ARTIFACT_VARIANTS 38" in HEADER
 
 # Parse complete C string constants (JSON-escaped literals are C99-compatible).
@@ -57,6 +59,7 @@ assert len(re.findall(r'^\s*\{\s*"[^"]+",\s*"[^"]+"\s*\},$', STANDARD,
                       re.M)) == 138
 
 assert 'a->text = string_append(a->text, parser_getstr(p, "text"));' in INIT
+assert 'a->text = string_append(a->text, parser_getstr(p, "text"));' in FA_INIT
 assert 'strcmp(english_description, variants[i].fa_source) == 0' in HEADER
 assert 'strcmp(english_description, variants[i].ang_source) == 0' in HEADER
 assert 'if (allow_standard) *allow_standard = false;' in HEADER
