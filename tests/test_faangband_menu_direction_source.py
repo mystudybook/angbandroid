@@ -23,7 +23,9 @@ assert "angdroid_menu_visible_tag_end(" in TAGS
 adapter = MENU.split(
     "static int fa_menu_navigation_is_valid(", 1)[1].split(
     "static int get_cursor_key(", 1)[0]
-assert "is_valid_row((struct menu *)context, row)" in adapter
+assert "angdroid_fa_menu_source_index(" in adapter
+assert "if (oid < 0) return false;" in adapter
+assert "menu->row_funcs->valid_row(menu, oid) == MN_ROW_VALID" in adapter
 
 keyboard = MENU.split("bool menu_handle_keypress(", 1)[1].split(
     "static void keys_to_ui(", 1)[0]
@@ -34,11 +36,16 @@ assert "int direction = ddy[dir] ? ddy[dir] : ddx[dir];" in keyboard
 assert "if (next >= 0)" in keyboard
 assert "out->type = EVT_NONE;" in keyboard
 assert "menu->cursor = previous;" in keyboard
-assert "if (is_valid_row(menu, menu->cursor))" in keyboard
+assert "if (fa_menu_navigation_is_valid(menu, menu->cursor))" in keyboard
 assert "menu->cursor >= total - 1" not in keyboard
 assert "while (!is_valid_row(menu, menu->cursor))" not in keyboard
 assert "menu->cursor += ddy[dir];" not in keyboard
 assert "menu->top = angdroid_fa_menu_clamp_top(" in keyboard
+ensure = MENU.split("void menu_ensure_cursor_valid(", 1)[1].split(
+    "static bool menu_calc_size(", 1)[0]
+assert "fa_menu_navigation_is_valid(m, row)" in ensure
+assert "is_valid_row(m, row)" not in ensure
+
 
 # Columns: all tags are visible unless the skin has compacted down to a
 # scrolling list. Display, user key input, and Android hint must agree.
