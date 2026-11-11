@@ -23,9 +23,35 @@
 #include "ui-input.h"
 #include "ui-menu.h"
 #include "ui-menu-resize-guard.h"
+#include "ui-menu-cell-text.h"
 #include "../curses/unicode_display.h"
 
 #include "droid.h"
+
+/* Draw by physical terminal cells. Term_putstr(n) counts characters,
+ * which is unsafe for CJK/fullwidth names and long menu labels. */
+static void fa_menu_put_clipped(uint8_t color, const char *source,
+                                int row, int col, int limit)
+{
+    char clipped[512];
+
+    if (!Term || !source) return;
+    (void)angdroid_fa_menu_copy_visible(
+        clipped, sizeof(clipped), source,
+        Term->wid, Term->hgt, row, col, limit);
+    if (clipped[0])
+        c_put_str(color, clipped, row, col);
+}
+
+static void fa_menu_erase_clipped(int row, int col, int limit)
+{
+    int cells;
+    if (!Term) return;
+    cells = angdroid_fa_menu_visible_columns(
+        Term->wid, Term->hgt, row, col, limit);
+    if (cells > 0)
+        Term_erase(col, row, cells);
+}
 
 /**
  * Cursor colours
@@ -62,10 +88,10 @@ static void display_action_aux(menu_action *act, uint8_t color,
 {
 	/* TODO: add preference support */
 	/* TODO: wizard mode should show more data */
-	Term_erase(col, row, wid);
+	fa_menu_erase_clipped(row, col, wid);
 
 	if (act->name)
-		Term_putstr(col, row, wid, color, act->name);
+		fa_menu_put_clipped(color, act->name, row, col, wid);
 }
 
 /* ------------------------------------------------------------------------
@@ -141,7 +167,7 @@ static void display_string(struct menu *m, int oid, bool cursor,
 {
 	const char **items = menu_priv(m);
 	uint8_t color = curs_attrs[CURS_KNOWN][0 != cursor];
-	Term_putstr(col, row, width, color, items[oid]);
+	fa_menu_put_clipped(color, items[oid], row, col, width);
 }
 
 static bool handle_string(struct menu *m, const ui_event *event, int oid)
@@ -561,6 +587,12 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 	int oid = pos;
 	menu_row_validity_t row_valid = MN_ROW_VALID;
 
+	/* Each row is a physical cell region. Never forward a negative width
+	 * to a skin when a three-cell shortcut cannot fit after rotation. */
+	if (!Term || angdroid_fa_menu_visible_columns(
+			Term->wid, Term->hgt, row, col, width) <= 0)
+		return;
+
 	if (menu->filter_list)
 		oid = menu->filter_list[oid];
 
@@ -582,7 +614,15 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 	if (sel) {
 		menu_row_style_t style = menu_row_style_for_validity(row_valid);
 		uint8_t color = curs_attrs[style][0 != (cursor)];
-		Term_putstr(col, row, 3, color, format("%c) ", sel));
+		/* With fewer than three cells, show only the selection letter.
+		 * Do not send zero/negative widths to the underlying row skin. */
+		if (width <= 3) {
+			fa_menu_put_clipped(color, format("%c) ", sel),
+				row, col, width);
+			return;
+		}
+		fa_menu_put_clipped(color, format("%c) ", sel),
+			row, col, 3);
 		col += 3;
 		width -= 3;
 	}
@@ -611,16 +651,16 @@ void menu_refresh(struct menu *menu, bool reset_screen)
 		oid = menu->filter_list[oid];
 
 	if (menu->title)
-		Term_putstr(menu->boundary.col, menu->boundary.row,
-				loc->width, COLOUR_WHITE, menu->title);
+		fa_menu_put_clipped(COLOUR_WHITE, menu->title,
+			menu->boundary.row, menu->boundary.col, loc->width);
 
 	if (menu->header)
-		Term_putstr(loc->col, loc->row - 1, loc->width,
-				COLOUR_WHITE, menu->header);
+		fa_menu_put_clipped(COLOUR_WHITE, menu->header,
+			loc->row - 1, loc->col, loc->width);
 
 	if (menu->prompt)
-		Term_putstr(menu->boundary.col, loc->row + loc->page_rows,
-				loc->width, COLOUR_WHITE, menu->prompt);
+		fa_menu_put_clipped(COLOUR_WHITE, menu->prompt,
+			loc->row + loc->page_rows, menu->boundary.col, loc->width);
 
 	if (menu->browse_hook && oid >= 0)
 		menu->browse_hook(oid, menu->menu_data, loc);
@@ -1031,7 +1071,11 @@ static bool menu_calc_size(struct menu *menu)
 	if (menu->title) {
 		menu->active.row += 2;
 		menu->active.page_rows -= 2;
+		/* Four title-indent cells must also be removed from the active
+		 * width, otherwise the item skin draws past the screen's right edge. */
 		menu->active.col += 4;
+		menu->active.width = menu->active.width > 4 ?
+			menu->active.width - 4 : 0;
 	}
 
 	if (menu->header) {
@@ -1160,7 +1204,7 @@ static void dynamic_display(struct menu *m, int oid, bool cursor,
 		assert(entry);
 	}
 
-	Term_putstr(col, row, width, color, entry->text);
+	fa_menu_put_clipped(color, entry->text, row, col, width);
 }
 
 static const menu_iter dynamic_iter = {
