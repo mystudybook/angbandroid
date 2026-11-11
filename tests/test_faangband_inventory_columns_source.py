@@ -92,6 +92,24 @@ assert "fa_item_menu_resize };" in UI
 assert "fa_item_menu_resize(m);" in UI
 assert "show_obj(oid, row - oid, col, cursor, olist_render_mode, width);" in UI
 
+# The quiver footer used to paint at local_area->row + num_obj (which
+# can overlap selected rows after scrolling/rotation) and read label[i]
+# without bounding the alphabet. Match Angband's physical-cell layout.
+browser = UI[UI.index("static void item_menu_browser("):
+             UI.index("static void fa_item_menu_resize(")]
+assert "if (!Term || !local_area || local_area->page_rows <= 0)" in browser
+assert "if (col < 0 || col >= Term->wid)" in browser
+assert "max_columns = MIN(local_area->width, Term->wid - col);" in browser
+assert "if (z_info->quiver_slot_size <= 0 || player->upkeep->quiver_cnt <= 0)" in browser
+assert "angdroid_item_selection_footer_row(local_area->row," in browser
+assert "if (line < 0 || i >= (int)strlen(all_letters_nohjkl))" in browser
+assert "angdroid_menu_copy_columns(" in browser
+assert "tmp_val, (size_t)max_columns - label_cols);" in browser
+assert 'strnfmt(tmp_val, sizeof(tmp_val), "箭袋：%d 支彈藥", count);' in browser
+assert "local_area->row + i" not in browser
+assert "Term_gotoxy(" not in browser
+assert "text_out_c(" not in browser
+
 # Renderer width classifier and clipper must agree on CJK two-cell glyphs.
 assert "angdroid_terminal_columns(codepoint)" in MENU
 assert "if (width > max_columns - columns) break;" in MENU
