@@ -46,6 +46,7 @@
 #include "zh-tw-item-abilities.h"
 #include "zh-tw-artifact-lore.h"
 #include "zh-tw-faangband-artifact-lore.h"
+#include "zh-tw-faangband-artifact-variants.h"
 #include "zh-tw-ego-lore.h"
 #include "zh-tw-kind-lore.h"
 #include "zh-tw-monsters.h"
@@ -2384,11 +2385,16 @@ static void describe_flavor_text(textblock *tb, const struct object *obj,
 		obj->known->artifact && obj->artifact->text) {
 		const char *flavor = obj->artifact->text;
 		if (zh_tw) {
+			bool allow_standard = true;
+			/* An identical artifact name can have different source lore
+			 * in the two variants. A source-text mismatch keeps English. */
 			const char *translated =
-				angdroid_zh_tw_artifact_flavor(obj->artifact->name);
-			/* FAangband-exclusive names are not in the standard
-			 * Angband dictionary. Keep the canonical English fallback. */
-			if (!translated)
+				angdroid_zh_tw_faangband_variant_artifact_lore(
+					obj->artifact->name, flavor, &allow_standard);
+			if (!translated && allow_standard)
+				translated = angdroid_zh_tw_artifact_flavor(
+					obj->artifact->name);
+			if (!translated && allow_standard)
 				translated = angdroid_zh_tw_faangband_artifact_flavor(
 					obj->artifact->name);
 			if (translated) flavor = translated;
