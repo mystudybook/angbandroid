@@ -986,6 +986,7 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 	while (!(in.type & notify)) {
 		ui_event out = EVENT_EMPTY;
 		int cursor = menu->cursor;
+		bool touch_select_dispatched = false;
 
 		menu_refresh(menu, popup);
         
