@@ -45,6 +45,7 @@
 #include "zh-tw-curse.h"
 #include "zh-tw-item-abilities.h"
 #include "zh-tw-artifact-lore.h"
+#include "zh-tw-faangband-artifact-lore.h"
 #include "zh-tw-ego-lore.h"
 #include "zh-tw-kind-lore.h"
 #include "zh-tw-monsters.h"
@@ -2385,6 +2386,11 @@ static void describe_flavor_text(textblock *tb, const struct object *obj,
 		if (zh_tw) {
 			const char *translated =
 				angdroid_zh_tw_artifact_flavor(obj->artifact->name);
+			/* FAangband-exclusive names are not in the standard
+			 * Angband dictionary. Keep the canonical English fallback. */
+			if (!translated)
+				translated = angdroid_zh_tw_faangband_artifact_flavor(
+					obj->artifact->name);
 			if (translated) flavor = translated;
 		}
 		textblock_append(tb, "%s\n\n", flavor);
