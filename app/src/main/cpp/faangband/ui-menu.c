@@ -30,6 +30,7 @@
 #include "../angband/menu-column-width.h"
 #include "../angband/menu-compact-layout.h"
 #include "../angband/menu-valid-cursor.h"
+#include "../angband/menu-action-guard.h"
 #include "../angband/menu-visible-tags.h"
 #include "../angband/menu-popup-layout.h"
 #include "../curses/unicode_display.h"
@@ -761,17 +762,29 @@ bool menu_handle_mouse(struct menu *menu, const ui_event *in,
  */
 static bool menu_handle_action(struct menu *m, const ui_event *in)
 {
-	if (m->row_funcs->row_handler) {
-		int oid = angdroid_fa_menu_source_index(
-			m->filter_list, m->cursor,
-			m->filter_list ? m->filter_count : m->count, m->count);
-		if (oid < 0) return false;
-		return m->row_funcs->row_handler(m, in, oid);
+	int count;
+	int oid;
+
+	if (!m->row_funcs || !m->row_funcs->row_handler)
+		return false;
+
+	count = m->filter_list ? m->filter_count : m->count;
+	oid = angdroid_fa_menu_source_index(
+		m->filter_list, m->cursor, count, m->count);
+
+	/* A stock change deliberately clears the selected cursor.  Empty
+	 * shops must still accept Sell/Help and shopkeeper-header touches,
+	 * but this opt-in must never dispatch SELECT against stock[-1]. */
+	if (oid < 0 || !is_valid_row(m, m->cursor)) {
+		if (angdroid_menu_allow_empty_input(m->flags,
+			MN_ALLOW_EMPTY_INPUT,
+			in->type == EVT_KBRD || in->type == EVT_MOUSE))
+			return m->row_funcs->row_handler(m, in, -1);
+		return false;
 	}
 
-	return false;
+	return m->row_funcs->row_handler(m, in, oid);
 }
-
 
 /**
  * Handle navigation keypresses.
