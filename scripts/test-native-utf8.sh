@@ -243,6 +243,13 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
 "$BUILD_DIR/test_faangband_artifact_lore_locale"
 
+# FAangband assigned flavor appearance, identified effect, and scroll
+# random-title display, including C99 buffer and privacy regressions.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_flavor_ui.c" \
+    -o "$BUILD_DIR/test_faangband_flavor_ui"
+"$BUILD_DIR/test_faangband_flavor_ui"
+
 # FAangband identified item kinds and ego modifiers: 118 unique ego
 # names, 39 FA-only kinds, localized quantity and complete UTF-8 suffixes.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
