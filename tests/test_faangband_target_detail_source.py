@@ -44,9 +44,15 @@ assert "if (hgt <= HELP_HEIGHT + 2 || wid < 64)" in help_body
 assert "fa_target_draw_compact_help(hgt - 1);" in help_body
 assert help_body.index("fa_target_draw_compact_help(hgt - 1);") < (
     help_body.index("clear_from(help_loc);"))
-assert "text_out_wrap = saved_wrap;" in help_body
-assert "text_out_indent = 0;" in help_body
-assert 'text_out_c(COLOUR_L_GREEN, "t")' in help_body
+assert "help_loc = hgt - HELP_HEIGHT;" in help_body
+assert "clear_from(help_loc);" in help_body
+assert "fa_target_draw_bounded_line(third, help_loc + 2);" in help_body
+assert help_body.count("fa_target_draw_bounded_line(") == 3
+assert "text_out_to_screen" not in help_body
+assert "text_out_wrap =" not in help_body
+assert "cmd_lookup_key(CMD_IGNORE," in help_body
+assert "UN_KTRL(key)" in help_body
+assert "monster || free" in help_body
 
 # The monster/held-item/pile/ground-item/trap/terrain/hallucination
 # descriptions all originated from fixed-byte strnfmt() buffers. None
