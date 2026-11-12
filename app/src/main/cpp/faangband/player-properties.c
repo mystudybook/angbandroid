@@ -112,42 +112,46 @@ void gain_specialty(void)
  */
 void view_abilities(void)
 {
-	int i;
-	struct player_ability *ability;
-	int num_abilities = 0;
-	struct player_ability ability_list[32];
+    int i, capacity = 0, count = 0;
+    struct player_ability *ability;
+    struct player_ability *list;
 
-	/* Count the number of specialties we know */
-	num_abilities = 0;
-	for (i = 0; i < PF_MAX; i++) {
-		if (!pf_has(player->specialties, i)) continue;
-		memcpy(&ability_list[num_abilities], lookup_ability("player", i, 0),
-			   sizeof(struct player_ability));
-		ability_list[num_abilities++].group = PLAYER_FLAG_SPECIAL;
-	}
+    /* All three sources can exceed the old fixed 32-element stack array.
+     * Count each actual entry before copying to avoid a buffer overflow. */
+    for (i = 0; i < PF_MAX; ++i) {
+        if (pf_has(player->specialties, i) &&
+            lookup_ability("player", i, 0))
+            ++capacity;
+    }
+    for (ability = player_abilities; ability; ability = ability->next) {
+        if (class_has_ability(player->class, ability)) ++capacity;
+        if (race_has_ability(player->race, ability)) ++capacity;
+    }
 
-	/* Count the number of class powers we have */
-	for (ability = player_abilities; ability; ability = ability->next) {
-		if (class_has_ability(player->class, ability)) {
-			memcpy(&ability_list[num_abilities], ability,
-				   sizeof(struct player_ability));
-			ability_list[num_abilities++].group = PLAYER_FLAG_CLASS;
-		}
-	}
+    if (capacity == 0) return;
+    list = mem_alloc((size_t)capacity * sizeof(*list));
 
-	/* Count the number of race powers we have */
-	for (ability = player_abilities; ability; ability = ability->next) {
-		if (race_has_ability(player->race, ability)) {
-			memcpy(&ability_list[num_abilities], ability,
-				   sizeof(struct player_ability));
-			ability_list[num_abilities++].group = PLAYER_FLAG_RACE;
-		}
-	}
+    /* Preserve the original specialty, class, race display order. */
+    for (i = 0; i < PF_MAX; ++i) {
+        if (!pf_has(player->specialties, i)) continue;
+        ability = lookup_ability("player", i, 0);
+        if (!ability) continue;
+        list[count] = *ability;
+        list[count++].group = PLAYER_FLAG_SPECIAL;
+    }
+    for (ability = player_abilities; ability; ability = ability->next) {
+        if (!class_has_ability(player->class, ability)) continue;
+        list[count] = *ability;
+        list[count++].group = PLAYER_FLAG_CLASS;
+    }
+    for (ability = player_abilities; ability; ability = ability->next) {
+        if (!race_has_ability(player->race, ability)) continue;
+        list[count] = *ability;
+        list[count++].group = PLAYER_FLAG_RACE;
+    }
 
-	/* View choices until user exits */
-	view_ability_menu(ability_list, num_abilities);
-
-	return;
+    view_ability_menu(list, count);
+    mem_free(list);
 }
 
 
