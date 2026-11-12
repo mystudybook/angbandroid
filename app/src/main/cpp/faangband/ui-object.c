@@ -1335,6 +1335,8 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 	bool allow_equip = false;
 	bool allow_quiver = false;
 	bool allow_floor = false;
+	bool equip_has_item = false;
+	int equipped_slot;
 
 	bool toggle = false;
 
@@ -1414,6 +1416,19 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 	else if (item_mode & USE_EQUIP)
 		item_mode -= USE_EQUIP;
 
+	/* With CMD_NULL, equipment slots are intentionally not trimmed to
+	 * allow SHOW_EMPTY. A slot range is not proof that an actual object
+	 * exists. Only count a tester-eligible equipped object as populated. */
+	if (allow_equip) {
+		for (equipped_slot = e1; equipped_slot <= e2; ++equipped_slot) {
+			struct object *equipped = slot_object(player, equipped_slot);
+			if (equipped && object_test(tester, equipped)) {
+				equip_has_item = true;
+				break;
+			}
+		}
+	}
+
 	/* Restrict quiver indexes */
 	q1 = 0;
 	q2 = z_info->quiver_size - 1;
@@ -1474,7 +1489,7 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 				(allow_quiver ? ANGDROID_PICKER_QUIVER : 0u) |
 				(allow_floor ? ANGDROID_PICKER_FLOOR : 0u),
 				(i1 <= i2 ? ANGDROID_PICKER_INVEN : 0u) |
-				(e1 <= e2 ? ANGDROID_PICKER_EQUIP : 0u) |
+				(equip_has_item ? ANGDROID_PICKER_EQUIP : 0u) |
 				(q1 <= q2 ? ANGDROID_PICKER_QUIVER : 0u) |
 				(f1 <= f2 ? ANGDROID_PICKER_FLOOR : 0u),
 				(use_inven ? ANGDROID_PICKER_INVEN : 0u) |
