@@ -71,6 +71,35 @@ for game in ("angband", "faangband"):
     assert "menu_handle_action(menu, &in);" in select_loop
     assert "return in;" in select_loop
 
+    # An empty inventory is displayed with zero actual selectable rows.
+    # Left/right arrows must still become EVT_SWITCH if another tab exists.
+    keyboard = menu.split("bool menu_handle_keypress(", 1)[1].split(
+        "static void keys_to_ui(", 1
+    )[0]
+    empty = keyboard.split("} else if (count <= 0) {", 1)[1].split(
+        "} else if (in->key.code == ' ')", 1
+    )[0]
+    for marker in (
+        "(menu->flags & MN_ALLOW_EMPTY_INPUT)",
+        "menu->skin == &menu_skin_object",
+        "menu->switch_keys",
+        "int dir = target_dir(in->key);",
+        "dir && ddx[dir] && !ddy[dir]",
+        "*out = menu->skin->process_dir(menu, dir);",
+        "eat = true;",
+    ):
+        assert marker in empty, (game, marker)
+    assert "m->cursor" not in empty, game
+
+    # When neither arrow can reach a different source, do not rebuild
+    # the identical empty menu in an unbounded loop.
+    switch = picker.split("/* Deal with menu switch */", 1)[1].split(
+        "/* Result */", 1
+    )[0]
+    assert "int original_source = player->upkeep->command_wrk;" in switch
+    assert "newmenu = (player->upkeep->command_wrk != original_source);" in switch
+    assert "\\n\\t\\tnewmenu = true;" not in switch
+
 for marker in (
     "angdroid_item_selection_viewport_count(0, false) == 0",
     "angdroid_item_selection_viewport_count(0, true) == 1",
