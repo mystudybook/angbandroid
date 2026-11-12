@@ -1,6 +1,8 @@
 #ifndef INCLUDED_DROID_H
 #define INCLUDED_DROID_H
 
+#include "soft-kbd-linger-scope.h"
+
 #ifndef false
 #	define false 0
 #endif
@@ -27,6 +29,8 @@ extern int Term_control_quantity(const char *msg, int max_value, int initial_val
 /* For control keys in android */
 extern void soft_kbd_flash(const char *keys);
 extern void soft_kbd_linger(const char *keys);
+extern void soft_kbd_save_linger(soft_kbd_linger_snapshot *saved);
+extern void soft_kbd_restore_linger(const soft_kbd_linger_snapshot *saved, int cancelled);
 extern void soft_kbd_replace(const char *keys);
 extern void soft_kbd_clear(int force);
 extern void soft_kbd_flush();
