@@ -1015,6 +1015,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_ignore_quality_action_locale"
 "$BUILD_DIR/test_ignore_quality_action_locale"
 
+# Ignore-by-kind and ignore-by-ego labels must fit before being published.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_ignore_named_action_locale.c" \
+    -o "$BUILD_DIR/test_ignore_named_action_locale"
+"$BUILD_DIR/test_ignore_named_action_locale"
+
 # Native bilingual version title and complete UTF-8 buffer boundary.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_version_header_text.c" \
