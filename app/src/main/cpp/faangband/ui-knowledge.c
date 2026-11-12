@@ -4200,7 +4200,8 @@ void do_cmd_inven(void)
 	int ret = 3;
 
 	if (player->upkeep->inven[0] == NULL) {
-		msg("You have nothing in your inventory.");
+		msg("%s", angdroid_game_ui_text(
+            "You have nothing in your inventory.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -4213,7 +4214,8 @@ void do_cmd_inven(void)
 		screen_save();
 
 		/* Get an item to use a context command on (Display the inventory) */
-		if (get_item(&obj, "Select Item:",
+		if (get_item(&obj, angdroid_game_ui_text(
+            "Select Item:", angdroid_zh_tw_enabled()),
 				"Error in do_cmd_inven(), please report.",
 				CMD_NULL, NULL, GET_ITEM_PARAMS)) {
 			/* Load screen */
@@ -4246,7 +4248,8 @@ void do_cmd_equip(void)
 	int ret = 3;
 
 	if (!player->upkeep->equip_cnt) {
-		msg("You are not wielding or wearing anything.");
+		msg("%s", angdroid_game_ui_text(
+            "You are not wielding or wearing anything.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -4259,7 +4262,8 @@ void do_cmd_equip(void)
 		screen_save();
 
 		/* Get an item to use a context command on (Display the equipment) */
-		if (get_item(&obj, "Select Item:",
+		if (get_item(&obj, angdroid_game_ui_text(
+            "Select Item:", angdroid_zh_tw_enabled()),
 				"Error in do_cmd_equip(), please report.",
 				CMD_NULL, NULL, GET_ITEM_PARAMS)) {
 			/* Load screen */
@@ -4295,7 +4299,8 @@ void do_cmd_quiver(void)
 	int ret = 3;
 
 	if (player->upkeep->quiver_cnt == 0) {
-		msg("You have nothing in your quiver.");
+		msg("%s", angdroid_game_ui_text(
+            "You have nothing in your quiver.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -4308,7 +4313,8 @@ void do_cmd_quiver(void)
 		screen_save();
 
 		/* Get an item to use a context command on (Display the quiver) */
-		if (get_item(&obj, "Select Item:",
+		if (get_item(&obj, angdroid_game_ui_text(
+            "Select Item:", angdroid_zh_tw_enabled()),
 				"Error in do_cmd_quiver(), please report.",
 				CMD_NULL, NULL, GET_ITEM_PARAMS)) {
 			/* Load screen */
@@ -4343,7 +4349,8 @@ void do_cmd_look(void)
 	/* Look around */
 	if (target_set_interactive(TARGET_LOOK, -1, -1))
 	{
-		msg("Target Selected.");
+		msg("%s", angdroid_game_ui_text(
+            "Target Selected.", angdroid_zh_tw_enabled()));
 	}
 }
 
@@ -4384,34 +4391,66 @@ void do_cmd_locate(void)
 		int y2 = Term->offset_y;
 		int x2 = Term->offset_x;
 		
-		/* Describe the location */
-		if ((y2 == y1) && (x2 == x1)) {
-			tmp_val[0] = '\0';
-		} else {
-			strnfmt(tmp_val, sizeof(tmp_val), "%s%s of",
-			        ((y2 < y1) ? " north" : (y2 > y1) ? " south" : ""),
-			        ((x2 < x1) ? " west" : (x2 > x1) ? " east" : ""));
-		}
-
-		/* Prepare to ask which way to look */
-		strnfmt(out_val, sizeof(out_val),
-		        "Map sector [%d,%d], which is%s your sector.  Direction?",
-		        (2 * y2) / panel_hgt, (2 * x2) / panel_wid, tmp_val);
-
-		/* More detail */
-		if (OPT(player, center_player)) {
-			strnfmt(out_val, sizeof(out_val),
-		        	"Map sector [%d(%02d),%d(%02d)], which is%s your sector.  Direction?",
-					(2 * y2) / panel_hgt, (2 * y2) % panel_hgt,
-					(2 * x2) / panel_wid, (2 * x2) % panel_wid, tmp_val);
-		}
+        /* The terminal prompt is localized, not the panel offsets or
+         * movement controls. Relative direction is from the initial panel. */
+        if (angdroid_zh_tw_enabled()) {
+            const char *north_south =
+                (y2 < y1) ? "北" : (y2 > y1) ? "南" : "";
+            const char *east_west =
+                (x2 < x1) ? "西" : (x2 > x1) ? "東" : "";
+            if (y2 == y1 && x2 == x1)
+                my_strcpy(tmp_val, "起點", sizeof(tmp_val));
+            else
+                strnfmt(tmp_val, sizeof(tmp_val), "%s%s",
+                    north_south, east_west);
+            if (OPT(player, center_player)) {
+                strnfmt(out_val, sizeof(out_val),
+                    "地圖區域 [%d(%02d),%d(%02d)]（%s），方向？",
+                    (2 * y2) / panel_hgt, (2 * y2) % panel_hgt,
+                    (2 * x2) / panel_wid, (2 * x2) % panel_wid, tmp_val);
+            } else {
+                strnfmt(out_val, sizeof(out_val),
+                    "地圖區域 [%d,%d]（%s），方向？",
+                    (2 * y2) / panel_hgt, (2 * x2) / panel_wid, tmp_val);
+            }
+        } else {
+            /* Keep the original English status and direction wording. */
+            if ((y2 == y1) && (x2 == x1)) {
+                tmp_val[0] = '\0';
+            } else {
+                strnfmt(tmp_val, sizeof(tmp_val), "%s%s of",
+                    (y2 < y1) ? " north" : (y2 > y1) ? " south" : "",
+                    (x2 < x1) ? " west" : (x2 > x1) ? " east" : "");
+            }
+            strnfmt(out_val, sizeof(out_val),
+                "Map sector [%d,%d], which is%s your sector.  Direction?",
+                (2 * y2) / panel_hgt, (2 * x2) / panel_wid, tmp_val);
+            if (OPT(player, center_player)) {
+                strnfmt(out_val, sizeof(out_val),
+                    "Map sector [%d(%02d),%d(%02d)], which is%s your sector.  Direction?",
+                    (2 * y2) / panel_hgt, (2 * y2) % panel_hgt,
+                    (2 * x2) / panel_wid, (2 * x2) % panel_wid, tmp_val);
+            }
+        }
 
 		/* Get a direction */
 		while (!dir) {
 			struct keypress command = KEYPRESS_NULL;
 
-			/* Get a command (or Cancel) */
-			if (!get_com(out_val, (char *)&command.code)) break;
+            /* Unicode terminal columns, not bytes, determine what fits.
+             * Keep the essential direction prompt on narrow phones. */
+            {
+                char visible[sizeof(out_val)];
+                const char *prompt = out_val;
+                if (angdroid_zh_tw_enabled() && Term &&
+                    angdroid_utf8_display_columns(prompt) >
+                        (size_t)MAX(0, Term->wid - 1))
+                    prompt = "方向？";
+                angdroid_knowledge_clip_label(visible, sizeof(visible),
+                    prompt, 0, Term ? MAX(0, Term->wid - 1) : 0,
+                    Term ? Term->wid : 0);
+                if (!get_com(visible, (char *)&command.code)) break;
+            }
 
 			/* Extract direction */
 			dir = target_dir(command);
