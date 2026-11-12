@@ -443,13 +443,21 @@ static void display_winner(void)
 
 		/* Dump the file to the screen */
 		while (file_getl(fp, buf, sizeof(buf))) {
-			put_str(buf, i++, (wid / 2) - (width / 2));
-		}
+            char visible[1024];
+            int x = MAX(0, (wid - width) / 2);
+            if (i >= hgt || x >= wid) break;
+            angdroid_menu_copy_columns(visible, sizeof(visible),
+                buf, (size_t)(wid - x));
+            if (visible[0]) put_str(visible, i, x);
+            ++i;
+        }
 
 		file_close(fp);
 	}
 
-	put_str_centred(i, 0, wid, "All Hail the Mighty Champion!");
+	put_str_centred(i, 0, wid - 1, "%s",
+        angdroid_zh_tw_enabled() ?
+            "向偉大冠軍致敬！" : "All Hail the Mighty Champion!");
 
 	event_signal(EVENT_INPUT_FLUSH);
 	pause_line(Term);
