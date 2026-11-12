@@ -58,6 +58,7 @@
 #include "../angband/item-picker-start-source.h"
 #include "../angband/item-picker-tag-guard.h"
 #include "../angband/zh-tw-ui.h"
+#include "../angband/zh-tw-ignore-quality-action.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -1503,6 +1504,10 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 
 	/* Require at least one legal choice */
 	if (allow_inven || allow_equip || allow_quiver || allow_floor) {
+		soft_kbd_linger_snapshot outer_keys;
+		/* Parent hints return only after cancellation of the entire picker,
+		 * never between inventory/equipment/quiver/floor tabs. */
+		soft_kbd_save_linger(&outer_keys);
 		/* Throwing remains an explicit higher-priority view. Otherwise
 		 * begin with an allowed tab containing at least one real item,
 		 * instead of inheriting a now-empty inventory page. */
@@ -1637,6 +1642,7 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 				break;
 			}
 		}
+		soft_kbd_restore_linger(&outer_keys, *choice == NULL);
 	} else {
 		/* Warning if needed */
 		if (str) msg("%s", str);
@@ -1724,7 +1730,9 @@ void textui_obj_examine(void)
 	struct object *obj;
 
 	/* Select item */
-	if (!get_item(&obj, "Examine which item?", "You have nothing to examine.",
+	if (!get_item(&obj,
+            angdroid_game_ui_text("Examine which item?", angdroid_zh_tw_enabled()),
+            angdroid_game_ui_text("You have nothing to examine.", angdroid_zh_tw_enabled()),
 			CMD_NULL, NULL, (USE_EQUIP | USE_INVEN | USE_QUIVER | USE_FLOOR | IS_HARMLESS)))
 		return;
 
@@ -1774,9 +1782,11 @@ void textui_cmd_ignore_menu(struct object *obj)
 
 	/* Basic ignore option */
 	if (!(obj->known->notice & OBJ_NOTICE_IGNORE)) {
-		menu_dynamic_add(m, "This item only", IGNORE_THIS_ITEM);
+		menu_dynamic_add(m, angdroid_game_ui_text(
+            "This item only", angdroid_zh_tw_enabled()), IGNORE_THIS_ITEM);
 	} else {
-		menu_dynamic_add(m, "Unignore this item", UNIGNORE_THIS_ITEM);
+		menu_dynamic_add(m, angdroid_game_ui_text(
+            "Unignore this item", angdroid_zh_tw_enabled()), UNIGNORE_THIS_ITEM);
 	}
 
 	/* Flavour-aware ignore */
@@ -1789,10 +1799,12 @@ void textui_cmd_ignore_menu(struct object *obj)
 		object_desc(tmp, sizeof(tmp), obj,
 			ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL, player);
 		if (!ignored) {
-			strnfmt(out_val, sizeof out_val, "All %s", tmp);
+			strnfmt(out_val, sizeof out_val,
+                angdroid_zh_tw_enabled() ? "全部忽略 %s" : "All %s", tmp);
 			menu_dynamic_add(m, out_val, IGNORE_THIS_FLAVOR);
 		} else {
-			strnfmt(out_val, sizeof out_val, "Unignore all %s", tmp);
+			strnfmt(out_val, sizeof out_val,
+                angdroid_zh_tw_enabled() ? "取消忽略全部 %s" : "Unignore all %s", tmp);
 			menu_dynamic_add(m, out_val, UNIGNORE_THIS_FLAVOR);
 		}
 	}
@@ -1810,10 +1822,12 @@ void textui_cmd_ignore_menu(struct object *obj)
 		choice.short_name = "";
 		(void) ego_item_name(tmp, sizeof(tmp), &choice);
 		if (!ego_is_ignored(choice.e_idx, choice.itype)) {
-			strnfmt(out_val, sizeof out_val, "All %s", tmp + 4);
+			strnfmt(out_val, sizeof out_val,
+                angdroid_zh_tw_enabled() ? "全部忽略 %s" : "All %s", tmp + 4);
 			menu_dynamic_add(m, out_val, IGNORE_THIS_EGO);
 		} else {
-			strnfmt(out_val, sizeof out_val, "Unignore all %s", tmp + 4);
+			strnfmt(out_val, sizeof out_val,
+                angdroid_zh_tw_enabled() ? "取消忽略全部 %s" : "Unignore all %s", tmp + 4);
 			menu_dynamic_add(m, out_val, UNIGNORE_THIS_EGO);
 		}
 	}
@@ -1825,15 +1839,21 @@ void textui_cmd_ignore_menu(struct object *obj)
 		value = IGNORE_MAX;
 
 	if (value != IGNORE_MAX && type != ITYPE_MAX) {
-		strnfmt(out_val, sizeof out_val, "All %s %s",
-				quality_values[value].name, ignore_name_for_type(type));
+		if (!angdroid_ignore_quality_action_text(
+                out_val, sizeof(out_val), quality_values[value].name,
+                ignore_name_for_type(type), angdroid_zh_tw_enabled()))
+            my_strcpy(out_val, angdroid_game_ui_text(
+                "Quality ignore menu", angdroid_zh_tw_enabled()),
+                sizeof(out_val));
 
 		menu_dynamic_add(m, out_val, IGNORE_THIS_QUALITY);
 	}
 
 	/* Work out display region */
-	r.width = menu_dynamic_longest_entry(m) + 3 + 2; /* +3 for tag, 2 for pad */
-	r.col = 80 - r.width;
+	/* Fit translated labels within the actual terminal columns. */
+	r.width = (int)MIN(menu_dynamic_longest_entry(m) + 3 + 2,
+        (size_t)MAX(1, Term->wid - 2));
+	r.col = MAX(0, Term->wid - r.width - 1);
 	r.row = 1;
 	r.page_rows = m->count;
 
@@ -1841,7 +1861,7 @@ void textui_cmd_ignore_menu(struct object *obj)
 	menu_layout(m, &r);
 	region_erase_bordered(&r);
 
-	prt("(Enter to select, ESC) Ignore:", 0, 0);
+	prt(angdroid_game_ui_text("(Enter to select, ESC) Ignore:", angdroid_zh_tw_enabled()), 0, 0);
 	selected = menu_dynamic_select(m);
 
 	screen_load();
@@ -1875,8 +1895,8 @@ void textui_cmd_ignore(void)
 	struct object *obj;
 
 	/* Get an item */
-	const char *q = "Ignore which item? ";
-	const char *s = "You have nothing to ignore.";
+	const char *q = angdroid_game_ui_text("Ignore which item? ", angdroid_zh_tw_enabled());
+	const char *s = angdroid_game_ui_text("You have nothing to ignore.", angdroid_zh_tw_enabled());
 	if (!get_item(&obj, q, s, CMD_IGNORE, NULL,
 				  USE_INVEN | USE_QUIVER | USE_EQUIP | USE_FLOOR))
 		return;
