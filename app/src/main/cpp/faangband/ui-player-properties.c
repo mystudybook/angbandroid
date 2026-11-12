@@ -37,7 +37,9 @@
 
 static char view_ability_tag(struct menu *menu, int oid)
 {
-	return all_letters_nohjkl[oid];
+    /* Long race/class lists remain scrollable without reading past tags. */
+    return oid >= 0 && (size_t)oid < strlen(all_letters_nohjkl) ?
+        all_letters_nohjkl[oid] : 0;
 }
 
 /**
@@ -115,8 +117,12 @@ void textui_view_ability_menu(struct player_ability *ability_list,
 	menu_iter menu_f = { view_ability_tag, 0, view_ability_display, 0, 0 };
 	region loc = { 0, 0, 70, -99 };
 	char buf[160];
+    int last_shortcut;
 
-    if (!ability_list || num_abilities <= 0) return;
+    if (!ability_list || num_abilities <= 0 ||
+        !all_letters_nohjkl[0]) return;
+    last_shortcut = MIN(num_abilities,
+        (int)strlen(all_letters_nohjkl)) - 1;
 
 	/* Save the screen and clear it */
 	screen_save();
@@ -126,7 +132,7 @@ void textui_view_ability_menu(struct player_ability *ability_list,
         angdroid_zh_tw_enabled() ?
             "種族與職業能力（%c-%c，Esc 離開）：" :
             "Race and class abilities (%c-%c, ESC=exit): ",
-        all_letters_nohjkl[0], all_letters_nohjkl[num_abilities - 1]);
+        all_letters_nohjkl[0], all_letters_nohjkl[last_shortcut]);
 
 	/* Set up the menu */
 	menu_init(&menu, MN_SKIN_SCROLL, &menu_f);
