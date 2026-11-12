@@ -26,11 +26,13 @@ if "menu->cursor += ddy[dir];" in section:
 
 # Horizontal/vertical arrows must skip hidden rows just as FAangband does.
 adapter = source.split(
-    "static int menu_navigation_is_valid(void *context, int row)\\n{", 1
-)[1].split("\\n}\\n", 1)[0]
+    "static int menu_navigation_is_valid(void *context, int row)\n{", 1
+)[1].split("\n}\n", 1)[0]
 if "menu->row_funcs->valid_row(menu, oid) == MN_ROW_VALID" not in adapter:
     raise SystemExit("FAIL: hidden rows can be reached by arrow keys")
-nonav = source.split("static bool no_valid_row(", 1)[1].split("\\n}\\n", 1)[0]
+nonav = source.split(
+    "static bool no_valid_row(struct menu *menu, int count)\n{", 1
+)[1].split("\n}\n", 1)[0]
 if "menu_navigation_is_valid(menu, i)" not in nonav:
     raise SystemExit("FAIL: hidden-only menus count as navigable")
 
