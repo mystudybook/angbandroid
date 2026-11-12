@@ -51,6 +51,8 @@
 #include "ui-target.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
 
 static bool inkey_xtra;
 uint32_t inkey_scan;		/* See the "inkey()" function */
@@ -1081,7 +1083,9 @@ bool get_character_name(char *buf, size_t buflen)
 	event_signal(EVENT_MESSAGE_FLUSH);
 
 	/* Display prompt */
-	prt("Enter a name for your character (* for a random name): ", 0, 0);
+	prt(angdroid_game_ui_text(
+        "Enter a name for your character (* for a random name): ",
+        angdroid_zh_tw_enabled()), 0, 0);
 
 	/* Save the player name */
 	my_strcpy(buf, player->full_name, buflen);
@@ -1120,8 +1124,8 @@ static bool textui_get_string(const char *prompt, char *buf, size_t len)
 	/* Paranoia */
 	event_signal(EVENT_MESSAGE_FLUSH);
 
-	/* Display prompt */
-	prt(prompt, 0, 0);
+    prt(angdroid_game_ui_text(prompt, angdroid_zh_tw_enabled()),
+        0, 0);
 
 	/* Ask the user for a string */
 	res = askfor_aux(buf, len, NULL);
@@ -1150,7 +1154,9 @@ static int textui_get_quantity(const char *prompt, int max)
 		/* Build a prompt if needed */
 		if (!prompt) {
 			/* Build a prompt */
-			strnfmt(tmp, sizeof(tmp), "Quantity (0-%d, *=all): ", max);
+			strnfmt(tmp, sizeof(tmp), angdroid_zh_tw_enabled() ?
+                "數量（0-%d，* 代表全部）：" :
+                "Quantity (0-%d, *=all): ", max);
 
 			/* Use that prompt */
 			prompt = tmp;
@@ -1293,7 +1299,9 @@ static bool get_file_text(const char *suggested_name, char *path, size_t len)
 	
 	if (!arg_force_name) {
 			
-			if (!get_string("File name: ", buf, sizeof buf)) return false;
+			if (!get_string(angdroid_game_ui_text(
+                "File name: ", angdroid_zh_tw_enabled()),
+                buf, sizeof buf)) return false;
 
 			/* Make sure it's actually a filename */
 			if (buf[0] == '\0' || buf[0] == ' ') return false;
@@ -1306,7 +1314,8 @@ static bool get_file_text(const char *suggested_name, char *path, size_t len)
 		time(&ltime);
 		today = localtime(&ltime);
 
-		prt("File name: ", 0,0);
+		prt(angdroid_game_ui_text(
+            "File name: ", angdroid_zh_tw_enabled()), 0, 0);
 
 		/* Overwrite the ".txt" that was added */
 		assert(strlen(buf) >= 4);
@@ -1323,11 +1332,13 @@ static bool get_file_text(const char *suggested_name, char *path, size_t len)
 	path_build(path, len, ANGBAND_DIR_USER, buf);
 
 	/* Check if it already exists */
-	if (file_exists(path) && !get_check("Replace existing file? "))
+	if (file_exists(path) && !get_check(angdroid_game_ui_text(
+            "Replace existing file? ", angdroid_zh_tw_enabled())))
 		return false;
 
 	/* Tell the user where it's saved to. */
-	prt(format("Saving as %s.", path), 0, 0);
+	prt(format(angdroid_game_ui_text(
+        "Saving as %s.", angdroid_zh_tw_enabled()), path), 0, 0);
 	anykey();
 	prt("", 0, 0);
 
@@ -1375,8 +1386,8 @@ bool get_com_ex(const char *prompt, ui_event *command)
 	/* Paranoia XXX XXX XXX */
 	event_signal(EVENT_MESSAGE_FLUSH);
 
-	/* Display a prompt */
-	prt(prompt, 0, 0);
+    prt(angdroid_game_ui_text(prompt, angdroid_zh_tw_enabled()),
+        0, 0);
 
 	/* Get a key */
 	ke = inkey_m();
@@ -1403,9 +1414,17 @@ bool get_com_ex(const char *prompt, ui_event *command)
  */
 void pause_line(struct term *tm)
 {
-	prt("", tm->hgt - 1, 0);
-	put_str("[Press any key to continue]", tm->hgt - 1, (tm->wid - 27) / 2);
-	(void)anykey();
+    const char *message = angdroid_game_ui_text(
+        "[Press any key to continue]", angdroid_zh_tw_enabled());
+    char visible[96];
+    int columns, x;
+    prt("", tm->hgt - 1, 0);
+    columns = (int)angdroid_utf8_display_columns(message);
+    x = columns >= tm->wid ? 0 : (tm->wid - columns) / 2;
+    angdroid_menu_copy_columns(visible, sizeof(visible), message,
+        (size_t)MAX(0, tm->wid - x));
+    put_str(visible, tm->hgt - 1, x);
+    (void)anykey();
 	prt("", tm->hgt - 1, 0);
 }
 
@@ -1463,7 +1482,9 @@ static bool textui_get_rep_dir(int *dp, bool allow_5)
 		if (ke.type == EVT_NONE ||
 				(ke.type == EVT_KBRD
 				&& !target_dir_allow(ke.key, allow_5))) {
-			prt("Direction or <click> (Escape to cancel)? ", 0, 0);
+			prt(angdroid_game_ui_text(
+                "Direction or <click> (Escape to cancel)? ",
+                angdroid_zh_tw_enabled()), 0, 0);
 			ke = inkey_ex();
 		}
 
