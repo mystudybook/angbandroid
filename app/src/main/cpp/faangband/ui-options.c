@@ -41,6 +41,20 @@
 #include "../angband/menu-text-fit.h"
 #include "obj-desc-item-zh-tw.h"
 
+/* Restrict Chinese menu labels to the visible terminal-cell budget.
+ * This helper never changes the underlying selection item or shortcut. */
+static void fa_options_put_clipped(uint8_t attr, const char *label,
+    int row, int col, int width)
+{
+    char clipped[512];
+    if (!Term || !label || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid || width <= 0) return;
+    angdroid_menu_copy_columns(clipped, sizeof(clipped), label,
+        (size_t)MIN(width, Term->wid - col));
+    if (clipped[0]) c_prt(attr, clipped, row, col);
+}
+
+
 
 /**
  * Prompt the user for a filename to save the pref file to.
@@ -1638,7 +1652,7 @@ static void ego_menu(const char *unused, int also_unused)
 
 	/* Indent output */
 	text_out_indent = 1;
-	text_out_wrap = MIN(79, MAX(12, Term->wid - 2));
+	text_out_wrap = MIN(79, MAX(1, Term->wid - 2));
 	Term_gotoxy(1, 1);
 
 	/* Display some helpful information */
@@ -1914,11 +1928,19 @@ static void ignore_sval_menu_display(struct menu *menu, int oid, bool cursor,
 
 	uint8_t attr = curs_attrs[(int)aware][0 != cursor];
 
-	/* Acquire the "name" of object "i" */
-	object_kind_name(buf, sizeof(buf), kind, aware);
-
-	/* Print it */
-	c_put_str(attr, format("[ ] %s", buf), row, col);
+    /* Only show the localized real kind when already learned.  The
+     * aware/unaware ignore row selection and flags remain canonical. */
+    object_kind_name(buf, sizeof(buf), kind, aware);
+    {
+        const char *display = buf;
+        if (aware && kind->aware && angdroid_zh_tw_enabled()) {
+            const char *known = angdroid_faangband_known_kind_ui_name(
+                kind->name, tval_find_name(kind->tval), true);
+            if (known) display = known;
+        }
+        fa_options_put_clipped(attr, format("[ ] %s", display),
+            row, col, width);
+    }
 	if ((aware && (kind->ignore & IGNORE_IF_AWARE)) ||
 			(!aware && (kind->ignore & IGNORE_IF_UNAWARE)))
 		c_put_str(COLOUR_L_RED, "*", row, col + 1);
@@ -2155,16 +2177,18 @@ static void display_options_item(struct menu *menu, int oid, bool cursor,
 		bool known = seen_tval(sval_dependent[line].tval);
 		uint8_t attr = curs_attrs[known ? CURS_KNOWN: CURS_UNKNOWN][(int)cursor];
 
-		c_prt(attr, angdroid_game_ui_text(sval_dependent[line].desc,
-            angdroid_zh_tw_enabled()), row, col);
+		fa_options_put_clipped(attr,
+            angdroid_game_ui_text(sval_dependent[line].desc,
+                angdroid_zh_tw_enabled()), row, col, width);
 	} else {
 		uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 
 		line = line - N_ELEMENTS(sval_dependent) - 1;
 
 		if (line < N_ELEMENTS(extra_item_options))
-			c_prt(attr, angdroid_game_ui_text(extra_item_options[line].name,
-                angdroid_zh_tw_enabled()), row, col);
+			fa_options_put_clipped(attr,
+                angdroid_game_ui_text(extra_item_options[line].name,
+                    angdroid_zh_tw_enabled()), row, col, width);
 	}
 }
 
