@@ -1111,9 +1111,12 @@ static void item_menu_browser(int oid, void *data, const region *local_area)
         player->upkeep->command_wrk != USE_INVEN)
         return;
 
-    if (z_info->quiver_slot_size <= 0) return;
-    quiver_slots = (player->upkeep->quiver_cnt +
-        z_info->quiver_slot_size - 1) / z_info->quiver_slot_size;
+    if (z_info->quiver_slot_size <= 0 ||
+        player->upkeep->quiver_cnt <= 0) return;
+    /* Ceil-divide without quiver_cnt + quiver_slot_size - 1 overflow. */
+    quiver_slots = player->upkeep->quiver_cnt /
+        z_info->quiver_slot_size +
+        (player->upkeep->quiver_cnt % z_info->quiver_slot_size != 0);
     for (j = 0; j < quiver_slots; ++j, ++i) {
         int line = angdroid_item_selection_footer_row(local_area->row,
             local_area->page_rows, Term->hgt, j);
@@ -1236,6 +1239,13 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 			selectable_objects, m->switch_keys))
 		m->flags |= MN_ALLOW_EMPTY_INPUT;
 	m->browse_hook = item_menu_browser;
+	/* The quiver summary has its own reserved terminal rows, even when
+	 * the current inventory is empty or contains only placeholders.
+	 * item_menu_browser() never dereferences the incoming oid. */
+	if ((mode & OLIST_QUIVER) &&
+		player->upkeep->command_wrk == USE_INVEN &&
+		player->upkeep->quiver_cnt > 0)
+		m->flags |= MN_BROWSE_WITHOUT_SELECTION;
 
 	/* Get inscriptions */
 	m->inscriptions = mem_zalloc(10 * sizeof(char));
