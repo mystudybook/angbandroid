@@ -837,7 +837,8 @@ static void visuals_reset(const char *title, int row)
 
 	/* Message */
 	prt("", 0, 0);
-	msg("Visual attr/char tables reset.");
+	msg("%s", angdroid_game_ui_text(
+        "Visual attr/char tables reset.", angdroid_zh_tw_enabled()));
 	event_signal(EVENT_MESSAGE_FLUSH);
 }
 
@@ -854,6 +855,16 @@ static menu_action visual_menu_items [] =
 };
 
 
+static const char *const visual_action_english[] = {
+    "Load a user pref file",
+    "Save monster attr/chars",
+    "Save object attr/chars",
+    "Save feature attr/chars",
+    "Save flavor attr/chars",
+    "Reset visuals",
+};
+
+/* Action keys are never translated: only the menu text is refreshed. */
 static void visuals_browse_hook(int oid, void *db, const region *loc)
 {
 	event_signal(EVENT_MESSAGE_FLUSH);
@@ -866,6 +877,12 @@ static void visuals_browse_hook(int oid, void *db, const region *loc)
  */
 static void do_cmd_visuals(const char *title, int row)
 {
+    size_t i;
+    assert(N_ELEMENTS(visual_menu_items) == N_ELEMENTS(visual_action_english));
+    for (i = 0; i < N_ELEMENTS(visual_menu_items); ++i) {
+        visual_menu_items[i].name = angdroid_game_ui_text(
+            visual_action_english[i], angdroid_zh_tw_enabled());
+    }
 	screen_save();
 	clear_from(0);
 
@@ -877,11 +894,17 @@ static void do_cmd_visuals(const char *title, int row)
 		visual_menu->title = title;
 		visual_menu->selections = lower_case;
 		visual_menu->browse_hook = visuals_browse_hook;
-		visual_menu->header = "To edit visuals, use the knowledge menu";
+        visual_menu->header = angdroid_game_ui_text(
+            "To edit visuals, use the knowledge menu",
+            angdroid_zh_tw_enabled());
 	}
 
-	menu_layout(visual_menu, &SCREEN_REGION);
-	menu_select(visual_menu, 0, false);
+    /* Cached menu must also refresh the currently selected language. */
+    visual_menu->title = title;
+    visual_menu->header = angdroid_game_ui_text(
+        "To edit visuals, use the knowledge menu", angdroid_zh_tw_enabled());
+    menu_layout(visual_menu, &SCREEN_REGION);
+    menu_select(visual_menu, 0, false);
 
 	screen_load();
 }
@@ -916,7 +939,8 @@ static void colors_modify(const char *title, int row)
 	static uint8_t a = 0;
 
 	/* Prompt */
-	prt("Command: Modify colors", 8, 0);
+	prt(angdroid_game_ui_text("Command: Modify colors",
+        angdroid_zh_tw_enabled()), 8, 0);
 
 	/* Hack -- query until done */
 	while (1) {
@@ -946,9 +970,12 @@ static void colors_modify(const char *title, int row)
 		index = ((a < BASIC_COLORS) ? color_table[a].index_char : '?');
 
 		/* Describe the color */
-		Term_putstr(5, 10, -1, COLOUR_WHITE,
-					format("Color = %d, Name = %s, Index = %c",
-						   a, name, index));
+        Term_putstr(5, 10, -1, COLOUR_WHITE,
+            angdroid_zh_tw_enabled() ?
+                format("顏色：%d  名稱：%s  索引：%c",
+                    a, angdroid_game_ui_text(name, true), index) :
+                format("Color = %d, Name = %s, Index = %c",
+                    a, name, index));
 
 		/* Label the Current values */
 		Term_putstr(5, 12, -1, COLOUR_WHITE,
@@ -959,8 +986,9 @@ static void colors_modify(const char *title, int row)
 				   angband_color_table[a][3]));
 
 		/* Prompt */
-		Term_putstr(0, 14, -1, COLOUR_WHITE,
-				"Command (n/N/k/K/r/R/g/G/b/B): ");
+        Term_putstr(0, 14, -1, COLOUR_WHITE,
+            angdroid_game_ui_text("Command (n/N/k/K/r/R/g/G/b/B): ",
+                angdroid_zh_tw_enabled()));
 
 		/* Get a command */
 		cx = inkey();
@@ -1029,11 +1057,22 @@ static menu_action color_events [] =
 	{ 0, 0, "Modify colors",         colors_modify }
 };
 
+static const char *const color_action_english[] = {
+    "Load a user pref file",
+    "Dump colors",
+    "Modify colors",
+};
+
 /**
  * Interact with "colors"
  */
 static void do_cmd_colors(const char *title, int row)
 {
+    size_t i;
+    assert(N_ELEMENTS(color_events) == N_ELEMENTS(color_action_english));
+    for (i = 0; i < N_ELEMENTS(color_events); ++i)
+        color_events[i].name = angdroid_game_ui_text(
+            color_action_english[i], angdroid_zh_tw_enabled());
 	screen_save();
 	clear_from(0);
 
@@ -1047,8 +1086,9 @@ static void do_cmd_colors(const char *title, int row)
 		color_menu->browse_hook = colors_browse_hook;
 	}
 
-	menu_layout(color_menu, &SCREEN_REGION);
-	menu_select(color_menu, 0, false);
+    color_menu->title = title;
+    menu_layout(color_menu, &SCREEN_REGION);
+    menu_select(color_menu, 0, false);
 
 	screen_load();
 }
