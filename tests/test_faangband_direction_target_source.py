@@ -69,7 +69,10 @@ contains(target,
     "wid = current_wid;",
     "hgt = current_hgt;",
     "if (!help) fa_target_draw_short_help(help_prompt_loc);")
-assert target.count("fa_target_draw_short_help(help_prompt_loc);") == 3
+assert target.count("fa_target_draw_short_help(help_prompt_loc);") == 4
+assert target.index("target_set_interactive_aux(y, x,") < target.index(
+    "/* A resize can be swallowed by the nested inkey_m()") < target.index(
+        "/* Handle an input event */")
 assert "target_set_monster(0);" in target
 assert "soft_kbd_clear(true);" in target
 
