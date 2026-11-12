@@ -1429,31 +1429,53 @@ static bool textui_get_com(const char *prompt, char *command)
 
 bool get_com_ex(const char *prompt, ui_event *command)
 {
-	ui_event ke;
+    ui_event ke = EVENT_EMPTY;
+    char visible[512];
+    const char *display = angdroid_game_ui_text(
+        prompt, angdroid_zh_tw_enabled());
 
-	/* Paranoia XXX XXX XXX */
-	event_signal(EVENT_MESSAGE_FLUSH);
+    if (!command) return false;
+    event_signal(EVENT_MESSAGE_FLUSH);
 
-    prt(angdroid_game_ui_text(prompt, angdroid_zh_tw_enabled()),
-        0, 0);
+    for (;;) {
+        int width = Term && Term->hgt > 0 ? Term->wid - 1 : 0;
+        if (width < 3) {
+            /* Do not leave the previous prompt visible when an Android
+             * rotation makes the input row unreadable. */
+            if (Term && Term->wid > 0 && Term->hgt > 0)
+                prt("", 0, 0);
+            ke.type = EVT_KBRD;
+            ke.key.code = ESCAPE;
+            break;
+        }
+        angdroid_menu_copy_columns(visible, sizeof(visible), display,
+            (size_t)width);
+        prt(visible, 0, 0);
+        ke = inkey_ex();
+        if (ke.type == EVT_RESIZE || ke.type == EVT_NONE)
+            continue;
+        if (ke.type == EVT_ESCAPE) {
+            /* Preserve inkey_m()'s escape normalization. */
+            ke.type = EVT_KBRD;
+            ke.key.code = ESCAPE;
+            ke.key.mods = 0;
+            break;
+        }
+        if (ke.type == EVT_BUTTON) {
+            /* inkey_m() also exposes Android buttons as keyboard input. */
+            ke.type = EVT_KBRD;
+            break;
+        }
+        if (ke.type == EVT_KBRD || ke.type == EVT_MOUSE)
+            break;
+    }
 
-	/* Get a key */
-	ke = inkey_m();
-
-	/* Clear the prompt */
-	prt("", 0, 0);
-
-	/* Save the command */
-	*command = ke;
-
-	/* Done */
-	if ((ke.type == EVT_KBRD && ke.key.code != ESCAPE) ||
-		(ke.type == EVT_MOUSE))
-		return true;
-	else
-		return false;
+    if (Term && Term->wid > 0 && Term->hgt > 0)
+        prt("", 0, 0);
+    *command = ke;
+    return (ke.type == EVT_KBRD && ke.key.code != ESCAPE) ||
+        ke.type == EVT_MOUSE;
 }
-
 
 /**
  * Pause for user response
