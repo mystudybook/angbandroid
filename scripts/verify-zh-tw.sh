@@ -104,6 +104,7 @@ run_check "FAangband supplemental kind names and known-effect nouns" python3 "$R
 run_check "FAangband additional spell names and exact descriptions" python3 "$ROOT/tests/test_faangband_spells_source.py"
 run_check "FAangband divergent spell effect descriptions" python3 "$ROOT/tests/test_faangband_variant_spell_descriptions_source.py"
 run_check "FAangband dragon and bear shape names and FLYING" python3 "$ROOT/tests/test_faangband_shapes_source.py"
+run_check "FAangband shape knowledge, message recall and symbol-query bilingual UI" python3 "$ROOT/tests/test_faangband_knowledge_shape_message_symbol_source.py"
 run_check "FAangband 64 race/class/specialty ability descriptions" python3 "$ROOT/tests/test_faangband_abilities_source.py"
 run_check "FAangband six resistance-renewal timed messages" python3 "$ROOT/tests/test_faangband_timed_renewals_source.py"
 run_check "FAangband projection and dragonfire/hellfire lash names" python3 "$ROOT/tests/test_faangband_projection_source.py"
