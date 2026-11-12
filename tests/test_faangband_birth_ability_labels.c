@@ -51,6 +51,18 @@ int main(void)
         return 1;
     if (check("Free action", "object", OF_FREE_ACT, 1, "行動自由"))
         return 1;
+    /* Negative and equipment-dependent flags must not accidentally
+     * display positive effects. All use the native OF index. */
+    if (check("Cannot teleport", "object", OF_NO_TELEPORT, 1, "無法傳送"))
+        return 1;
+    if (check("Drains experience", "object", OF_DRAIN_EXP, 1, "流失經驗"))
+        return 1;
+    if (check("Fragile", "object", OF_FRAGILE, 1, "容易損壞"))
+        return 1;
+    if (check("Two hands required", "object", OF_TWO_HANDED_REQ, 1,
+            "必須雙手持用")) return 1;
+    if (check("Darkness", "object", OF_DARKNESS, 1, "散發黑暗"))
+        return 1;
 
     /* Never force Chinese in English, and don't invent translations
      * for unrecognized types and flags. */
