@@ -36,29 +36,35 @@
 #include "ui-spoil.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-death.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/zh-tw-class-titles.h"
+#include "../angband/menu-text-fit.h"
 
 /**
  * Write formatted string `fmt` on line `y`, centred between points x1 and x2.
  */
 static void put_str_centred(int y, int x1, int x2, const char *fmt, ...)
 {
-	va_list vp;
-	char *tmp;
-	size_t len;
-	int x;
+    va_list vp;
+    char *tmp, visible[512];
+    int left, right, width, columns, x;
+    if (!Term || Term->wid <= 0 || y < 0 || y >= Term->hgt) return;
 
-	/* Format into the (growable) tmp */
-	va_start(vp, fmt);
-	tmp = vformat(fmt, vp);
-	va_end(vp);
+    va_start(vp, fmt);
+    tmp = vformat(fmt, vp);
+    va_end(vp);
+    if (!tmp) return;
 
-	/* Centre now; account for possible multibyte characters */
-	len = utf8_strlen(tmp);
-	x = x1 + ((x2-x1)/2 - len/2);
-
-	put_str(tmp, y, x);
+    left = MAX(0, x1);
+    right = MIN(Term->wid - 1, x2);
+    if (right < left) return;
+    width = right - left + 1;
+    columns = (int)angdroid_menu_copy_columns(visible, sizeof(visible),
+        tmp, (size_t)width);
+    x = left + (width - columns) / 2;
+    if (visible[0]) put_str(visible, y, x);
 }
-
 
 /**
  * Display the tombstone/retirement screen
@@ -105,39 +111,60 @@ static void display_exit_screen(void)
 	}
 
 	put_str_centred(line++, start, start+31, "%s", player->full_name);
-	put_str_centred(line++, start, start+31, "the");
+	put_str_centred(line++, start, start+31, "%s",
+        angdroid_zh_tw_enabled() ? "稱號" : "the");
 	if (player->total_winner)
-		put_str_centred(line++, start, start+31, "Magnificent");
+		put_str_centred(line++, start, start+31, "%s",
+            angdroid_zh_tw_enabled() ? "偉大的勝利者" : "Magnificent");
 	else
-		put_str_centred(line++, start, start+31, "%s", player->class->title[(player->lev - 1) / 5]);
+		put_str_centred(line++, start, start+31, "%s",
+            angdroid_zh_tw_class_title(
+                player->class->title[(player->lev - 1) / 5],
+                angdroid_zh_tw_enabled()));
 
 	line++;
 
-	put_str_centred(line++, start, start+31, "%s", player->class->name);
-	put_str_centred(line++, start, start+31, "Level: %d", (int)player->lev);
-	put_str_centred(line++, start, start+31, "Exp: %d", (int)player->exp);
-	put_str_centred(line++, start, start+31, "AU: %d", (int)player->au);
+	put_str_centred(line++, start, start+31, "%s",
+        angdroid_game_ui_text(player->class->name,
+            angdroid_zh_tw_enabled()));
+	put_str_centred(line++, start, start+31,
+        angdroid_zh_tw_enabled() ? "等級：%d" : "Level: %d",
+        (int)player->lev);
+	put_str_centred(line++, start, start+31,
+        angdroid_zh_tw_enabled() ? "經驗：%d" : "Exp: %d",
+        (int)player->exp);
+	put_str_centred(line++, start, start+31,
+        angdroid_zh_tw_enabled() ? "金幣：%d" : "AU: %d",
+        (int)player->au);
 	if (boat) {
-		put_str_centred(line++, start, start+31, "Sailed victorious to Aman.");
+		put_str_centred(line++, start, start+31, "%s",
+            angdroid_zh_tw_enabled() ? "凱旋航向阿門。" : "Sailed victorious to Aman.");
 	} else if (tree) {
-		put_str_centred(line++,start, start+31, "Retired to Fangorn Forest.");
+		put_str_centred(line++, start, start+31, "%s",
+            angdroid_zh_tw_enabled() ? "隱退至法貢森林。" : "Retired to Fangorn Forest.");
 	} else if (retired) {
-		put_str_centred(line++, 8, 8+31, "Retired in %s %d.",
+		put_str_centred(line++, start, start+31,
+            angdroid_zh_tw_enabled() ? "於%s第%d層退休。" : "Retired in %s %d.",
 						locality_name(lev->locality), lev->depth);
 	} else {
 		if (lev->depth) {
-			put_str_centred(line++, start, start+31, "Killed in %s %d",
+			put_str_centred(line++, start, start+31,
+            angdroid_zh_tw_enabled() ? "命喪%s第%d層" : "Killed in %s %d",
 							locality_name(lev->locality), lev->depth);
 		} else {
-			put_str_centred(line++, start, start+31, "Killed in %s Town",
+			put_str_centred(line++, start, start+31,
+            angdroid_zh_tw_enabled() ? "命喪%s城鎮" : "Killed in %s Town",
 							locality_name(lev->locality));
 		}
-		put_str_centred(line++, start, start+31, "by %s.", player->died_from);
+		put_str_centred(line++, start, start+31,
+            angdroid_zh_tw_enabled() ? "死因：%s" : "by %s.", player->died_from);
 	}
 
 	line++;
 
-	put_str_centred(line, start, start+31, "on %-.24s", ctime(&death_time));
+	put_str_centred(line, start, start+31,
+        angdroid_zh_tw_enabled() ? "日期：%-.24s" : "on %-.24s",
+        ctime(&death_time));
 }
 
 
