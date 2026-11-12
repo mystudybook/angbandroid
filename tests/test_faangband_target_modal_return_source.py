@@ -57,7 +57,9 @@ assert "textblock_free(tb);" in object_modal
 assert "textblock_free(tb);" in monster_modal
 textblock = between(output, "struct keypress textui_textblock_show(",
                     "void text_out_to_screen(")
-assert "ch = inkey();" in textblock
+assert "input = inkey_ex();" in textblock
+assert "ch = fa_textblock_key_from_event(input);" in textblock
+assert "if (input.type == EVT_RESIZE || input.type == EVT_NONE) continue;" in textblock
 assert "screen_save();" in textblock and "screen_load();" in textblock
 assert "test_faangband_target_modal_return_source.py" in verify
 print("PASS: FA target modal detail returns without a second blocking input")
