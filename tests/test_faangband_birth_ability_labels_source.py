@@ -30,7 +30,7 @@ object_flags = {
 translated_player = re.findall(r"case (PF_\w+): return \"([^\"]+)\";", TRAITS)
 translated_object = re.findall(r"case (OF_\w+): return \"([^\"]+)\";", TRAITS)
 assert len(translated_player) >= 65
-assert len(translated_object) >= 20
+assert len(translated_object) == len(object_flags) - 1  # OF_MAX isn't a trait
 
 for pairs, known in (
     (translated_player, player_flags),
@@ -64,13 +64,14 @@ for bad in ("cmdq_push(", "cmd_set_arg_", "pf_on(", "pf_off(",
 # still filters traits by the original ability type/index/value flags.
 require(BIRTH,
     '#include "ui-birth-abilities-zh-tw.h"',
-    "ability->name, ability->type, ability->index, zh));",
+    "ability->name, ability->type, ability->index, zh);",
     "ability->name, ability->type, ability->index,",
     "pf_has(race->pflags, ability->index)",
     "of_has(clazz->flags, ability->index)",
     "race->el_info[ability->index].res_level !=",
 )
-assert BIRTH.count("angdroid_fa_birth_ability_name(") == 3
+assert BIRTH.count("angdroid_fa_birth_ability_name(") == 1
+assert BIRTH.count("fa_birth_ability_visible_name(") == 4
 assert "angdroid_game_ui_text(ability->name," not in BIRTH
 
 # Portrait-mode instructions retain the original * @ Esc = ? Ctrl-X keys
