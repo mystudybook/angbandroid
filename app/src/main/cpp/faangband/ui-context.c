@@ -382,7 +382,8 @@ int context_menu_player(int mx, int my)
 
 	screen_load();
 
-	cmdkey = cmd_lookup_key(selected, mode);
+	/* Pseudo menu values and Cancel are not cmd_code values. */
+	cmdkey = 0;
 
 	/* Check the command to see if it is allowed. */
 	switch(selected) {
@@ -397,6 +398,7 @@ int context_menu_player(int mx, int my)
 		case CMD_PICKUP:
 			/* Only check for ^ inscriptions, since we don't have an object
 			 * selected (if we need one). */
+			cmdkey = cmd_lookup_key(selected, mode);
 			allowed = key_confirm_command(cmdkey);
 			break;
 
@@ -613,7 +615,8 @@ int context_menu_cave(struct chunk *c, int y, int x, int adjacent, int mx,
 
 	screen_load();
 
-	cmdkey = cmd_lookup_key(selected, mode);
+	/* Pseudo menu values and Cancel are not cmd_code values. */
+	cmdkey = 0;
 
 	/* Check the command to see if it is allowed. */
 	switch (selected) {
@@ -642,6 +645,7 @@ int context_menu_cave(struct chunk *c, int y, int x, int adjacent, int mx,
 		case CMD_USE:
 			/* Only check for ^ inscriptions, since we don't have an object
 			 * selected (if we need one). */
+			cmdkey = cmd_lookup_key(selected, mode);
 			allowed = key_confirm_command(cmdkey);
 			break;
 
@@ -866,7 +870,8 @@ int context_menu_object(struct object *obj)
 
 	screen_load();
 
-	cmdkey = cmd_lookup_key(selected, mode);
+	/* Pseudo menu values and Cancel are not cmd_code values. */
+	cmdkey = 0;
 
 	switch (selected) {
 		case -1:
@@ -916,6 +921,7 @@ int context_menu_object(struct object *obj)
 		case CMD_ACTIVATE:
 		case CMD_FIRE:
 		case CMD_USE:
+			cmdkey = cmd_lookup_key(selected, mode);
 			/* Check for inscriptions that trigger confirmation. */
 			allowed = key_confirm_command(cmdkey) &&
 				get_item_allow(obj, cmdkey, selected, false);
