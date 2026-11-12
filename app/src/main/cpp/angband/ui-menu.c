@@ -695,7 +695,15 @@ void menu_refresh(struct menu *menu, bool reset_screen)
 	int oid;
 	region *loc = &menu->active;
 
-	if (loc->width <= 0 || loc->page_rows <= 0)
+	/* Android can report a resize between two input events. The old
+	 * region may still have positive dimensions yet extend beyond the
+	 * *new* terminal (or Term may be absent). Never draw through stale
+	 * coordinates; the resize event rebuilds the item menu geometry. */
+	if (!Term || loc->col < 0 || loc->row < 0 ||
+		loc->width <= 0 || loc->page_rows <= 0 ||
+		loc->col >= Term->wid || loc->row >= Term->hgt ||
+		loc->width > Term->wid - loc->col ||
+		loc->page_rows > Term->hgt - loc->row)
 		return;
 
 	/* No filtered entry may be read while Android's resized surface is inactive. */
