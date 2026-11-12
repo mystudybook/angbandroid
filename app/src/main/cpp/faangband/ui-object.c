@@ -1204,6 +1204,13 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 			selectable_objects, m->switch_keys))
 		m->flags |= MN_ALLOW_EMPTY_INPUT;
 	m->browse_hook = item_menu_browser;
+	/* The quiver summary has its own reserved terminal rows, even when
+	 * the current inventory is empty or contains only placeholders.
+	 * item_menu_browser() never dereferences the incoming oid. */
+	if ((mode & OLIST_QUIVER) &&
+		player->upkeep->command_wrk == USE_INVEN &&
+		player->upkeep->quiver_cnt > 0)
+		m->flags |= MN_BROWSE_WITHOUT_SELECTION;
 
 	/* Get inscriptions */
 	m->inscriptions = mem_zalloc(10 * sizeof(char));
