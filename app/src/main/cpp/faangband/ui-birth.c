@@ -301,31 +301,45 @@ static bool map_menu_handler(struct menu *m, const ui_event *e, int oid)
  */
 static void map_menu_browser(int oid, void *data, const region *loc)
 {
-	struct map_menu_data *d = data;
+    struct map_menu_data *d = data;
+    size_t starts[128], lengths[128], lines, show, max_lines;
+    const char *description;
+    int col, row, width;
+    size_t i;
 
-    int saved_wrap = text_out_wrap;
-    int saved_indent = text_out_indent;
-    int saved_pad = text_out_pad;
-    int col, row;
-    if (!Term || Term->wid <= 0 || Term->hgt <= 0) return;
+    if (!Term || Term->wid <= 0 || Term->hgt <= 0 || !loc ||
+            oid < 0 || oid >= num_maps) return;
+    col = MAX(0, MIN(loc->col, Term->wid - 1));
+    /* Leave a spacer between choices and the first description line. */
+    row = loc->row + loc->page_rows + 1;
+    if (row >= Term->hgt) return;
+    width = MIN(MAX(1, loc->width), Term->wid - col);
+    if (width <= 0) return;
 
-    col = MIN(MAX(0, loc->col), Term->wid - 1);
-    row = loc->row + loc->page_rows;
-    if (row >= Term->hgt) row = Term->hgt - 1;
-    if (row < 0) row = 0;
-
-    text_out_hook = text_out_to_screen;
-    text_out_wrap = MIN(60, MAX(col + 1, Term->wid - 1));
-    text_out_indent = MAX(0, col - 1);
-    text_out_pad = 1;
-    Term_gotoxy(col, row);
-    text_out_c(COLOUR_DEEP_L_BLUE, "\n%s\n",
-        angdroid_game_ui_text(d[oid].description,
-            angdroid_zh_tw_enabled()));
-
-    text_out_pad = saved_pad;
-    text_out_indent = saved_indent;
-    text_out_wrap = saved_wrap;
+    description = angdroid_game_ui_text(d[oid].description,
+        angdroid_zh_tw_enabled());
+    if (!description) description = "";
+    /* text_out_c() could wrap indefinitely into rows below the screen.
+     * Instead wrap each complete UTF-8 scalar by actual terminal columns
+     * and paint at most the available two or three preview lines. */
+    lines = angdroid_fa_history_wrap(description, (size_t)width,
+        starts, lengths, N_ELEMENTS(starts));
+    max_lines = MIN((size_t)3, (size_t)(Term->hgt - row));
+    show = MIN(lines, max_lines);
+    for (i = 0; i < max_lines; ++i)
+        Term_erase(col, row + (int)i, width);
+    for (i = 0; i < show; ++i) {
+        char uncut[512], visible[512];
+        angdroid_fa_history_copy_line(uncut, sizeof(uncut),
+            description, starts[i], lengths[i]);
+        angdroid_menu_copy_columns(visible, sizeof(visible),
+            uncut, (size_t)width);
+        if (visible[0])
+            c_put_str(COLOUR_DEEP_L_BLUE, visible,
+                row + (int)i, col);
+    }
+    /* The full original map description remains available in the
+     * game data; presentation never mutates it or its selection index. */
 }
 
 /* Recompute the map chooser geometry after a phone rotation. Native
@@ -428,14 +442,20 @@ static void map_menu_destroy(struct menu *m)
  */
 static int map_menu_select(struct menu *m)
 {
-	screen_save();
-	region_erase_bordered(&m->active);
+    ui_event result;
+    int confirmed = -1;
 
-	menu_select(m, 0, true);
-
-	screen_load();
-
-	return current_map_index;
+    screen_save();
+    region_erase_bordered(&m->active);
+    result = menu_select(m, 0, true);
+    /* The initial cursor may highlight a previous world; ESC or an
+     * aborted/resized menu must never silently select that world. */
+    if (result.type == EVT_SELECT && current_map_index >= 0 &&
+            current_map_index < num_maps)
+        confirmed = current_map_index;
+    screen_load();
+    current_map_index = confirmed;
+    return confirmed;
 }
 
 /**
