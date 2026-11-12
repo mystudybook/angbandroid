@@ -100,7 +100,8 @@ browser = UI[UI.index("static void item_menu_browser("):
 assert "if (!Term || !local_area || local_area->page_rows <= 0)" in browser
 assert "if (col < 0 || col >= Term->wid)" in browser
 assert "max_columns = MIN(local_area->width, Term->wid - col);" in browser
-assert "if (z_info->quiver_slot_size <= 0 || player->upkeep->quiver_cnt <= 0)" in browser
+assert "angdroid_item_quiver_footer_slots(" in browser
+assert "if (quiver_slots <= 0)" in browser
 assert "angdroid_item_selection_footer_row(local_area->row," in browser
 assert "if (line < 0 || i >= (int)strlen(all_letters_nohjkl))" in browser
 assert "angdroid_menu_copy_columns(" in browser
