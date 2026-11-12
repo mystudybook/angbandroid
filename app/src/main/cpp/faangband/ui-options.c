@@ -36,6 +36,8 @@
 #include "ui-options.h"
 #include "ui-prefs.h"
 #include "ui-target.h"
+#include "droid.h"
+#include "../angband/zh-tw-ui.h"
 
 
 /**
@@ -329,18 +331,24 @@ static void option_toggle_menu(const char *name, int page)
 	struct menu *m = menu_new(MN_SKIN_SCROLL, &option_toggle_iter);
 
 	/* for all menus */
-	m->prompt = "Set option (y/n/t), select with movement keys or index";
+	m->prompt = angdroid_game_ui_text(
+        "Set option (y/n/t), select with movement keys or index",
+        angdroid_zh_tw_enabled());
 	m->cmd_keys = "YyNnTt";
 	m->selections = selections;
 	m->flags = MN_DBL_TAP;
 
 	/* We add 10 onto the page amount to indicate we're at birth */
 	if (page == OPT_PAGE_BIRTH) {
-		m->prompt = "You can only modify these options at character birth.";
+		m->prompt = angdroid_game_ui_text(
+            "You can only modify these options at character birth.",
+            angdroid_zh_tw_enabled());
 		m->cmd_keys = "";
 		m->flags = MN_NO_TAGS;
 	} else if (page == OPT_PAGE_BIRTH + 10 || page == OP_INTERFACE) {
-		m->prompt = "Set option (y/n/t), 's' to save, 'r' to restore, 'x' to reset";
+		m->prompt = angdroid_game_ui_text(
+            "Set option (y/n/t), 's' to save, 'r' to restore, 'x' to reset",
+            angdroid_zh_tw_enabled());
 		m->cmd_keys = "YyNnTtSsRrXx";
 		/* Provide a context menu for equivalents to 's', 'r', .... */
 		m->context_hook = use_option_context_menu;
@@ -379,7 +387,8 @@ static void option_toggle_menu(const char *name, int page)
  */
 void do_cmd_options_birth(void)
 {
-	option_toggle_menu("Birth options", OPT_PAGE_BIRTH + 10);
+	option_toggle_menu(angdroid_game_ui_text(
+        "Birth options", angdroid_zh_tw_enabled()), OPT_PAGE_BIRTH + 10);
 }
 
 
@@ -405,7 +414,9 @@ static void do_cmd_options_win(const char *name, int row)
 	/* Interact */
 	while (1) {
 		/* Prompt */
-		prt("Window flags (<dir> to move, 't'/Enter to toggle, or ESC)", 0, 0);
+		prt(angdroid_game_ui_text(
+            "Window flags (<dir> to move, 't'/Enter to toggle, or ESC)",
+            angdroid_zh_tw_enabled()), 0, 0);
 
 		/* Display the windows */
 		for (j = 0; j < ANGBAND_TERM_MAX; j++) {
@@ -2060,24 +2071,60 @@ static menu_action option_actions[] =
 };
 
 
+static const char *const option_action_english[] = {
+    "User interface options",
+    "Birth (difficulty) options",
+    "Cheat options",
+    "Subwindow setup",
+    "Item ignoring setup",
+    "Auto-inscription setup",
+    NULL,
+    "Set base delay factor",
+    "Set hitpoint warning",
+    "Set movement delay",
+    "Set sidebar mode",
+    NULL,
+    "Save subwindow setup to pref file",
+    "Save autoinscriptions to pref file",
+    "Save char screen options to pref file",
+    NULL,
+    "Load a user pref file",
+    "Edit keymaps (advanced)",
+    "Edit colours (advanced)",
+    "Save visuals (advanced)",
+};
+
+/* Menu callbacks and their original tags remain fixed; translated labels are
+ * refreshed only when opening the options screen. */
 /**
  * Display the options main menu.
  */
 void do_cmd_options(void)
 {
+    size_t i;
+    assert(N_ELEMENTS(option_action_english) == N_ELEMENTS(option_actions));
+    for (i = 0; i < N_ELEMENTS(option_actions); ++i) {
+        option_actions[i].name = option_action_english[i] ?
+            angdroid_game_ui_text(option_action_english[i],
+                angdroid_zh_tw_enabled()) : NULL;
+    }
+
 	if (!option_menu) {
 		/* Main option menu */
 		option_menu = menu_new_action(option_actions,
 				N_ELEMENTS(option_actions));
 
-		option_menu->title = "Options Menu";
+		option_menu->title = angdroid_game_ui_text(
+            "Options Menu", angdroid_zh_tw_enabled());
 		option_menu->flags = MN_CASELESS_TAGS;
 	}
 
-	screen_save();
-	clear_from(0);
+    option_menu->title = angdroid_game_ui_text(
+        "Options Menu", angdroid_zh_tw_enabled());
+    screen_save();
+    clear_from(0);
 
-	menu_layout(option_menu, &SCREEN_REGION);
+    menu_layout(option_menu, &SCREEN_REGION);
 	menu_select(option_menu, 0, false);
 
 	screen_load();
