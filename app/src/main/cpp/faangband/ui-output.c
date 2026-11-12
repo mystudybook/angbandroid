@@ -21,6 +21,8 @@
 #include "ui-input.h"
 #include "ui-output.h"
 #include "z-textblock.h"
+#include "../angband/menu-text-fit.h"
+#include "../angband/zh-tw-ui.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -100,22 +102,36 @@ bool region_inside(const region *loc, const ui_event *key)
  * Utility function
  */
 static void display_area(const wchar_t *text, const uint8_t *attrs,
-		size_t *line_starts, size_t *line_lengths,
-		size_t n_lines,
-		region area, size_t line_from)
+        size_t *line_starts, size_t *line_lengths,
+        size_t n_lines, region area, size_t line_from)
 {
-	size_t i, j;
+    size_t i, j, available;
 
-	n_lines = MIN(n_lines, (size_t) area.page_rows);
+    if (!Term || area.width <= 0 || area.page_rows <= 0 ||
+            area.col < 0 || area.row < 0 ||
+            area.col >= Term->wid || area.row >= Term->hgt)
+        return;
 
-	for (i = 0; i < n_lines; i++) {
-		Term_erase(area.col, area.row + i, area.width);
-		for (j = 0; j < line_lengths[line_from + i]; j++) {
-			Term_putch(area.col + j, area.row + i,
-					attrs[line_starts[line_from + i] + j],
-					text[line_starts[line_from + i] + j]);
-		}
-	}
+    /* Never address lines before the first page, after the last page,
+     * or beyond the terminal after rotation. Clear unused rows too,
+     * so a short last page does not leave stale description text. */
+    available = line_from < n_lines ? n_lines - line_from : 0;
+    if (!text || !attrs || !line_starts || !line_lengths) available = 0;
+    for (i = 0; i < (size_t)area.page_rows &&
+            area.row + (int)i < Term->hgt; ++i) {
+        size_t cells = 0;
+        Term_erase(area.col, area.row + (int)i, area.width);
+        if (i >= available) continue;
+        for (j = 0; j < line_lengths[line_from + i]; ++j) {
+            uint32_t cp = (uint32_t)text[line_starts[line_from + i] + j];
+            size_t width = (size_t)angdroid_terminal_columns(cp);
+            if (width > (size_t)area.width - cells) break;
+            Term_putch(area.col + (int)cells, area.row + (int)i,
+                attrs[line_starts[line_from + i] + j],
+                text[line_starts[line_from + i] + j]);
+            cells += width;
+        }
+    }
 }
 
 /**
