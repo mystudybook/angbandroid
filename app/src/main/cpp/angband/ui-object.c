@@ -1253,6 +1253,7 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	/* Deal with menu switch */
 	if (evt.type == EVT_SWITCH && !newmenu) {
 		bool left = evt.key.code == ARROW_LEFT;
+		int original_source = player->upkeep->command_wrk;
 
 		if (player->upkeep->command_wrk == USE_EQUIP) {
 			if (left) {
@@ -1306,7 +1307,9 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 			}
 		}
 
-		newmenu = true;
+		/* An arrow with no reachable source must not rebuild the
+		 * identical empty picker indefinitely. */
+		newmenu = (player->upkeep->command_wrk != original_source);
 	}
 
 	/* Result */
