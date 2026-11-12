@@ -9,6 +9,9 @@ ROOT = Path(__file__).resolve().parents[1]
 FA = ROOT / "app/src/main/cpp/faangband"
 UI = (FA / "ui-player-properties.c").read_text(encoding="utf-8")
 MENU = (FA / "ui-menu.c").read_text(encoding="utf-8")
+INPUT = (FA / "ui-input.c").read_text(encoding="utf-8")
+NATIVE_DROID = (ROOT / "app/src/main/cpp/curses/droid.c").read_text(
+    encoding="utf-8")
 PROPS = (FA / "player-properties.c").read_text(encoding="utf-8")
 LORE = (FA / "ui-knowledge.c").read_text(encoding="utf-8")
 DUMP = (FA / "ui-player.c").read_text(encoding="utf-8")
@@ -236,6 +239,23 @@ assert "angdroid_fa_ability_line_capacity(size_t bytes)" in LAYOUT
 assert '-std=c99 -Wall -Wextra -Werror -pedantic' in RUN_SCRIPT
 assert 'test-fa-ability-layout.sh' in RUNNER
 assert 'test-fa-ability-action.sh' in RUNNER
+assert 'test-fa-ability-hints.sh' in RUNNER
+assert 'soft_kbd_flash("${yes_no}");' in INPUT
+assert 'soft_kbd_replace(buf);' in MENU
+assert 'void soft_kbd_replace(const char *keys)' in NATIVE_DROID
+assert 'Term_control_keys("${clear}");' in NATIVE_DROID
+HINT_GEN = (ROOT / "tests/native/generate_fa_ability_hint_host.py").read_text(
+    encoding="utf-8")
+assert 'extract(name) for name in names' in HINT_GEN
+for fn in ("soft_kbd_flash", "soft_kbd_replace", "soft_kbd_clear",
+           "soft_kbd_flush", "strdeldup"):
+    assert fn in HINT_GEN
+assert '"${yes_no}"' in HINT_GEN
+assert '"${clear}"' in HINT_GEN
+HINT_RUN = (ROOT / "scripts/test-fa-ability-hints.sh").read_text(
+    encoding="utf-8")
+assert "generate_fa_ability_hint_host.py" in HINT_RUN
+assert "-std=c99 -Wall -Wextra -Werror -pedantic" in HINT_RUN
 ACTION_GEN = (ROOT / "tests/native/generate_fa_ability_action_host.py").read_text(
     encoding="utf-8")
 assert "matched.group(0)" in ACTION_GEN
