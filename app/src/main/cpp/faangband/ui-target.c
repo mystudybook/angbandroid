@@ -381,8 +381,13 @@ static ui_event target_recall_loop_object(struct object *obj, int y, int x,
 
 	while (1) {
 		if (recall) {
+            /* The modal object viewer already waits for its exit key.
+             * Do not require a second unrelated key on returning to
+             * target inspection. Repaint the description for the
+             * current terminal width on the next pass. */
 			display_object_recall_interactive(cave->objects[obj->oidx]);
-			press = inkey_m();
+            recall = false;
+            continue;
 		} else {
 			char o_name[80];
 
@@ -550,8 +555,12 @@ static bool aux_monster(struct chunk *c, struct player *p,
 	while (1) {
 		/* Recall or target */
 		if (recall) {
+            /* lore_show_interactive() owns the entire modal key loop.
+             * Its close key should return to this description directly,
+             * not block on an extra inkey_m() before the next draw. */
 			lore_show_interactive(mon->race, lore);
-			auxst->press = inkey_m();
+            recall = false;
+            continue;
 		} else {
 			char buf[80];
 
