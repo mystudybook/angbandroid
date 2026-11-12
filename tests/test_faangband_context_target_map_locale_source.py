@@ -69,12 +69,12 @@ need(player, 'MENU_VALUE_INVENTORY', 'MENU_VALUE_REST',
      'cmdq_push(selected);', "Term_keypress('R', 0);")
 need(cave, 'square_apparent_name(player->cave, grid)',
      'fa_context_print_prompt(angdroid_zh_tw_enabled() ?',
-     'diff' if False else 'cmd_set_arg_point(cmdq_peek(), "point", loc(x, y));',
+     'cmd_set_arg_point(cmdq_peek(), "point", loc(x, y));',
      'ODESC_PREFIX | ODESC_FULL |',
      '(angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0)')
 need(obj, 'fa_context_ui_text("Drop All")',
      'object_is_ignored(obj) ? "Unignore" : "Ignore"',
-     'ctx' if False else 'get_item_allow(obj, cmdkey, selected, false)',
+     'get_item_allow(obj, cmdkey, selected, false)',
      'r.width = MIN(r.width, MAX(1, Term->wid - 2));',
      '"(Enter to select, ESC) Command for %s:"',
      '(angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0)')
@@ -96,10 +96,6 @@ need(CONTEXT,
 
 # The target help is translated without changing the target selection
 # controls or consuming state in the rest of the UI.
-target_help = section(TARGET, "void target_display_help(",
-                      "int target_dir(") if "int target_dir(" in TARGET.split(
-                      "void target_display_help(", 1)[1] else section(
-                      TARGET, "void target_display_help(", "static ")
 need(TARGET, 'msg("%s", angdroid_game_ui_text("Target Selected."',
      'msg("%s", angdroid_game_ui_text("Target Aborted."',
      '"Press \'?\' for help."',
