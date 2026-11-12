@@ -1078,7 +1078,9 @@ static bool use_context_menu_birth(struct menu *current_menu,
 		ACT_CTX_BIRTH_RAND,
 		ACT_CTX_BIRTH_FINISH_RAND,
 		ACT_CTX_BIRTH_QUIT,
-		ACT_CTX_BIRTH_HELP
+		ACT_CTX_BIRTH_HELP,
+        ACT_CTX_BIRTH_PREV_DETAILS,
+        ACT_CTX_BIRTH_NEXT_DETAILS
 	};
 	struct birthmenu_data *menu_data = menu_priv(current_menu);
 	char *labels;
@@ -1109,6 +1111,16 @@ static bool use_context_menu_birth(struct menu *current_menu,
             angdroid_zh_tw_enabled()), 'q', ACT_CTX_BIRTH_QUIT, labels);
 	menu_dynamic_add_label(m, angdroid_game_ui_text("Help",
             angdroid_zh_tw_enabled()), '?', ACT_CTX_BIRTH_HELP, labels);
+    if (fa_birth_compact_layout() && fa_birth_detail_page_count > 1 &&
+            (menu_data->stage_inout == BIRTH_RACE_CHOICE ||
+             menu_data->stage_inout == BIRTH_CLASS_CHOICE)) {
+        menu_dynamic_add_label(m, angdroid_zh_tw_enabled() ?
+            "特性上一頁" : "Previous traits", '[',
+            ACT_CTX_BIRTH_PREV_DETAILS, labels);
+        menu_dynamic_add_label(m, angdroid_zh_tw_enabled() ?
+            "特性下一頁" : "Next traits", ']',
+            ACT_CTX_BIRTH_NEXT_DETAILS, labels);
+    }
 
 	screen_save();
 
@@ -1148,6 +1160,17 @@ static bool use_context_menu_birth(struct menu *current_menu,
 		do_cmd_help();
 		menu_data->stage_inout = BIRTH_RESET;
 		out->type = EVT_SWITCH;
+        break;
+
+    case ACT_CTX_BIRTH_PREV_DETAILS:
+        fa_birth_detail_change_page(-1);
+        out->type = EVT_SWITCH;
+        break;
+
+    case ACT_CTX_BIRTH_NEXT_DETAILS:
+        fa_birth_detail_change_page(1);
+        out->type = EVT_SWITCH;
+        break;
 
 	default:
 		/* There's nothing to do. */
@@ -1491,7 +1514,11 @@ static enum birth_stage menu_question(enum birth_stage current,
                 COLOUR_YELLOW, visible);
     }
 
-	current_menu->cmd_keys = "?=*@\x18";	 /* ?, =, *, @, <ctl-X> */
+    /* Brackets only page the visible explanation while retaining the
+     * currently highlighted race/class and original birth shortcuts. */
+    current_menu->cmd_keys = fa_birth_compact_layout() &&
+        current != BIRTH_ROLLER_CHOICE ?
+        "?=*@[]\x18" : "?=*@\x18";
 
 	while (next == BIRTH_RESET) {
 		/* Display the menu, wait for a selection of some sort to be made. */
@@ -1531,6 +1558,17 @@ static enum birth_stage menu_question(enum birth_stage current,
 		} else if (cx.type == EVT_SWITCH) {
 			next = menu_data->stage_inout;
 		} else if (cx.type == EVT_KBRD) {
+            if (fa_birth_compact_layout() &&
+                    current != BIRTH_ROLLER_CHOICE &&
+                    (cx.key.code == '[' || cx.key.code == ']')) {
+                fa_birth_detail_change_page(
+                    cx.key.code == '[' ? -1 : 1);
+                menu_refresh(current_menu, false);
+                /* This event is presentation-only; do not push any
+                 * CMD_CHOOSE_RACE or CMD_CHOOSE_CLASS. */
+                next = BIRTH_RESET;
+                continue;
+            }
 			/* '*' chooses an option at random from those the game's provided */
 			if (cx.key.code == '*' && menu_data->allow_random) {
 				current_menu->cursor = randint0(current_menu->count);
