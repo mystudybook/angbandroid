@@ -1170,7 +1170,9 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 			player->upkeep->command_wrk != USE_QUIVER,
 		((f1 <= f2) || allow_all) &&
 			player->upkeep->command_wrk != USE_FLOOR);
-	m->switch_keys = switch_keys;
+	/* NULL also prevents a zero-valued key event from matching the
+	 * terminator of an otherwise empty switch-key string. */
+	m->switch_keys = switch_keys[0] ? switch_keys : NULL;
 	m->flags = (MN_PVT_TAGS | MN_INSCRIP_TAGS);
 	m->browse_hook = item_menu_browser;
 
