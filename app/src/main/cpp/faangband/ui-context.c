@@ -277,11 +277,17 @@ static void context_menu_player_display_floor(void)
 	screen_save();
 
 	/* Prompt for a command */
-	prt(format("(Inventory) Burden %d.%d lb (%d.%d lb %s). Item for command: ",
-			   player->upkeep->total_weight / 10,
-			   player->upkeep->total_weight % 10,
-			   abs(diff) / 10, abs(diff) % 10,
-			   (diff < 0 ? "overweight" : "remaining")), 0, 0);
+    fa_context_print_prompt(angdroid_zh_tw_enabled() ?
+        format("背包重量 %d.%d 磅（%d.%d 磅%s），選擇物品：",
+            player->upkeep->total_weight / 10,
+            player->upkeep->total_weight % 10,
+            abs(diff) / 10, abs(diff) % 10,
+            diff < 0 ? "超重" : "剩餘") :
+        format("(Inventory) Burden %d.%d lb (%d.%d lb %s). Item for command: ",
+            player->upkeep->total_weight / 10,
+            player->upkeep->total_weight % 10,
+            abs(diff) / 10, abs(diff) % 10,
+            diff < 0 ? "overweight" : "remaining"));
 
 
 	/* Get an item to use a context command on */
@@ -563,7 +569,9 @@ int context_menu_cave(struct chunk *c, int y, int x, int adjacent, int mx,
 	region_erase_bordered(&m->boundary);
 
 	if (player->timed[TMD_IMAGE]) {
-		prt("(Enter to select command, ESC to cancel) You see something strange:", 0, 0);
+		fa_context_print_prompt(angdroid_zh_tw_enabled() ?
+            "Enter 選取／Esc 取消：你看見奇怪的東西" :
+            "(Enter to select command, ESC to cancel) You see something strange:");
 	} else if (square(c, grid)->mon) {
 		char m_name[80];
 		struct monster *mon = square_monster(c, grid);
@@ -571,23 +579,31 @@ int context_menu_cave(struct chunk *c, int y, int x, int adjacent, int mx,
 		/* Get the monster name ("a kobold") */
 		monster_desc(m_name, sizeof(m_name), mon, MDESC_IND_VIS);
 
-		prt(format("(Enter to select command, ESC to cancel) You see %s:",
-				   m_name), 0, 0);
+		fa_context_print_prompt(angdroid_zh_tw_enabled() ?
+            format("Enter 選取／Esc 取消：你看見 %s", m_name) :
+            format("(Enter to select command, ESC to cancel) You see %s:",
+                m_name));
 	} else if (square_obj && !ignore_item_ok(player, square_obj)) {
 		char o_name[80];
 
 		/* Obtain an object description */
-		object_desc(o_name, sizeof (o_name), square_obj,
-			ODESC_PREFIX | ODESC_FULL, player);
+		object_desc(o_name, sizeof(o_name), square_obj,
+            ODESC_PREFIX | ODESC_FULL |
+            (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
-		prt(format("(Enter to select command, ESC to cancel) You see %s:",
-				   o_name), 0, 0);
+		fa_context_print_prompt(angdroid_zh_tw_enabled() ?
+            format("Enter 選取／Esc 取消：你看見 %s", o_name) :
+            format("(Enter to select command, ESC to cancel) You see %s:",
+                o_name));
 	} else {
 		/* Feature (apply mimic) */
 		const char *name = square_apparent_name(player->cave, grid);
 		const char *prefix = square_apparent_look_prefix(player->cave, grid);
 
-		prt(format("(Enter to select command, ESC to cancel) You see %s%s:", prefix, name), 0, 0);
+		fa_context_print_prompt(angdroid_zh_tw_enabled() ?
+            format("Enter 選取／Esc 取消：你看見 %s%s", prefix, name) :
+            format("(Enter to select command, ESC to cancel) You see %s%s:",
+                prefix, name));
 	}
 
 	selected = menu_dynamic_select(m);
@@ -714,8 +730,8 @@ int context_menu_object(struct object *obj)
 	if (!m || !obj)
 		return 0;
 
-	object_desc(header, sizeof(header), obj, ODESC_PREFIX | ODESC_BASE,
-		player);
+	object_desc(header, sizeof(header), obj, ODESC_PREFIX | ODESC_BASE |
+        (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	labels = string_make(lower_case);
 	m->selections = labels;
@@ -816,8 +832,10 @@ int context_menu_object(struct object *obj)
 
 	/* work out display region */
 	r.width = (int)menu_dynamic_longest_entry(m) + 3 + 2; /* +3 for tag,
-														   * 2 for pad */
-	r.col = Term->wid - r.width - 1;
+                                                            * 2 for pad */
+    /* Width is in terminal cells; don't place a menu left of screen. */
+    r.width = MIN(r.width, MAX(1, Term->wid - 2));
+    r.col = MAX(0, Term->wid - r.width - 1);
 	r.row = 1;
 	r.page_rows = m->count;
 
@@ -829,8 +847,8 @@ int context_menu_object(struct object *obj)
 
 	/* Display info */
 	tb = object_info(obj, OINFO_NONE);
-	object_desc(header, sizeof(header), obj, ODESC_PREFIX | ODESC_FULL,
-		player);
+	object_desc(header, sizeof(header), obj, ODESC_PREFIX | ODESC_FULL |
+        (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	textui_textblock_place(tb, area, format("%s", header));
 	textblock_free(tb);
@@ -838,7 +856,9 @@ int context_menu_object(struct object *obj)
 	menu_layout(m, &r);
 	region_erase_bordered(&r);
 
-	prt(format("(Enter to select, ESC) Command for %s:", header), 0, 0);
+	fa_context_print_prompt(format(angdroid_game_ui_text(
+        "(Enter to select, ESC) Command for %s:",
+        angdroid_zh_tw_enabled()), header));
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
@@ -858,7 +878,8 @@ int context_menu_object(struct object *obj)
 			/* Display info */
 			tb = object_info(obj, OINFO_NONE);
 			object_desc(header, sizeof(header), obj,
-				ODESC_PREFIX | ODESC_FULL, player);
+                ODESC_PREFIX | ODESC_FULL |
+                (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 			textui_textblock_show(tb, area, format("%s", header));
 			textblock_free(tb);
@@ -951,7 +972,7 @@ static int show_command_list(struct cmd_info cmd_list[], int size, int mx,
 	struct menu *m;
 	int selected;
 	int i;
-	char cmd_name[80];
+	char cmd_name[192];
 	char key[3];
 
 	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
@@ -971,7 +992,8 @@ static int show_command_list(struct cmd_info cmd_list[], int size, int mx,
 			key[0] = cmd_list[i].key[mode];
 			key[1] = '\0';
 		}
-		strnfmt(cmd_name, 80, "%s (%s)",  cmd_list[i].desc, key);
+		strnfmt(cmd_name, sizeof(cmd_name), "%s (%s)",
+            fa_context_ui_text(cmd_list[i].desc), key);
 		menu_dynamic_add(m, cmd_name, i+1);
 	}
 
