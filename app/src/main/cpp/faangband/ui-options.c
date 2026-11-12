@@ -56,7 +56,8 @@ static bool get_pref_path(const char *what, int row, char *buf, size_t max)
 	}
 	prt(format("%s to a pref file", what), row, 0);
 	prt("", row + 1, 0);
-	prt("File: ", row + 2, 0);
+	prt(angdroid_game_ui_text("File: ",
+            angdroid_zh_tw_enabled()), row + 2, 0);
 	prt("", row + 3, 0);
 
 	/* Get the filesystem-safe name and append .prf */
@@ -1100,9 +1101,13 @@ static void do_cmd_delay(const char *name, int unused)
 
 	/* Prompt */
 	prt("", 19, 0);
-	prt("Command: Base Delay Factor", 20, 0);
-	prt("New base delay factor (0-255): ", 21, 0);
-	prt(format("Current base delay factor: %d msec", msec), 22, 0);
+	prt(angdroid_game_ui_text("Command: Base Delay Factor",
+            angdroid_zh_tw_enabled()), 20, 0);
+	prt(angdroid_game_ui_text("New base delay factor (0-255): ",
+            angdroid_zh_tw_enabled()), 21, 0);
+	prt(angdroid_zh_tw_enabled() ?
+        format("目前基本延遲：%d 毫秒", msec) :
+        format("Current base delay factor: %d msec", msec), 22, 0);
 	prt("", 23, 0);
 
 	/* Ask for a numeric value */
@@ -1128,13 +1133,20 @@ static void do_cmd_sidebar_mode(const char *name, int unused)
 	while (true) {	
 
 		// Get the name
-		my_strcpy(tmp, names[SIDEBAR_MODE % SIDEBAR_MAX], sizeof(tmp));
+		my_strcpy(tmp, angdroid_zh_tw_enabled() ?
+            ((SIDEBAR_MODE % SIDEBAR_MAX) == 0 ? "左側" :
+             (SIDEBAR_MODE % SIDEBAR_MAX) == 1 ? "頂部" : "無") :
+            names[SIDEBAR_MODE % SIDEBAR_MAX], sizeof(tmp));
 
 		/* Prompt */
 		prt("", 19, 0);
-		prt("Command: Sidebar Mode", 20, 0);
-		prt(format("Current mode: %s", tmp), 21, 0);
-		prt("ESC: go back, other: cycle", 22, 0);
+		prt(angdroid_game_ui_text("Command: Sidebar Mode",
+            angdroid_zh_tw_enabled()), 20, 0);
+		prt(angdroid_zh_tw_enabled() ?
+            format("目前模式：%s", tmp) :
+            format("Current mode: %s", tmp), 21, 0);
+		prt(angdroid_game_ui_text("ESC: go back, other: cycle",
+            angdroid_zh_tw_enabled()), 22, 0);
 		prt("", 23, 0);
 
 		/* Get a command */
@@ -1166,11 +1178,16 @@ static void do_cmd_hp_warn(const char *name, int unused)
 
 	/* Prompt */
 	prt("", 19, 0);
-	prt("Command: Hitpoint Warning", 20, 0);
-	prt("New hitpoint warning (0-9): ", 21, 0);
-	prt(format("Current hitpoint warning: %d (%d%%)",
-		player->opts.hitpoint_warn, player->opts.hitpoint_warn * 10),
-		22, 0);
+	prt(angdroid_game_ui_text("Command: Hitpoint Warning",
+            angdroid_zh_tw_enabled()), 20, 0);
+	prt(angdroid_game_ui_text("New hitpoint warning (0-9): ",
+            angdroid_zh_tw_enabled()), 21, 0);
+	prt(angdroid_zh_tw_enabled() ?
+        format("目前生命值警告：%d（%d%%）",
+            player->opts.hitpoint_warn, player->opts.hitpoint_warn * 10) :
+        format("Current hitpoint warning: %d (%d%%)",
+            player->opts.hitpoint_warn, player->opts.hitpoint_warn * 10),
+        22, 0);
 	prt("", 23, 0);
 
 	/* Ask the user for a string */
@@ -1205,11 +1222,17 @@ static void do_cmd_lazymove_delay(const char *name, int unused)
 
 	/* Prompt */
 	prt("", 19, 0);
-	prt("Command: Movement Delay Factor", 20, 0);
-	prt("New movement delay: ", 21, 0);
-	prt(format("Current movement delay: %d (%d msec)",
-		player->opts.lazymove_delay, player->opts.lazymove_delay * 10),
-		22, 0);
+	prt(angdroid_game_ui_text("Command: Movement Delay Factor",
+            angdroid_zh_tw_enabled()), 20, 0);
+	prt(angdroid_game_ui_text("New movement delay: ",
+            angdroid_zh_tw_enabled()), 21, 0);
+	prt(angdroid_zh_tw_enabled() ?
+        format("目前移動延遲：%d（%d 毫秒）",
+            player->opts.lazymove_delay,
+            player->opts.lazymove_delay * 10) :
+        format("Current movement delay: %d (%d msec)",
+            player->opts.lazymove_delay,
+            player->opts.lazymove_delay * 10), 22, 0);
 	prt("", 23, 0);
 
 	/* Ask the user for a string */
@@ -1245,9 +1268,11 @@ static void do_cmd_pref_file_hack(long row)
 	if (row > 0) {
 		prt("", row - 1, 0);
 	}
-	prt("Command: Load a user pref file", row, 0);
+	prt(angdroid_game_ui_text("Command: Load a user pref file",
+            angdroid_zh_tw_enabled()), row, 0);
 	prt("", row + 1, 0);
-	prt("File: ", row + 2, 0);
+	prt(angdroid_game_ui_text("File: ",
+            angdroid_zh_tw_enabled()), row + 2, 0);
 	prt("", row + 3, 0);
 
 	/* Get the filesystem-safe name and append .prf */
@@ -1265,11 +1290,13 @@ static void do_cmd_pref_file_hack(long row)
 		if (process_pref_file(ftmp, false, true) == false) {
 			/* Mention failure */
 			prt("", 0, 0);
-			msg("Failed to load '%s'!", ftmp);
+			msg(angdroid_zh_tw_enabled() ?
+                "載入「%s」失敗！" : "Failed to load '%s'!", ftmp);
 		} else {
 			/* Mention success */
 			prt("", 0, 0);
-			msg("Loaded '%s'.", ftmp);
+			msg(angdroid_zh_tw_enabled() ?
+                "已載入「%s」。" : "Loaded '%s'.", ftmp);
 		}
 	}
 
@@ -1490,7 +1517,8 @@ static void ego_menu(const char *unused, int also_unused)
 	clear_from(0);
 
 	/* Help text */
-	prt("Ego item ignore menu", 0, 0);
+	prt(angdroid_game_ui_text("Ego item ignore menu",
+            angdroid_zh_tw_enabled()), 0, 0);
 
 	/* Output to the screen */
 	text_out_hook = text_out_to_screen;
