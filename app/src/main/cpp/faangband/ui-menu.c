@@ -906,6 +906,17 @@ static void keys_to_ui(struct menu *menu)
 	int cursor;
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 	int first = 0, end = n;
+
+	/* Do not publish a previous inventory page's keys while Android's
+	 * terminal is between portrait/landscape layout sizes. */
+	if (menu->skin == &menu_skin_object &&
+		(!Term || !angdroid_fa_menu_region_visible(
+			Term->wid, Term->hgt,
+			menu->active.col, menu->active.row,
+			menu->active.width, menu->active.page_rows))) {
+		soft_kbd_replace("");
+		return;
+	}
 	bool paged = fa_menu_relative_tags_paged(menu);
 
 	/* Only visible relative tags belong on the current soft keyboard
