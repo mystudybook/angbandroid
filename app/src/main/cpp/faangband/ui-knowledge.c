@@ -65,6 +65,10 @@
 #include "z-util.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/zh-tw-knowledge-groups.h"
+#include "../angband/knowledge-column-text.h"
+#include "obj-desc-item-zh-tw.h"
 
 /**
  * The first part of this file contains the knowledge menus.  Generic display
@@ -748,7 +752,7 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 
 	const char **g_names;
 
-	int g_name_len = 8;  /* group name length, minumum is 8 */
+	int g_name_len = 8;  /* terminal display columns, not UTF-8 bytes */
 
 	int grp_cnt = 0; /* total number groups */
 
@@ -826,11 +830,15 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 	g_names = mem_zalloc(grp_cnt * sizeof(char*));
 
 	for (i = 0; i < grp_cnt; i++) {
-		int len;
-		g_names[i] = g_funcs.name(g_list[i]);
-		len = strlen(g_names[i]);
-		if (len > g_name_len) g_name_len = len;
-	}
+        size_t columns;
+        /* Names are only translated in the visible knowledge browser.
+         * Sorting, group IDs and canonical source names are unchanged. */
+        g_names[i] = angdroid_knowledge_group_text(
+            g_funcs.name(g_list[i]), angdroid_zh_tw_enabled());
+        columns = angdroid_utf8_display_columns(g_names[i]);
+        if (columns > (size_t)g_name_len)
+            g_name_len = columns > 20 ? 20 : (int)columns;
+    }
 
 	/* Reasonable max group name len */
 	if (g_name_len >= 20) g_name_len = 20;
@@ -879,9 +887,14 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 		if (redraw) {
 			/* Print the title bits */
 			region_erase(&title_area);
-			prt(format("Knowledge - %s", title), 2, 0);
-			prt("Group", 4, 0);
-			prt("Name", 4, g_name_len + 3);
+			if (angdroid_zh_tw_enabled())
+                prt(format("知識圖鑑：%s",
+                    angdroid_game_ui_text(title, true)), 2, 0);
+            else
+                prt(format("Knowledge - %s", title), 2, 0);
+            prt(angdroid_zh_tw_enabled() ? "分類" : "Group", 4, 0);
+            prt(angdroid_zh_tw_enabled() ? "名稱" : "Name",
+                4, g_name_len + 3);
 
 			if (otherfields)
 				prt(otherfields, 4, 46);
@@ -1732,8 +1745,17 @@ static void display_ego_item(int col, int row, bool cursor, int oid)
 	/* Choose a color */
 	uint8_t attr = curs_attrs[0 != (int)ego->everseen][0 != (int)cursor];
 
-	/* Display the name */
-	c_prt(attr, ego->name, row, col);
+	/* Known ego names use the existing 118-entry display-only dictionary.
+     * Width is measured in terminal cells: never cut a Han glyph. */
+    if (Term && col >= 0 && col < Term->wid) {
+        const char *localized = angdroid_faangband_known_ego_ui_name(
+            ego->name, angdroid_zh_tw_enabled());
+        const char *label = localized ? localized : ego->name;
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            label, col, Term->wid, Term->wid);
+        if (clipped[0]) c_prt(attr, clipped, row, col);
+    }
 }
 
 /**
@@ -1750,9 +1772,16 @@ static void desc_ego_fake(int oid)
 	/* List ego flags */
 	tb = object_info_ego(ego);
 
-	textui_textblock_show(tb, area, format("%s %s",
-										   ego_grp_name(default_group_id(oid)),
-										   ego->name));
+	/* Title translation never affects lore flags, object knowledge or IDs. */
+    {
+        int zh_tw = angdroid_zh_tw_enabled();
+        const char *localized = angdroid_faangband_known_ego_ui_name(
+            ego->name, zh_tw);
+        const char *label = localized ? localized : ego->name;
+        const char *group = angdroid_knowledge_group_text(
+            ego_grp_name(default_group_id(oid)), zh_tw);
+        textui_textblock_show(tb, area, format("%s %s", group, label));
+    }
 	textblock_free(tb);
 }
 
