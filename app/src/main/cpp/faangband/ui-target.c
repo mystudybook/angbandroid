@@ -162,6 +162,35 @@ static void fa_target_draw_bounded_line(const char *description, int row)
     prt(visible, row, 0);
 }
 
+/* inkey_m() swallows terminal resize events, leaving the previous
+ * target-description line clipped for the old display. Redraw the SAME
+ * description and restore the map cursor each time the display changes.
+ * Keep the original Escape, Android button, and mouse event semantics. */
+static ui_event fa_target_inkey_described(
+    const char *description, int y, int x)
+{
+    ui_event press = EVENT_EMPTY;
+
+    for (;;) {
+        press = inkey_ex();
+        if (press.type == EVT_RESIZE) {
+            fa_target_draw_bounded_line(description, 0);
+            move_cursor_relative(y, x);
+            continue;
+        }
+        if (press.type == EVT_NONE) continue;
+        if (press.type == EVT_ESCAPE) {
+            press.type = EVT_KBRD;
+            press.key.code = ESCAPE;
+            press.key.mods = 0;
+        } else if (press.type == EVT_BUTTON) {
+            press.type = EVT_KBRD;
+        }
+        if (press.type == EVT_KBRD || press.type == EVT_MOUSE)
+            return press;
+    }
+}
+
 /* A short landscape terminal cannot safely show the full multi-line help.
  * Keep map rows available and put the essential controls in its footer. */
 static void fa_target_draw_compact_help(int row)
@@ -365,7 +394,7 @@ static ui_event target_recall_loop_object(struct object *obj, int y, int x,
 
 			fa_target_draw_bounded_line(out_val, 0);
 			move_cursor_relative(y, x);
-			press = inkey_m();
+            press = fa_target_inkey_described(out_val, y, x);
 		}
 
 		if ((press.type == EVT_MOUSE) && (press.mouse.button == 1) &&
@@ -540,7 +569,8 @@ static bool aux_monster(struct chunk *c, struct player *p,
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
 
 			/* Command */
-			auxst->press = inkey_m();
+            auxst->press = fa_target_inkey_described(out_val,
+                auxst->grid.y, auxst->grid.x);
 		}
 
 		/* Normal commands */
@@ -613,7 +643,8 @@ static bool aux_monster(struct chunk *c, struct player *p,
 
 			fa_target_draw_bounded_line(out_val, 0);
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
-			auxst->press = inkey_m();
+            auxst->press = fa_target_inkey_described(out_val,
+                auxst->grid.y, auxst->grid.x);
 
 			if (auxst->press.type == EVT_MOUSE) {
 				/* Stop on right click */
@@ -697,7 +728,8 @@ static bool aux_trap(struct chunk *c, struct player *p,
 		move_cursor_relative(auxst->grid.y, auxst->grid.x);
 
 		/* Command */
-		auxst->press = inkey_m();
+        auxst->press = fa_target_inkey_described(out_val,
+            auxst->grid.y, auxst->grid.x);
 
 		/* Stop on everything but "return"/"space" */
 		if (auxst->press.key.code != KC_ENTER
@@ -765,7 +797,8 @@ static bool aux_object(struct chunk *c, struct player *p,
 
 			fa_target_draw_bounded_line(out_val, 0);
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
-			auxst->press = inkey_m();
+            auxst->press = fa_target_inkey_described(out_val,
+                auxst->grid.y, auxst->grid.x);
 
 			/* Display objects */
 			if ((auxst->press.type == EVT_MOUSE
@@ -892,7 +925,8 @@ static bool aux_terrain(struct chunk *c, struct player *p,
 
 	fa_target_draw_bounded_line(out_val, 0);
 	move_cursor_relative(auxst->grid.y, auxst->grid.x);
-	auxst->press = inkey_m();
+    auxst->press = fa_target_inkey_described(out_val,
+        auxst->grid.y, auxst->grid.x);
 
 	/*
 	 * Stop on right click of mouse or everything but "return"/"space" for
