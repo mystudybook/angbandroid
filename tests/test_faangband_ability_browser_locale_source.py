@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FA = ROOT / "app/src/main/cpp/faangband"
 UI = (FA / "ui-player-properties.c").read_text(encoding="utf-8")
+MENU = (FA / "ui-menu.c").read_text(encoding="utf-8")
 PROPS = (FA / "player-properties.c").read_text(encoding="utf-8")
 LORE = (FA / "ui-knowledge.c").read_text(encoding="utf-8")
 DUMP = (FA / "ui-player.c").read_text(encoding="utf-8")
@@ -64,6 +65,18 @@ require(learn, "lookup_ability(\"player\", idx, 0)",
         "angdroid_fa_birth_ability_name(ability->name,",
         "angdroid_menu_copy_columns(visible, sizeof(visible), name,",
         "c_put_str(attr, visible, row, col);")
+
+# Generic menu_select() tries the row handler for an outside-list touch
+# before falling through to menu_handle_mouse() / context_hook.
+outside_touch = section(
+    MENU,
+    "/* Keep shopkeeper/header and outside context actions. */",
+    "} else if (in.type == EVT_KBRD)")
+require(outside_touch,
+        "if (!no_act && menu_handle_action(menu, &in))",
+        "menu_handle_mouse(menu, &in, &out);")
+assert outside_touch.index("menu_handle_action(menu, &in)") < (
+    outside_touch.index("menu_handle_mouse(menu, &in, &out);"))
 
 action = section(UI, "static bool gain_spec_action(",
                  "static void gain_spec_menu_browser(")
