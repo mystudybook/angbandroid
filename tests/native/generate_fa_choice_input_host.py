@@ -166,7 +166,18 @@ int main(void)
     push(EVT_RESIZE, 0, 0, 1);
     push(EVT_KBRD, 'a', 0, 0);
     CHECK(get_char("Too narrow", "abc", 3, 'z') == 'z');
-    CHECK(prompts == 1 && bad_width == 0 && index_at == 1);
+    CHECK(prompts == 1 && clears == 1 && bad_width == 0 && index_at == 1);
+
+    /* Rotations must not leave the previous [abc] line on a tiny screen,
+     * and must not consume a queued answer after becoming unreadable. */
+    reset(100);
+    push(EVT_RESIZE, 0, 0, 43);
+    push(EVT_RESIZE, 0, 0, 5);
+    push(EVT_RESIZE, 0, 0, 2);
+    push(EVT_KBRD, 'b', 0, 0);
+    CHECK(get_char("非常長的角色選項說明", "abc", 3, 'z') == 'z');
+    CHECK(prompts == 3 && clears == 1 && bad_width == 0);
+    CHECK(index_at == 3 && hint_clears == 4);
 
     reset(7);
     push(EVT_KBRD, 'b', 0, 0);
@@ -184,7 +195,7 @@ int main(void)
 
     reset(2);
     CHECK(get_char("No room", "abc", 3, 'z') == 'z');
-    CHECK(index_at == 0 && prompts == 0 && hint_clears == 1);
+    CHECK(index_at == 0 && prompts == 0 && clears == 1 && hint_clears == 1);
 
     reset(30);
     CHECK(get_char("Empty choices", "", 0, 'z') == 'z');
