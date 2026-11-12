@@ -71,6 +71,19 @@ for game in ("angband", "faangband"):
     assert "menu_handle_action(menu, &in);" in select_loop
     assert "return in;" in select_loop
 
+    # C strchr() matches the string terminator for keycode 0. A
+    # Unicode/special key might also alias an ASCII control when cast
+    # to char. Only actual one-byte nonzero codes can use shortcut lists.
+    assert menu.count("angdroid_menu_shortcut_is_byte(in.key.code)") == 2
+    key_scan = menu.split("static int get_cursor_key(", 1)[1].split(
+        "static menu_row_style_t", 1
+    )[0]
+    assert "if (!angdroid_menu_shortcut_is_byte(key.code))" in key_scan
+    assert menu.index("if (!angdroid_menu_shortcut_is_byte(key.code))") < (
+        menu.index("if (menu->flags & MN_CASELESS_TAGS)",
+                   menu.index("static int get_cursor_key("))
+    )
+
     # An empty inventory is displayed with zero actual selectable rows.
     # Left/right arrows must still become EVT_SWITCH if another tab exists.
     keyboard = menu.split("bool menu_handle_keypress(", 1)[1].split(
