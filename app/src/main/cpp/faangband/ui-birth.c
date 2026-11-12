@@ -719,27 +719,39 @@ static void fa_birth_help_clear(void)
 
 static void fa_birth_help_line(int *row, const char *label)
 {
-    int col, width, first, per_page, offset, screen_row;
-    char visible[384];
+    int col, width, first, per_page;
+    size_t starts[128], lengths[128], line_count, i;
     if (!row) return;
     first = fa_birth_help_start();
-    /* Reserve the penultimate row for the page indicator, and the final
-     * row for the game's existing keyboard shortcut instructions. */
+    /* Reserve the penultimate row for paging and the final row for the
+     * existing birth controls. Never split a Chinese ability name merely
+     * because its rendered width is longer than one terminal row. */
     per_page = Term ? MAX(0, Term->hgt - 2 - first) : 0;
-    offset = *row - first - fa_birth_detail_page * per_page;
-    screen_row = first + offset;
     col = fa_birth_help_col();
-    if (Term && label && per_page > 0 &&
-            offset >= 0 && offset < per_page &&
-            col >= 0 && col < Term->wid &&
-            screen_row >= 0 && screen_row < Term->hgt - 2) {
-        width = Term->wid - col;
-        angdroid_menu_copy_columns(visible, sizeof(visible),
-            label, (size_t)width);
-        if (visible[0])
-            c_put_str(COLOUR_L_BLUE, visible, screen_row, col);
+    width = Term && col >= 0 && col < Term->wid ?
+        Term->wid - col : 0;
+    if (!label || width <= 0) {
+        ++*row;
+        return;
     }
-    ++*row;
+    line_count = angdroid_fa_history_wrap(label, (size_t)width,
+        starts, lengths, N_ELEMENTS(starts));
+    for (i = 0; i < line_count; ++i) {
+        int offset = *row - first - fa_birth_detail_page * per_page;
+        int screen_row = first + offset;
+        if (Term && per_page > 0 &&
+                offset >= 0 && offset < per_page &&
+                screen_row >= 0 && screen_row < Term->hgt - 2) {
+            char original[512], visible[512];
+            angdroid_fa_history_copy_line(original, sizeof(original),
+                label, starts[i], lengths[i]);
+            angdroid_menu_copy_columns(visible, sizeof(visible),
+                original, (size_t)width);
+            if (visible[0])
+                c_put_str(COLOUR_L_BLUE, visible, screen_row, col);
+        }
+        ++*row;
+    }
 }
 
 static void fa_birth_compact_details(const struct player_race *race,
