@@ -866,6 +866,17 @@ static void keys_to_ui(struct menu *menu)
 	size_t tag_capacity;
 	int cursor;
 	int n = menu->filter_list ? menu->filter_count : menu->count;
+	int first = 0, end = n;
+	bool paged = fa_menu_relative_tags_paged(menu);
+
+	/* Only visible relative tags belong on the current soft keyboard
+	 * page. Avoid scanning thousands of offscreen rows on every frame.
+	 * Absolute/explicit tags retain their original full-list behavior. */
+	if (menu->flags & MN_REL_TAGS) {
+		first = angdroid_menu_visible_tag_first(n, menu->top, paged);
+		end = angdroid_menu_visible_tag_end(
+			n, menu->top, menu->active.page_rows, paged);
+	}
 
 	/* Numeric inscription aliases are separate from the visible tags. */
 	if (menu->inscriptions) {
@@ -897,7 +908,7 @@ static void keys_to_ui(struct menu *menu)
 	 * The old code always read filter_list[0] and wrote temp[256]
 	 * without a capacity check. A crowded inventory could corrupt memory
 	 * while updating the Android soft keyboard. */
-	for (cursor = 0; cursor < n; cursor++) {
+	for (cursor = first; cursor < end; cursor++) {
 		int oid = angdroid_fa_menu_source_index(
 			menu->filter_list, cursor, n, menu->count);
 		char sel = 0;
@@ -908,12 +919,6 @@ static void keys_to_ui(struct menu *menu)
 			continue;
 		if (!(menu->flags & MN_NO_TAGS)) {
 			if (menu->flags & MN_REL_TAGS) {
-				bool paged = fa_menu_relative_tags_paged(menu);
-				int first = angdroid_menu_visible_tag_first(
-					n, menu->top, paged);
-				int end = angdroid_menu_visible_tag_end(
-					n, menu->top, menu->active.page_rows, paged);
-				if (cursor < first || cursor >= end) continue;
 				sel = menu->skin->get_tag(menu,
 					paged ? cursor - first : cursor);
 			} else if (menu->selections &&
