@@ -108,6 +108,22 @@ require(learn_menu, '"學習哪項專精（%c-%c，Esc 離開，剩餘 %d 次）
         "fa_ability_layout_menu(&menu);",
         "mem_free(d->specialties);")
 assert "if (evt.type != EVT_ESCAPE)" not in learn_menu
+# Modal key ownership: clear menu tags before get_check() appends Yes/No;
+# after cancellation the list must refresh on the next menu_select().
+assert "soft_kbd_replace(\"\");" in learn_menu
+assert learn_menu.count('soft_kbd_replace("");') == 3
+assert learn_menu.index('menu_refresh(&menu, false);') < learn_menu.index(
+    'soft_kbd_replace("");') < learn_menu.index("if (get_check(format(")
+assert "d->selected_spec = 0;\n        soft_kbd_replace(\"\");" in learn_menu
+assert learn_menu.index('if (accepted)') < learn_menu.rindex(
+    'soft_kbd_replace("");') < learn_menu.index("screen_load();")
+view_menu = section(UI, "void textui_view_ability_menu(",
+                    "struct spec_menu_data {")
+assert view_menu.index("menu_select(&menu, 0, false);") < (
+    view_menu.index('soft_kbd_replace("");')) < view_menu.index("screen_load();")
+ability_outer = section(UI, "void textui_interact_with_specialties(",
+                        "\n}")
+assert ability_outer.strip().endswith('soft_kbd_replace("");')
 assert learn_menu.index("if (accepted)") < learn_menu.index(
     "*pick = d->selected_spec;")
 assert "pf_on(" not in UI and "pf_off(" not in UI
@@ -202,7 +218,8 @@ assert "if (specialty <= PF_NONE || specialty >= PF_MAX) return false;" in UI
 assert "ability = lookup_ability(\"player\", specialty, 0);" in UI
 assert "if (!ability || !ability->name) return false;" in UI
 assert 'if (!name) name = zh ? "未知能力" : "Unknown ability";' in UI
-assert "check_specialty_gain(idx) && get_check(format(" in UI
+assert "if (ability && ability->name && check_specialty_gain(idx))" in UI
+assert "if (get_check(format(" in UI
 
 assert "void fa_ability_layout_menu" in UI
 assert "int angdroid_fa_ability_plan(" in LAYOUT
