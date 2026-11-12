@@ -33,4 +33,16 @@ static inline int angdroid_item_picker_allow_blank_switch(
     return selectable_objects <= 0 && switch_keys && switch_keys[0] != '\0';
 }
 
+/* A SHOW_EMPTY list may have several painted placeholder rows and
+ * zero selectable objects. Let left/right arrows switch item sources in
+ * that case, but never treat up/down as an item selection. Do not enable
+ * this fallback for shops or other non-item menus. */
+static inline int angdroid_item_picker_blank_arrow_switch(
+    int flags, int empty_input_flag, int is_item_skin,
+    int has_switch_keys, int dx, int dy)
+{
+    return (flags & empty_input_flag) != 0 &&
+        is_item_skin && has_switch_keys && dx != 0 && dy == 0;
+}
+
 #endif /* ANGDROID_ITEM_PICKER_SWITCH_KEYS_H */
