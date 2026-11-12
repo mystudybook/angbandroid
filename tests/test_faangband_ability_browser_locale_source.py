@@ -8,6 +8,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FA = ROOT / "app/src/main/cpp/faangband"
 UI = (FA / "ui-player-properties.c").read_text(encoding="utf-8")
+PROPS = (FA / "player-properties.c").read_text(encoding="utf-8")
 LORE = (FA / "ui-knowledge.c").read_text(encoding="utf-8")
 DUMP = (FA / "ui-player.c").read_text(encoding="utf-8")
 RUNNER = (ROOT / "scripts/verify-zh-tw.sh").read_text(encoding="utf-8")
@@ -87,6 +88,20 @@ require(misc, "angdroid_ability_description(",
         "angdroid_shape_misc_desc(ability->desc,",
         "if (localized == ability->desc)",
         "pf_has(s->pflags, ability->index)")
+
+require(UI,
+    "return oid >= 0 && (size_t)oid < strlen(all_letters_nohjkl) ?",
+    "all_letters_nohjkl[last_shortcut]",
+    "last_shortcut = MIN(num_abilities,")
+require(PROPS,
+    "list = mem_alloc((size_t)capacity * sizeof(*list));",
+    "lookup_ability(\"player\", i, 0)",
+    "list[count++].group = PLAYER_FLAG_SPECIAL;",
+    "list[count++].group = PLAYER_FLAG_CLASS;",
+    "list[count++].group = PLAYER_FLAG_RACE;",
+    "view_ability_menu(list, count);",
+    "mem_free(list);")
+assert "ability_list[32]" not in PROPS
 
 # Export and original player ability data are deliberately not localized.
 dump = section(DUMP, "void write_character_dump(", "bool dump_save(")
