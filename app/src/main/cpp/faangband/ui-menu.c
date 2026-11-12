@@ -880,8 +880,7 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 					out->type = EVT_NONE;
 				}
 			}
-		}
-		else if (dir && angdroid_item_picker_blank_arrow_switch(
+		} else if (dir && angdroid_item_picker_blank_arrow_switch(
 				menu->flags, MN_ALLOW_EMPTY_INPUT,
 				menu->skin == &menu_skin_object,
 				menu->switch_keys != NULL, ddx[dir], ddy[dir])) {
