@@ -1281,7 +1281,8 @@ char get_char(const char *prompt, const char *options, size_t len, char fallback
     for (;;) {
         int width = Term && Term->hgt > 0 ? Term->wid - 1 : 0;
 
-        if (width < 1) {
+        if (width < 3) {
+            /* Too few cells to distinguish a choice or truncation. */
             soft_kbd_replace("");
             return fallback;
         }
