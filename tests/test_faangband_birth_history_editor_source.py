@@ -87,6 +87,11 @@ need(UI,
     "static void fa_birth_map_menu_resize(struct menu *m)",
     "fa_birth_map_menu_resize /* rotate or resize */",
     "cmdq_push(CMD_CHOOSE_MAP);",
+    "ui_event result;",
+    "result = menu_select(m, 0, true);",
+    "if (result.type == EVT_SELECT && current_map_index >= 0 &&",
+    "confirmed = current_map_index;",
+    "current_map_index = confirmed;",
     'cmd_set_arg_choice(cmdq_peek(), "choice", map);')
 assert 'cmd_set_arg_choice(cmdq_peek(), "choice",\n\t\t\t\t\tm->cursor);' not in UI
 
