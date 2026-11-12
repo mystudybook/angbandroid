@@ -645,7 +645,24 @@ static void birthmenu_display(struct menu *menu, int oid, bool cursor,
  * the default handling of "commands" in the standard iterators (hence
  * only defining the display and handler parts).
  */
-static const menu_iter birth_iter = { NULL, NULL, birthmenu_display, NULL, NULL };
+/* menu_select() invokes the iterator's resize callback while a menu
+ * is already open. Without this, rotating the phone only reflows the
+ * *next* birth stage, leaving the current selection at stale coordinates. */
+static void fa_birth_menu_resize(struct menu *m)
+{
+    if (!m) return;
+    fa_birth_configure_layout();
+    if (m == &race_menu)
+        menu_layout(m, &race_region);
+    else if (m == &class_menu)
+        menu_layout(m, &class_region);
+    else if (m == &roller_menu)
+        menu_layout(m, &roller_region);
+}
+
+static const menu_iter birth_iter = {
+    NULL, NULL, birthmenu_display, NULL, fa_birth_menu_resize
+};
 
 static void skill_help(const int r_skills[], const int c_skills[], int mhp, int infra)
 {
