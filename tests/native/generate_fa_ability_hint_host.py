@@ -29,6 +29,7 @@ static char soft_kbd_buffer[256] = "";
 static bool flashing_keys = true;
 static char last_sent[256];
 static int send_count;
+void strdeldup(char *str);
 static void my_strcat(char *dst, const char *src, size_t cap)
 {
     size_t used = strlen(dst);
