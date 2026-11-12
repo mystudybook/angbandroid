@@ -25,6 +25,7 @@
 #include "menu-key-hints.h"
 #include "menu-visible-tags.h"
 #include "menu-valid-cursor.h"
+#include "menu-scroll-viewport.h"
 #include "menu-column-width.h"
 #include "menu-hit-test.h"
 #include "menu-compact-layout.h"
@@ -216,22 +217,15 @@ static void display_scrolling(struct menu *menu, int cursor, int *top, region *l
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 	int i;
 
-	/* Keep a certain distance from the top when possible */
-	if ((cursor <= *top) && (*top > 0))
-		*top = cursor - 1;
-
-	/* Keep a certain distance from the bottom when possible */
-	if (cursor >= *top + (rows_per_page - 1))
-		*top = cursor - (rows_per_page - 1) + 1;
-
-	/* Limit the top to legal places */
-	*top = MIN(*top, n - rows_per_page);
-	*top = MAX(*top, 0);
+	/* Screen rotation, stock shrink and filters may change how many
+	 * rows fit. Keep the selected row visible and clamp stale offsets. */
+	*top = angdroid_menu_scroll_clamp_top(
+		*top, cursor, n, rows_per_page);
 
 	for (i = 0; i < rows_per_page; i++) {
 		/* Blank all lines */
 		Term_erase(col, row + i, loc->width);
-		if (i < n) {
+		if (*top < n && i < n - *top) {
 			/* Redraw the line if it's within the number of menu items */
 			bool is_curs = (i == cursor - *top);
 			display_menu_row(menu, i + *top, *top, is_curs, row + i, col,
@@ -239,8 +233,14 @@ static void display_scrolling(struct menu *menu, int cursor, int *top, region *l
 		}
 	}
 
-	if (menu->cursor >= 0)
-		Term_gotoxy(col + menu->cursor_x_offset, row + cursor - *top);
+	/* A fully disabled/empty view has cursor -1. Do not move the
+	 * terminal cursor off-screen during a rotation or after filtering. */
+	if (cursor >= *top && cursor < n &&
+		cursor - *top < rows_per_page &&
+		menu->cursor_x_offset >= 0 &&
+		menu->cursor_x_offset < loc->width)
+		Term_gotoxy(col + menu->cursor_x_offset,
+			row + cursor - *top);
 }
 
 static char scroll_get_tag(struct menu *menu, int pos)
@@ -304,22 +304,15 @@ static void object_skin_display(struct menu *menu, int cursor, int *top, region 
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 	int i;
 
-	/* Keep a certain distance from the top when possible */
-	if ((cursor <= *top) && (*top > 0))
-		*top = cursor - 1;
-
-	/* Keep a certain distance from the bottom when possible */
-	if (cursor >= *top + (rows_per_page - 1))
-		*top = cursor - (rows_per_page - 1) + 1;
-
-	/* Limit the top to legal places */
-	*top = MIN(*top, n - rows_per_page);
-	*top = MAX(*top, 0);
+	/* Screen rotation, stock shrink and filters may change how many
+	 * rows fit. Keep the selected row visible and clamp stale offsets. */
+	*top = angdroid_menu_scroll_clamp_top(
+		*top, cursor, n, rows_per_page);
 
 	for (i = 0; i < rows_per_page; i++) {
 		/* Blank all lines */
 		Term_erase(col, row + i, loc->width);
-		if (i < n) {
+		if (*top < n && i < n - *top) {
 			/* Redraw the line if it's within the number of menu items */
 			bool is_curs = (i == cursor - *top);
 			display_menu_row(menu, i + *top, *top, is_curs, row + i, col,
@@ -327,8 +320,14 @@ static void object_skin_display(struct menu *menu, int cursor, int *top, region 
 		}
 	}
 
-	if (menu->cursor >= 0)
-		Term_gotoxy(col + menu->cursor_x_offset, row + cursor - *top);
+	/* A fully disabled/empty view has cursor -1. Do not move the
+	 * terminal cursor off-screen during a rotation or after filtering. */
+	if (cursor >= *top && cursor < n &&
+		cursor - *top < rows_per_page &&
+		menu->cursor_x_offset >= 0 &&
+		menu->cursor_x_offset < loc->width)
+		Term_gotoxy(col + menu->cursor_x_offset,
+			row + cursor - *top);
 }
 
 static char object_skin_get_tag(struct menu *menu, int pos)
