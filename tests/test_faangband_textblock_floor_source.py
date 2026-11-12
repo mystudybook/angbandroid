@@ -45,7 +45,7 @@ require(pager, "screen_save();", "screen_load();",
         "full.page_rows = MAX(0, MIN(full.page_rows, term_height - full.row));",
         "show_header = header && full.page_rows >= 3;",
         "body_rows = full.page_rows - (show_header ? 1 : 0) -",
-        "n_lines = textblock_calculate_lines(",
+        "n_lines = textblock_calculate_display_lines(",
         "if (layout_width != area.width)",
         "if (n_lines <= (size_t)body_rows)",
         "start_line = n_lines - (size_t)body_rows;",
@@ -55,6 +55,23 @@ require(pager, "screen_save();", "screen_load();",
 assert "ch = inkey();" not in pager
 assert "area.page_rows -= 2;" not in pager
 assert "n_lines - area.page_rows" not in pager
+assert "textblock_calculate_lines(" not in pager
+
+# Only native screen textblocks use display-cell wrapping. File and
+# export layout keeps the original wchar-oriented contract unchanged.
+TEXTCORE = (FA / "z-textblock.c").read_text(encoding="utf-8")
+TEXTHEAD = (FA / "z-textblock.h").read_text(encoding="utf-8")
+require(TEXTCORE,
+        '#include "../curses/unicode_width.h"',
+        "size_t textblock_calculate_display_lines(",
+        "angdroid_terminal_columns(",
+        "if (columns > width - cells) break;",
+        "if (cursor == begin) ++cursor;",
+        "if (begin < length && text[begin] == L'\\n') ++begin;")
+require(TEXTHEAD, "size_t textblock_calculate_display_lines(")
+assert "size_t textblock_calculate_lines(" in TEXTCORE
+assert "n_lines = textblock_calculate_lines(" in TEXTCORE
+
 
 normalize = section(OUTPUT, "static struct keypress fa_textblock_key_from_event(",
                     "static void fa_textblock_print_bounded(")
@@ -109,8 +126,8 @@ floor_fixture = (ROOT / "tests/native/generate_fa_floor_list_input_host.py").rea
 runner = (ROOT / "scripts/test-fa-textblock-floor.sh").read_text(
     encoding="utf-8")
 require(pager_fixture, "textui_textblock_show", "display_area",
-        "extract(",
-        "EVT_RESIZE", "layout_calls >= 2",
+        "extract_core(", "textblock_calculate_display_lines",
+        "EVT_RESIZE", "check_column_lines()",
         "lines_allocated == lines_freed", "bad_coordinates == 0")
 require(floor_fixture, "fa_target_floor_list_index",
         "fa_target_floor_list_inkey", "all_letters_nohjkl",
