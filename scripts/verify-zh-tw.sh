@@ -87,6 +87,7 @@ run_check "FAangband generic get_char UTF-8 choices and resize handling" sh "$RO
 run_check "FAangband UTF-8 command prompt redraw and resize cancellation" sh "$ROOT/scripts/test-fa-command-prompt.sh"
 run_check "FAangband direction and targeting C99 input/resize" sh "$ROOT/scripts/test-fa-direction-target.sh"
 run_check "FAangband direction and target help source regression" python3 "$ROOT/tests/test_faangband_direction_target_source.py"
+run_check "FAangband compact targeting help and UTF-8 monster/object/terrain details" python3 "$ROOT/tests/test_faangband_target_detail_source.py"
 run_check "FAangband typed ability PF/OF labels with C99" sh "$ROOT/scripts/test-fa-birth-ability-labels.sh"
 run_check "FAangband elemental resistance/vulnerability source contract" python3 "$ROOT/tests/test_faangband_birth_elements_source.py"
 run_check "FAangband elemental resistance/weakness native C99" sh "$ROOT/scripts/test-fa-birth-elements.sh"
