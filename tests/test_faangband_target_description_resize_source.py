@@ -79,7 +79,7 @@ for snippet in (
     "extract(", "fa_target_draw_bounded_line",
     "fa_target_inkey_described", "EVT_RESIZE", "EVT_MOUSE",
     "EVT_BUTTON", "EVT_ESCAPE", "read_at == 2",
-    "Truncated", "Broken byte",
+    "very_long", "Broken byte",
 ):
     assert snippet in generator, snippet
 for snippet in ("-std=c99 -Wall -Wextra -Werror -pedantic",
