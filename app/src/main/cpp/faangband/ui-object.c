@@ -59,6 +59,8 @@
 #include "../angband/item-picker-tag-guard.h"
 #include "../angband/zh-tw-ui.h"
 #include "../angband/zh-tw-ignore-quality-action.h"
+#include "../angband/ignore-named-action-locale.h"
+#include "obj-desc-item-zh-tw.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -1766,11 +1768,12 @@ enum {
 
 void textui_cmd_ignore_menu(struct object *obj)
 {
-	char out_val[160];
+	char out_val[256];
 
 	struct menu *m;
 	region r;
 	int selected;
+    soft_kbd_linger_snapshot parent_keys;
 	uint8_t value;
 	int type;
 
@@ -1795,18 +1798,19 @@ void textui_cmd_ignore_menu(struct object *obj)
 		bool ignored = kind_is_ignored_aware(obj->kind) ||
 				kind_is_ignored_unaware(obj->kind);
 
-		char tmp[70];
-		object_desc(tmp, sizeof(tmp), obj,
-			ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL, player);
-		if (!ignored) {
-			strnfmt(out_val, sizeof out_val,
-                angdroid_zh_tw_enabled() ? "全部忽略 %s" : "All %s", tmp);
-			menu_dynamic_add(m, out_val, IGNORE_THIS_FLAVOR);
-		} else {
-			strnfmt(out_val, sizeof out_val,
-                angdroid_zh_tw_enabled() ? "取消忽略全部 %s" : "Unignore all %s", tmp);
-			menu_dynamic_add(m, out_val, UNIGNORE_THIS_FLAVOR);
-		}
+		char tmp[192];
+        object_desc(tmp, sizeof(tmp), obj,
+            ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL | ODESC_ZH_TW, player);
+		/* Keep the same kinds/IDs and display only known appearance.
+         * The entire localized label must fit or use a generic fallback. */
+        if (!angdroid_ignore_named_action_text(out_val,
+                sizeof(out_val), tmp, ignored, angdroid_zh_tw_enabled()))
+            my_strcpy(out_val, angdroid_game_ui_text(
+                ignored ? "Unignore items of this type"
+                        : "Ignore items of this type",
+                angdroid_zh_tw_enabled()), sizeof(out_val));
+        menu_dynamic_add(m, out_val,
+            ignored ? UNIGNORE_THIS_FLAVOR : IGNORE_THIS_FLAVOR);
 	}
 
 	type = ignore_type_of(obj);
@@ -1815,21 +1819,32 @@ void textui_cmd_ignore_menu(struct object *obj)
 	if (obj->known->ego && type != ITYPE_MAX) {
 		struct ego_desc choice;
 		struct ego_item *ego = obj->ego;
-		char tmp[80] = "";
+		char tmp[160] = "";
+        const char *localized;
+        const char *ego_display;
 
 		choice.e_idx = ego->eidx;
 		choice.itype = type;
 		choice.short_name = "";
 		(void) ego_item_name(tmp, sizeof(tmp), &choice);
-		if (!ego_is_ignored(choice.e_idx, choice.itype)) {
-			strnfmt(out_val, sizeof out_val,
-                angdroid_zh_tw_enabled() ? "全部忽略 %s" : "All %s", tmp + 4);
-			menu_dynamic_add(m, out_val, IGNORE_THIS_EGO);
-		} else {
-			strnfmt(out_val, sizeof out_val,
-                angdroid_zh_tw_enabled() ? "取消忽略全部 %s" : "Unignore all %s", tmp + 4);
-			menu_dynamic_add(m, out_val, UNIGNORE_THIS_EGO);
-		}
+        localized = angdroid_faangband_known_ego_ui_name(
+            ego->name, angdroid_zh_tw_enabled());
+        /* The original formatted English label uses a four-byte prefix.
+         * Never skip four UTF-8 bytes in a translated name. */
+        ego_display = localized ? localized :
+            (strlen(tmp) >= 4 ? tmp + 4 : ego->name);
+        {
+            bool ignored = ego_is_ignored(choice.e_idx, choice.itype);
+            if (!angdroid_ignore_named_action_text(out_val,
+                    sizeof(out_val), ego_display, ignored,
+                    angdroid_zh_tw_enabled()))
+                my_strcpy(out_val, angdroid_game_ui_text(
+                    ignored ? "Unignore items of this type"
+                            : "Ignore items of this type",
+                    angdroid_zh_tw_enabled()), sizeof(out_val));
+            menu_dynamic_add(m, out_val,
+                ignored ? UNIGNORE_THIS_EGO : IGNORE_THIS_EGO);
+        }
 	}
 
 	/* Quality ignoring */
@@ -1862,9 +1877,14 @@ void textui_cmd_ignore_menu(struct object *obj)
 	region_erase_bordered(&r);
 
 	prt(angdroid_game_ui_text("(Enter to select, ESC) Ignore:", angdroid_zh_tw_enabled()), 0, 0);
-	selected = menu_dynamic_select(m);
+    /* The popup temporarily owns the Android hint strip, not its caller.
+     * Restore a lingering parent only on Escape, never after an action. */
+    soft_kbd_save_linger(&parent_keys);
+    selected = menu_dynamic_select(m);
 
-	screen_load();
+    screen_load();
+    soft_kbd_replace("");
+    soft_kbd_restore_linger(&parent_keys, selected < 0);
 
 	if (selected == IGNORE_THIS_ITEM) {
 		obj->known->notice |= OBJ_NOTICE_IGNORE;
