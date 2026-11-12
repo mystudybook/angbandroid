@@ -879,6 +879,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_menu_shortcut_code"
 "$BUILD_DIR/test_menu_shortcut_code"
 
+# Choose a populated initial item tab while preserving current/requested source.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_item_picker_start_source.c" \
+    -o "$BUILD_DIR/test_item_picker_start_source"
+"$BUILD_DIR/test_item_picker_start_source"
+
 # Inventory/equipment/quiver/floor picker keys: only actionable tab targets.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_item_picker_switch_keys.c" \
