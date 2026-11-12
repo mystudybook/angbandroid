@@ -1663,34 +1663,37 @@ static int quality_validity(struct menu *menu, int oid)
 /**
  * Display an entry in the menu.
  */
-static void quality_display(struct menu *menu, int oid, bool cursor, int row,
-							int col, int width)
+static void quality_display(struct menu *menu, int oid, bool cursor,
+        int row, int col, int width)
 {
-	if (oid) {
-		/* Note: the order of the values in quality_choices do not
-			align with the ignore_type_t enum order. - fix? NRM*/
-		const char *name = quality_choices[oid].name;
-		uint8_t level = ignore_level[oid];
-		const char *level_name = quality_values[level].name;
-		uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
-		size_t u8len = utf8_strlen(name);
+    if (oid && Term && col >= 0 && col < Term->wid) {
+        /* Reuse original ignore enums and values; change only row text. */
+        const char *name = angdroid_game_ui_text(
+            quality_choices[oid].name, angdroid_zh_tw_enabled());
+        uint8_t level = ignore_level[oid];
+        const char *level_name = angdroid_game_ui_text(
+            quality_values[level].name, angdroid_zh_tw_enabled());
+        uint8_t attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
+        int available = MIN(width, Term->wid - col);
+        int left_columns = MIN(30, MAX(0, available - 12));
+        char clipped[4 * 30 + 1], status[128], visible[128];
+        size_t columns;
 
-		if (u8len < 30) {
-			c_put_str(attr, format("%s%*s", name, (int)(30 - u8len),
-				" "), row, col);
-		} else {
-			char *name_copy = string_make(name);
-
-			if (u8len > 30) {
-				utf8_clipto(name_copy, 30);
-			}
-			c_put_str(attr, name_copy, row, col);
-			string_free(name_copy);
-		}
-		c_put_str(attr, format(" : %s", level_name), row, col + 30);
-	}
+        if (left_columns <= 0) left_columns = available;
+        if (left_columns <= 0) return;
+        columns = angdroid_menu_copy_columns(clipped, sizeof(clipped),
+            name, (size_t)left_columns);
+        c_put_str(attr, format("%s%*s", clipped,
+            (int)(left_columns - columns), ""), row, col);
+        if (available > left_columns) {
+            strnfmt(status, sizeof(status), " : %s", level_name);
+            angdroid_menu_copy_columns(visible, sizeof(visible),
+                status, (size_t)(available - left_columns));
+            if (visible[0])
+                c_put_str(attr, visible, row, col + left_columns);
+        }
+    }
 }
-
 
 /**
  * Display the quality ignore subtypes.
@@ -1698,10 +1701,15 @@ static void quality_display(struct menu *menu, int oid, bool cursor, int row,
 static void quality_subdisplay(struct menu *menu, int oid, bool cursor, int row,
 							   int col, int width)
 {
-	const char *name = quality_values[oid].name;
-	uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
-
-	c_put_str(attr, name, row, col);
+    const char *name = angdroid_game_ui_text(
+        quality_values[oid].name, angdroid_zh_tw_enabled());
+    uint8_t attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
+    if (Term && col >= 0 && col < Term->wid && width > 0) {
+        char clipped[256];
+        angdroid_menu_copy_columns(clipped, sizeof(clipped),
+            name, (size_t)MIN(width, Term->wid - col));
+        if (clipped[0]) c_put_str(attr, clipped, row, col);
+    }
 }
 
 
@@ -1765,7 +1773,8 @@ static void quality_menu(const char *unused, int also_unused)
 
 	/* Set up the menu */
 	menu_init(&menu, MN_SKIN_SCROLL, &menu_f);
-	menu.title = "Quality ignore menu";
+	menu.title = angdroid_game_ui_text(
+        "Quality ignore menu", angdroid_zh_tw_enabled());
 	menu_setpriv(&menu, ITYPE_MAX, quality_values);
 	menu_layout(&menu, &area);
 
@@ -2084,14 +2093,16 @@ static void display_options_item(struct menu *menu, int oid, bool cursor,
 		bool known = seen_tval(sval_dependent[line].tval);
 		uint8_t attr = curs_attrs[known ? CURS_KNOWN: CURS_UNKNOWN][(int)cursor];
 
-		c_prt(attr, sval_dependent[line].desc, row, col);
+		c_prt(attr, angdroid_game_ui_text(sval_dependent[line].desc,
+            angdroid_zh_tw_enabled()), row, col);
 	} else {
 		uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 
 		line = line - N_ELEMENTS(sval_dependent) - 1;
 
 		if (line < N_ELEMENTS(extra_item_options))
-			c_prt(attr, extra_item_options[line].name, row, col);
+			c_prt(attr, angdroid_game_ui_text(extra_item_options[line].name,
+                angdroid_zh_tw_enabled()), row, col);
 	}
 }
 
