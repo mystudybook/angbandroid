@@ -1537,6 +1537,10 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 
 	/* Require at least one legal choice */
 	if (allow_inven || allow_equip || allow_quiver || allow_floor) {
+		soft_kbd_linger_snapshot outer_keys;
+		/* Parent hints return only after cancellation of the entire picker,
+		 * never between inventory/equipment/quiver/floor tabs. */
+		soft_kbd_save_linger(&outer_keys);
 		/* Throwing remains an explicit higher-priority view. Otherwise
 		 * begin with an allowed tab containing at least one real item,
 		 * instead of inheriting a now-empty inventory page. */
@@ -1670,6 +1674,7 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 				break;
 			}
 		}
+		soft_kbd_restore_linger(&outer_keys, *choice == NULL);
 	} else {
 		/* Warning if needed */
 		if (str) msg("%s", str);
