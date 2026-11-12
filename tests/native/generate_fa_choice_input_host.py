@@ -120,6 +120,16 @@ int main(void)
     CHECK(clears == 1);
 
     reset(30);
+    push(EVT_KBRD, 'b', 0, 0);
+    CHECK(get_char("Invalid option byte", "\x61\xff\x62", 3, 'z') == 'b');
+    CHECK(strstr(last_text, "[ab] ") != NULL);
+    CHECK(last_hints[0] == '\0');
+
+    reset(30);
+    CHECK(get_char("Only invalid option", "\xff", 1, 'z') == 'z');
+    CHECK(prompts == 0 && index_at == 0);
+
+    reset(30);
     push(EVT_KBRD, 0, 0, 0);
     CHECK(get_char("NUL code", "abc", 3, 'z') == 'z');
     CHECK(prompts == 1 && clears == 1);
