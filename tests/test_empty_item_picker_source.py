@@ -114,12 +114,24 @@ for game in ("angband", "faangband"):
         "menu->skin == &menu_skin_object",
         "menu->switch_keys",
         "int dir = target_dir(in->key);",
-        "dir && ddx[dir] && !ddy[dir]",
+        "dir && angdroid_item_picker_blank_arrow_switch(",
+        "menu->flags, MN_ALLOW_EMPTY_INPUT, true,",
+        "menu->switch_keys != NULL, ddx[dir], ddy[dir]",
         "*out = menu->skin->process_dir(menu, dir);",
         "eat = true;",
     ):
         assert marker in empty, (game, marker)
     assert "m->cursor" not in empty, game
+
+    # SHOW_EMPTY equipment has count > 0, but each visible row may
+    # contain a NULL object. Its left/right arrow must still switch
+    # to another allowed source; invalid rows remain unselectable.
+    directions = keyboard.split("} else {", 1)[-1]
+    assert "if (dir && !no_valid_row(menu, count))" in keyboard
+    assert "} else if (dir && angdroid_item_picker_blank_arrow_switch(" in keyboard
+    assert "menu->skin == &menu_skin_object" in directions
+    assert "menu->switch_keys != NULL, ddx[dir], ddy[dir]" in directions
+    assert "*out = menu->skin->process_dir(menu, dir);" in directions
 
     # When neither arrow can reach a different source, do not rebuild
     # the identical empty menu in an unbounded loop.
