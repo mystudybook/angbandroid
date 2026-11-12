@@ -34,7 +34,7 @@ for variant in ("angband", "faangband"):
     )[0]
     assert "char switch_keys[4];" in picker
     assert "angdroid_item_picker_switch_keys(" in picker
-    assert "m->switch_keys = switch_keys;" in picker
+    assert "m->switch_keys = switch_keys[0] ? switch_keys : NULL;" in picker
     assert 'm->switch_keys = "/|-";' not in picker
     for part in (
         "player->upkeep->command_wrk != USE_INVEN",
