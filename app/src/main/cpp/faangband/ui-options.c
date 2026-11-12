@@ -468,16 +468,24 @@ static void do_cmd_options_win(const char *name, int row)
 		for (i = 0; i < PW_MAX_FLAGS; i++) {
 			uint8_t a = COLOUR_WHITE;
 
-			const char *str = window_flag_desc[i];
+            const char *str = window_flag_desc[i];
 
 			/* Use color */
 			if (i == y) a = COLOUR_L_BLUE;
 
 			/* Unused option */
-			if (!str) str = "(Unused option)";
+            if (!str) str = "(Unused option)";
+            str = angdroid_game_ui_text(str, angdroid_zh_tw_enabled());
 
 			/* Flag name */
-			Term_putstr(0, i + 5, -1, a, str);
+            /* Names occupy only the 35-cell flag column. */
+            if (Term && Term->wid > 0) {
+                char clipped[4 * 34 + 1];
+                angdroid_menu_copy_columns(clipped, sizeof(clipped),
+                    str, (size_t)MIN(34, Term->wid));
+                if (clipped[0])
+                    Term_putstr(0, i + 5, -1, a, clipped);
+            }
 
 			/* Display the windows */
 			for (j = 0; j < ANGBAND_TERM_MAX; j++) {
@@ -695,7 +703,8 @@ static void ui_keymap_create(const char *title, int row)
 		if (n == KEYMAP_ACTION_MAX) color = COLOUR_L_RED;
 
 		keypress_to_text(tmp, sizeof(tmp), keymap_buffer, false);
-		c_prt(color, format("Action: %s", tmp), 15, 0);
+		c_prt(color, angdroid_zh_tw_enabled() ?
+            format("操作：%s", tmp) : format("Action: %s", tmp), 15, 0);
 
 		c_prt(COLOUR_L_BLUE, angdroid_game_ui_text(
             "  Press '=' when finished.", angdroid_zh_tw_enabled()), 17, 0);
@@ -1415,6 +1424,8 @@ static void options_load_pref_file(const char *n, int row)
 
 #define EGO_MENU_HELPTEXT \
 "{light green}Movement keys{/} scroll the list\n{light red}ESC{/} returns to the previous menu\n{light blue}Enter{/} toggles the current setting."
+#define EGO_MENU_HELPTEXT_ZH \
+"{light green}方向鍵{/}瀏覽清單\n{light red}Esc{/}返回上一層\n{light blue}Enter{/}切換目前設定。"
 
 /**
  * Skip common prefixes in ego-item names.
@@ -1627,11 +1638,12 @@ static void ego_menu(const char *unused, int also_unused)
 
 	/* Indent output */
 	text_out_indent = 1;
-	text_out_wrap = 79;
+	text_out_wrap = MIN(79, MAX(12, Term->wid - 2));
 	Term_gotoxy(1, 1);
 
 	/* Display some helpful information */
-	text_out_e(EGO_MENU_HELPTEXT);
+	text_out_e(angdroid_zh_tw_enabled() ?
+        EGO_MENU_HELPTEXT_ZH : EGO_MENU_HELPTEXT);
 
 	text_out_indent = 0;
 
