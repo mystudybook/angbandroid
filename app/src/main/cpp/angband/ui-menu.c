@@ -403,26 +403,36 @@ static void display_columns(struct menu *menu, int cursor, int *top, region *loc
 	int cols;
 	int colw;
 
-	if (rows_per_page <= 0 || n <= 0)
+	if (rows_per_page <= 0 || loc->width <= 0)
 		return;
-	cols = 1 + (n - 1) / rows_per_page;
 
+	/* A changed filter or rotated viewport can leave old columns behind.
+	 * Clear the whole active region even when it now has no items. */
+	for (r = 0; r < rows_per_page; ++r)
+		Term_erase(col, row + r, loc->width);
+	if (n <= 0)
+		return;
+
+	cols = 1 + (n - 1) / rows_per_page;
 	colw = angdroid_menu_fit_column_width(23, loc->width, 0, cols);
 
-	for (c = 0; c < cols; c++) {
-		for (r = 0; r < rows_per_page; r++) {
-			int pos = c * rows_per_page + r;
-			bool is_cursor = (pos == cursor);
-
-			if (pos < n)
-				display_menu_row(menu, pos, 0, is_cursor,
-						row + r, col + c * colw, colw);
+	/* Never render columns beyond the physical available terminal cells. */
+	for (c = 0; c < cols && c < loc->width / colw; ++c) {
+		int base = c * rows_per_page;
+		for (r = 0; r < rows_per_page && r < n - base; ++r) {
+			int pos = base + r;
+			display_menu_row(menu, pos, 0, pos == cursor,
+				row + r, col + c * colw, colw);
 		}
 	}
 
-	if (menu->cursor >= 0)
-		Term_gotoxy(col + (cursor / rows_per_page) * colw + menu->cursor_x_offset,
-				row + (cursor % rows_per_page) - *top);
+	if (cursor >= 0 && cursor < n) {
+		int dx = (cursor / rows_per_page) * colw +
+			menu->cursor_x_offset;
+		int dy = cursor % rows_per_page;
+		if (dx >= 0 && dx < loc->width)
+			Term_gotoxy(col + dx, row + dy);
+	}
 }
 
 static char column_get_tag(struct menu *menu, int pos)
