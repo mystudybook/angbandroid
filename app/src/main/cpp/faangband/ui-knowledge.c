@@ -3360,8 +3360,7 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 	sort(sarray, count, sizeof(sarray[0]), compare_shape_names);
 	narray = mem_alloc(count * sizeof(*narray));
 	for (i = 0; i < count; ++i) {
-		narray[i] = angdroid_shape_name(
-            sarray[i]->name, angdroid_zh_tw_enabled());
+		narray[i] = angdroid_shape_name(sarray[i]->name, angdroid_zh_tw_enabled());
 	}
 
 	menu_setpriv(m, count, narray);
