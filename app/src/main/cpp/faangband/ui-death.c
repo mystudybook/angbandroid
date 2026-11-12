@@ -66,6 +66,18 @@ static void put_str_centred(int y, int x1, int x2, const char *fmt, ...)
     if (visible[0]) put_str(visible, y, x);
 }
 
+/* Death and ghost prompts can be longer than the available phone screen.
+ * Crop on complete UTF-8 terminal cells, leaving command tags untouched. */
+static void fa_death_print_prompt(const char *message, int row)
+{
+    char visible[512];
+    if (!Term || !message || row < 0 || row >= Term->hgt ||
+        Term->wid <= 0) return;
+    angdroid_menu_copy_columns(visible, sizeof(visible),
+        message, (size_t)Term->wid);
+    prt(visible, row, 0);
+}
+
 /**
  * Display the tombstone/retirement screen
  */
@@ -455,9 +467,9 @@ static void death_file(const char *title, int row)
 
 		/* Check result */
 		if (success)
-			msg("Character dump successful.");
+			msg("%s", angdroid_death_prompt(ANGDROID_DEATH_DUMP_SUCCESS, angdroid_zh_tw_enabled()));
 		else
-			msg("Character dump failed!");
+			msg("%s", angdroid_death_prompt(ANGDROID_DEATH_DUMP_FAILED, angdroid_zh_tw_enabled()));
 
 		/* Flush messages */
 		event_signal(EVENT_MESSAGE_FLUSH);
@@ -477,7 +489,8 @@ static void death_info(const char *title, int row)
 	display_player(0);
 
 	/* Prompt for inventory */
-	prt("Hit any key to see more information: ", 0, 0);
+	fa_death_print_prompt(angdroid_death_prompt(
+            ANGDROID_DEATH_MORE_INFORMATION, angdroid_zh_tw_enabled()), 0);
 
 	/* Allow abort at this point */
 	(void)anykey();
@@ -489,7 +502,8 @@ static void death_info(const char *title, int row)
 	if (player->upkeep->equip_cnt) {
 		Term_clear();
 		show_equip(OLIST_WEIGHT | OLIST_SEMPTY | OLIST_DEATH, NULL);
-		prt("You are using: -more-", 0, 0);
+		fa_death_print_prompt(angdroid_death_prompt(
+            ANGDROID_DEATH_EQUIPMENT, angdroid_zh_tw_enabled()), 0);
 		(void)anykey();
 	}
 
@@ -497,7 +511,8 @@ static void death_info(const char *title, int row)
 	if (player->upkeep->inven_cnt) {
 		Term_clear();
 		show_inven(OLIST_WEIGHT | OLIST_DEATH, NULL);
-		prt("You are carrying: -more-", 0, 0);
+		fa_death_print_prompt(angdroid_death_prompt(
+            ANGDROID_DEATH_INVENTORY, angdroid_zh_tw_enabled()), 0);
 		(void)anykey();
 	}
 
@@ -505,7 +520,8 @@ static void death_info(const char *title, int row)
 	if (player->upkeep->quiver_cnt) {
 		Term_clear();
 		show_quiver(OLIST_WEIGHT | OLIST_DEATH, NULL);
-		prt("Your quiver holds: -more-", 0, 0);
+		fa_death_print_prompt(angdroid_death_prompt(
+            ANGDROID_DEATH_QUIVER, angdroid_zh_tw_enabled()), 0);
 		(void)anykey();
 	}
 
@@ -525,7 +541,7 @@ static void death_info(const char *title, int row)
 			for (line = 0; obj && line < 12; obj = obj->next, line++) {
 				uint8_t attr;
 
-				char o_name[80];
+				char o_name[192];
 				char tmp_val[80];
 
 				/* Print header, clear line */
@@ -534,17 +550,26 @@ static void death_info(const char *title, int row)
 
 				/* Get the object description */
 				object_desc(o_name, sizeof(o_name), obj,
-					ODESC_PREFIX | ODESC_FULL, player);
+                    ODESC_PREFIX | ODESC_FULL |
+                    (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 				/* Get the inventory color */
 				attr = obj->kind->base->attr;
 
 				/* Display the object */
-				c_put_str(attr, o_name, line + 2, 7);
+				if (Term && Term->wid > 7) {
+                    char visible[192];
+                    angdroid_menu_copy_columns(visible, sizeof(visible),
+                        o_name, (size_t)(Term->wid - 7));
+                    if (visible[0])
+                        c_put_str(attr, visible, line + 2, 7);
+                }
 			}
 
 			/* Caption */
-			prt(format("Your home contains (page %d): -more-", page), 0, 0);
+			fa_death_print_prompt(format(angdroid_death_prompt(
+                ANGDROID_DEATH_HOME_PAGE, angdroid_zh_tw_enabled()),
+                page), 0);
 
 			/* Wait for it */
 			(void)anykey();
@@ -583,8 +608,8 @@ static void death_examine(const char *title, int row)
 	const char *q, *s;
 
 	/* Get an item */
-	q = "Examine which item? ";
-	s = "You have nothing to examine.";
+	q = angdroid_death_prompt(ANGDROID_DEATH_EXAMINE, angdroid_zh_tw_enabled());
+	s = angdroid_death_prompt(ANGDROID_DEATH_NO_ITEMS, angdroid_zh_tw_enabled());
 
 	while (get_item(&obj, q, s, 0, NULL, (USE_INVEN | USE_QUIVER | USE_EQUIP | IS_HARMLESS))) {
 		char header[120];
@@ -594,7 +619,8 @@ static void death_examine(const char *title, int row)
 
 		tb = object_info(obj, OINFO_NONE);
 		object_desc(header, sizeof(header), obj,
-			ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL, player);
+			ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL |
+            (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 		textui_textblock_show(tb, area, header);
 		textblock_free(tb);
@@ -623,7 +649,8 @@ static void death_spoilers(const char *title, int row)
  */
 static void death_new_game(const char *title, int row)
 {
-    play_again = get_check("Start a new game? ");
+    play_again = get_check(angdroid_death_prompt(
+        ANGDROID_DEATH_NEW_GAME, angdroid_zh_tw_enabled()));
 }
 
 /**
@@ -652,7 +679,11 @@ void death_screen(void)
 {
 	struct menu *death_menu;
 	bool done = false;
-	const region area = { 51, 2, 0, N_ELEMENTS(death_actions) };
+	region area = { 51, 2, 0, N_ELEMENTS(death_actions) };
+    size_t label_index;
+    /* A fixed x=51 makes the death menu unreachable on portrait phones. */
+    if (Term && Term->wid <= 72)
+        area.col = MAX(0, Term->wid - 24);
 
 	/* Dump bones file */
 	make_bones();
@@ -669,6 +700,14 @@ void death_screen(void)
 	/* Flush all input and output */
 	event_signal(EVENT_INPUT_FLUSH);
 	event_signal(EVENT_MESSAGE_FLUSH);
+
+    /* Rebuild visible labels from stable indexes each time: the
+     * numeric menu IDs, callbacks and i/m/f/v/x/h/s/n/q tags remain fixed.
+     * The final Quit action must stay last. */
+    for (label_index = 0; label_index < N_ELEMENTS(death_actions);
+         ++label_index)
+        death_actions[label_index].name = angdroid_death_menu_label(
+            (int)label_index, angdroid_zh_tw_enabled());
 
 	/* Display and use the death menu */
 	death_menu = menu_new_action(death_actions,
@@ -688,7 +727,8 @@ void death_screen(void)
 		}
 		else if (e.type == EVT_SELECT)
 		{
-			done = get_check("Do you want to quit? ");
+			done = get_check(angdroid_death_prompt(
+                ANGDROID_DEATH_QUIT, angdroid_zh_tw_enabled()));
 		}
 	}
 
