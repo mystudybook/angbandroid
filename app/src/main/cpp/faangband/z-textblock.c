@@ -373,6 +373,9 @@ size_t textblock_calculate_display_lines(textblock *tb, size_t **line_starts,
             new_line(line_starts, line_lengths, &allocated, &count,
                 begin, cursor - begin);
             begin = cursor;
+            /* If the single over-wide glyph immediately precedes a
+             * newline, it already consumed this visual row. */
+            if (begin < length && text[begin] == L'\n') ++begin;
         }
     }
 
