@@ -85,7 +85,16 @@ void gain_specialty(void)
 	/* Make one choice */
 	if (gain_specialty_menu(&pick)) {
 		char buf[120];
-		struct player_ability *ability = lookup_ability("player", pick, 0);
+		struct player_ability *ability;
+
+        /* The menu may have been cancelled or source data may be
+         * incomplete. Never change player flags on an invalid ID. */
+        if (pick <= PF_NONE || pick >= PF_MAX ||
+            pf_has(player->specialties, pick) ||
+            !pf_has(player->class->specialties, pick))
+            return;
+        ability = lookup_ability("player", pick, 0);
+        if (!ability || !ability->name) return;
 
 		/* Add it to the specialties */
 		pf_on(player->specialties, pick);
