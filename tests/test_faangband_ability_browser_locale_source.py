@@ -284,7 +284,7 @@ require(confirm,
         "if (width < 3)",
         "ke = inkey_ex();",
         "return (ke.type == EVT_KBRD || ke.type == EVT_BUTTON) &&")
-assert "%.70s" not in confirm and "inkey_m();" not in confirm
+assert 'strnfmt(buf, 78, "%.70s[y/n] " ' not in confirm\nassert "inkey_m();" not in confirm
 PROMPT = (FA / "ui-confirm-prompt-utf8.h").read_text(encoding="utf-8")
 require(PROMPT, "../angband/menu-text-fit.h",
         "angdroid_fa_confirm_prompt_line(",
