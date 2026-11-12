@@ -25,6 +25,7 @@ enum {
     EVT_ESCAPE = 4, EVT_RESIZE = 5, EVT_OTHER = 6,
     EVENT_MESSAGE_FLUSH = 7
 };
+#define EVENT_EMPTY {EVT_NONE, {0}}
 typedef struct ui_event {
     int type;
     struct { int code; } key;
