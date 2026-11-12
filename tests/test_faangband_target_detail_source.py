@@ -74,6 +74,15 @@ for name in ("fa_target_draw_short_help", "fa_target_draw_bounded_line",
     assert name in HOST, name
 assert "extract(\"fa_target_draw_bounded_line\")" in HOST
 assert "extract(\"fa_target_draw_compact_help\")" in HOST
+assert "help_match.group(0)" in HOST
+assert "#define HELP_HEIGHT 3" in HOST
+assert "full_help_clears == 1 && help_clear_start == 21" in HOST
+assert "draws == HELP_HEIGHT && erases == 0" in HOST
+assert "first_row == 21 && last_row == 23" in HOST
+assert "width = 1; width < 80" in HOST
+TARGET_H = (FA / "ui-target.h").read_text(encoding="utf-8")
+assert "#define HELP_HEIGHT 3" in TARGET_H
+assert "#define TARGET_OUT_VAL_SIZE 256" in TARGET_H
 assert 'Truncated UTF-8: \\xe4\\xb8' in HOST
 assert 'CHECK(strcmp(last_text, "Truncated ??") == 0)' in HOST
 assert "invalid_row" in HOST and "overflow" in HOST
