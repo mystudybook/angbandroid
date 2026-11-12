@@ -59,6 +59,19 @@ static void fa_birth_prompt_centered(const char *message, int row)
     if (visible[0]) put_str(visible, row, x);
 }
 
+/* A one-line prompt should not flow past the end of a narrow terminal.
+ * This helper owns only display output, never key selections or game data. */
+static void fa_birth_prompt_left(const char *message, int row)
+{
+    char visible[256];
+    if (!Term || !message || Term->wid <= 0 ||
+        row < 0 || row >= Term->hgt) return;
+    angdroid_menu_copy_columns(visible, sizeof(visible),
+        message, (size_t)Term->wid);
+    prt("", row, 0);
+    if (visible[0]) prt(visible, row, 0);
+}
+
 /**
  * Overview
  * ========
@@ -134,8 +147,9 @@ static enum birth_stage textui_birth_quickstart(void)
 	enum birth_stage next = BIRTH_QUICKSTART;
 
 	/* Prompt for it */
-	prt(angdroid_game_ui_text("New character based on previous one:",
-        angdroid_zh_tw_enabled()), 0, 0);
+	fa_birth_prompt_left(angdroid_game_ui_text(
+        "New character based on previous one:",
+        angdroid_zh_tw_enabled()), 0);
 	fa_birth_prompt_centered(prompt, Term->hgt - 1);
 
 	do {
@@ -2053,8 +2067,9 @@ static enum birth_stage get_history_command(void)
 	enum birth_stage next = 0;
 	struct keypress ke;
 	/* Ask for some history */
-	prt(angdroid_game_ui_text("Accept character history? [y/n]",
-        angdroid_zh_tw_enabled()), 0, 0);
+	fa_birth_prompt_left(angdroid_game_ui_text(
+        "Accept character history? [y/n]",
+        angdroid_zh_tw_enabled()), 0);
 
 	soft_kbd_flash("yn\x18");
 
