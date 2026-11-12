@@ -125,7 +125,15 @@ static void display_area(const wchar_t *text, const uint8_t *attrs,
         for (j = 0; j < line_lengths[line_from + i]; ++j) {
             uint32_t cp = (uint32_t)text[line_starts[line_from + i] + j];
             size_t width = (size_t)angdroid_terminal_columns(cp);
-            if (width > (size_t)area.width - cells) break;
+            if (width > (size_t)area.width - cells) {
+                /* A lone wide glyph is not drawable in a 1-cell area.
+                 * Show an explicit placeholder rather than losing a
+                 * complete line with no indication of its content. */
+                if (cells == 0 && width > (size_t)area.width)
+                    Term_putch(area.col, area.row + (int)i,
+                        attrs[line_starts[line_from + i] + j], L'?');
+                break;
+            }
             Term_putch(area.col + (int)cells, area.row + (int)i,
                 attrs[line_starts[line_from + i] + j],
                 text[line_starts[line_from + i] + j]);
@@ -139,30 +147,37 @@ static void display_area(const wchar_t *text, const uint8_t *attrs,
  */
 void textui_textblock_place(textblock *tb, region orig_area, const char *header)
 {
-	/* xxx on resize this should be recalculated */
-	region area = region_calculate(orig_area);
+    size_t *line_starts = NULL, *line_lengths = NULL;
+    size_t n_lines = 0;
+    region area;
+    int wid, hgt;
 
-	size_t *line_starts = NULL, *line_lengths = NULL;
-	size_t n_lines;
+    Term_get_size(&wid, &hgt);
+    if (!Term || wid <= 1 || hgt <= 0) return;
+    area = region_calculate(orig_area);
+    if (area.col < 0) area.col = 0;
+    if (area.row < 0) area.row = 0;
+    if (area.col >= wid - 1 || area.row >= hgt) return;
+    area.width = MAX(0, MIN(area.width, wid - area.col - 1));
+    area.page_rows = MAX(0, MIN(area.page_rows, hgt - area.row));
+    if (!area.width || !area.page_rows) return;
 
-	n_lines = textblock_calculate_lines(tb,
-			&line_starts, &line_lengths, area.width);
+    if (header && area.page_rows > 1) {
+        char visible[256];
+        angdroid_menu_copy_columns(visible, sizeof(visible), header,
+            (size_t)area.width);
+        Term_erase(area.col, area.row, area.width);
+        c_put_str(COLOUR_L_BLUE, visible, area.row, area.col);
+        ++area.row;
+        --area.page_rows;
+    }
 
-	if (header != NULL) {
-		area.page_rows--;
-		Term_erase(area.col, area.row, area.width);
-		c_put_str(COLOUR_L_BLUE, header, area.row, area.col);
-		area.row++;
-	}
-
-	if (n_lines > (size_t) area.page_rows)
-		n_lines = area.page_rows;
-
-	display_area(textblock_text(tb), textblock_attrs(tb), line_starts,
-	             line_lengths, n_lines, area, 0);
-
-	mem_free(line_starts);
-	mem_free(line_lengths);
+    n_lines = textblock_calculate_display_lines(tb,
+        &line_starts, &line_lengths, (size_t)area.width);
+    display_area(textblock_text(tb), textblock_attrs(tb), line_starts,
+        line_lengths, n_lines, area, 0);
+    mem_free(line_starts);
+    mem_free(line_lengths);
 }
 
 /**
@@ -264,7 +279,7 @@ struct keypress textui_textblock_show(textblock *tb, region orig_area, const cha
             mem_free(line_lengths);
             line_starts = NULL;
             line_lengths = NULL;
-            n_lines = textblock_calculate_lines(
+            n_lines = textblock_calculate_display_lines(
                 tb, &line_starts, &line_lengths, (size_t)area.width);
             layout_width = area.width;
         }
