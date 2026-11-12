@@ -120,9 +120,10 @@ static void mem_free(void *item)
 }
 static void *mem_realloc(void *item, size_t bytes)
 {
+    bool fresh = item == NULL;
     void *result = realloc(item, bytes);
     if (!result) abort();
-    if (!item) ++lines_allocated;
+    if (fresh) ++lines_allocated;
     return result;
 }
 static const wchar_t *textblock_text(textblock *tb)
