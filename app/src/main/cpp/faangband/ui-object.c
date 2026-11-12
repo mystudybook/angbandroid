@@ -1125,7 +1125,6 @@ static void fa_item_menu_resize(struct menu *m)
             angdroid_utf8_display_columns(header), ex_width,
             angdroid_item_selection_viewport_count(
                 m->count, m->switch_keys && m->switch_keys[0]),
-
             footer, &layout)) {
         area.col = 0;
         area.row = 1;
