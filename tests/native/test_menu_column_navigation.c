@@ -53,10 +53,23 @@ static int expected_move(int cursor, int count, int rows, int dx, int dy,
         for (i = 1; i < cols; ++i) {
             int next_col = (column + (dx < 0 ? cols - i : i)) % cols;
             int first = next_col * rows;
-            int next = first + row;
-            if (next >= count) next = count - 1;
-            if (next != cursor && (mask & (1UL << next)))
-                return next;
+            int height = count - first < rows ? count - first : rows;
+            int target = row < height ? row : height - 1;
+            int best = -1, best_distance = height + 1;
+            int j;
+
+            /* Independent nearest-valid-row oracle; lower row breaks a
+             * tie. A hidden target must not skip an otherwise valid
+             * item in the same column. */
+            for (j = 0; j < height; ++j) {
+                int distance = j < target ? target - j : j - target;
+                if ((mask & (1UL << (first + j))) &&
+                    distance < best_distance) {
+                    best = first + j;
+                    best_distance = distance;
+                }
+            }
+            if (best >= 0) return best;
         }
         return -1;
     }
