@@ -320,7 +320,8 @@ require(choice_section,
         "if (width < 3)",
         "ke = inkey_ex();",
         "if (code == 0 || code > 0x7fu) return fallback;",
-        "allowed_count < len",
+        "i < len && allowed_count < sizeof(allowed) - 1",
+        "if ((unsigned char)options[i] <= 0x7fu)",
         "ke.mouse.button == 1",
         "return fallback;")
 assert 'strnfmt(buf, 78, "%.70s[%s] "' not in choice_section
@@ -341,6 +342,8 @@ CHOICE_GEN = (ROOT / "tests/native/generate_fa_choice_input_host.py").read_text(
     encoding="utf-8")
 assert "match.group(0)" in CHOICE_GEN
 assert "get_char" in CHOICE_GEN and "0x161u" in CHOICE_GEN
+assert "Invalid option byte" in CHOICE_GEN
+assert "Only invalid option" in CHOICE_GEN
 CHOICE_RUN = (ROOT / "scripts/test-fa-choice-input.sh").read_text(
     encoding="utf-8")
 assert "test_faangband_choice_prompt_utf8.c" in CHOICE_RUN
