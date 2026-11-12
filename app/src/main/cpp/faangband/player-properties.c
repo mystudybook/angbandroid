@@ -41,33 +41,34 @@ struct player_ability *lookup_ability(const char *type, int index, int value)
 }
 
 bool class_has_ability(const struct player_class *class,
-					   struct player_ability *ability)
+                       struct player_ability *ability)
 {
-	if (streq(ability->type, "player") &&
-		pf_has(class->pflags, ability->index)) {
-		return true;
-	} else if (streq(ability->type, "object") &&
-			   of_has(class->flags, ability->index)) {
-		return true;
-	}
-	return false;
+    if (!class || !ability || !ability->type || ability->index < 0)
+        return false;
+    if (streq(ability->type, "player"))
+        return ability->index < PF_MAX &&
+            pf_has(class->pflags, ability->index);
+    if (streq(ability->type, "object"))
+        return ability->index < OF_MAX &&
+            of_has(class->flags, ability->index);
+    return false;
 }
 
 bool race_has_ability(const struct player_race *race,
-					  struct player_ability *ability)
+                      struct player_ability *ability)
 {
-	if (streq(ability->type, "player") &&
-		pf_has(race->pflags, ability->index)) {
-		return true;
-	} else if (streq(ability->type, "object") &&
-			   of_has(race->flags, ability->index)) {
-		return true;
-	} else if (streq(ability->type, "element") &&
-			   (race->el_info[ability->index].res_level == ability->value)) {
-		return true;
-	}
-
-	return false;
+    if (!race || !ability || !ability->type || ability->index < 0)
+        return false;
+    if (streq(ability->type, "player"))
+        return ability->index < PF_MAX &&
+            pf_has(race->pflags, ability->index);
+    if (streq(ability->type, "object"))
+        return ability->index < OF_MAX &&
+            of_has(race->flags, ability->index);
+    if (streq(ability->type, "element"))
+        return ability->index < ELEM_MAX &&
+            race->el_info[ability->index].res_level == ability->value;
+    return false;
 }
 
 /**
