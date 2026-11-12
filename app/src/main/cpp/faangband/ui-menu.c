@@ -30,6 +30,7 @@
 #include "../angband/menu-column-width.h"
 #include "../angband/menu-compact-layout.h"
 #include "../angband/menu-valid-cursor.h"
+#include "../angband/menu-column-navigation.h"
 #include "../angband/menu-action-guard.h"
 #include "../angband/menu-visible-tags.h"
 #include "../angband/menu-popup-layout.h"
@@ -87,6 +88,7 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 static bool menu_calc_size(struct menu *menu);
 static bool is_valid_row(struct menu *menu, int cursor);
 static bool no_valid_row(struct menu *menu, int count);
+static int fa_menu_navigation_is_valid(void *context, int row);
 
 
 /**
@@ -436,30 +438,25 @@ static char column_get_tag(struct menu *menu, int pos)
 static ui_event column_process_direction(struct menu *m, int dir)
 {
 	ui_event out = EVENT_EMPTY;
+	int count = m->filter_list ? m->filter_count : m->count;
+	int next;
 
-	int n = m->filter_list ? m->filter_count : m->count;
-
-	region *loc = &m->active;
-	int rows_per_page = loc->page_rows;
-	if (rows_per_page <= 0 || n <= 0) return out;
+	if (count <= 0 || m->active.page_rows <= 0)
+		return out;
+	/* Portrait columns use the scrolling renderer and its navigation. */
 	if (angdroid_menu_use_compact_columns(
-			n, rows_per_page, loc->width, 8))
+			count, m->active.page_rows, m->active.width, 8))
 		return scroll_process_direction(m, dir);
 
-	if (ddx[dir])
-		m->cursor += ddx[dir] * rows_per_page;
-	if (ddy[dir])
-		m->cursor += ddy[dir];
-
-	/* Adjust to the correct locations (roughly) */
-	if (m->cursor >= n)
-		m->cursor = m->cursor % rows_per_page;
-	else if (m->cursor < 0)
-		m->cursor = n - 1;
-	/* No column navigation may leave the selected position outside the
-	 * available rows (including a partially filled final column). */
-	m->cursor = angdroid_fa_menu_clamp_cursor(m->cursor, n);
-
+	/* Move by the actual column-major grid, not a linear cursor offset.
+	 * The partially filled last column and hidden/disabled rows are
+	 * skipped without selecting an absent or unpainted cell. */
+	next = angdroid_menu_column_next_valid(
+		m->cursor, count, m->active.page_rows, ddx[dir], ddy[dir],
+		m, fa_menu_navigation_is_valid);
+	if (next < 0 || next == m->cursor)
+		return out;
+	m->cursor = next;
 	out.type = EVT_MOVE;
 	return out;
 }
