@@ -72,6 +72,6 @@ int main(void)
         compact, sizeof(compact), &saved, 1));
     CHECK(strcmp(compact, "xyz") == 0);
 
-    puts("PASS: item-picker lingering parent keys (25 assertions incl. boundary cases)");
+    printf("PASS: item-picker lingering parent keys (%d assertions)\n", checks);
     return 0;
 }
