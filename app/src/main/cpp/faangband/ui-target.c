@@ -46,6 +46,7 @@
 
 #include "droid.h"
 #include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
 
 /*
  * Holds state passed between target_set_interactive_aux() and the handlers
@@ -119,6 +120,27 @@ int target_dir_allow(struct keypress ch, bool allow_5)
 /**
  * Display targeting help at the bottom of the screen.
  */
+/* Keep targeting help on the current bottom row and within UTF-8
+ * terminal columns. Long translations must not spill into the map or
+ * leave an incomplete Han glyph on a narrow Android display. */
+static void fa_target_draw_short_help(int row)
+{
+    char visible[128];
+    const char *prompt = angdroid_game_ui_text(
+        "Press '?' for help.", angdroid_zh_tw_enabled());
+    int width = Term ? Term->wid - 1 : 0;
+
+    if (!Term || Term->hgt <= 0 || row < 0 || row >= Term->hgt)
+        return;
+    if (width < 1) {
+        prt("", row, 0);
+        return;
+    }
+    angdroid_menu_copy_columns(visible, sizeof(visible), prompt,
+        (size_t)width);
+    prt(visible, row, 0);
+}
+
 void target_display_help(bool monster, bool object, bool free)
 {
 	/* Determine help location */
@@ -1207,11 +1229,10 @@ bool target_set_interactive(int mode, int x, int y)
 
 	/* Calculate the window location for the help prompt */
 	Term_get_size(&wid, &hgt);
-	help_prompt_loc = hgt - 1;
-	
-	/* Display the help prompt */
-	prt(angdroid_game_ui_text("Press '?' for help.",
-        angdroid_zh_tw_enabled()), help_prompt_loc, 0);
+	help_prompt_loc = hgt > 0 ? hgt - 1 : 0;
+
+	/* Display the help prompt inside the phone terminal. */
+    fa_target_draw_short_help(help_prompt_loc);
 
 	/* Prepare the target set */
 	struct point_set *targets = target_get_monsters(mode, NULL, true);
@@ -1219,7 +1240,17 @@ bool target_set_interactive(int mode, int x, int y)
 
 	/* Interact */
 	while (!done) {
+        int current_wid, current_hgt;
 		bool path_drawn = false;
+        Term_get_size(&current_wid, &current_hgt);
+        if (current_wid != wid || current_hgt != hgt) {
+            /* The nested targeting input may have consumed a resize.
+             * Recalculate the footer row before this new target pass. */
+            wid = current_wid;
+            hgt = current_hgt;
+            help_prompt_loc = hgt > 0 ? hgt - 1 : 0;
+            if (!help) fa_target_draw_short_help(help_prompt_loc);
+        }
 		bool use_interesting_mode = show_interesting && point_set_size(targets);
 		bool use_free_mode = !use_interesting_mode;
 
@@ -1439,8 +1470,7 @@ bool target_set_interactive(int mode, int x, int y)
 			Term_clear();
 			handle_stuff(player);
 			if (!help)
-				prt(angdroid_game_ui_text("Press '?' for help.",
-        angdroid_zh_tw_enabled()), help_prompt_loc, 0);
+                fa_target_draw_short_help(help_prompt_loc);
 
 		} else {
 			/* Try to extract a direction from the key press */
