@@ -81,7 +81,7 @@ runner = (ROOT / "scripts/test-fa-direction-target.sh").read_text(
     encoding="utf-8")
 contains(direction_host,
     "match.group(0)", "textui_get_rep_dir", "SCAN_INSTANT",
-    "EVT_RESIZE", "inkey_scan == SCAN_OFF", "No",
+    "EVT_RESIZE", "inkey_scan == SCAN_OFF", "overflow == 0",
     "A resize while waiting for lazy second key")
 contains(target_host,
     "found.group(0)", "fa_target_draw_short_help", "invalid_row",
