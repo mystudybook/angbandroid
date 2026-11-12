@@ -3671,6 +3671,24 @@ static menu_action knowledge_actions[] =
 
 static struct menu knowledge_menu;
 
+/* Preserve the canonical English action keys independently of the current
+ * display language. This allows switching zh-TW on/off between menu opens,
+ * without changing a single callback, action index or shortcut. */
+static const char *const knowledge_action_keys[] = {
+    "Display object knowledge",
+    "Display rune knowledge",
+    "Display artifact knowledge",
+    "Display ego item knowledge",
+    "Display monster knowledge",
+    "Display feature knowledge",
+    "Display trap knowledge",
+    "Display shapechange effects",
+    "Display contents of home",
+    "Display hall of fame",
+    "Display character history",
+    "Display equippable comparison"
+};
+
 void textui_knowledge_init(void)
 {
 	/* Initialize the menus */
@@ -3719,8 +3737,18 @@ void textui_knowledge_cleanup(void)
  */
 void textui_browse_knowledge(void)
 {
-	int i, rune_max = max_runes();
-	region knowledge_region = { 0, 0, -1, 2 + (int)N_ELEMENTS(knowledge_actions) };
+    int i, rune_max = max_runes();
+    region knowledge_region = { 0, 0, -1,
+        2 + (int)N_ELEMENTS(knowledge_actions) };
+
+    /* Never translate or reorder action callbacks. Only their labels and
+     * the title are refreshed for the current app language. */
+    assert(N_ELEMENTS(knowledge_action_keys) == N_ELEMENTS(knowledge_actions));
+    for (i = 0; i < (int)N_ELEMENTS(knowledge_actions); ++i)
+        knowledge_actions[i].name = angdroid_game_ui_text(
+            knowledge_action_keys[i], angdroid_zh_tw_enabled());
+    knowledge_menu.title = angdroid_game_ui_text(
+        "Display current knowledge", angdroid_zh_tw_enabled());
 
 	/* Runes */
 	knowledge_actions[1].flags = MN_ACT_GRAYED;
