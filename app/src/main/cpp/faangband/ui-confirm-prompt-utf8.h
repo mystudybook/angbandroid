@@ -20,10 +20,11 @@ static inline size_t angdroid_fa_confirm_prompt_line(
     dest[0] = '\0';
     if (terminal_cols <= 0) return 0;
     width = (size_t)terminal_cols;
+    if (width > capacity - 1) width = capacity - 1;
 
     /* Even a tiny window should present a meaningful choice, rather
      * than a broken fragment of the normal [y/n] control label. */
-    if (width < suffix_cols || capacity <= suffix_bytes) {
+    if (width < suffix_cols) {
         const char *small = width == 1 ? "?" :
             width == 2 ? "yn" : width < suffix_cols ? "y/n" : suffix;
         return angdroid_menu_copy_columns(dest, capacity, small, width);
