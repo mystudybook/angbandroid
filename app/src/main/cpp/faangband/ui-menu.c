@@ -714,7 +714,12 @@ void menu_refresh(struct menu *menu, bool reset_screen)
 		fa_menu_put_clipped(COLOUR_WHITE, menu->prompt,
 			loc->row + loc->page_rows, menu->boundary.col, loc->width);
 
-	if (menu->browse_hook && oid >= 0)
+	/* A quiver footer is purely decorative and is placed after the
+	 * selectable item rows. Draw it even if an empty inventory or an
+	 * all-placeholder equipment page has cursor -1. Other browse
+	 * callbacks still receive only valid object indices. */
+	if (menu->browse_hook &&
+		(oid >= 0 || (menu->flags & MN_BROWSE_WITHOUT_SELECTION)))
 		menu->browse_hook(oid, menu->menu_data, loc);
 
 	menu->skin->display_list(menu, menu->cursor, &menu->top, loc);
