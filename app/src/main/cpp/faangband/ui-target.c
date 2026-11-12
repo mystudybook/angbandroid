@@ -45,6 +45,7 @@
 #include "ui-term.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
 
 /*
  * Holds state passed between target_set_interactive_aux() and the handlers
@@ -135,34 +136,34 @@ void target_display_help(bool monster, bool object, bool free)
 
 	/* Display help */
 	text_out_c(COLOUR_L_GREEN, "<dir>");
-	text_out(" and ");
+	text_out(angdroid_zh_tw_enabled() ? " 與 " : " and ");
 	text_out_c(COLOUR_L_GREEN, "<click>");
-	text_out(" look around. '");
+	text_out(angdroid_zh_tw_enabled() ? " 查看四周。'" : " look around. '");
 	text_out_c(COLOUR_L_GREEN, "g");
-	text_out("' moves to selection. '");
+	text_out(angdroid_zh_tw_enabled() ? "' 移動到目標。'" : "' moves to selection. '");
 	text_out_c(COLOUR_L_GREEN, "p");
-	text_out("' selects player. '");
+	text_out(angdroid_zh_tw_enabled() ? "' 選擇角色。'" : "' selects player. '");
 	text_out_c(COLOUR_L_GREEN, "q");
-	text_out("' exits. '");
+	text_out(angdroid_zh_tw_enabled() ? "' 離開。'" : "' exits. '");
 	text_out_c(COLOUR_L_GREEN, "r");
-	text_out("' displays details. '");
+	text_out(angdroid_zh_tw_enabled() ? "' 查看詳細資訊。'" : "' displays details. '");
 
 	if (free) {
 		text_out_c(COLOUR_L_GREEN, "m");
-		text_out("' restricts to interesting places.");
+		text_out(angdroid_zh_tw_enabled() ? "' 限制於重要位置。" : "' restricts to interesting places.");
 	} else {
 		text_out_c(COLOUR_L_GREEN, "+");
-		text_out("' and '");
+		text_out(angdroid_zh_tw_enabled() ? "' 與 '" : "' and '");
 		text_out_c(COLOUR_L_GREEN, "-");
-		text_out("' cycle through places. '");
+		text_out(angdroid_zh_tw_enabled() ? "' 切換位置。'" : "' cycle through places. '");
 		text_out_c(COLOUR_L_GREEN, "o");
-		text_out("' allows free selection.");
+		text_out(angdroid_zh_tw_enabled() ? "' 自由選取位置。" : "' allows free selection.");
 	}
 	
 	if (monster || free) {
 		text_out(" '");
 		text_out_c(COLOUR_L_GREEN, "t");
-		text_out("' targets selection.");
+		text_out(angdroid_zh_tw_enabled() ? "' 設定目標。" : "' targets selection.");
 	}
 
 	if (object) {
@@ -181,7 +182,7 @@ void target_display_help(bool monster, bool object, bool free)
 		}
 		text_out(" '");
 		text_out_c(COLOUR_L_GREEN, "%s", label);
-		text_out("' ignores selection.");
+		text_out(angdroid_zh_tw_enabled() ? "' 忽略選取的物品。" : "' ignores selection.");
 	}
 
 	/* Reset */
@@ -936,9 +937,9 @@ static ui_event target_set_interactive_aux(int y, int x, int mode)
 void textui_target(void)
 {
 	if (target_set_interactive(TARGET_KILL, -1, -1))
-		msg("Target Selected.");
+		msg("%s", angdroid_game_ui_text("Target Selected.", angdroid_zh_tw_enabled()));
 	else
-		msg("Target Aborted.");
+		msg("%s", angdroid_game_ui_text("Target Aborted.", angdroid_zh_tw_enabled()));
 }
 
 /**
@@ -1206,7 +1207,8 @@ bool target_set_interactive(int mode, int x, int y)
 	help_prompt_loc = hgt - 1;
 	
 	/* Display the help prompt */
-	prt("Press '?' for help.", help_prompt_loc, 0);
+	prt(angdroid_game_ui_text("Press '?' for help.",
+        angdroid_zh_tw_enabled()), help_prompt_loc, 0);
 
 	/* Prepare the target set */
 	struct point_set *targets = target_get_monsters(mode, NULL, true);
@@ -1434,7 +1436,8 @@ bool target_set_interactive(int mode, int x, int y)
 			Term_clear();
 			handle_stuff(player);
 			if (!help)
-				prt("Press '?' for help.", help_prompt_loc, 0);
+				prt(angdroid_game_ui_text("Press '?' for help.",
+        angdroid_zh_tw_enabled()), help_prompt_loc, 0);
 
 		} else {
 			/* Try to extract a direction from the key press */
