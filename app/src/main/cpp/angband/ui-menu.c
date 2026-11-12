@@ -1023,6 +1023,8 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 	/* A zero-sized Android surface during rotation is not a valid menu.
 	 * Exit cleanly rather than calling layout arithmetic with zero rows. */
 	if (menu->active.width <= 0 || menu->active.page_rows <= 0) {
+		if (menu->skin == &menu_skin_object)
+			soft_kbd_replace("");
 		in.type = EVT_ESCAPE;
 		return in;
 	}
@@ -1109,6 +1111,8 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 				if (!menu_calc_size(menu)) {
 					if (popup)
 						screen_load();
+					if (menu->skin == &menu_skin_object)
+						soft_kbd_replace("");
 					in.type = EVT_ESCAPE;
 					return in;
 				}
@@ -1120,6 +1124,8 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 			if (menu->active.width <= 0 || menu->active.page_rows <= 0) {
 				if (popup)
 					screen_load();
+				if (menu->skin == &menu_skin_object)
+					soft_kbd_replace("");
 				in.type = EVT_ESCAPE;
 				return in;
 			}
