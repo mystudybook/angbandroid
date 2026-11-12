@@ -60,8 +60,8 @@ require(compact,
     "mem_free(realm);",
     "fa_birth_detail_page_count = MAX(1,",
     "format(\"特性 %d/%d：按 [ 上頁、] 下頁\"",
-    "fa_birth_help_line(&line, angdroid_fa_birth_ability_name(",
-    "ability->name, ability->type, ability->index, zh));",
+    "fa_birth_help_line(&line, fa_birth_ability_visible_name(",
+    "ability, zh));",
 )
 assert "cmdq_push(" not in compact
 assert "CMD_CHOOSE_RACE" not in compact
