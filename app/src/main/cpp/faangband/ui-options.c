@@ -38,6 +38,7 @@
 #include "ui-target.h"
 #include "droid.h"
 #include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
 
 
 /**
@@ -122,23 +123,24 @@ static void option_toggle_display(struct menu *m, int oid, bool cursor,
 {
 	uint8_t attr = curs_attrs[CURS_KNOWN][cursor != 0];
 	bool *options = menu_priv(m);
-	const char *desc = option_desc(oid);
-	size_t u8len = utf8_strlen(desc);
+    const char *desc = angdroid_game_ui_text(option_desc(oid),
+        angdroid_zh_tw_enabled());
+    char clipped[4 * 45 + 1];
+    size_t columns = angdroid_menu_copy_columns(clipped,
+        sizeof(clipped), desc, 45);
 
-	if (u8len < 45) {
-		c_prt(attr, format("%s%*s", desc, (int)(45 - u8len), " "), row,
-			col);
-	} else {
-		char *desc_copy = string_make(desc);
-
-		if (u8len > 45) {
-			utf8_clipto(desc_copy, 45);
-		}
-		c_prt(attr, desc_copy, row, col);
-		string_free(desc_copy);
-	}
-	c_prt(attr, format(": %s  (%s)", options[oid] ? "yes" : "no ",
-		option_name(oid)), row, col + 45);
+    /* 45 is terminal cells, not bytes or code points. Never feed a
+     * half-character to the renderer or let the label reach the key. */
+    if (Term && col >= 0 && col < Term->wid) {
+        c_prt(attr, format("%s%*s", clipped, (int)(45 - columns),
+            ""), row, col);
+        if (col + 45 < Term->wid) {
+            c_prt(attr, format(": %s  (%s)",
+                angdroid_game_ui_text(options[oid] ? "yes" : "no",
+                    angdroid_zh_tw_enabled()), option_name(oid)),
+                row, col + 45);
+        }
+    }
 }
 
 /**
@@ -171,9 +173,11 @@ static bool option_toggle_handle(struct menu *m, const ui_event *event,
 
 			screen_save();
 			if (options_save_custom(&player->opts, page)) {
-				get_com("Successfully saved.  Press any key to continue.", &dummy);
+				get_com(angdroid_game_ui_text("Successfully saved.  Press any key to continue.",
+                    angdroid_zh_tw_enabled()), &dummy);
 			} else {
-				get_com("Save failed.  Press any key to continue.", &dummy);
+				get_com(angdroid_game_ui_text("Save failed.  Press any key to continue.",
+                    angdroid_zh_tw_enabled()), &dummy);
 			}
 			screen_load();
 		/*
@@ -189,7 +193,8 @@ static bool option_toggle_handle(struct menu *m, const ui_event *event,
 			} else {
 				char dummy;
 
-				get_com("Restore failed.  Press any key to continue.", &dummy);
+				get_com(angdroid_game_ui_text("Restore failed.  Press any key to continue.",
+                    angdroid_zh_tw_enabled()), &dummy);
 				screen_load();
 			}
 		/*
@@ -244,18 +249,24 @@ static bool use_option_context_menu(struct menu *m, const ui_event *in,
 	char *labels = string_make(lower_case);
 	struct menu *cm = menu_dynamic_new();
 	bool refresh = false;
-	char save_label[40];
+	char save_label[128];
 	int selected;
 	char dummy;
 
 	cm->selections = labels;
-	strnfmt(save_label, sizeof(save_label), "Save as default %s options",
-		option_type_name(page));
+	if (angdroid_zh_tw_enabled())
+        strnfmt(save_label, sizeof(save_label), "將%s選項設為預設值",
+            angdroid_game_ui_text(option_type_name(page), true));
+    else
+        strnfmt(save_label, sizeof(save_label), "Save as default %s options",
+            option_type_name(page));
 	menu_dynamic_add_label(cm, save_label, 's', ACT_CTX_OPT_SAVE, labels);
 	if (m->flags == MN_DBL_TAP) {
-		menu_dynamic_add_label(cm, "Restore from saved defaults", 'r',
+		menu_dynamic_add_label(cm, angdroid_game_ui_text(
+            "Restore from saved defaults", angdroid_zh_tw_enabled()), 'r',
 			ACT_CTX_OPT_RESTORE, labels);
-		menu_dynamic_add_label(cm, "Reset to factory defaults", 'x',
+		menu_dynamic_add_label(cm, angdroid_game_ui_text(
+            "Reset to factory defaults", angdroid_zh_tw_enabled()), 'x',
 			ACT_CTX_OPT_RESET, labels);
 	}
 
@@ -273,11 +284,12 @@ static bool use_option_context_menu(struct menu *m, const ui_event *in,
 	switch (selected) {
 	case ACT_CTX_OPT_SAVE:
 		if (options_save_custom(&player->opts, page)) {
-			get_com("Successfully saved.  Press any key to "
-				"continue.", &dummy);
+			get_com(angdroid_game_ui_text(
+                "Successfully saved.  Press any key to continue.",
+                angdroid_zh_tw_enabled()), &dummy);
 		} else {
-			get_com("Save failed.  Press any key to continue.",
-				&dummy);
+			get_com(angdroid_game_ui_text("Save failed.  Press any key to continue.",
+                angdroid_zh_tw_enabled()), &dummy);
 		}
 		break;
 
@@ -285,8 +297,8 @@ static bool use_option_context_menu(struct menu *m, const ui_event *in,
 		if (options_restore_custom(&player->opts, page)) {
 			refresh = true;
 		} else {
-			get_com("Restore failed.  Press any key to continue.",
-				&dummy);
+			get_com(angdroid_game_ui_text("Restore failed.  Press any key to continue.",
+                angdroid_zh_tw_enabled()), &dummy);
 		}
 		break;
 
