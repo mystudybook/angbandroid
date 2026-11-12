@@ -42,10 +42,31 @@ static void no_unusable_tab_is_advertised(void)
     angdroid_item_picker_switch_keys(NULL, 1, 1, 1);
 }
 
+/* Visible SHOW_EMPTY equipment slots are not selectable objects.
+ * The switch strip must stay usable even if the list has 12 blank slots. */
+static void placeholder_only_equipment_switches(void)
+{
+    const char *alternates[] = { NULL, "", "/", "|", "-", "/|-" };
+    int count, k;
+
+    for (count = -2; count <= 12; ++count) {
+        for (k = 0; k < 6; ++k) {
+            const int expected = count <= 0 && k >= 2;
+            assert(!!angdroid_item_picker_allow_blank_switch(
+                count, alternates[k]) == expected);
+        }
+    }
+    assert(angdroid_item_picker_allow_blank_switch(0, "/"));
+    assert(angdroid_item_picker_allow_blank_switch(0, "/|-"));
+    assert(!angdroid_item_picker_allow_blank_switch(1, "/|-"));
+    assert(!angdroid_item_picker_allow_blank_switch(12, "/|-"));
+}
+
 int main(void)
 {
     available_tab_combinations();
     no_unusable_tab_is_advertised();
+    placeholder_only_equipment_switches();
     puts("PASS: only actionable inventory/equipment/quiver/floor tab shortcuts");
     return 0;
 }
