@@ -99,7 +99,7 @@ void soft_kbd_clear(int force)
 	}
 }
 
-void soft_kbd_flush()
+void soft_kbd_flush(void)
 {
 	if (soft_kbd_buffer[0] != 0) {
 		/*android_debug("Flushing!");*/
