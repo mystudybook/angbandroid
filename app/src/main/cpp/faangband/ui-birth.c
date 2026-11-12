@@ -710,30 +710,34 @@ static void class_help(int i, void *db, const region *l)
 	if (c->magic.total_spells) {
 		int count;
 		struct magic_realm *realm = class_magic_realms(c, &count), *realm_next;
-		char buf[120];
+        char buf[240];
+        size_t used = 0;
 
-		my_strcpy(buf, angdroid_game_ui_text(realm->name,
-            angdroid_zh_tw_enabled()), sizeof(buf));
-		realm_next = realm->next;
-		mem_free(realm);
-		realm = realm_next;
-		if (count > 1) {
-			while (realm) {
-				count--;
-				if (count) {
-					my_strcat(buf, angdroid_zh_tw_enabled() ? "、" : ", ",
-                        sizeof(buf));
-				} else {
-					my_strcat(buf, angdroid_zh_tw_enabled() ? "與" : " and ",
-                        sizeof(buf));
-				}
-				my_strcat(buf, angdroid_game_ui_text(realm->name,
-                    angdroid_zh_tw_enabled()), sizeof(buf));
-				realm_next = realm->next;
-				mem_free(realm);
-				realm = realm_next;
-			}
-		}
+        /* A list of Chinese magic realms is multi-byte. Safely append
+         * whole UTF-8 scalars instead of possibly cutting the last name
+         * in the middle when the display buffer fills. */
+        used = angdroid_utf8_copy_complete(buf, sizeof(buf),
+            angdroid_game_ui_text(realm->name, angdroid_zh_tw_enabled()));
+        realm_next = realm->next;
+        mem_free(realm);
+        realm = realm_next;
+        if (count > 1) {
+            while (realm) {
+                const char *join;
+                --count;
+                join = angdroid_zh_tw_enabled() ?
+                    (count ? "、" : "與") :
+                    (count ? ", " : " and ");
+                used = angdroid_utf8_append_complete(buf, sizeof(buf),
+                    used, join);
+                used = angdroid_utf8_append_complete(buf, sizeof(buf),
+                    used, angdroid_game_ui_text(realm->name,
+                        angdroid_zh_tw_enabled()));
+                realm_next = realm->next;
+                mem_free(realm);
+                realm = realm_next;
+            }
+        }
 		text_out_e(angdroid_zh_tw_enabled() ?
             "\n可學習%s魔法" : "\nLearns %s magic", buf);
 	}
