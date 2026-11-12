@@ -69,4 +69,17 @@ assert 'snprintf(out, capacity, "%s%s", prefix, name)' in HELPER
 assert 'if (n < 0 || (size_t)n >= capacity)' in HELPER
 assert "test_ignore_named_action_locale.c" in RUN
 assert "test_faangband_knowledge_ego_locale_source.py" in VERIFY
+ANG_OBJ = (CPP / "angband/ui-object.c").read_text(encoding="utf-8")
+for engine, text in (("Angband", ANG_OBJ), ("FAangband", OBJ)):
+    modal = text.split("void textui_cmd_ignore_menu(", 1)[1].split(
+        "void textui_cmd_ignore(", 1)[0]
+    assert "soft_kbd_linger_snapshot parent_keys;" in modal, engine
+    assert "soft_kbd_save_linger(&parent_keys);" in modal, engine
+    assert 'soft_kbd_replace("");' in modal, engine
+    assert "soft_kbd_restore_linger(&parent_keys, selected < 0);" in modal, engine
+    assert modal.index("soft_kbd_save_linger(&parent_keys);") < modal.index(
+        "selected = menu_dynamic_select(m);"), engine
+    assert modal.index("soft_kbd_restore_linger(&parent_keys, selected < 0);"
+        ) > modal.index("selected = menu_dynamic_select(m);"), engine
+
 print("PASS: FA knowledge/Ego names and modal ignore actions localized safely")
