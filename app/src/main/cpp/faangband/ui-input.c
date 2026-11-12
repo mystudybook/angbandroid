@@ -1221,6 +1221,10 @@ static bool textui_get_check(const char *prompt)
         /* At fewer than three visible cells the choices cannot be
          * distinguished. Refuse to confirm rather than act blindly. */
         if (width < 3) {
+            /* A resize can make a previously printed prompt unusable.
+             * Remove that line before abandoning the confirmation. */
+            if (Term && Term->wid > 0 && Term->hgt > 0)
+                prt("", 0, 0);
             soft_kbd_replace("");
             return false;
         }
@@ -1283,7 +1287,10 @@ char get_char(const char *prompt, const char *options, size_t len, char fallback
         int width = Term && Term->hgt > 0 ? Term->wid - 1 : 0;
 
         if (width < 3) {
-            /* Too few cells to distinguish a choice or truncation. */
+            /* Clear the previous prompt after a resize to a tiny
+             * viewport, rather than leaving misleading old choices. */
+            if (Term && Term->wid > 0 && Term->hgt > 0)
+                prt("", 0, 0);
             soft_kbd_replace("");
             return fallback;
         }
