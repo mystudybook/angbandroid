@@ -111,6 +111,11 @@ require(PROPS,
     "view_ability_menu(list, count);",
     "mem_free(list);")
 assert "ability_list[32]" not in PROPS
+assert "if (!ability || !ability->name) return;" in PROPS
+assert "if (pick <= PF_NONE || pick >= PF_MAX ||" in PROPS
+assert PROPS.index('if (!ability || !ability->name) return;') < PROPS.index(
+    "pf_on(player->specialties, pick);")
+
 
 # The selectable list and text description have independent bounded space;
 # portrait view and new specialty dialogs share the same resize callback.
@@ -140,12 +145,28 @@ assert "70, -99" not in UI and "text_out_wrap = 60;" not in UI
 assert "fa_ability_resize_menu };" in UI
 assert "gain_spec_action, fa_ability_resize_menu };" in UI
 assert "angdroid_fa_ability_page_clamp(" in UI
+assert "loc.page_rows" not in UI  # stale variable from the old layout
+assert "starts[256]" not in UI
+assert "capacity = angdroid_fa_ability_line_capacity(strlen(text));" in UI
+assert "starts = mem_alloc(capacity * sizeof(*starts));" in UI
+assert "lengths = mem_alloc(capacity * sizeof(*lengths));" in UI
+assert "mem_free(lengths);" in UI and "mem_free(starts);" in UI
+assert UI.count('menu.cmd_keys = "[]";') == 2
+assert "if (specialty <= PF_NONE || specialty >= PF_MAX ||" in UI
+assert "check_specialty_gain(idx) && get_check(format(" in UI
+
 assert "void fa_ability_layout_menu" in UI
 assert "int angdroid_fa_ability_plan(" in LAYOUT
 assert "int angdroid_fa_ability_page_clamp(" in LAYOUT
 assert "angdroid_fa_history_wrap(" in HISTORY
 assert "test_terminal_geometry(void)" in C_TEST
 assert "test_description_paging(void)" in C_TEST
+assert "test_dynamic_line_capacity(void)" in C_TEST
+HISTORY_TEST = (ROOT / "tests/test_faangband_birth_history_utf8.c").read_text(
+    encoding="utf-8")
+assert 'count != 321 || starts[320] != 640' in HISTORY_TEST
+assert "angdroid_fa_ability_line_capacity(strlen(long_text))" in HISTORY_TEST
+assert "angdroid_fa_ability_line_capacity(size_t bytes)" in LAYOUT
 assert '-std=c99 -Wall -Wextra -Werror -pedantic' in RUN_SCRIPT
 assert 'test-fa-ability-layout.sh' in RUNNER
 
