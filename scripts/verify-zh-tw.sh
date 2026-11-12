@@ -79,6 +79,7 @@ run_check "FAangband compact race/class details and bounded map chooser" python3
 run_check "FAangband race/class trait paging and touch controls" python3 "$ROOT/tests/test_faangband_birth_traits_paging_source.py"
 run_check "FAangband race/class ability labels and portrait hints" python3 "$ROOT/tests/test_faangband_birth_ability_labels_source.py"
 run_check "FAangband specialty browsers and shape knowledge display" python3 "$ROOT/tests/test_faangband_ability_browser_locale_source.py"
+run_check "FAangband portrait ability browser C99 layout and description pages" sh "$ROOT/scripts/test-fa-ability-layout.sh"
 run_check "FAangband typed ability PF/OF labels with C99" sh "$ROOT/scripts/test-fa-birth-ability-labels.sh"
 run_check "FAangband elemental resistance/vulnerability source contract" python3 "$ROOT/tests/test_faangband_birth_elements_source.py"
 run_check "FAangband elemental resistance/weakness native C99" sh "$ROOT/scripts/test-fa-birth-elements.sh"
