@@ -1122,7 +1122,10 @@ static void fa_item_menu_resize(struct menu *m)
         player->upkeep->quiver_cnt > 0;
     if (!angdroid_item_selection_region(width, height,
             item_prompt_columns, max_len,
-            angdroid_utf8_display_columns(header), ex_width, m->count,
+            angdroid_utf8_display_columns(header), ex_width,
+            angdroid_item_selection_viewport_count(
+                m->count, m->switch_keys && m->switch_keys[0]),
+
             footer, &layout)) {
         area.col = 0;
         area.row = 1;
@@ -1173,7 +1176,12 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	/* NULL also prevents a zero-valued key event from matching the
 	 * terminator of an otherwise empty switch-key string. */
 	m->switch_keys = switch_keys[0] ? switch_keys : NULL;
+	/* A blank tab has no selectable item, but its switch keys still
+	 * need to reach get_item_action() to rebuild the next source.
+	 * EVT_SELECT is guarded by menu_handle_action(), so no item[-1]. */
 	m->flags = (MN_PVT_TAGS | MN_INSCRIP_TAGS);
+	if (num_obj <= 0 && m->switch_keys)
+		m->flags |= MN_ALLOW_EMPTY_INPUT;
 	m->browse_hook = item_menu_browser;
 
 	/* Get inscriptions */
