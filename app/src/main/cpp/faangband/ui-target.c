@@ -496,7 +496,16 @@ static bool aux_hallucinate(struct chunk *c, struct player *p,
 	fa_target_draw_bounded_line(out_val, 0);
 	move_cursor_relative(auxst->grid.y, auxst->grid.x);
 
-	auxst->press.key = inkey();
+    /* Match inkey()'s mouse-as-key contract, but repaint the target
+     * line after rotation instead of swallowing its resize event. */
+    auxst->press = fa_target_inkey_described(out_val,
+        auxst->grid.y, auxst->grid.x);
+    if (auxst->press.type == EVT_MOUSE) {
+        uint8_t button = auxst->press.mouse.button;
+        auxst->press.type = EVT_KBRD;
+        auxst->press.key.code = button == 1 ? '\n' : ESCAPE;
+        auxst->press.key.mods = 0;
+    }
 
 	/* Stop on everything but "return" */
 	return auxst->press.key.code != KC_ENTER;
