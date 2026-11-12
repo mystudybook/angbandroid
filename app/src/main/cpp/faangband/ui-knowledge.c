@@ -815,9 +815,14 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 	int prev_g = -1;
 	ui_event ke;
 
-	/* Get size */
-	Term_get_size(&wid, &hgt);
-	browser_rows = hgt - 8;
+	/* A transient zero-sized or extremely small terminal cannot hold the
+     * two knowledge panels and footer. Return without an invalid layout. */
+    Term_get_size(&wid, &hgt);
+    if (wid < 12 || hgt < 9) {
+        soft_kbd_clear(true);
+        return;
+    }
+    browser_rows = hgt - 8;
 
 	/* Determine if using tiles or not */
 	if (tiles) tiles = (current_graphics_mode->grafID != 0);
@@ -904,11 +909,18 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 		if (redraw) {
 			/* Print the title bits */
 			region_erase(&title_area);
-			if (angdroid_zh_tw_enabled())
-                prt(format("知識圖鑑：%s",
-                    angdroid_game_ui_text(title, true)), 2, 0);
-            else
-                prt(format("Knowledge - %s", title), 2, 0);
+            {
+                char full_title[256], visible_title[256];
+                if (angdroid_zh_tw_enabled())
+                    strnfmt(full_title, sizeof(full_title),
+                        "知識圖鑑：%s", angdroid_game_ui_text(title, true));
+                else
+                    strnfmt(full_title, sizeof(full_title),
+                        "Knowledge - %s", title);
+                angdroid_knowledge_clip_label(visible_title,
+                    sizeof(visible_title), full_title, 0, wid, wid);
+                prt(visible_title, 2, 0);
+            }
             prt(angdroid_zh_tw_enabled() ? "分類" : "Group", 4, 0);
             prt(angdroid_zh_tw_enabled() ? "名稱" : "Name",
                 4, g_name_len + 3);
@@ -1015,6 +1027,30 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
                 } else {
                     strnfmt(full_prompt, sizeof(full_prompt),
                         "<dir>%s%s%s, ESC", pvs, pedit, xtra);
+                }
+                /* A long translated prompt may hide ESC at the right
+                 * edge. Prefer a short hint that still shows how to exit.
+                 * Actual hotkeys above are never changed. */
+                if (angdroid_utf8_display_columns(full_prompt) >
+                    (size_t)wid) {
+                    const bool zh_tw = angdroid_zh_tw_enabled();
+                    const char *short_prompt;
+                    if (tile_picker)
+                        short_prompt = zh_tw ? "Enter 確認／Esc 返回" :
+                            "Enter accept / Esc";
+                    else if (glyph_picker)
+                        short_prompt = zh_tw ? "i 插入／Esc 返回" :
+                            "i insert / Esc";
+                    else if (o_funcs.xattr)
+                        short_prompt = zh_tw ? "v 外觀／r 詳情／Esc 返回" :
+                            "v visuals / r recall / Esc";
+                    else
+                        short_prompt = zh_tw ? "r 詳情／Esc 返回" :
+                            "r recall / Esc";
+                    if (angdroid_utf8_display_columns(short_prompt) >
+                        (size_t)wid)
+                        short_prompt = zh_tw ? "Esc 返回" : "Esc";
+                    my_strcpy(full_prompt, short_prompt, sizeof(full_prompt));
                 }
                 angdroid_knowledge_clip_label(visible_prompt,
                     sizeof(visible_prompt), full_prompt, 0, wid, wid);
