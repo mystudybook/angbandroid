@@ -25,6 +25,7 @@
 #include "menu-key-hints.h"
 #include "menu-visible-tags.h"
 #include "menu-valid-cursor.h"
+#include "menu-column-navigation.h"
 #include "menu-scroll-viewport.h"
 #include "menu-column-width.h"
 #include "menu-hit-test.h"
@@ -63,6 +64,7 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 static bool menu_calc_size(struct menu *menu);
 static bool is_valid_row(struct menu *menu, int cursor);
 static bool no_valid_row(struct menu *menu, int count);
+static int menu_navigation_is_valid(void *context, int row);
 
 
 /* Native Term_putstr(n) limits codepoints, not screen columns. Menu text
@@ -443,24 +445,21 @@ static char column_get_tag(struct menu *menu, int pos)
 static ui_event column_process_direction(struct menu *m, int dir)
 {
 	ui_event out = EVENT_EMPTY;
+	int count = m->filter_list ? m->filter_count : m->count;
+	int next;
 
-	int n = m->filter_list ? m->filter_count : m->count;
+	if (count <= 0 || m->active.page_rows <= 0)
+		return out;
 
-	region *loc = &m->active;
-	int rows_per_page = loc->page_rows;
-	int cols = (n + rows_per_page - 1) / rows_per_page;
-
-	if (ddx[dir])
-		m->cursor += ddx[dir] * rows_per_page;
-	if (ddy[dir])
-		m->cursor += ddy[dir];
-
-	/* Adjust to the correct locations (roughly) */
-	if (m->cursor > n)
-		m->cursor = m->cursor % rows_per_page;
-	else if (m->cursor < 0)
-		m->cursor = (rows_per_page * cols) + m->cursor;
-
+	/* Move by the actual column-major grid, not a linear cursor offset.
+	 * The partially filled last column and hidden/disabled rows are
+	 * skipped without selecting an absent or unpainted cell. */
+	next = angdroid_menu_column_next_valid(
+		m->cursor, count, m->active.page_rows, ddx[dir], ddy[dir],
+		m, menu_navigation_is_valid);
+	if (next < 0 || next == m->cursor)
+		return out;
+	m->cursor = next;
 	out.type = EVT_MOVE;
 	return out;
 }
@@ -510,7 +509,17 @@ static bool no_valid_row(struct menu *menu, int count)
 /* Adapt the menu's validity callback to bounded navigation. */
 static int menu_navigation_is_valid(void *context, int row)
 {
-	return is_valid_row((struct menu *)context, row);
+	struct menu *menu = (struct menu *)context;
+	int count = menu->filter_list ? menu->filter_count : menu->count;
+	int oid = angdroid_menu_action_item_index(
+		row, count, menu->count, menu->filter_list);
+
+	if (oid < 0)
+		return false;
+	/* Hidden entries can have explicit tags, but direction keys must not
+	 * navigate to screen cells that were never rendered. */
+	return !menu->row_funcs->valid_row ||
+		menu->row_funcs->valid_row(menu, oid) == MN_ROW_VALID;
 }
 
 /* 
