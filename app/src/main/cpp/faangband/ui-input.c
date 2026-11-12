@@ -53,6 +53,7 @@
 #include "droid.h"
 #include "../angband/zh-tw-ui.h"
 #include "../angband/menu-text-fit.h"
+#include "ui-confirm-prompt-utf8.h"
 
 static bool inkey_xtra;
 uint32_t inkey_scan;		/* See the "inkey()" function */
@@ -1205,42 +1206,45 @@ static int textui_get_quantity(const char *prompt, int max)
  */
 static bool textui_get_check(const char *prompt)
 {
-	ui_event ke;
+    ui_event ke = EVENT_EMPTY;
+    char buf[512];
 
-	char buf[80];
+    /* A bounded UTF-8/cell-aware line reserves room for [y/n]. The old
+     * %.70s printf precision could split a Chinese character and drew
+     * past a portrait phone's terminal width. */
+    event_signal(EVENT_MESSAGE_FLUSH);
+    soft_kbd_flash("${yes_no}");
 
-	/*
-	 * Hack -- Build a "useful" prompt; do this first so prompts built by
-	 * format() won't run afoul of event_signal()'s side effects.
-	 */
-	strnfmt(buf, 78, "%.70s[y/n] ", prompt);
+    for (;;) {
+        int width = Term && Term->hgt > 0 ? Term->wid - 1 : 0;
 
-	/* Paranoia */
-	event_signal(EVENT_MESSAGE_FLUSH);
+        /* At fewer than three visible cells the choices cannot be
+         * distinguished. Refuse to confirm rather than act blindly. */
+        if (width < 3) {
+            soft_kbd_replace("");
+            return false;
+        }
+        angdroid_fa_confirm_prompt_line(buf, sizeof(buf), prompt, width);
+        prt(buf, 0, 0);
+        ke = inkey_ex();
+        if (ke.type == EVT_RESIZE) {
+            /* inkey_ex() clears flashing hints after input. Repaint the
+             * changed terminal and present only the current Yes/No keys. */
+            soft_kbd_replace("");
+            soft_kbd_flash("${yes_no}");
+            continue;
+        }
+        if (ke.type == EVT_NONE) continue;
+        if (ke.type == EVT_ESCAPE || ke.type == EVT_MOUSE ||
+            ke.type == EVT_KBRD || ke.type == EVT_BUTTON)
+            break;
+    }
 
-	soft_kbd_flash("${yes_no}");
-
-	/* Prompt for it */
-	prt(buf, 0, 0);
-	ke = inkey_m();
-
-	/* Erase the prompt */
-	prt("", 0, 0);
-
-	/* Normal negation */
-	if (ke.type == EVT_MOUSE) {
-		/* Changed for android
-		if ((ke.mouse.button != 1) && (ke.mouse.y != 0))
-			return (false);
-		*/
-		return (false);
-	} else {
-		if ((ke.key.code != 'Y') && (ke.key.code != 'y'))
-			return (false);
-	}
-
-	/* Success */
-	return (true);
+    prt("", 0, 0);
+    /* Keep inkey_m()'s original behavior: an Android mouse tap is No;
+     * only explicit Y/y on the keyboard or a button confirms. */
+    return (ke.type == EVT_KBRD || ke.type == EVT_BUTTON) &&
+        (ke.key.code == 'Y' || ke.key.code == 'y');
 }
 
 /* TODO: refactor get_check() in terms of get_char() */
