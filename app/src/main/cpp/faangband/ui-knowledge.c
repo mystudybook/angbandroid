@@ -72,6 +72,8 @@
 #include "../angband/knowledge-monster-label.h"
 #include "../angband/zh-tw-knowledge-kill-summary.h"
 #include "../angband/zh-tw-shape-lore.h"
+#include "../angband/zh-tw-symbol-query.h"
+#include "../angband/zh-tw-terrain-trap.h"
 
 /**
  * The first part of this file contains the knowledge menus.  Generic display
@@ -4330,7 +4332,13 @@ static void lookup_symbol(char sym, char *buf, size_t max)
 	 * associate a display character with each tval. */
 	for (i = 0; i < z_info->k_max; i++) {
 		if (char_matches_key(k_info[i].d_char, sym)) {
-			strnfmt(buf, max, "%c - %s.", sym, tval_find_name(k_info[i].tval));
+			{
+                const char *canonical = tval_find_name(k_info[i].tval);
+                angdroid_symbol_query_format(buf, max, sym, canonical,
+                    angdroid_symbol_tval_name(canonical,
+                        angdroid_zh_tw_enabled()),
+                    angdroid_zh_tw_enabled());
+            }
 			return;
 		}
 	}
@@ -4340,7 +4348,9 @@ static void lookup_symbol(char sym, char *buf, size_t max)
 	 * door, and '^' matches trap door (instead of the more generic "trap"). */
 	for (i = 1; i < z_info->f_max; i++) {
 		if (char_matches_key(f_info[i].d_char, sym)) {
-			strnfmt(buf, max, "%c - %s.", sym, f_info[i].name);
+			angdroid_symbol_query_format(buf, max, sym, f_info[i].name,
+                angdroid_terrain_name(f_info[i].name, angdroid_zh_tw_enabled()),
+                angdroid_zh_tw_enabled());
 			return;
 		}
 	}
@@ -4350,16 +4360,21 @@ static void lookup_symbol(char sym, char *buf, size_t max)
 		/* Slight hack - P appears twice */
 		if (streq(race->name, "Morgoth")) continue;
 		if (char_matches_key(race->d_char, sym)) {
-			strnfmt(buf, max, "%c - %s.", sym, race->text);
+			angdroid_symbol_query_format(buf, max, sym, race->text,
+                angdroid_symbol_monster_base_text(race->name, race->text,
+                    angdroid_zh_tw_enabled()), angdroid_zh_tw_enabled());
 			return;
 		}
 	}
 
 	/* No matches */
         if (isprint(sym)) {
-			strnfmt(buf, max, "%c - Unknown Symbol.", sym);
+			strnfmt(buf, max,
+                angdroid_zh_tw_enabled() ? "%c - 未知符號。" :
+                    "%c - Unknown Symbol.", sym);
         } else {
-			strnfmt(buf, max, "? - Unknown Symbol.");
+			my_strcpy(buf, angdroid_zh_tw_enabled() ?
+                "? - 未知符號。" : "? - Unknown Symbol.", max);
         }
 	
 	return;
@@ -4394,19 +4409,24 @@ void do_cmd_query_symbol(void)
 	uint16_t *who;
 
 	/* Get a character, or abort */
-	if (!get_com("Enter character to be identified, or control+[ANU]: ", &sym))
+	if (!get_com(angdroid_game_ui_text(
+        "Enter character to be identified, or control+[ANU]: ",
+        angdroid_zh_tw_enabled()), &sym))
 		return;
 
 	/* Describe */
 	if (sym == KTRL('A')) {
 		all = true;
-		my_strcpy(buf, "Full monster list.", sizeof(buf));
+		my_strcpy(buf, angdroid_game_ui_text("Full monster list.",
+            angdroid_zh_tw_enabled()), sizeof(buf));
 	} else if (sym == KTRL('U')) {
 		all = uniq = true;
-		my_strcpy(buf, "Unique monster list.", sizeof(buf));
+		my_strcpy(buf, angdroid_game_ui_text("Unique monster list.",
+            angdroid_zh_tw_enabled()), sizeof(buf));
 	} else if (sym == KTRL('N')) {
 		all = norm = true;
-		my_strcpy(buf, "Non-unique monster list.", sizeof(buf));
+		my_strcpy(buf, angdroid_game_ui_text("Non-unique monster list.",
+            angdroid_zh_tw_enabled()), sizeof(buf));
 	} else {
 		lookup_symbol(sym, buf, sizeof(buf));
 	}
@@ -4444,7 +4464,9 @@ void do_cmd_query_symbol(void)
 	}
 
 	/* Prompt */
-	put_str("Recall details? (y/k/n): ", 0, 40);
+	put_str(angdroid_zh_tw_enabled() ?
+        "查看詳情？(y/k/n)：" : "Recall details? (y/k/n): ",
+        0, (Term && Term->wid > 40) ? 40 : 0);
 
 	/* Query */
 	query = inkey();
@@ -4486,7 +4508,8 @@ void do_cmd_query_symbol(void)
 		tb = textblock_new();
 		lore_title(tb, race);
 
-		textblock_append(tb, " [(r)ecall, ESC]");
+		textblock_append(tb, "%s", angdroid_game_ui_text(
+            " [(r)ecall, ESC]", angdroid_zh_tw_enabled()));
 		textui_textblock_place(tb, SCREEN_REGION, NULL);
 		textblock_free(tb);
 
