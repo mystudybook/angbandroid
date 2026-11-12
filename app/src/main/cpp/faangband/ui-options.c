@@ -39,6 +39,7 @@
 #include "droid.h"
 #include "../angband/zh-tw-ui.h"
 #include "../angband/menu-text-fit.h"
+#include "obj-desc-item-zh-tw.h"
 
 
 /**
@@ -1494,6 +1495,36 @@ static void ego_display(struct menu * menu, int oid, bool cursor, int row,
 	uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
 	uint8_t sq_attr = (ignored ? COLOUR_L_RED : COLOUR_L_GREEN);
 
+    /* This entry is already restricted to ever-seen ego kinds.  Use the
+     * shared full-name dictionary only for the visible row, preserving
+     * ego IDs, the original short_name pointer and the sort order. */
+    if (angdroid_zh_tw_enabled() && Term &&
+        col >= 0 && col < Term->wid) {
+        const char *known_name = angdroid_faangband_known_ego_ui_name(
+            e_info[choice[oid].e_idx].name, true);
+        if (known_name) {
+            char prefix[128], clipped_prefix[128], clipped_name[256];
+            int available = MIN(width, Term->wid - col);
+            size_t prefix_columns;
+            strnfmt(prefix, sizeof(prefix), "[ ] %s ",
+                angdroid_game_ui_text(
+                    quality_choices[choice[oid].itype].name, true));
+            prefix_columns = angdroid_menu_copy_columns(clipped_prefix,
+                sizeof(clipped_prefix), prefix, (size_t)MAX(0, available));
+            if (clipped_prefix[0]) c_put_str(attr, clipped_prefix, row, col);
+            if (ignored && available > 1)
+                c_put_str(COLOUR_L_RED, "*", row, col + 1);
+            if (available > (int)prefix_columns) {
+                angdroid_menu_copy_columns(clipped_name, sizeof(clipped_name),
+                    known_name, (size_t)(available - (int)prefix_columns));
+                if (clipped_name[0])
+                    c_put_str(sq_attr, clipped_name, row,
+                        col + (int)prefix_columns);
+            }
+            return;
+        }
+    }
+
 	/* Acquire the "name" of object "i" */
 	(void) ego_item_name(buf, sizeof(buf), &choice[oid]);
 
@@ -1720,9 +1751,16 @@ static bool quality_action(struct menu *m, const ui_event *event, int oid)
 {
 	struct menu menu;
 	menu_iter menu_f = { NULL, NULL, quality_subdisplay, NULL, NULL };
-	region area = { 37, 2, 29, IGNORE_MAX };
-	ui_event evt;
-	int count;
+    region area = { 37, 2, 29, IGNORE_MAX };
+    ui_event evt;
+    int count;
+
+    /* Never place the quality popup outside the actual phone terminal. */
+    if (!Term || Term->wid < 9 || Term->hgt < 4) return false;
+    if (area.col + area.width + 2 > Term->wid) {
+        area.width = MIN(29, Term->wid - 4);
+        area.col = Term->wid - area.width - 2;
+    }
 
 	/* Display at the right point */
 	area.row += oid;
@@ -1988,7 +2026,12 @@ static bool sval_menu(int tval, const char *desc)
 	clear_from(0);
 
 	/* Help text */
-	prt(format("Ignore the following %s:", desc), 0, 0);
+    if (angdroid_zh_tw_enabled()) {
+        prt(format("忽略以下%s：", angdroid_game_ui_text(desc, true)),
+            0, 0);
+    } else {
+        prt(format("Ignore the following %s:", desc), 0, 0);
+    }
 
 	/* Run menu */
 	menu = menu_new(MN_SKIN_COLUMNS, &ignore_sval_menu);
