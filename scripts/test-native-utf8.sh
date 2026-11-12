@@ -873,6 +873,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_menu_visible_tags"
 "$BUILD_DIR/test_menu_visible_tags"
 
+# Only genuine byte keycodes may be compared with modal shortcut strings.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_shortcut_code.c" \
+    -o "$BUILD_DIR/test_menu_shortcut_code"
+"$BUILD_DIR/test_menu_shortcut_code"
+
 # Inventory/equipment/quiver/floor picker keys: only actionable tab targets.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_item_picker_switch_keys.c" \
