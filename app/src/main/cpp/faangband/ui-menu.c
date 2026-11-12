@@ -1085,6 +1085,10 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 				menu_handle_action(menu, &in);
 				if (popup)
 					screen_load();
+				/* Switching item sources must not retain the old page's
+				 * Android ribbon before the new picker is created. */
+				if (menu->skin == &menu_skin_object)
+					soft_kbd_replace("");
 				return in;
 			}
 
@@ -1127,12 +1131,18 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 		if (notify & out.type) {
 			if (popup)
 				screen_load();
+			/* All normal object-picker exits own their final hint cleanup,
+			 * even if the input event came from an injected key or tap. */
+			if (menu->skin == &menu_skin_object)
+				soft_kbd_replace("");
 			return out;
 		}
 	}
 
 	if (popup)
 		screen_load();
+	if (menu->skin == &menu_skin_object)
+		soft_kbd_replace("");
 	return in;
 }
 
