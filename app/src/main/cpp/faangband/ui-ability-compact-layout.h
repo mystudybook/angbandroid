@@ -5,6 +5,7 @@
 #define ANGDROID_FA_ABILITY_COMPACT_LAYOUT_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 struct angdroid_fa_ability_layout {
     int width;
@@ -38,6 +39,16 @@ static inline int angdroid_fa_ability_plan(int width, int height,
     out->detail_row = menu_rows + 1;
     out->detail_rows = height - out->detail_row;
     return out->detail_rows >= 4;
+}
+
+/* A UTF-8 string of N bytes can contain at most N+1 wrapped lines:
+ * one line per byte in the worst case (embedded newlines). Reserve all
+ * indices dynamically, never silently clip descriptions at 256 rows.
+ * Return 0 instead of overflowing the allocation multiplication. */
+static inline size_t angdroid_fa_ability_line_capacity(size_t bytes)
+{
+    if (bytes >= SIZE_MAX / sizeof(size_t)) return 0;
+    return bytes + 1;
 }
 
 /* A page number is never negative or past the final description page.
