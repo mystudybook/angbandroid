@@ -879,6 +879,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_menu_scroll_viewport"
 "$BUILD_DIR/test_menu_scroll_viewport"
 
+# Column-major keyboard moves after rotation and shortened final columns.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_menu_column_navigation.c" \
+    -o "$BUILD_DIR/test_menu_column_navigation"
+"$BUILD_DIR/test_menu_column_navigation"
+
 # Horizontal movement across invalid menu rows must terminate.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_valid_cursor.c" \
