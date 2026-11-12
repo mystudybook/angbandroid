@@ -1034,13 +1034,21 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 			}
 		} else if (in.type == EVT_KBRD) {
 			/* Command key */
-			if (!no_act && menu->cmd_keys &&
+			/* Only a real single-byte key can match a C key string.
+			 * strchr(str, 0) would otherwise match its terminator,
+			 * and truncating a Unicode/special key could alias a command. */
+			if (!no_act && in.key.code > 0 && in.key.code <= 0xff &&
+				menu->cmd_keys &&
 				strchr(menu->cmd_keys, (char)in.key.code) &&
 				menu_handle_action(menu, &in))
 				continue;
 
 			/* Switch key */
-			if (!no_act && menu->switch_keys &&
+			/* Only a real single-byte key can match a C key string.
+			 * strchr(str, 0) would otherwise match its terminator,
+			 * and truncating a Unicode/special key could alias a command. */
+			if (!no_act && in.key.code > 0 && in.key.code <= 0xff &&
+				menu->switch_keys &&
 				strchr(menu->switch_keys, (char)in.key.code)) {
 				menu_handle_action(menu, &in);
 				if (popup)
