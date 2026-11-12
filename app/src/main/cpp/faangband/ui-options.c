@@ -608,7 +608,7 @@ static void ui_keymap_query(const char *title, int row)
 	const struct keypress *act;
 
 	prt(title, 13, 0);
-	prt("Key: ", 14, 0);
+	prt(angdroid_game_ui_text("Key: ", angdroid_zh_tw_enabled()), 14, 0);
 	
 	/* Get a keymap trigger & mapping */
 	c = keymap_get_trigger();
@@ -617,17 +617,17 @@ static void ui_keymap_query(const char *title, int row)
 	/* Keymap found? */
 	if (!act) {
 		/* Prompt */
-		prt("No keymap with that trigger.  Press any key to continue.", 16, 0);
+		prt(angdroid_game_ui_text("No keymap with that trigger.  Press any key to continue.", angdroid_zh_tw_enabled()), 16, 0);
 		inkey();
 	} else {
 		/* Analyze the current action */
 		keypress_to_text(tmp, sizeof(tmp), act, false);
 	
 		/* Display the current action */
-		prt("Found: ", 15, 0);
+		prt(angdroid_game_ui_text("Found: ", angdroid_zh_tw_enabled()), 15, 0);
 		Term_addstr(-1, COLOUR_WHITE, tmp);
 
-		prt("Press any key to continue.", 17, 0);
+		prt(angdroid_game_ui_text("Press any key to continue.", angdroid_zh_tw_enabled()), 17, 0);
 		inkey();
 	}
 }
@@ -642,12 +642,13 @@ static void ui_keymap_create(const char *title, int row)
 	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
 
 	prt(title, 13, 0);
-	prt("Key: ", 14, 0);
+	prt(angdroid_game_ui_text("Key: ", angdroid_zh_tw_enabled()), 14, 0);
 
 	c = keymap_get_trigger();
 	if (c.code == '=') {
-		c_prt(COLOUR_L_RED, "The '=' key is reserved.", 16, 2);
-		prt("Press any key to continue.", 18, 0);
+		c_prt(COLOUR_L_RED, angdroid_game_ui_text(
+            "The '=' key is reserved.", angdroid_zh_tw_enabled()), 16, 2);
+		prt(angdroid_game_ui_text("Press any key to continue.", angdroid_zh_tw_enabled()), 18, 0);
 		inkey();
 		return;
 	}
@@ -663,8 +664,10 @@ static void ui_keymap_create(const char *title, int row)
 		keypress_to_text(tmp, sizeof(tmp), keymap_buffer, false);
 		c_prt(color, format("Action: %s", tmp), 15, 0);
 
-		c_prt(COLOUR_L_BLUE, "  Press '=' when finished.", 17, 0);
-		c_prt(COLOUR_L_BLUE, "  Use 'CTRL-u' to reset.", 18, 0);
+		c_prt(COLOUR_L_BLUE, angdroid_game_ui_text(
+            "  Press '=' when finished.", angdroid_zh_tw_enabled()), 17, 0);
+		c_prt(COLOUR_L_BLUE, angdroid_game_ui_text(
+            "  Use 'CTRL-u' to reset.", angdroid_zh_tw_enabled()), 18, 0);
 		c_prt(COLOUR_L_BLUE, format("(Maximum keymap length is %d keys.)",
 									KEYMAP_ACTION_MAX), 19, 0);
 
@@ -705,9 +708,10 @@ static void ui_keymap_create(const char *title, int row)
 		}
 	}
 
-	if (c.code && get_check("Keep this keymap? ")) {
+	if (c.code && get_check(angdroid_game_ui_text(
+        "Keep this keymap? ", angdroid_zh_tw_enabled()))) {
 		keymap_add(mode, c, keymap_buffer, true);
-		prt("To use in other sessions, save the keymaps to a file.  Press a key to continue.", 17, 0);
+		prt(angdroid_game_ui_text("To use in other sessions, save the keymaps to a file.  Press a key to continue.", angdroid_zh_tw_enabled()), 17, 0);
 		inkey();
 	}
 }
@@ -718,17 +722,17 @@ static void ui_keymap_remove(const char *title, int row)
 	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
 
 	prt(title, 13, 0);
-	prt("Key: ", 14, 0);
+	prt(angdroid_game_ui_text("Key: ", angdroid_zh_tw_enabled()), 14, 0);
 
 	c = keymap_get_trigger();
 
 	if (keymap_remove(mode, c))
-		prt("Removed.", 16, 0);
+		prt(angdroid_game_ui_text("Removed.", angdroid_zh_tw_enabled()), 16, 0);
 	else
-		prt("No keymap to remove!", 16, 0);
+		prt(angdroid_game_ui_text("No keymap to remove!", angdroid_zh_tw_enabled()), 16, 0);
 
 	/* Prompt */
-	prt("Press any key to continue.", 17, 0);
+	prt(angdroid_game_ui_text("Press any key to continue.", angdroid_zh_tw_enabled()), 17, 0);
 	inkey();
 }
 
@@ -741,7 +745,7 @@ static void keymap_browse_hook(int oid, void *db, const region *loc)
 	clear_from(13);
 
 	/* Show current action */
-	prt("Current action (if any) shown below:", 13, 0);
+	prt(angdroid_game_ui_text("Current action (if any) shown below:", angdroid_zh_tw_enabled()), 13, 0);
 	keypress_to_text(tmp, sizeof(tmp), keymap_buffer, false);
 	prt(tmp, 14, 0);
 }
@@ -756,9 +760,22 @@ static menu_action keymap_actions[] =
 	{ 0, 0, "Remove a keymap",          ui_keymap_remove },
 };
 
+static const char *const keymap_action_english[] = {
+    "Load a user pref file",
+    "Save keymaps to file",
+    "Query a keymap",
+    "Create a keymap",
+    "Remove a keymap",
+};
+
 static void do_cmd_keymaps(const char *title, int row)
 {
-	region loc = {0, 0, 0, 12};
+    region loc = {0, 0, 0, 12};
+    size_t i;
+    assert(N_ELEMENTS(keymap_actions) == N_ELEMENTS(keymap_action_english));
+    for (i = 0; i < N_ELEMENTS(keymap_actions); ++i)
+        keymap_actions[i].name = angdroid_game_ui_text(
+            keymap_action_english[i], angdroid_zh_tw_enabled());
 
 	screen_save();
 	clear_from(0);
@@ -772,8 +789,10 @@ static void do_cmd_keymaps(const char *title, int row)
 		keymap_menu->browse_hook = keymap_browse_hook;
 	}
 
-	menu_layout(keymap_menu, &loc);
-	menu_select(keymap_menu, 0, false);
+    /* This menu is cached; language may change between openings. */
+    keymap_menu->title = title;
+    menu_layout(keymap_menu, &loc);
+    menu_select(keymap_menu, 0, false);
 
 	screen_load();
 }
