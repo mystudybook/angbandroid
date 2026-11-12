@@ -14,7 +14,7 @@ helper = (CPP / "angband/zh-tw-knowledge-kill-summary.h").read_text(
 def block(start, finish):
     return source.split(start, 1)[1].split(finish, 1)[0]
 
-browser = block("static void display_knowledge(", "/*\n * ------------------------------------------------------------------------\n *  MONSTERS")
+browser = block("static void display_knowledge(", "static void display_monster(")
 monster = block("static void display_monster(", "static int m_cmp_race(")
 summary = block("static void mon_summary(", "static int count_known_monsters(")
 recall = block("static const char *recall_prompt(", "#define swap(")
