@@ -51,7 +51,8 @@ struct object { int unused; };
 struct terminal { int wid, hgt; };
 static struct terminal screen = {80, 24};
 static struct terminal *Term = &screen;
-static const char all_letters_nohjkl[] = "abcdefgimnopqrstuvwxyz";
+static const char all_letters_nohjkl[] =
+    "abcdefgimnopqrstuvwxyzABCDEFGIMNOPQRSTUVWXYZ";
 
 struct queue_item {
     ui_event input;
@@ -120,6 +121,8 @@ int main(void)
     press.type = EVT_KBRD;
     press.key.code = 'm';
     CHECK(fa_target_floor_list_index(press, 20, 80, 24) == 8);
+    press.key.code = 'A';
+    CHECK(fa_target_floor_list_index(press, 30, 80, 24) == 22);
     press.key.code = 'h';
     CHECK(fa_target_floor_list_index(press, 20, 80, 24) == -1);
     press.key.code = 0;
