@@ -70,13 +70,15 @@ assert "fa_menu_relative_tags_paged(menu) ? pos - top : pos" in display
 
 hints = MENU.split("static void keys_to_ui(", 1)[1].split(
     "ui_event menu_select(", 1)[0]
-assert "bool paged = fa_menu_relative_tags_paged(menu);" in hints
+assert "bool paged;" in hints
+assert "paged = fa_menu_relative_tags_paged(menu);" in hints
 assert "angdroid_menu_visible_tag_first(" in hints
 assert "angdroid_menu_visible_tag_end(" in hints
 assert "for (cursor = first; cursor < end; cursor++)" in hints
 assert "if (cursor < first || cursor >= end) continue;" not in hints
 assert "int first = 0, end = n;" in hints
-assert "bool paged = fa_menu_relative_tags_paged(menu);" in hints
+assert "bool paged;" in hints
+assert "paged = fa_menu_relative_tags_paged(menu);" in hints
 assert "if (menu->flags & MN_REL_TAGS) {" in hints
 assert "first = angdroid_menu_visible_tag_first(n, menu->top, paged);" in hints
 assert "end = angdroid_menu_visible_tag_end(" in hints
