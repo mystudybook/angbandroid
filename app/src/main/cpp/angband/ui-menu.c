@@ -882,37 +882,36 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 static void keys_to_ui(struct menu *menu)
 {
 	char buf[256] = "";
+	size_t used = 0;
+	size_t tag_capacity;
+	int cursor;
+	int n = menu->filter_list ? menu->filter_count : menu->count;
+	int first = 0, end = n;
 
+	/* Inscription digits should be present even if the menu has hundreds
+	 * of other tags. Append unique keys now, before reserving commands. */
 	if (menu->inscriptions) {
-		int i, j;
-		char used[20];
-		for (i = 0, j = 0; i < 10; i++) {
-			if (menu->inscriptions[i]) {
-				used[j++] = ('0' + i);
-			}
+		int i;
+		for (i = 0; i < 10; ++i) {
+			if (menu->inscriptions[i])
+				used = angdroid_menu_hint_append_unique(
+					buf, used, sizeof(buf), (char)('0' + i));
 		}
-		used[j] = '\0';
-		my_strcat(buf, used, sizeof(buf));
 	}
 
-	int cursor;
-	size_t current = 0;
-	char temp[256] = "";
-	int n = menu->filter_list ? menu->filter_count : menu->count;
-	int first = 0;
-	int end = n;
-
-	/* Relative tags are regenerated for the current page. Sending tags
-	 * from offscreen rows makes the Android keyboard offer wrong keys. */
+	/* Commands and screen-switch keys must not disappear when a long
+	 * inventory fills the Android shortcut strip. Relative tags are
+	 * generated only for the current scrolling page. */
+	tag_capacity = angdroid_menu_hint_tag_capacity(
+		sizeof(buf), used, menu->cmd_keys, menu->switch_keys);
 	if (menu->flags & MN_REL_TAGS) {
 		int paged = (menu->skin != &menu_skin_column);
 		first = angdroid_menu_visible_tag_first(n, menu->top, paged);
 		end = angdroid_menu_visible_tag_end(
-				n, menu->top, menu->active.page_rows, paged);
+			n, menu->top, menu->active.page_rows, paged);
 	}
 
-	for (cursor = first; cursor < end; cursor++) {
-
+	for (cursor = first; cursor < end; ++cursor) {
 		int oid = angdroid_menu_action_item_index(
 			cursor, n, menu->count, menu->filter_list);
 		menu_row_validity_t row_valid = MN_ROW_VALID;
@@ -920,60 +919,45 @@ static void keys_to_ui(struct menu *menu)
 
 		if (oid < 0)
 			continue;
-
-		if (menu->row_funcs->valid_row) {
+		if (menu->row_funcs->valid_row)
 			row_valid = menu->row_funcs->valid_row(menu, oid);
-		}
-
-		if (row_valid != MN_ROW_VALID) {
+		if (row_valid != MN_ROW_VALID)
 			continue;
-		}
 
 		if (!(menu->flags & MN_NO_TAGS)) {
-			if (menu->flags & MN_REL_TAGS) {
+			if (menu->flags & MN_REL_TAGS)
 				sel = menu->skin->get_tag(menu, cursor);
-			}
-			else if (menu->selections && !(menu->flags & MN_PVT_TAGS)) {
+			else if (menu->selections && !(menu->flags & MN_PVT_TAGS))
 				sel = angdroid_menu_tag_at(menu->selections, cursor);
-			}
-			else if (menu->row_funcs->get_tag) {
+			else if (menu->row_funcs->get_tag)
 				sel = menu->row_funcs->get_tag(menu, oid);
-			}
 		}
-
-		if (sel != 0) {
-			current = angdroid_menu_hint_append(temp, current,
-					sizeof(temp), sel);
-		}
+		if (sel)
+			used = angdroid_menu_hint_append_unique(
+				buf, used, tag_capacity, sel);
 	}
-	temp[current] = '\0';
-	my_strcat(buf, temp, sizeof(buf));
 
 	if (menu->cmd_keys) {
 		if ((menu->flags & MN_ALLOW_EMPTY_INPUT) && n <= 0) {
-			/* Empty stores have no stock to Buy/Get/Examine.
-			 * Do not advertise those buttons on the Android ribbon;
-			 * Sell, Help, Inspect inventory, and other commands remain. */
 			const char *key = menu->cmd_keys;
 			for (; *key; ++key) {
 				if (angdroid_menu_empty_shop_key_visible(
-					menu->flags, MN_ALLOW_EMPTY_INPUT, n, *key)) {
-					char one[2] = { *key, '\0' };
-					my_strcat(buf, one, sizeof(buf));
-				}
+					menu->flags, MN_ALLOW_EMPTY_INPUT, n, *key))
+					used = angdroid_menu_hint_append_unique(
+						buf, used, sizeof(buf), *key);
 			}
 		} else {
-			my_strcat(buf, menu->cmd_keys, sizeof(buf));
+			used = angdroid_menu_hint_append_keys_unique(
+				buf, used, sizeof(buf), menu->cmd_keys);
 		}
 	}
-	if (menu->switch_keys) {
-		my_strcat(buf, menu->switch_keys, sizeof(buf));
-	}
+	used = angdroid_menu_hint_append_keys_unique(
+		buf, used, sizeof(buf), menu->switch_keys);
 
+	/* Keep the legacy de-dup normalization as a harmless final guard.
+	 * The bounded appends above already eliminate duplicates before
+	 * they consume room reserved for fixed controls. */
 	strdeldup(buf);
-
-	/* A filtered or empty menu replaces its previous shortcut set.
-	 * Otherwise the Android ribbon may retain keys from another page. */
 	soft_kbd_replace(buf);
 }
 
