@@ -65,6 +65,7 @@ run_check "Rotated item-selection and compact shop prompts" python3 "$ROOT/tests
 run_check "Knowledge glyph strict Unicode input and bilingual autoinscriptions" python3 "$ROOT/tests/test_knowledge_glyph_codepoint_locale_source.py"
 run_check "Item picker switching, selection, cancellation clear stale soft keyboard" python3 "$ROOT/tests/test_item_picker_soft_key_exit_source.py"
 run_check "FAangband item examine/ignore zh-TW labels" python3 "$ROOT/tests/test_faangband_object_ignore_locale_source.py"
+run_check "FAangband knowledge category/Ego labels and nested ignore popup keys" python3 "$ROOT/tests/test_faangband_knowledge_ego_locale_source.py"
 run_check "Clear stale item picker soft keys after invalid Android rotation" python3 "$ROOT/tests/test_item_picker_rotation_hints_source.py"
 run_check "Empty bag quiver footer repaint and rotated bounds" python3 "$ROOT/tests/test_empty_quiver_footer_source.py"
 run_check "Empty item picker can switch tabs without selecting a fake object" python3 "$ROOT/tests/test_empty_item_picker_source.py"
