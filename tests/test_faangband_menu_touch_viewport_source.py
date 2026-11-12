@@ -68,13 +68,19 @@ assert "display_scrolling(menu, cursor, top, loc);" in cols_draw
 assert "colw = (w - col) / cols" not in cols_hit + cols_draw
 assert "if (cursor < 0) cursor = 0;" not in cols_hit
 assert "col + c * colw" in cols_draw
+assert "int base = c * rows;" in cols_draw
+assert "for (r = 0; r < rows && r < n - base; r++)" in cols_draw
+assert "int pos = base + r;" in cols_draw
+assert "int pos = c * rows + r;" not in cols_draw
 assert "Term_gotoxy(col + dx, row + dy);" in cols_draw
 
 column_direction = MENU.split("static ui_event column_process_direction(", 1)[1].split(
     "static const menu_skin menu_skin_column", 1)[0]
-assert "if (rows_per_page <= 0 || n <= 0) return out;" in column_direction
+assert "count <= 0 || m->active.page_rows <= 0" in column_direction
 assert "return scroll_process_direction(m, dir);" in column_direction
-assert "angdroid_fa_menu_clamp_cursor(m->cursor, n)" in column_direction
+assert "angdroid_menu_column_next_valid(" in column_direction
+assert "if (next < 0 || next == m->cursor)" in column_direction
+assert "angdroid_fa_menu_clamp_cursor(m->cursor, n)" not in column_direction
 
 for tag in ("scroll_get_tag", "object_skin_get_tag", "column_get_tag"):
     func = MENU.split("static char " + tag + "(", 1)[1].split("\n}\n", 1)[0]
