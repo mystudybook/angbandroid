@@ -30,6 +30,7 @@
 #include "../angband/menu-column-width.h"
 #include "../angband/menu-compact-layout.h"
 #include "../angband/menu-valid-cursor.h"
+#include "../angband/menu-shortcut-code.h"
 #include "../angband/menu-column-navigation.h"
 #include "../angband/menu-action-guard.h"
 #include "../angband/menu-visible-tags.h"
@@ -541,7 +542,7 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 	/* A key tag is one byte. Do not turn a Unicode/special key into
 	 * an unrelated ASCII tag by truncating it to char, and never
 	 * match a zero key against an empty C-string terminator. */
-	if (key.code == 0 || key.code > 0xff)
+	if (!angdroid_menu_shortcut_is_byte(key.code))
 		return -1;
 
 	if (menu->flags & MN_CASELESS_TAGS)
@@ -1038,7 +1039,7 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 			/* Only a real single-byte key can match a C key string.
 			 * strchr(str, 0) would otherwise match its terminator,
 			 * and truncating a Unicode/special key could alias a command. */
-			if (!no_act && in.key.code > 0 && in.key.code <= 0xff &&
+			if (!no_act && angdroid_menu_shortcut_is_byte(in.key.code) &&
 				menu->cmd_keys &&
 				strchr(menu->cmd_keys, (char)in.key.code) &&
 				menu_handle_action(menu, &in))
@@ -1048,7 +1049,7 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 			/* Only a real single-byte key can match a C key string.
 			 * strchr(str, 0) would otherwise match its terminator,
 			 * and truncating a Unicode/special key could alias a command. */
-			if (!no_act && in.key.code > 0 && in.key.code <= 0xff &&
+			if (!no_act && angdroid_menu_shortcut_is_byte(in.key.code) &&
 				menu->switch_keys &&
 				strchr(menu->switch_keys, (char)in.key.code)) {
 				menu_handle_action(menu, &in);
