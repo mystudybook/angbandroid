@@ -1350,7 +1350,8 @@ void do_cmd_change_name(void)
 {
 	ui_event ke;
 	int mode = 0;
-	int prompt_line = 23 + MIN(Term->hgt - 24, 2);
+	int prompt_line = MAX(0, MIN(Term->hgt - 1,
+        23 + MIN(Term->hgt - 24, 2)));
 	const char *p;
 
 	bool more = true;
@@ -1368,8 +1369,16 @@ void do_cmd_change_name(void)
 		/* Display the player */
 		display_player(mode);
 
-		/* Prompt */
-		Term_putstr(2, prompt_line, -1, COLOUR_WHITE, p);
+        /* The bilingual instruction is never allowed to paint outside the
+         * terminal. Keep command keys c/f/h and the screen navigation. */
+        if (Term && Term->wid > 2) {
+            char visible[192];
+            angdroid_utf8_copy_complete(visible, sizeof(visible), p);
+            angdroid_utf8_clip_columns(visible,
+                (size_t)(Term->wid - 2));
+            if (visible[0])
+                Term_putstr(2, prompt_line, -1, COLOUR_WHITE, visible);
+        }
 
 		soft_kbd_flash("cfh");
 
