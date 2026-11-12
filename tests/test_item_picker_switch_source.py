@@ -26,6 +26,10 @@ assert "selectable_objects <= 0 && switch_keys && switch_keys[0]" in SHARED
 assert "placeholder_only_equipment_switches();" in NATIVE
 assert "count <= 12" in NATIVE
 assert "!angdroid_item_picker_allow_blank_switch(12," in NATIVE
+assert "static inline int angdroid_item_picker_blank_arrow_switch(" in SHARED
+assert "is_item_skin && has_switch_keys && dx != 0 && dy == 0" in SHARED
+assert "blank_picker_direction_keys();" in NATIVE
+assert "for (flags = 0; flags < 256; ++flags)" in NATIVE
 
 for variant in ("angband", "faangband"):
     path = CPP / variant / "ui-object.c"
