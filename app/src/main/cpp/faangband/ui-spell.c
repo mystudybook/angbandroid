@@ -223,6 +223,19 @@ static const menu_iter spell_menu_iter = {
 	NULL	/* no resize hook */
 };
 
+/* A static label remains alive for the lifetime of the transient spell
+ * menu. Size is measured in terminal cells, not UTF-8 bytes. */
+static const char *fa_spell_menu_header(size_t max_columns)
+{
+    static char visible[192];
+    const char *label = angdroid_zh_tw_enabled() ?
+        "法術名稱                        等級 法力 失敗率 資訊" :
+        "Name                             Lv Mana Fail Info";
+    angdroid_menu_copy_columns(visible, sizeof(visible), label,
+        max_columns);
+    return visible;
+}
+
 /**
  * Create and initialise a spell menu, given an object and a validity hook
  */
@@ -254,9 +267,7 @@ static struct menu *spell_menu_new(const struct object *obj,
 	menu_setpriv(m, d->n_spells, d);
 
 	/* Set flags */
-	m->header = angdroid_zh_tw_enabled() ?
-        "名稱                            等級 魔力 失敗率 資訊" :
-        "Name                             Lv Mana Fail Info";
+	m->header = fa_spell_menu_header(width);
 	m->flags = MN_CASELESS_TAGS;
 	m->selections = all_letters_nohjkl;
 	m->browse_hook = spell_menu_browser;
