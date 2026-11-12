@@ -1191,32 +1191,32 @@ void textui_process_click(ui_event e)
  * Display an entry on a command menu
  */
 static void cmd_sub_entry(struct menu *menu, int oid, bool cursor, int row,
-						  int col, int width)
+                          int col, int width)
 {
-	uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
-	const struct cmd_info *commands = menu_priv(menu);
+    uint8_t attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
+    const struct cmd_info *commands = menu_priv(menu);
+    int mode = OPT(player, rogue_like_commands) ?
+        KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
+    struct keypress kp = { EVT_KBRD, commands[oid].key[mode], 0 };
+    char key[16] = "";
+    char full[256], visible[256];
 
-	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
-	struct keypress kp = { EVT_KBRD, commands[oid].key[mode], 0 };
-	char buf[16];
+    /* Selection still uses the original native key. Translate only the
+     * description, then clip the complete row by terminal cell width. */
+    if (kp.code) {
+        keypress_to_readable(key, sizeof(key), kp);
+        strnfmt(full, sizeof(full), "%s (%s)",
+            fa_context_ui_text(commands[oid].desc), key);
+    } else {
+        my_strcpy(full, fa_context_ui_text(commands[oid].desc),
+            sizeof(full));
+    }
 
-	/* Write the description */
-	Term_putstr(col, row, -1, attr, commands[oid].desc);
-
-	/*
-	 * Include keypress for commands that aren't placeholders to drive the
-	 * the menu system.
-	 */
-	if (kp.code) {
-		Term_addch(attr, L' ');
-		Term_addch(attr, L'(');
-
-		/* Get readable version */
-		keypress_to_readable(buf, sizeof buf, kp);
-		Term_addstr(-1, attr, buf);
-
-		Term_addch(attr, L')');
-	}
+    if (Term && col >= 0 && col < Term->wid && width > 0) {
+        angdroid_menu_copy_columns(visible, sizeof(visible), full,
+            (size_t)MIN(width, Term->wid - col));
+        if (visible[0]) Term_putstr(col, row, -1, attr, visible);
+    }
 }
 
 /**
@@ -1319,7 +1319,13 @@ static void cmd_list_entry(struct menu *menu, int oid, bool cursor, int row,
 						   int col, int width)
 {
 	uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
-	Term_putstr(col, row, -1, attr, cmds_all[oid].name);
+    if (Term && col >= 0 && col < Term->wid && width > 0) {
+        char visible[256];
+        angdroid_menu_copy_columns(visible, sizeof(visible),
+            fa_context_ui_text(cmds_all[oid].name),
+            (size_t)MIN(width, Term->wid - col));
+        if (visible[0]) Term_putstr(col, row, -1, attr, visible);
+    }
 }
 
 static struct menu *command_menu;
