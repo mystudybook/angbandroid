@@ -57,6 +57,7 @@
 #include "../angband/store-detail-text.h"
 #include "../angband/store-menu-row.h"
 #include "../angband/store-stock-guard.h"
+#include "../angband/store-confirmation-text.h"
 #include "../angband/menu-text-fit.h"
 #include "z-debug.h"
 
@@ -527,7 +528,8 @@ static bool store_get_check(const char *prompt)
 	struct keypress ch;
 
 	/* Prompt for it */
-	prt(prompt, 0, 0);
+	fa_store_put_clipped(COLOUR_WHITE, prompt, 0, 0,
+        Term ? Term->wid : 0);
 
 	/* Get an answer */
 	ch = inkey();
@@ -592,14 +594,27 @@ static bool store_sell(struct store_context *ctx)
 	/* Cannot remove stickied objects */
 	if (object_is_equipped(player->body, obj) && !obj_can_takeoff(obj)) {
 		/* Oops */
-		msg("Hmmm, it seems to be stuck.");
+		msg("%s", angdroid_zh_tw_enabled() ?
+            "這件裝備似乎無法卸下。" : "Hmmm, it seems to be stuck.");
 
 		/* Nope */
 		return false;
 	}
 
 	/* Get a quantity */
-	amt = get_quantity(NULL, obj->number);
+	{
+        char quantity_prompt[128];
+        const char *ask = NULL;
+        if (angdroid_zh_tw_enabled() &&
+            angdroid_store_quantity_prompt(quantity_prompt,
+                sizeof(quantity_prompt),
+                store_is_home(store) ? ANGDROID_STORE_Q_STASH :
+                OPT(player, birth_no_selling) ? ANGDROID_STORE_Q_GIVE :
+                    ANGDROID_STORE_Q_SELL,
+                obj->number, 0))
+            ask = quantity_prompt;
+        amt = get_quantity(ask, obj->number);
+    }
 
 	/* Allow user abort */
 	if (amt <= 0) return false;
@@ -610,16 +625,20 @@ static bool store_sell(struct store_context *ctx)
 	if (!store_check_num(store, temp_obj)) {
 		object_wipe(temp_obj);
 		if (store_is_home(store))
-			msg("Your home is full.");
+			msg("%s", angdroid_game_ui_text(
+                "Your home is full.", angdroid_zh_tw_enabled()));
 		else
-			msg("I have not the room in my store to keep it.");
+			msg("%s", angdroid_game_ui_text(
+                "I have not the room in my store to keep it.",
+                angdroid_zh_tw_enabled()));
 
 		return false;
 	}
 
 	/* Get a full description */
 	object_desc(o_name, sizeof(o_name), temp_obj,
-		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
+		ODESC_PREFIX | ODESC_FULL |
+        (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	/* Real store */
 	if (!store_is_home(store)) {
@@ -631,11 +650,18 @@ static bool store_sell(struct store_context *ctx)
 
 		/* Show price */
 		if (!OPT(player, birth_no_selling))
-			prt(format("Price: %ld", (long)price), 1, 0);
+			fa_store_put_clipped(COLOUR_WHITE,
+                angdroid_zh_tw_enabled() ?
+                    format("價格：%ld", (long)price) :
+                    format("Price: %ld", (long)price),
+                1, 0, Term->wid);
 
 		/* Confirm sale */
-		if (!store_get_check(format("%s %s? [ESC, any other key to accept]",
-				OPT(player, birth_no_selling) ? "Give" : "Sell", o_name))) {
+		if (!store_get_check(angdroid_zh_tw_enabled() ?
+                format("%s %s？[Esc 取消，其他按鍵確認]",
+                    OPT(player, birth_no_selling) ? "交出" : "出售", o_name) :
+                format("%s %s? [ESC, any other key to accept]",
+                    OPT(player, birth_no_selling) ? "Give" : "Sell", o_name))) {
 			screen_load();
 			return false;
 		}
@@ -697,7 +723,9 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		/* Check if the player can afford any at all */
 		if (!store_is_home(store) &&
 				player->au < price_item(store, obj, false, 1)) {
-			msg("You do not have enough gold for this item.");
+			msg("%s", angdroid_game_ui_text(
+                "You do not have enough gold for this item.",
+                angdroid_zh_tw_enabled()));
 			return false;
 		}
 	} else {
@@ -711,7 +739,9 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 			/* Check if the player can afford any at all */
 			if ((uint32_t)player->au < (uint32_t)price) {
-				msg("You do not have enough gold for this item.");
+				msg("%s", angdroid_game_ui_text(
+                "You do not have enough gold for this item.",
+                angdroid_zh_tw_enabled()));
 				return false;
 			}
 
@@ -738,7 +768,9 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		flavor_aware = object_flavor_is_aware(obj);
 		if (amt <= 0 || (!flavor_aware && !store_is_home(store) &&
 						 pack_is_full())) {
-			msg("You cannot carry that many items.");
+			msg("%s", angdroid_game_ui_text(
+                "You cannot carry that many items.",
+                angdroid_zh_tw_enabled()));
 			return false;
 		}
 
@@ -749,9 +781,14 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		else
 			num = find_inven(obj);
 
-		strnfmt(o_name, sizeof o_name, "%s how many%s? (max %d) ",
-				(store_is_home(store)) ? "Take" : "Buy",
-				num ? format(" (you have %d)", num) : "", amt);
+		if (!(angdroid_zh_tw_enabled() &&
+                angdroid_store_quantity_prompt(o_name, sizeof(o_name),
+                    store_is_home(store) ? ANGDROID_STORE_Q_TAKE :
+                        ANGDROID_STORE_Q_BUY, amt, num))) {
+            strnfmt(o_name, sizeof(o_name), "%s how many%s? (max %d) ",
+                store_is_home(store) ? "Take" : "Buy",
+                num ? format(" (you have %d)", num) : "", amt);
+        }
 
 		/* Get a quantity */
 		amt = get_quantity(o_name, amt);
@@ -774,7 +811,9 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 	/* Ensure we have room */
 	if (!inven_carry_okay(dummy)) {
-		msg("You cannot carry that many items.");
+		msg("%s", angdroid_game_ui_text(
+                "You cannot carry that many items.",
+                angdroid_zh_tw_enabled()));
 		object_delete(NULL, NULL, &dummy);
 		return false;
 	}
@@ -788,7 +827,8 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 		/* Describe the object (fully) */
 		object_desc(o_name, sizeof(o_name), dummy,
-			ODESC_PREFIX | ODESC_FULL | ODESC_STORE | ODESC_ZH_TW, player);
+			ODESC_PREFIX | ODESC_FULL | ODESC_STORE |
+            (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 		/* Extract the price for the entire stack */
 		price = price_item(store, dummy, false, dummy->number);
@@ -796,13 +836,19 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		screen_save();
 
 		/* Show price */
-		prt(format("Price: %ld", (long)price), 1, 0);
+		fa_store_put_clipped(COLOUR_WHITE,
+                angdroid_zh_tw_enabled() ?
+                    format("價格：%ld", (long)price) :
+                    format("Price: %ld", (long)price),
+                1, 0, Term->wid);
 
 		/* Confirm purchase */
-		response = store_get_check(format("Buy %s?%s %s",
-					o_name,
-					obj_can_use ? "" : " (Can't use!)",
-					"[ESC, any other key to accept]"));
+		response = store_get_check(angdroid_zh_tw_enabled() ?
+            format("購買 %s？%s [Esc 取消，其他按鍵確認]",
+                o_name, obj_can_use ? "" : "（目前無法使用）") :
+            format("Buy %s?%s %s", o_name,
+                obj_can_use ? "" : " (Can't use!)",
+                "[ESC, any other key to accept]"));
 
 		screen_load();
 
