@@ -54,6 +54,7 @@
 #include "../angband/object-list-text.h"
 #include "../angband/inventory-equip-mention.h"
 #include "../angband/item-selection-layout.h"
+#include "../angband/zh-tw-ui.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -637,7 +638,8 @@ static item_tester tester_m;
 static region area = { 20, 1, -1, -2 };
 static struct object *selection;
 static const char *prompt;
-static char header[80];
+/* UTF-8 item-list headers can exceed the English-only 80-byte buffer. */
+static char header[288];
 static int i1, i2;
 static int e1, e2;
 static int q1, q2;
@@ -794,8 +796,8 @@ static bool get_tag(struct object **tagged_obj, char tag, cmd_code cmd,
  */
 static void menu_header(void)
 {
-	char tmp_val[75];
-	char out_val[75];
+	char tmp_val[80];
+	char out_val[256];
 
 	bool use_inven = ((item_mode & USE_INVEN) ? true : false);
 	bool use_equip = ((item_mode & USE_EQUIP) ? true : false);
@@ -805,7 +807,7 @@ static void menu_header(void)
 	/* Viewing inventory */
 	if (player->upkeep->command_wrk == USE_INVEN) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Inven:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Inven:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (i1 <= i2) {
@@ -819,21 +821,21 @@ static void menu_header(void)
 
 		/* Indicate legality of equipment */
 		if (use_equip)
-			my_strcat(out_val, " / for Equip,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Equip,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing equipment */
 	else if (player->upkeep->command_wrk == USE_EQUIP) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Equip:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Equip:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (e1 <= e2) {
@@ -847,21 +849,21 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing quiver */
 	else if (player->upkeep->command_wrk == USE_QUIVER) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Quiver:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Quiver:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (q1 <= q2) {
@@ -874,19 +876,19 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory or equipment */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 		else if (use_equip)
-			my_strcat(out_val, " / for Equip,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Equip,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing throwing */
 	else if (player->upkeep->command_wrk == SHOW_THROWING) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Throwing items:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Throwing items:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (throwing_num) {
@@ -900,21 +902,21 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing floor */
 	else {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Floor:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Floor:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (f1 <= f2) {
@@ -928,17 +930,18 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory or equipment */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 		else if (use_equip)
-			my_strcat(out_val, " / for Equip,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Equip,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Finish the header */
-	my_strcat(out_val, " ESC", sizeof(out_val));
+	my_strcat(out_val, angdroid_game_ui_text(" ESC",
+		angdroid_zh_tw_enabled()), sizeof(out_val));
 
 	/* Build the header */
 	strnfmt(header, sizeof(header), "(%s)", out_val);
@@ -1526,17 +1529,31 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 							   olist_mode);
 
 			/* Show the prompt */
+			/* The prompt and header share one terminal row. UTF-8 bytes
+			 * are not terminal columns; clip each visible segment. */
 			menu_header();
-			if (pmt) {
-				prt(pmt, 0, 0);
-				prt(header, 0, strlen(pmt) + 1);
+			if (pmt && Term && Term->wid > 0) {
+				char clipped[256];
+				size_t left = angdroid_menu_copy_columns(
+					clipped, sizeof(clipped), pmt,
+					(size_t)Term->wid);
+				int second_col = (int)left + 1;
+				prt("", 0, 0);
+				if (clipped[0])
+					c_put_str(COLOUR_WHITE, clipped, 0, 0);
+				if (second_col < Term->wid) {
+					angdroid_menu_copy_columns(clipped, sizeof(clipped),
+						header, (size_t)(Term->wid - second_col));
+					if (clipped[0])
+						c_put_str(COLOUR_WHITE, clipped, 0, second_col);
+				}
 			}
 
 			/* No menu change request */
 			newmenu = false;
 
 			/* Get an item choice */
-			*choice = item_menu(cmd, MAX(pmt ? strlen(pmt) : 0, 15), mode);
+			*choice = item_menu(cmd, MAX(pmt ? (int)angdroid_utf8_display_columns(pmt) : 0, 15), mode);
 
 			/* Fix the screen */
 			screen_load();
