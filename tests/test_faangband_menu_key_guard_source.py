@@ -72,16 +72,19 @@ assert "angdroid_menu_visible_tag_end(" in keyboard
 assert "angdroid_fa_menu_selection_key(" in keyboard
 assert "angdroid_fa_menu_add_key(" in keyboard
 assert "size_t tag_capacity;" in keyboard
-assert "reserved = nkeys < remaining ? nkeys : remaining;" in keyboard
-assert "tag_capacity = sizeof(buf) - reserved;" in keyboard
+assert "angdroid_menu_hint_tag_capacity(" in keyboard
+assert "sizeof(buf), used, menu->cmd_keys, menu->switch_keys);" in keyboard
 assert "buf, tag_capacity, &used, sel" in keyboard
 assert "if (oid < 0 || !fa_menu_navigation_is_valid(menu, cursor))" in keyboard
 assert "temp[current++] = sel;" not in keyboard
 assert "oid = menu->filter_list[oid]" not in keyboard
-assert "my_strcat(buf, menu->cmd_keys, sizeof(buf));" in keyboard
-assert "my_strcat(buf, menu->switch_keys, sizeof(buf));" in keyboard
+assert "angdroid_menu_hint_append_keys_unique(" in keyboard
+assert "buf, used, sizeof(buf), menu->switch_keys);" in keyboard
 assert "(menu->flags & MN_ALLOW_EMPTY_INPUT) && n <= 0" in keyboard
 assert "angdroid_menu_empty_shop_key_visible(" in keyboard
+assert "#include \"../angband/menu-key-hints.h\"" in MENU
+assert "sel && !strchr(buf, sel) && !angdroid_fa_menu_add_key(" in keyboard
+assert "angdroid_menu_hint_append_unique(" in keyboard
 assert "soft_kbd_replace(buf);" in keyboard
 assert "strdeldup(buf);" in keyboard
 
