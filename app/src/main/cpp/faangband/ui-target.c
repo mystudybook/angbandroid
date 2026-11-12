@@ -167,8 +167,8 @@ static void fa_target_draw_bounded_line(const char *description, int row)
 static void fa_target_draw_compact_help(int row)
 {
     fa_target_draw_bounded_line(angdroid_zh_tw_enabled() ?
-        "方向／點擊查看，t 設目標，q 離開，? 說明" :
-        "Dir/click: look, t: target, q: exit, ?: help", row);
+        "q 離開，t 設目標，方向／點擊查看，? 說明" :
+        "q: exit, t: target, dir/click: look, ?: help", row);
 }
 
 void target_display_help(bool monster, bool object, bool free)
@@ -178,10 +178,11 @@ void target_display_help(bool monster, bool object, bool free)
     int saved_wrap = text_out_wrap;
     Term_get_size(&wid, &hgt);
     if (wid <= 1 || hgt <= 0) return;
-    if (hgt <= HELP_HEIGHT + 2) {
-        /* On a tiny rotated phone, clearing HELP_HEIGHT rows would
-         * erase the entire map, and wrapped help could escape the
-         * available terminal bounds. Use a single bounded footer. */
+    if (hgt <= HELP_HEIGHT + 2 || wid < 64) {
+        /* On a short or narrow rotated phone, clearing HELP_HEIGHT
+         * rows could erase the map, and word wrapping across several
+         * translations could escape the available terminal bounds.
+         * Present the essential actions in a single bounded footer. */
         fa_target_draw_compact_help(hgt - 1);
         return;
     }
