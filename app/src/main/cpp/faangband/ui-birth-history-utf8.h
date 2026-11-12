@@ -44,7 +44,7 @@ static inline size_t angdroid_fa_history_wrap(
             continue;
         }
 
-        if (glyph_cols > width - col &&
+        if ((col >= width || glyph_cols > width - col) &&
                 scalar_pos > starts[count - 1]) {
             lengths[count - 1] = scalar_pos - starts[count - 1];
             if (count == capacity) break;
