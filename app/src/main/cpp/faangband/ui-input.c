@@ -1259,37 +1259,72 @@ static bool textui_get_check(const char *prompt)
  */
 char get_char(const char *prompt, const char *options, size_t len, char fallback)
 {
-	struct keypress key;
-	char buf[80];
+    ui_event ke = EVENT_EMPTY;
+    char buf[512], allowed[256];
+    size_t i, allowed_count = 0;
+    keycode_t code = 0;
 
-	/* Paranoia */
-	event_signal(EVENT_MESSAGE_FLUSH);
+    if (!options || len == 0) return fallback;
+    /* Only one-byte shortcuts can be returned by this char API. Respect
+     * the advertised option count and never read past the source NUL. */
+    while (allowed_count < len && allowed_count < sizeof(allowed) - 1 &&
+            options[allowed_count]) {
+        allowed[allowed_count] = options[allowed_count];
+        ++allowed_count;
+    }
+    allowed[allowed_count] = '\0';
+    if (!allowed_count) return fallback;
 
-	/* Hack -- Build a "useful" prompt */
-	strnfmt(buf, 78, "%.70s[%s] ", prompt, options);
+    event_signal(EVENT_MESSAGE_FLUSH);
+    soft_kbd_flash(allowed);
 
-	/* Prompt for it */
-	prt(buf, 0, 0);
+    for (;;) {
+        int width = Term && Term->hgt > 0 ? Term->wid - 1 : 0;
 
-	soft_kbd_flash(options);
+        if (width < 1) {
+            soft_kbd_replace("");
+            return fallback;
+        }
+        angdroid_fa_choice_prompt_line(buf, sizeof(buf), prompt,
+            allowed, width);
+        prt(buf, 0, 0);
+        ke = inkey_ex();
+        if (ke.type == EVT_RESIZE || ke.type == EVT_NONE) {
+            /* inkey_ex() clears temporary hints after every input.
+             * Restore only this question's choices when continuing. */
+            soft_kbd_replace(allowed);
+            continue;
+        }
+        if (ke.type == EVT_KBRD || ke.type == EVT_BUTTON) {
+            code = ke.key.code;
+            break;
+        }
+        if (ke.type == EVT_MOUSE) {
+            /* Match inkey(): a primary tap is Return; all other
+             * mouse buttons mean Escape, never silent acceptance. */
+            code = ke.mouse.button == 1 ? '\n' : ESCAPE;
+            break;
+        }
+        if (ke.type == EVT_ESCAPE) {
+            code = ESCAPE;
+            break;
+        }
+        soft_kbd_replace(allowed);
+    }
 
-	/* Get an acceptable answer */
-	key = inkey();
+    prt("", 0, 0);
+    soft_kbd_replace("");
 
-	/* Lowercase answer if necessary */
-	if (key.code >= 'A' && key.code <= 'Z') key.code += 32;
-
-	/* See if key is in our options string */
-	if (!strchr(options, (char)key.code))
-		key.code = fallback;
-
-	/* Erase the prompt */
-	prt("", 0, 0);
-
-	/* Success */
-	return key.code;
+    /* strchr(options, 0) matches the NUL terminator; truncating an
+     * extended Unicode/special key to char can also alias a valid tag. */
+    if (code == 0 || code > 0x7fu) return fallback;
+    if (code >= 'A' && code <= 'Z') code += 'a' - 'A';
+    for (i = 0; i < allowed_count; ++i) {
+        if ((unsigned char)allowed[i] == code)
+            return (char)code;
+    }
+    return fallback;
 }
-
 
 /**
  * Text-native way of getting a filename.
