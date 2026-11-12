@@ -1070,12 +1070,12 @@ static void item_menu_browser(int oid, void *data, const region *local_area)
 		player->upkeep->command_wrk != USE_INVEN)
 		return;
 
-	/* Avoid divide-by-zero in malformed or not-yet-initialized data. */
-	if (z_info->quiver_slot_size <= 0 || player->upkeep->quiver_cnt <= 0)
+	/* No overflow even when the quiver contains INT_MAX missiles;
+	 * a zero-sized slot never produces a drawable footer. */
+	quiver_slots = angdroid_item_quiver_footer_slots(
+		player->upkeep->quiver_cnt, z_info->quiver_slot_size);
+	if (quiver_slots <= 0)
 		return;
-	quiver_slots = player->upkeep->quiver_cnt /
-		z_info->quiver_slot_size +
-		(player->upkeep->quiver_cnt % z_info->quiver_slot_size != 0);
 	for (j = 0; j < quiver_slots; ++j, ++i) {
 		int line = angdroid_item_selection_footer_row(local_area->row,
 			local_area->page_rows, Term->hgt, j);
