@@ -23,6 +23,7 @@ assert "angdroid_zh_tw_enabled()" in code
 assert 'angdroid_zh_tw_enabled() ? "全部忽略 %s" : "All %s"' in code
 assert 'angdroid_zh_tw_enabled() ? "取消忽略全部 %s" : "Unignore all %s"' in code
 assert "menu_dynamic_add(m, out_val, IGNORE_THIS_QUALITY)" in code
+assert code.count("char header_buf[256];") >= 3
 assert "menu_dynamic_longest_entry(m) + 3 + 2" in code
 assert "Term->wid - 2" in code
 assert "All %s %s" in quality  # Unmapped labels retain English.
