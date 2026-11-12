@@ -41,6 +41,7 @@
 
 #include "droid.h"
 #include "../angband/zh-tw-ui.h"
+#include "ui-birth-abilities-zh-tw.h"
 #include "../angband/menu-text-fit.h"
 
 /* Only visible birth hints change: original character-generation
@@ -851,7 +852,8 @@ static void fa_birth_compact_details(const struct player_race *race,
         if (streq(ability->type, "element") &&
                 (clazz || race->el_info[ability->index].res_level !=
                     ability->value)) continue;
-        fa_birth_help_line(&line, angdroid_game_ui_text(ability->name, zh));
+        fa_birth_help_line(&line, angdroid_fa_birth_ability_name(
+            ability->name, ability->type, ability->index, zh));
     }
     if (Term && Term->hgt - 2 >= fa_birth_help_start()) {
         int per_page = MAX(1, Term->hgt - 2 - fa_birth_help_start());
@@ -959,7 +961,8 @@ static void race_help(int i, void *db, const region *l)
 				   (r->el_info[ability->index].res_level != ability->value)) {
 			continue;
 		}
-		text_out_e("\n%s", angdroid_game_ui_text(ability->name,
+		text_out_e("\n%s", angdroid_fa_birth_ability_name(
+            ability->name, ability->type, ability->index,
             angdroid_zh_tw_enabled()));
 		n_flags++;
 	}
@@ -1069,7 +1072,8 @@ static void class_help(int i, void *db, const region *l)
 			continue;
 		}
 
-		text_out_e("\n%s", angdroid_game_ui_text(ability->name,
+		text_out_e("\n%s", angdroid_fa_birth_ability_name(
+            ability->name, ability->type, ability->index,
             angdroid_zh_tw_enabled()));
 		n_flags++;
 	}
