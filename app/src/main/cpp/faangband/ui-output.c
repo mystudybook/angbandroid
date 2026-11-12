@@ -152,8 +152,9 @@ void textui_textblock_place(textblock *tb, region orig_area, const char *header)
     region area;
     int wid, hgt;
 
+    if (!Term) return;
     Term_get_size(&wid, &hgt);
-    if (!Term || wid <= 1 || hgt <= 0) return;
+    if (wid <= 1 || hgt <= 0) return;
     area = region_calculate(orig_area);
     if (area.col < 0) area.col = 0;
     if (area.row < 0) area.row = 0;
