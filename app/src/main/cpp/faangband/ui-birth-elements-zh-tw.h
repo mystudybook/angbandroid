@@ -4,6 +4,7 @@
  */
 #ifndef ANGDROID_FA_BIRTH_ELEMENTS_ZH_TW_H
 #define ANGDROID_FA_BIRTH_ELEMENTS_ZH_TW_H
+#include <stddef.h>
 #include "player.h"
 
 /* The element ID is taken from the canonical list-elements.h enum.
