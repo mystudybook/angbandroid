@@ -63,5 +63,24 @@ for variant, early_exits in (("angband", 3), ("faangband", 2)):
     assert len(cleared) == early_exits, (variant, len(cleared))
     assert "menu->skin->display_list(" in code
 
+    refresh = code.split("void menu_refresh(", 1)[1].split(
+        "/*** MENU RUNNING AND INPUT HANDLING CODE", 1
+    )[0]
+    if variant == "angband":
+        # Refresh executes before keys_to_ui() on every input iteration,
+        # so it must not attempt an off-screen draw while Term resizes.
+        for marker in (
+            "!Term", "loc->col < 0", "loc->row < 0",
+            "loc->col >= Term->wid", "loc->row >= Term->hgt",
+            "loc->width > Term->wid - loc->col",
+            "loc->page_rows > Term->hgt - loc->row",
+        ):
+            assert marker in refresh, marker
+        assert refresh.index("if (!Term ||") < refresh.index(
+            "menu->skin->display_list("
+        )
+    else:
+        assert "angdroid_fa_menu_region_visible(" in refresh
+
 assert "test_item_picker_rotation_hints_source.py" in VERIFY
 print("PASS: invalid item viewport clears stale soft keys in both engines")
