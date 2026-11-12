@@ -1,7 +1,7 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <limits.h>
+#include <stdint.h>
 #include <string.h>
 #include "../../app/src/main/cpp/angband/menu-key-hints.h"
 
