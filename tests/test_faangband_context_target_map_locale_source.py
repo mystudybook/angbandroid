@@ -105,7 +105,7 @@ need(TARGET, 'msg("%s", angdroid_game_ui_text("Target Selected."',
      "target_set_monster(m_local);",
      "target_set_location(y, x);",
      "cmd_set_arg_point(cmdq_peek(), \"point\", loc(x, y));")
-assert TARGET.count('"Press \'?\' for help."') == 2
+assert TARGET.count('"Press \'?\' for help."') == 1
 
 # Map messages are clipped by Unicode columns, centered without negative x,
 # while the native wilderness movement mapping stays identical.
