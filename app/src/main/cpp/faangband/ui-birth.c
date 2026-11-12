@@ -1159,7 +1159,7 @@ static enum birth_stage roller_command(bool first_call)
 		ACT_CTX_BIRTH_ROLL_QUIT,
 		ACT_CTX_BIRTH_ROLL_HELP
 	};
-	char prompt[80] = "";
+	char prompt[256] = "";
 	size_t promptlen = 0;
 	int action = ACT_CTX_BIRTH_ROLL_NONE;
 	ui_event in;
