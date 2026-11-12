@@ -76,6 +76,7 @@
 #include "../angband/zh-tw-terrain-trap.h"
 #include "../angband/zh-tw-spell-names.h"
 #include "../angband/zh-tw-class-book-names.h"
+#include "../angband/zh-tw-rune-lore.h"
 
 /**
  * The first part of this file contains the knowledge menus.  Generic display
@@ -2010,7 +2011,7 @@ static void display_object(int col, int row, bool cursor, int oid)
 	struct object_kind *kind = &k_info[oid];
 	const char *inscrip = get_autoinscription(kind, kind->aware);
 
-	char o_name[80];
+	char o_name[160] = "";
 
 	/* Choose a color */
 	bool aware = (!kind->flavor || kind->aware);
@@ -2026,24 +2027,36 @@ static void display_object(int col, int row, bool cursor, int oid)
 
 	/* If the type is "tried", display that */
 	if (kind->tried && !aware)
-		my_strcat(o_name, " {tried}", sizeof(o_name));
+		my_strcat(o_name, angdroid_knowledge_tried_suffix(
+            angdroid_zh_tw_enabled()), sizeof(o_name));
 
-	/* Display the name */
-	c_prt(attr, o_name, row, col);
+    /* Keep metadata separate from the CJK item name. */
+    if (Term && col >= 0 && col < Term->wid) {
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            o_name, col, 45, Term->wid);
+        if (clipped[0]) c_prt(attr, clipped, row, col);
+    }
 
-	/* Show ignore status */
-	if ((aware && kind_is_ignored_aware(kind)) ||
-		(!aware && kind_is_ignored_unaware(kind)))
-		c_put_str(attr, "Yes", row, 46);
+    if (((aware && kind_is_ignored_aware(kind)) ||
+         (!aware && kind_is_ignored_unaware(kind))) &&
+        Term && Term->wid > 46) {
+        char clipped[32];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            angdroid_game_ui_text("Yes", angdroid_zh_tw_enabled()),
+            46, 54, Term->wid);
+        if (clipped[0]) c_put_str(attr, clipped, row, 46);
+    }
 
-
-	/* Show autoinscription if around */
-	if (inscrip)
-		c_put_str(COLOUR_YELLOW, inscrip, row, 55);
-
-	if (tile_height == 1) {
-		big_pad(76, row, a, c);
-	}
+    /* Preserve user-provided inscription bytes, but clip in full glyphs. */
+    if (inscrip && Term && Term->wid > 55) {
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            inscrip, 55, 75, Term->wid);
+        if (clipped[0]) c_put_str(COLOUR_YELLOW, clipped, row, 55);
+    }
+    if (tile_height == 1 && Term && Term->wid > 76)
+        big_pad(76, row, a, c);
 }
 
 /**
@@ -2078,7 +2091,8 @@ static void desc_obj_fake(int k_idx)
 
 	tb = object_info(obj, OINFO_FAKE);
 	object_desc(header, sizeof(header), obj,
-		ODESC_PREFIX | ODESC_CAPITAL, player);
+		ODESC_PREFIX | ODESC_CAPITAL |
+        (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	textui_textblock_show(tb, area, header);
 	object_delete(NULL, NULL, &known_obj);
@@ -2219,7 +2233,8 @@ static void o_xtra_act(struct keypress ch, int oid)
 		screen_save();
 
 		/* Prompt */
-		prt("Inscribe with: ", 0, 0);
+		prt(angdroid_game_ui_text("Inscribe with: ",
+            angdroid_zh_tw_enabled()), 0, 0);
 
 		/* Default note */
 		if (k->note_aware || k->note_unaware)
@@ -2308,11 +2323,22 @@ static void display_rune(int col, int row, bool cursor, int oid )
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 	const char *inscrip = quark_str(rune_note(oid));
 
-	c_prt(attr, rune_name(oid), row, col);
+    if (Term && col >= 0 && col < Term->wid) {
+        char localized[256], clipped[256];
+        const char *label = angdroid_zh_tw_rune_title(rune_name(oid),
+            angdroid_zh_tw_enabled(), localized, sizeof(localized));
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            label, col, 46, Term->wid);
+        if (clipped[0]) c_prt(attr, clipped, row, col);
+    }
 
-	/* Show autoinscription if around */
-	if (inscrip)
-		c_put_str(COLOUR_YELLOW, inscrip, row, 47);
+    if (inscrip && Term && Term->wid > 47) {
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            inscrip, 47, Term->wid, Term->wid);
+        if (clipped[0])
+            c_put_str(COLOUR_YELLOW, clipped, row, 47);
+    }
 }
 
 
@@ -2329,12 +2355,17 @@ static int rune_var(int oid)
 static void rune_lore(int oid)
 {
 	textblock *tb = textblock_new();
-	char *title = string_make(rune_name(oid));
+    char localized_title[256], localized_detail[512];
+    char *title = string_make(angdroid_zh_tw_rune_title(
+        rune_name(oid), angdroid_zh_tw_enabled(),
+        localized_title, sizeof(localized_title)));
 
-	my_strcap(title);
-	textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
-	textblock_append(tb, "\n");
-	textblock_append(tb, "%s", rune_desc(oid));
+    my_strcap(title);
+    textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
+    textblock_append(tb, "\n");
+    textblock_append(tb, "%s", angdroid_zh_tw_rune_description(
+        rune_desc(oid), angdroid_zh_tw_enabled(),
+        localized_detail, sizeof(localized_detail)));
 	textblock_append(tb, "\n");
 	textui_textblock_show(tb, SCREEN_REGION, NULL);
 	textblock_free(tb);
@@ -2370,7 +2401,8 @@ static void rune_xtra_act(struct keypress ch, int oid)
 		screen_save();
 
 		/* Prompt */
-		prt("Inscribe with: ", 0, 0);
+		prt(angdroid_game_ui_text("Inscribe with: ",
+            angdroid_zh_tw_enabled()), 0, 0);
 
 		/* Default note */
 		if (rune_note(oid))
@@ -2413,7 +2445,7 @@ static void do_cmd_knowledge_runes(const char *name, int row)
 	int rune_max = max_runes();
 	int count = 0;
 	int i;
-	char buf[30];
+	char buf[96];
 
 	runes = mem_zalloc(rune_max * sizeof(int));
 
@@ -2425,7 +2457,10 @@ static void do_cmd_knowledge_runes(const char *name, int row)
 		runes[count++] = i;
 	}
 
-	strnfmt(buf, sizeof(buf), "runes (%d unknown)", rune_max - count);
+	if (angdroid_zh_tw_enabled())
+        strnfmt(buf, sizeof(buf), "符文（%d 個尚未辨識）", rune_max - count);
+    else
+        strnfmt(buf, sizeof(buf), "runes (%d unknown)", rune_max - count);
 
 	display_knowledge(buf, runes, count, rune_var_f, rune_f, "Inscribed");
 	mem_free(runes);
