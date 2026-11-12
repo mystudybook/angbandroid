@@ -64,7 +64,8 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 static bool menu_calc_size(struct menu *menu);
 static bool is_valid_row(struct menu *menu, int cursor);
 static bool no_valid_row(struct menu *menu, int count);
-static int menu_navigation_is_valid(void *context, int row);
+static int
+menu_navigation_is_valid(void *context, int row);
 
 
 /* Native Term_putstr(n) limits codepoints, not screen columns. Menu text
