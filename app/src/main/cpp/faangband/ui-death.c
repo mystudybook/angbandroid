@@ -196,14 +196,14 @@ static char *get_personalized_string(uint8_t choice)
 	/* Prompt and ask */
 	if (choice == 1) {
 		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
-            "輸入角色幽靈的留言：" : "Enter a message for your character's ghost", 15, 0);
+            "輸入角色幽靈的留言：" : "Enter a message for your character's ghost", 15);
 		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
-            "完成後按 Esc 離開。" : "above, or hit ESCAPE.", 16, 0);
+            "完成後按 Esc 離開。" : "above, or hit ESCAPE.", 16);
 	} else if (choice == 2) {
 		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
-            "輸入角色幽靈的描述補充：" : "Enter an addition to your character ghost's", 15, 0);
+            "輸入角色幽靈的描述補充：" : "Enter an addition to your character ghost's", 15);
 		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
-            "完成後按 Esc 離開。" : "description above, or hit ESCAPE.", 16, 0);
+            "完成後按 Esc 離開。" : "description above, or hit ESCAPE.", 16);
 	} else
 		return NULL;
 
@@ -341,11 +341,11 @@ static void make_bones(void)
 
 	/* Ask if the player wants to add a personalized string. */
 	fa_death_print_prompt(angdroid_zh_tw_enabled() ?
-            "角色資料已儲存於幽靈紀錄。" : "Information about your character has been saved", 15, 0);
+            "角色資料已儲存於幽靈紀錄。" : "Information about your character has been saved", 15);
 	fa_death_print_prompt(angdroid_zh_tw_enabled() ?
-            "要為角色的幽靈加上特別的" : "in a bones file.  Would you like to give the", 16, 0);
+            "要為角色的幽靈加上特別的" : "in a bones file.  Would you like to give the", 16);
 	fa_death_print_prompt(angdroid_zh_tw_enabled() ?
-            "留言或描述嗎？(y/n)" : "ghost a special message or description? (y/n)", 17, 0);
+            "留言或描述嗎？(y/n)" : "ghost a special message or description? (y/n)", 17);
 
 	while (no_answer) {
 
@@ -360,11 +360,11 @@ static void make_bones(void)
 		/* Determine what the personalized string will be used for.  */
 		if ((answer.key.code == 'Y') || (answer.key.code == 'y')) {
 			fa_death_print_prompt(angdroid_zh_tw_enabled() ?
-            "要加入幽靈說的話，" : "Will you add something for your ghost to say,", 15, 0);
+            "要加入幽靈說的話，" : "Will you add something for your ghost to say,", 15);
 			fa_death_print_prompt(angdroid_zh_tw_enabled() ?
-            "還是補充怪物描述？" : "or add to the monster description?", 16, 0);
+            "還是補充怪物描述？" : "or add to the monster description?", 16);
 			fa_death_print_prompt(angdroid_zh_tw_enabled() ?
-            "(M) 留言／(D) 描述／Esc 跳過" : "((M)essage/(D)escription/ESC for neither)", 17, 0);
+            "(M) 留言／(D) 描述／Esc 跳過" : "((M)essage/(D)escription/ESC for neither)", 17);
 
 			while (1) {
 				answer = inkey_ex();
