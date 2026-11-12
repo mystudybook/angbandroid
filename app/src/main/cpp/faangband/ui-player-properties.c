@@ -319,6 +319,10 @@ struct spec_menu_data {
  */
 static bool check_specialty_gain(int specialty)
 {
+    /* A malformed or absent player_property record must never become
+     * a selectable row or reach the history/game-state mutation path. */
+    if (specialty <= PF_NONE || specialty >= PF_MAX ||
+        !lookup_ability("player", specialty, 0)) return false;
 	/* Can't learn it if we already know it */
 	if (pf_has(player->specialties, specialty)) {
 		return false;
@@ -480,7 +484,7 @@ bool textui_gain_spec_menu(int *pick)
 			struct player_ability *ability = lookup_ability("player", idx, 0);
             fa_ability_layout_menu(&menu);
             menu_refresh(&menu, false);
-            if (ability && get_check(format(
+            if (ability && check_specialty_gain(idx) && get_check(format(
                     angdroid_zh_tw_enabled() ? "確定選擇%s？" :
                         "Definitely choose %s? ",
                     angdroid_fa_birth_ability_name(ability->name,
