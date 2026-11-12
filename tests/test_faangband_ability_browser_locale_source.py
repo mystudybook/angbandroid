@@ -164,7 +164,10 @@ assert "starts = mem_alloc(capacity * sizeof(*starts));" in UI
 assert "lengths = mem_alloc(capacity * sizeof(*lengths));" in UI
 assert "mem_free(lengths);" in UI and "mem_free(starts);" in UI
 assert UI.count('menu.cmd_keys = "[]";') == 2
-assert "if (specialty <= PF_NONE || specialty >= PF_MAX ||" in UI
+assert "if (specialty <= PF_NONE || specialty >= PF_MAX) return false;" in UI
+assert "ability = lookup_ability(\"player\", specialty, 0);" in UI
+assert "if (!ability || !ability->name) return false;" in UI
+assert 'if (!name) name = zh ? "未知能力" : "Unknown ability";' in UI
 assert "check_specialty_gain(idx) && get_check(format(" in UI
 
 assert "void fa_ability_layout_menu" in UI
