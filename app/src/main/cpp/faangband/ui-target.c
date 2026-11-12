@@ -1289,6 +1289,17 @@ bool target_set_interactive(int mode, int x, int y)
 
 		soft_kbd_clear(true);
 
+        /* A resize can be swallowed by the nested inkey_m() before
+         * an immediately following Esc or target selection. Refresh the
+         * footer position now, not only on the next loop iteration. */
+        Term_get_size(&current_wid, &current_hgt);
+        if (current_wid != wid || current_hgt != hgt) {
+            wid = current_wid;
+            hgt = current_hgt;
+            help_prompt_loc = hgt > 0 ? hgt - 1 : 0;
+            if (!help) fa_target_draw_short_help(help_prompt_loc);
+        }
+
 		/* Remove the path */
 		if (path_drawn) load_path(path_n, path_g, path_char, path_attr);
 
