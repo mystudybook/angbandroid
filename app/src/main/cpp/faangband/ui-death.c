@@ -220,8 +220,9 @@ static char *get_personalized_string(uint8_t choice)
 		/* Start at beginning of field. */
 		Term_gotoxy(0, 14);
 
-		/* Get an input */
-		(void) askfor_aux(tmp, sizeof(tmp) - 1, NULL);
+        /* An aborted new entry must not reuse a previous ghost message. */
+        tmp[0] = '\0';
+        (void) askfor_aux(tmp, sizeof(tmp) - 1, NULL);
 
 		/* All done */
 		break;
