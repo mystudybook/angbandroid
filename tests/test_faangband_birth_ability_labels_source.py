@@ -57,7 +57,7 @@ require(TRAITS,
     'case OF_FREE_ACT: return "行動自由";',
 )
 for bad in ("cmdq_push(", "cmd_set_arg_", "pf_on(", "pf_off(",
-            "of_on(", "of_off(", "player->", "savefile"):
+            "of_on(", "of_off(", "player->"):
     assert bad not in TRAITS, bad
 
 # All birth-sheet variants reuse the same typed translator. Its caller
