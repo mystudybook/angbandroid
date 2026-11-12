@@ -922,6 +922,19 @@ static void keys_to_ui(struct menu *menu)
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 	int first = 0, end = n;
 
+	/* When a rotation temporarily invalidates the native item viewport,
+	 * do not keep advertising keys from its previous visible page. */
+	if (menu->preferred_skin == &menu_skin_object &&
+		(!Term || menu->active.col < 0 || menu->active.row < 0 ||
+		menu->active.width <= 0 || menu->active.page_rows <= 0 ||
+		menu->active.col >= Term->wid ||
+		menu->active.row >= Term->hgt ||
+		menu->active.width > Term->wid - menu->active.col ||
+		menu->active.page_rows > Term->hgt - menu->active.row)) {
+		soft_kbd_replace("");
+		return;
+	}
+
 	/* Inscription digits should be present even if the menu has hundreds
 	 * of other tags. Append unique keys now, before reserving commands. */
 	if (menu->inscriptions) {
