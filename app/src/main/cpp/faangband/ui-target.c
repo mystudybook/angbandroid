@@ -773,6 +773,64 @@ static bool aux_trap(struct chunk *c, struct player *p,
 	return true;
 }
 
+/* Match the shortcut label actually shown by show_floor(), not
+ * 'a' + index: item lists omit hjkl to reserve motion commands.
+ * Touch input is accepted only on a rendered item row, after rotation. */
+static int fa_target_floor_list_index(
+    ui_event press, int floor_count, int width, int height)
+{
+    if (floor_count <= 0 || width < 2 || height < 2) return -1;
+    if (press.type == EVT_MOUSE) {
+        int x = KEY_GRID_X(press), y = KEY_GRID_Y(press);
+        if (press.mouse.button != 1 || x < 0 || x >= width - 1 ||
+                y < 1 || y >= height || y - 1 >= floor_count)
+            return -1;
+        return y - 1;
+    }
+    if (press.type == EVT_KBRD &&
+            press.key.code >= 'a' && press.key.code <= 'z') {
+        const char *label = strchr(all_letters_nohjkl,
+            (char)press.key.code);
+        if (label && label - all_letters_nohjkl < floor_count)
+            return (int)(label - all_letters_nohjkl);
+    }
+    return -1;
+}
+
+/* A nested floor list has its own visible rows. Redraw those rows after
+ * resizing instead of applying old mouse coordinates to the new list. */
+static ui_event fa_target_floor_list_inkey(
+    struct object **floor_list, int floor_count, const char *description)
+{
+    ui_event press = EVENT_EMPTY;
+
+    for (;;) {
+        press = inkey_ex();
+        if (press.type == EVT_RESIZE) {
+            if (!Term || Term->wid < 3 || Term->hgt < 2) {
+                press.type = EVT_KBRD;
+                press.key.code = ESCAPE;
+                press.key.mods = 0;
+                return press;
+            }
+            show_floor(floor_list, floor_count,
+                OLIST_DEATH | OLIST_WEIGHT | OLIST_GOLD, NULL);
+            fa_target_draw_bounded_line(description, 0);
+            continue;
+        }
+        if (press.type == EVT_NONE) continue;
+        if (press.type == EVT_ESCAPE) {
+            press.type = EVT_KBRD;
+            press.key.code = ESCAPE;
+            press.key.mods = 0;
+        } else if (press.type == EVT_BUTTON) {
+            press.type = EVT_KBRD;
+        }
+        if (press.type == EVT_KBRD || press.type == EVT_MOUSE)
+            return press;
+    }
+}
+
 /**
  * Help target_set_interactive_aux():  handle objects.
  */
@@ -849,19 +907,18 @@ static bool aux_object(struct chunk *c, struct player *p,
 						(OLIST_DEATH | OLIST_WEIGHT
 						| OLIST_GOLD), NULL);
 
-					/* Describe the pile */
+					/* Describe the pile and wait with resize support. */
 					fa_target_draw_bounded_line(out_val, 0);
-					auxst->press = inkey_m();
+                    auxst->press = fa_target_floor_list_inkey(
+                        floor_list, floor_num, out_val);
+                    /* Validate against the list geometry while it is
+                     * still displayed, before restoring the map. */
+                    pos = fa_target_floor_list_index(auxst->press,
+                        floor_num, Term ? Term->wid : 0,
+                        Term ? Term->hgt : 0);
 
 					/* Load screen */
 					screen_load();
-
-					if (auxst->press.type == EVT_MOUSE) {
-						pos = auxst->press.mouse.y - 1;
-					} else {
-						pos = auxst->press.key.code -
-							'a';
-					}
 					if (0 <= pos && pos < floor_num) {
 						track_object(p->upkeep,
 							floor_list[pos]);
