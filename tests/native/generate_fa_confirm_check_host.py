@@ -143,8 +143,19 @@ int main(void)
     push(EVT_RESIZE, 0, 2);
     push(EVT_KBRD, 'Y', 0);
     CHECK(!textui_get_check("Too narrow?"));
-    CHECK(prompts == 1 && bad_width == 0);
+    CHECK(prompts == 1 && clears == 1 && bad_width == 0);
     CHECK(hint_clears == 2 && queue_index == 1);
+
+    /* A series of rotations that ends too narrow must discard the
+     * current Yes/No question and leave the next Y key untouched. */
+    reset(100);
+    push(EVT_RESIZE, 0, 50);
+    push(EVT_RESIZE, 0, 9);
+    push(EVT_RESIZE, 0, 2);
+    push(EVT_KBRD, 'Y', 0);
+    CHECK(!textui_get_check("中文長能力說明，請確認？"));
+    CHECK(prompts == 3 && clears == 1 && bad_width == 0);
+    CHECK(hint_clears == 4 && queue_index == 3);
 
     reset(25);
     push(EVT_NONE, 0, 0);
@@ -155,7 +166,7 @@ int main(void)
 
     reset(2);
     CHECK(!textui_get_check("No terminal width?"));
-    CHECK(hint_clears == 1 && prompts == 0 && queue_index == 0);
+    CHECK(hint_clears == 1 && prompts == 0 && clears == 1 && queue_index == 0);
 
     printf("PASS: %lu FA real native Yes/No resize and cancel checks\n",
            checks);
