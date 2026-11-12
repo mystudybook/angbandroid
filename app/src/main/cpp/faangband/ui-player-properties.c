@@ -18,6 +18,7 @@
  */
 
 #include "angband.h"
+#include <limits.h>
 #include "game-input.h"
 #include "player-properties.h"
 #include "ui-input.h"
@@ -95,8 +96,11 @@ static void fa_ability_draw_description(const char *description,
     lengths = mem_alloc(capacity * sizeof(*lengths));
     count = angdroid_fa_history_wrap(text, (size_t)width,
         starts, lengths, capacity);
-    total_pages = MAX(1, (int)(1 + (count ? count - 1 : 0) /
-        (size_t)content_rows));
+    {
+        size_t pages = 1 + (count ? count - 1 : 0) /
+            (size_t)content_rows;
+        total_pages = pages > (size_t)INT_MAX ? INT_MAX : (int)pages;
+    }
     page = angdroid_fa_ability_page_clamp(
         fa_ability_detail_page, count, content_rows);
     fa_ability_detail_page = page;
@@ -161,10 +165,10 @@ static bool fa_ability_page_touch(struct menu *m,
     (void)out;
     if (!m || !Term || !event || event->type != EVT_MOUSE ||
         event->mouse.y != Term->hgt - 1 ||
-        event->mouse.x < 0 || event->mouse.x >= Term->wid ||
+        event->mouse.x < 0 || event->mouse.x >= MIN(Term->wid, 80) ||
         fa_ability_detail_pages < 2) return false;
     key.type = EVT_KBRD;
-    key.key.code = event->mouse.x < Term->wid / 2 ? '[' : ']';
+    key.key.code = event->mouse.x < MIN(Term->wid, 80) / 2 ? '[' : ']';
     return fa_ability_handle_page(m, &key, m->cursor);
 }
 
