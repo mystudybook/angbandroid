@@ -34,6 +34,18 @@ require(area,
         "angdroid_terminal_columns(cp)",
         "if (width > (size_t)area.width - cells) break;")
 assert "line_lengths[line_from + i]" in area
+assert "if (cells == 0 && width > (size_t)area.width)" in area
+
+placed = section(OUTPUT, "void textui_textblock_place(",
+                 " * Show a textblock interactively")
+require(placed,
+        "if (!Term) return;",
+        "Term_get_size(&wid, &hgt);",
+        "if (wid <= 1 || hgt <= 0) return;",
+        "n_lines = textblock_calculate_display_lines(tb,",
+        "angdroid_menu_copy_columns(visible, sizeof(visible), header,",
+        "display_area(textblock_text(tb), textblock_attrs(tb), line_starts,")
+assert "textblock_calculate_lines(" not in placed
 
 pager = section(OUTPUT, "struct keypress textui_textblock_show(",
                 " * text_out hook for screen display")
