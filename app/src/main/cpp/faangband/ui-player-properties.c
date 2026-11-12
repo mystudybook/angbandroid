@@ -73,7 +73,7 @@ static void fa_ability_resize_menu(struct menu *m)
 static void fa_ability_draw_description(const char *description,
     const region *loc, int oid, uint8_t attr)
 {
-    size_t starts[256], lengths[256], count, index;
+    size_t *starts, *lengths, count, index, capacity;
     char raw[512], visible[512], footer[128];
     int row, first, content_rows, width, page, total_pages;
     const char *text = description ? description : "";
@@ -89,9 +89,13 @@ static void fa_ability_draw_description(const char *description,
         fa_ability_detail_oid = oid;
         fa_ability_detail_page = 0;
     }
+    capacity = angdroid_fa_ability_line_capacity(strlen(text));
+    if (!capacity) return;
+    starts = mem_alloc(capacity * sizeof(*starts));
+    lengths = mem_alloc(capacity * sizeof(*lengths));
     count = angdroid_fa_history_wrap(text, (size_t)width,
-        starts, lengths, N_ELEMENTS(starts));
-    total_pages = MAX(1, (int)((count + (size_t)content_rows - 1) /
+        starts, lengths, capacity);
+    total_pages = MAX(1, (int)(1 + (count ? count - 1 : 0) /
         (size_t)content_rows));
     page = angdroid_fa_ability_page_clamp(
         fa_ability_detail_page, count, content_rows);
@@ -127,6 +131,8 @@ static void fa_ability_draw_description(const char *description,
     angdroid_menu_copy_columns(visible, sizeof(visible), footer,
         (size_t)width);
     c_put_str(COLOUR_WHITE, visible, Term->hgt - 1, 0);
+    mem_free(lengths);
+    mem_free(starts);
 }
 
 static bool fa_ability_handle_page(struct menu *m,
