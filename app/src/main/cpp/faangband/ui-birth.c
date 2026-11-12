@@ -42,6 +42,7 @@
 #include "droid.h"
 #include "../angband/zh-tw-ui.h"
 #include "ui-birth-abilities-zh-tw.h"
+#include "ui-birth-elements-zh-tw.h"
 #include "../angband/menu-text-fit.h"
 
 /* Only visible birth hints change: original character-generation
@@ -755,6 +756,29 @@ static void fa_birth_help_line(int *row, const char *label)
     }
 }
 
+/* Convert only visible labels. The ability's index, type and resist
+ * percentage still drive the existing game rules and choice filtering.
+ * Display 0% damage as immunity, below 100% as resistance, over 100%
+ * as vulnerability. Leave unknown/neutral elements in original text. */
+static const char *fa_birth_ability_visible_name(
+    const struct player_ability *ability, bool zh)
+{
+    const char *element;
+    int tier;
+    if (!ability || !ability->name) return "";
+    if (zh && ability->type && streq(ability->type, "element")) {
+        element = angdroid_fa_birth_element_name(ability->index);
+        tier = angdroid_fa_birth_element_resistance(ability->value);
+        if (element) {
+            if (tier == 2) return format("免疫：%s", element);
+            if (tier == 1) return format("抗性：%s", element);
+            if (tier == -1) return format("弱點：%s", element);
+        }
+    }
+    return angdroid_fa_birth_ability_name(
+        ability->name, ability->type, ability->index, zh);
+}
+
 static void fa_birth_compact_details(const struct player_race *race,
     const struct player_class *clazz)
 {
@@ -850,10 +874,11 @@ static void fa_birth_compact_details(const struct player_race *race,
                 !(clazz ? pf_has(clazz->pflags, ability->index) :
                     pf_has(race->pflags, ability->index))) continue;
         if (streq(ability->type, "element") &&
-                (clazz || race->el_info[ability->index].res_level !=
-                    ability->value)) continue;
-        fa_birth_help_line(&line, angdroid_fa_birth_ability_name(
-            ability->name, ability->type, ability->index, zh));
+                (clazz || ability->index >= ELEM_MAX ||
+                 race->el_info[ability->index].res_level !=
+                     ability->value)) continue;
+        fa_birth_help_line(&line, fa_birth_ability_visible_name(
+            ability, zh));
     }
     if (Term && Term->hgt - 2 >= fa_birth_help_start()) {
         int per_page = MAX(1, Term->hgt - 2 - fa_birth_help_start());
@@ -958,12 +983,12 @@ static void race_help(int i, void *db, const region *l)
 				   !pf_has(r->pflags, ability->index)) {
 			continue;
 		} else if (streq(ability->type, "element") &&
-				   (r->el_info[ability->index].res_level != ability->value)) {
+                   (ability->index >= ELEM_MAX ||
+                    r->el_info[ability->index].res_level != ability->value)) {
 			continue;
 		}
-		text_out_e("\n%s", angdroid_fa_birth_ability_name(
-            ability->name, ability->type, ability->index,
-            angdroid_zh_tw_enabled()));
+		text_out_e("\n%s", fa_birth_ability_visible_name(
+            ability, angdroid_zh_tw_enabled()));
 		n_flags++;
 	}
 
@@ -1072,9 +1097,8 @@ static void class_help(int i, void *db, const region *l)
 			continue;
 		}
 
-		text_out_e("\n%s", angdroid_fa_birth_ability_name(
-            ability->name, ability->type, ability->index,
-            angdroid_zh_tw_enabled()));
+		text_out_e("\n%s", fa_birth_ability_visible_name(
+            ability, angdroid_zh_tw_enabled()));
 		n_flags++;
 	}
 
