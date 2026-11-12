@@ -1390,6 +1390,21 @@ static void clear_question(void)
 static void print_menu_instructions(void)
 {
     int old_wrap = text_out_wrap;
+    /* On portrait phones the full paragraph can extend below the
+     * question row. Give every key its own short, bounded line instead. */
+    if (fa_birth_compact_layout()) {
+        bool zh = angdroid_zh_tw_enabled();
+        Term_clear();
+        fa_birth_prompt_left(zh ? "↑↓ 選擇　Enter 確認" :
+            "Arrows: move  Enter: choose", HEADER_ROW);
+        fa_birth_prompt_left(zh ? "* 隨機　@ 完成" :
+            "* random  @ finish", HEADER_ROW + 1);
+        fa_birth_prompt_left(zh ? "Esc 返回　= 選項" :
+            "Esc back  = options", HEADER_ROW + 2);
+        fa_birth_prompt_left(zh ? "? 說明　Ctrl-X 離開" :
+            "? help  Ctrl-X quit", HEADER_ROW + 3);
+        return;
+    }
 	/* Clear screen */
 	Term_clear();
 	
@@ -1553,14 +1568,29 @@ static enum birth_stage menu_question(enum birth_stage current,
     /* A Chinese hint may occupy two cells per glyph. Keep it in the
      * terminal and leave the actual menu command keys untouched. */
     clear_question();
-    if (Term && Term->wid > QUESTION_COL &&
-        QUESTION_ROW >= 0 && QUESTION_ROW < Term->hgt) {
-        char visible[384];
-        angdroid_menu_copy_columns(visible, sizeof(visible),
-            menu_data->hint, (size_t)(Term->wid - QUESTION_COL));
-        if (visible[0])
-            Term_putstr(QUESTION_COL, QUESTION_ROW, -1,
-                COLOUR_YELLOW, visible);
+    if (Term && menu_data->hint && Term->wid > QUESTION_COL &&
+            QUESTION_ROW >= 0 && QUESTION_ROW < Term->hgt) {
+        size_t starts[16], lengths[16], count, line;
+        size_t width = (size_t)(Term->wid - QUESTION_COL);
+        count = fa_birth_compact_layout() ?
+            angdroid_fa_history_wrap(menu_data->hint, width,
+                starts, lengths, N_ELEMENTS(starts)) : 1;
+        for (line = 0; line < count &&
+                line < (size_t)(TABLE_ROW - QUESTION_ROW) &&
+                QUESTION_ROW + (int)line < Term->hgt; ++line) {
+            char original[384], visible[384];
+            if (fa_birth_compact_layout()) {
+                angdroid_fa_history_copy_line(original, sizeof(original),
+                    menu_data->hint, starts[line], lengths[line]);
+            } else {
+                my_strcpy(original, menu_data->hint, sizeof(original));
+            }
+            angdroid_menu_copy_columns(visible, sizeof(visible),
+                original, width);
+            if (visible[0])
+                Term_putstr(QUESTION_COL, QUESTION_ROW + (int)line, -1,
+                    COLOUR_YELLOW, visible);
+        }
     }
 
     /* Brackets only page the visible explanation while retaining the
