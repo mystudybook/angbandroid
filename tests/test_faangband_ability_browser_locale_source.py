@@ -312,7 +312,7 @@ assert "test-fa-confirm-check.sh" in RUNNER
 # get_char() was independently byte-truncating %.70s and treating the
 # terminating NUL of options as a valid key via strchr(options, 0).
 choice_section = section(INPUT, "char get_char(const char *prompt,",
-                         "/* Text-native way of getting a filename. */")
+                         " * Text-native way of getting a filename.")
 require(choice_section,
         "angdroid_fa_choice_prompt_line(buf, sizeof(buf), prompt,",
         "if (ke.type == EVT_RESIZE || ke.type == EVT_NONE)",
