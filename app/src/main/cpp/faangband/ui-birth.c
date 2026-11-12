@@ -319,7 +319,7 @@ static void map_menu_browser(int oid, void *data, const region *loc)
     description = angdroid_game_ui_text(d[oid].description,
         angdroid_zh_tw_enabled());
     if (!description) description = "";
-    /* text_out_c() could wrap indefinitely into rows below the screen.
+    /* The legacy text renderer could wrap into rows below the screen.
      * Instead wrap each complete UTF-8 scalar by actual terminal columns
      * and paint at most the available two or three preview lines. */
     lines = angdroid_fa_history_wrap(description, (size_t)width,
