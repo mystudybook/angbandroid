@@ -40,7 +40,7 @@ static inline int angdroid_menu_column_next_valid(
          * shorter, use its final actual row rather than wrapping early.
          * All columns are tried once; disabled/hidden rows are skipped. */
         for (attempt = 0; attempt < columns - 1; ++attempt) {
-            int base, candidate, available;
+            int base, available, target, distance;
             if (dx > 0)
                 next_column = next_column == columns - 1 ?
                     0 : next_column + 1;
@@ -49,9 +49,25 @@ static inline int angdroid_menu_column_next_valid(
                     columns - 1 : next_column - 1;
             base = next_column * page_rows;
             available = count - base;
-            candidate = base + (row < available ? row : available - 1);
-            if (candidate != cursor && is_valid(context, candidate))
-                return candidate;
+            if (available > page_rows) available = page_rows;
+            target = row < available ? row : available - 1;
+
+            /* A disabled target cell must not hide other valid items
+             * in this column. Search the nearest painted row first:
+             * same row, above, below, then progressively farther. */
+            for (distance = 0; distance < available; ++distance) {
+                int candidate;
+                if (distance <= target) {
+                    candidate = base + target - distance;
+                    if (is_valid(context, candidate))
+                        return candidate;
+                }
+                if (distance > 0 && distance < available - target) {
+                    candidate = base + target + distance;
+                    if (is_valid(context, candidate))
+                        return candidate;
+                }
+            }
         }
         return -1;
     }
