@@ -1804,6 +1804,7 @@ void textui_cmd_ignore_menu(struct object *obj)
 	struct menu *m;
 	region r;
 	int selected;
+	soft_kbd_linger_snapshot parent_keys;
 	uint8_t value;
 	int type;
 
@@ -1903,9 +1904,14 @@ void textui_cmd_ignore_menu(struct object *obj)
 	region_erase_bordered(&r);
 
 	prt(angdroid_game_ui_text("(Enter to select, ESC) Ignore:", angdroid_zh_tw_enabled()), 0, 0);
+	/* This nested popup must not leave its menu letters on the phone.
+	 * If Escape returns to a lingering parent prompt, restore only that. */
+	soft_kbd_save_linger(&parent_keys);
 	selected = menu_dynamic_select(m);
 
 	screen_load();
+	soft_kbd_replace("");
+	soft_kbd_restore_linger(&parent_keys, selected < 0);
 
 	if (selected == IGNORE_THIS_ITEM) {
 		obj->known->notice |= OBJ_NOTICE_IGNORE;
