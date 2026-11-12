@@ -311,6 +311,18 @@ int main(void)
     CHECK(lines_allocated == lines_freed);
     CHECK(saved == 1 && loaded == 1);
 
+    /* At one available terminal cell, a wide glyph is represented
+     * by '?'. It must not silently disappear from the textblock. */
+    reset(2, 3);
+    tb.text[0] = L'甲';
+    tb.text[1] = L'\0';
+    tb.strlen = 1;
+    push(EVT_KBRD, 'x', 0, 0, 0);
+    result = textui_textblock_show(&tb, whole, NULL);
+    CHECK(result.code == 'x' && bad_coordinates == 0);
+    CHECK(draws == 1 && saved == 1 && loaded == 1);
+    CHECK(lines_allocated == lines_freed);
+
     reset(20, 5);
     push(EVT_MOUSE, 0, 2, 0, 0);
     result = textui_textblock_show(&tb, whole, NULL);
