@@ -34,6 +34,7 @@
 #include "menu-popup-layout.h"
 #include "menu-text-fit.h"
 #include "menu-action-guard.h"
+#include "item-picker-switch-keys.h"
 #include "menu-dynamic-choice.h"
 
 #include "droid.h"
@@ -839,7 +840,9 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 		if ((menu->flags & MN_ALLOW_EMPTY_INPUT) &&
 			menu->skin == &menu_skin_object && menu->switch_keys) {
 			int dir = target_dir(in->key);
-			if (dir && ddx[dir] && !ddy[dir])
+			if (dir && angdroid_item_picker_blank_arrow_switch(
+					menu->flags, MN_ALLOW_EMPTY_INPUT, true,
+					menu->switch_keys != NULL, ddx[dir], ddy[dir]))
 				*out = menu->skin->process_dir(menu, dir);
 			else
 				eat = true;
@@ -891,6 +894,15 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 				assert(out->type != EVT_MOVE ||
 					(menu->cursor >= 0 && menu->cursor < count));
 			}
+		}
+		else if (dir && angdroid_item_picker_blank_arrow_switch(
+				menu->flags, MN_ALLOW_EMPTY_INPUT,
+				menu->skin == &menu_skin_object,
+				menu->switch_keys != NULL, ddx[dir], ddy[dir])) {
+			/* SHOW_EMPTY may draw slot labels without any selectable
+			 * object. Keep the item-picker source arrows working even
+			 * when count > 0 but every row is invalid. */
+			*out = menu->skin->process_dir(menu, dir);
 		}
 	}
 
