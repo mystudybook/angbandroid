@@ -15,6 +15,16 @@ typedef struct {
 /* Keep an empty picker visible only when it has another source to switch
  * to. This reserves a blank viewport row for keyboard hints but never
  * changes menu->count or invents a selectable object. */
+/* Number of quiver summary rows, without a potentially overflowing
+ * (item_count + slot_size - 1) ceil-division expression. */
+static inline int angdroid_item_quiver_footer_slots(
+    int item_count, int slot_size)
+{
+    if (item_count <= 0 || slot_size <= 0)
+        return 0;
+    return item_count / slot_size + (item_count % slot_size != 0);
+}
+
 static inline int angdroid_item_selection_viewport_count(
     int actual_count, bool has_switch_target)
 {
