@@ -29,8 +29,14 @@ for game in ("angband", "faangband"):
     )[0]
     assert "menu_setpriv(m, num_obj, items);" in picker
     assert "m->switch_keys = switch_keys[0] ? switch_keys : NULL;" in picker
-    assert "if (num_obj <= 0 && m->switch_keys)" in picker
+    assert "int selectable_objects = 0;" in picker
+    assert "for (row = 0; row < num_obj; ++row)" in picker
+    assert "if (items[row].object)" in picker
+    assert "++selectable_objects;" in picker
+    assert "angdroid_item_picker_allow_blank_switch(" in picker
+    assert "selectable_objects, m->switch_keys))" in picker
     assert "m->flags |= MN_ALLOW_EMPTY_INPUT;" in picker
+    assert "if (num_obj <= 0 && m->switch_keys)" not in picker
     assert "menu_setpriv(m, 1," not in picker
     assert "evt = menu_select(m, 0, true);" in picker
 
@@ -53,6 +59,17 @@ for game in ("angband", "faangband"):
     assert "if (event->type == EVT_KBRD)" in action
     select, keyboard = action.split("if (event->type == EVT_KBRD)", 1)
     assert "choice[oid].object" in select
+    assert "angdroid_item_picker_row_in_range(oid, menu->count)" in select
+    tag = ui.split("static char get_item_tag(", 1)[1].split(
+        "static int get_item_validity(", 1
+    )[0]
+    assert "if (!angdroid_item_picker_row_in_range(oid, menu->count))" in tag
+    assert "return choice[oid].object ? choice[oid].key : 0;" in tag
+    valid = ui.split("static int get_item_validity(", 1)[1].split(
+        "static void get_item_display(", 1
+    )[0]
+    assert "if (!angdroid_item_picker_row_in_range(oid, menu->count))" in valid
+    assert "return (choice[oid].object != NULL) ? 1 : 0;" in valid
     assert "choice[oid].object" not in keyboard
     for key in ("key == '/'", "key == '|'", "key == '-'"):
         assert key in keyboard
