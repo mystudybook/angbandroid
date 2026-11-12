@@ -3342,7 +3342,7 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 	struct menu* m;
 	struct player_shape **sarray;
 	const char **narray;
-	int h, mark, mark_old;
+	int h, w, mark, mark_old;
 	bool displaying, redraw;
 	struct player_shape *s;
 	int i;
@@ -3386,6 +3386,7 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 	clear_from(0);
 
 	h = 0;
+    w = 0;
 	mark = 0;
 	mark_old = -1;
 	displaying = true;
@@ -3398,10 +3399,12 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 
         Term_get_size(&wnew, &hnew);
         if (wnew < 12 || hnew < 9) break;
-        if (h != hnew) {
-			h = hnew;
-			redraw = true;
-		}
+        if (h != hnew || w != wnew) {
+            h = hnew;
+            w = wnew;
+            menu_layout(m, &list_region);
+            redraw = true;
+        }
 
 		if (redraw) {
 			region_erase(&header_region);
@@ -3419,6 +3422,8 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
                 if (angdroid_utf8_display_columns(footer) > (size_t)wnew)
                     footer = angdroid_zh_tw_enabled() ?
                         "r 詳情／Esc 返回" : "r recall / Esc";
+                if (angdroid_utf8_display_columns(footer) > (size_t)wnew)
+                    footer = angdroid_zh_tw_enabled() ? "Esc 返回" : "Esc";
                 angdroid_knowledge_clip_label(clipped, sizeof(clipped),
                     footer, 0, wnew, wnew);
                 prt(clipped, h - 2, 0);
@@ -3979,6 +3984,8 @@ void do_cmd_messages(void)
             if (angdroid_utf8_display_columns(prompt) > (size_t)wid)
                 prompt = angdroid_zh_tw_enabled() ?
                     "= 搜尋／Esc 離開" : "= find / Esc";
+            if (angdroid_utf8_display_columns(prompt) > (size_t)wid)
+                prompt = "Esc";
             angdroid_knowledge_clip_label(visible, sizeof(visible),
                 prompt, 0, wid, wid);
             prt(visible, hgt - 1, 0);
