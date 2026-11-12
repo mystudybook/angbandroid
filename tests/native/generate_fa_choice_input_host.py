@@ -161,7 +161,7 @@ int main(void)
     reset(7);
     push(EVT_KBRD, 'b', 0, 0);
     CHECK(get_char("A very long question", "abcdef", 6, 'z') == 'b');
-    CHECK(strcmp(last_text, "[a+]") == 0);
+    CHECK(strcmp(last_text, "[abc+]") == 0);
     CHECK(bad_width == 0);
 
     reset(25);
