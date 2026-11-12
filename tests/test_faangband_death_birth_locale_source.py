@@ -116,7 +116,7 @@ require(BIRTH,
     'x = columns >= Term->wid ? 0 : (Term->wid - columns) / 2;',
     '#define BIRTH_MENU_HELPTEXT_ZH',
     'BIRTH_MENU_HELPTEXT_ZH : BIRTH_MENU_HELPTEXT',
-    'angdroid_game_ui_text(roller_choices[i], angdroid_zh_tw_enabled())')
+    'angdroid_game_ui_text(\n            roller_choices[i], angdroid_zh_tw_enabled())')
 assert BIRTH.count('fa_birth_prompt_centered(prompt, Term->hgt - 1);') == 4
 for cmd in ("CMD_BIRTH_RESET", "CMD_ACCEPT_CHARACTER",
             "CMD_NAME_CHOICE", "CMD_HISTORY_CHOICE"):
