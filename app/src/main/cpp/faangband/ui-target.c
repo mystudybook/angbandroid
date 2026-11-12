@@ -173,84 +173,62 @@ static void fa_target_draw_compact_help(int row)
 
 void target_display_help(bool monster, bool object, bool free)
 {
-	/* Determine help location */
     int wid, hgt, help_loc;
-    int saved_wrap = text_out_wrap;
+    bool zh = angdroid_zh_tw_enabled();
+    char third[TARGET_OUT_VAL_SIZE];
+
     Term_get_size(&wid, &hgt);
     if (wid <= 1 || hgt <= 0) return;
     if (hgt <= HELP_HEIGHT + 2 || wid < 64) {
-        /* On a short or narrow rotated phone, clearing HELP_HEIGHT
-         * rows could erase the map, and word wrapping across several
-         * translations could escape the available terminal bounds.
-         * Present the essential actions in a single bounded footer. */
+        /* Never clear the map or let translated help wrap beyond the
+         * bottom on a short or narrow rotated phone. */
         fa_target_draw_compact_help(hgt - 1);
         return;
     }
-    help_loc = MAX(0, hgt - HELP_HEIGHT);
 
-    /* CJK glyphs use two terminal cells. Constrain wrapping to the
-     * actual phone window, and restore the previous setting on exit. */
-    text_out_wrap = MIN(MAX(1, saved_wrap), MAX(1, wid - 2));
+    /* HELP_HEIGHT is three lines. The old sequence of text_out() calls
+     * could produce far more than three wrapped rows, overwriting the
+     * map. Write exactly the reserved rows with UTF-8 cell clipping. */
+    help_loc = hgt - HELP_HEIGHT;
     clear_from(help_loc);
+    fa_target_draw_bounded_line(zh ?
+        "方向／點擊查看，g 移動，p 玩家，q 離開" :
+        "Dir/click: look; g: move; p: player; q: exit", help_loc);
+    fa_target_draw_bounded_line(free ?
+        (zh ? "m 重要位置，r 詳情，? 收起說明" :
+              "m: notable spots; r: details; ?: close help") :
+        (zh ? "+/- 切換目標，o 自由選取，r 詳情，? 收起說明" :
+              "+/-: cycle; o: free; r: details; ?: close help"),
+        help_loc + 1);
 
-    text_out_hook = text_out_to_screen;
-    text_out_indent = wid > 1 ? 1 : 0;
-    Term_gotoxy(wid > 1 ? 1 : 0, help_loc);
+    if (object) {
+        unsigned char key = cmd_lookup_key(CMD_IGNORE,
+            OPT(player, rogue_like_commands) ?
+            KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG);
+        char label[3];
 
-	/* Display help */
-	text_out_c(COLOUR_L_GREEN, "<dir>");
-	text_out(angdroid_zh_tw_enabled() ? " 與 " : " and ");
-	text_out_c(COLOUR_L_GREEN, "<click>");
-	text_out(angdroid_zh_tw_enabled() ? " 查看四周。'" : " look around. '");
-	text_out_c(COLOUR_L_GREEN, "g");
-	text_out(angdroid_zh_tw_enabled() ? "' 移動到目標。'" : "' moves to selection. '");
-	text_out_c(COLOUR_L_GREEN, "p");
-	text_out(angdroid_zh_tw_enabled() ? "' 選擇角色。'" : "' selects player. '");
-	text_out_c(COLOUR_L_GREEN, "q");
-	text_out(angdroid_zh_tw_enabled() ? "' 離開。'" : "' exits. '");
-	text_out_c(COLOUR_L_GREEN, "r");
-	text_out(angdroid_zh_tw_enabled() ? "' 查看詳細資訊。'" : "' displays details. '");
-
-	if (free) {
-		text_out_c(COLOUR_L_GREEN, "m");
-		text_out(angdroid_zh_tw_enabled() ? "' 限制於重要位置。" : "' restricts to interesting places.");
-	} else {
-		text_out_c(COLOUR_L_GREEN, "+");
-		text_out(angdroid_zh_tw_enabled() ? "' 與 '" : "' and '");
-		text_out_c(COLOUR_L_GREEN, "-");
-		text_out(angdroid_zh_tw_enabled() ? "' 切換位置。'" : "' cycle through places. '");
-		text_out_c(COLOUR_L_GREEN, "o");
-		text_out(angdroid_zh_tw_enabled() ? "' 自由選取位置。" : "' allows free selection.");
-	}
-	
-	if (monster || free) {
-		text_out(" '");
-		text_out_c(COLOUR_L_GREEN, "t");
-		text_out(angdroid_zh_tw_enabled() ? "' 設定目標。" : "' targets selection.");
-	}
-
-	if (object) {
-		unsigned char key = cmd_lookup_key(CMD_IGNORE,
-			(OPT(player, rogue_like_commands)) ?
-			KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG);
-		char label[3];
-
-		if (KTRL(key) == key) {
-			label[0] = '^';
-			label[1] = UN_KTRL(key);
-			label[2] = '\0';
-		} else {
-			label[0] = key;
-			label[1] = '\0';
-		}
-		text_out(" '");
-		text_out_c(COLOUR_L_GREEN, "%s", label);
-		text_out(angdroid_zh_tw_enabled() ? "' 忽略選取的物品。" : "' ignores selection.");
-	}
-
-	/* Reset: the next screen may have a wider terminal. */
-    text_out_indent = 0;
-    text_out_wrap = saved_wrap;
+        /* Retain the keymap-defined item-ignore shortcut, including
+         * control-key notation. This is just its display label. */
+        if (KTRL(key) == key) {
+            label[0] = '^';
+            label[1] = UN_KTRL(key);
+            label[2] = '\0';
+        } else {
+            label[0] = key;
+            label[1] = '\0';
+        }
+        strnfmt(third, sizeof(third), zh ?
+            "%s%s 忽略，Enter/空白 下一項" :
+            "%s%s: ignore; Enter/space: next",
+            (monster || free) ? (zh ? "t 設目標，" : "t: target; ") : "",
+            label);
+    } else {
+        strnfmt(third, sizeof(third), "%s", monster || free ?
+            (zh ? "t 設目標，Enter/空白 下一項" :
+                  "t: target; Enter/space: next") :
+            (zh ? "Enter/空白 下一項" : "Enter/space: next"));
+    }
+    fa_target_draw_bounded_line(third, help_loc + 2);
 }
 
 
