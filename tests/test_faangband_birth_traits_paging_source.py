@@ -42,6 +42,21 @@ need(layout, "Term->wid != fa_birth_layout_width",
     "fa_birth_detail_page = 0;",
     "fa_birth_detail_page_count = 1;")
 
+# Rotation events reach the menu iterator even if the user does not
+# leave the currently highlighted race/class choice.
+resize = part("static void fa_birth_menu_resize(struct menu *m)",
+              "static const menu_iter birth_iter =")
+need(resize,
+    "fa_birth_configure_layout();",
+    "if (m == &race_menu)",
+    "menu_layout(m, &race_region);",
+    "else if (m == &class_menu)",
+    "menu_layout(m, &class_region);",
+    "else if (m == &roller_menu)",
+    "menu_layout(m, &roller_region);",
+)
+need(BIRTH, "NULL, NULL, birthmenu_display, NULL, fa_birth_menu_resize")
+
 rows = part("static void fa_birth_help_line(", "static void race_help(")
 need(rows,
     "per_page = Term ? MAX(0, Term->hgt - 2 - first) : 0;",
