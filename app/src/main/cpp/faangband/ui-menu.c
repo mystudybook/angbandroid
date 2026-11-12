@@ -33,6 +33,7 @@
 #include "../angband/menu-column-navigation.h"
 #include "../angband/menu-action-guard.h"
 #include "../angband/menu-visible-tags.h"
+#include "../angband/menu-key-hints.h"
 #include "../angband/menu-popup-layout.h"
 #include "../curses/unicode_display.h"
 
@@ -887,22 +888,10 @@ static void keys_to_ui(struct menu *menu)
 		}
 	}
 
-	/* Keep room at the end of the hint for fixed commands and
-	 * screen switching even if thousands of rows have selectable tags. */
-	{
-		size_t reserved = 0, remaining = sizeof(buf) - used - 1;
-		if (menu->cmd_keys) {
-			size_t nkeys = strlen(menu->cmd_keys);
-			reserved = nkeys < remaining ? nkeys : remaining;
-		}
-		remaining -= reserved;
-		if (menu->switch_keys) {
-			size_t nkeys = strlen(menu->switch_keys);
-			reserved += nkeys < remaining ? nkeys : remaining;
-		}
-		/* buf has one NUL slot. The tag loop must leave fixed keys room. */
-		tag_capacity = sizeof(buf) - reserved;
-	}
+	/* Keep space for command/switch keys even when there are hundreds
+	 * of item labels. Use the same upper bound as Angband. */
+	tag_capacity = angdroid_menu_hint_tag_capacity(
+		sizeof(buf), used, menu->cmd_keys, menu->switch_keys);
 
 	/* A filtered view changes the actual row index on *each* iteration.
 	 * The old code always read filter_list[0] and wrote temp[256]
@@ -929,32 +918,32 @@ static void keys_to_ui(struct menu *menu)
 				sel = menu->row_funcs->get_tag(menu, oid);
 			}
 		}
-		if (sel && !angdroid_fa_menu_add_key(
+		/* A duplicate already appears on the shortcut bar and must
+		 * not consume another character of the reserved space. */
+		if (sel && !strchr(buf, sel) && !angdroid_fa_menu_add_key(
 			buf, tag_capacity, &used, sel))
 			break;
 	}
 
-	/* Preserve existing command/switch keys. my_strcat() bounds the
-	 * remaining space; never use a separate unbounded temporary array. */
+	/* Item tags, inscriptions and fixed buttons may overlap. Add fixed
+	 * controls just once, while retaining their established key order. */
 	if (menu->cmd_keys) {
 		if ((menu->flags & MN_ALLOW_EMPTY_INPUT) && n <= 0) {
-			/* Empty stores have no stock to Buy/Get/Examine.
-			 * Do not advertise those buttons on the Android ribbon;
-			 * Sell, Help, Inspect inventory, and other commands remain. */
+			/* Empty stores have no stock to Buy/Get/Examine. */
 			const char *key = menu->cmd_keys;
 			for (; *key; ++key) {
 				if (angdroid_menu_empty_shop_key_visible(
-					menu->flags, MN_ALLOW_EMPTY_INPUT, n, *key)) {
-					char one[2] = { *key, '\0' };
-					my_strcat(buf, one, sizeof(buf));
-				}
+					menu->flags, MN_ALLOW_EMPTY_INPUT, n, *key))
+					used = angdroid_menu_hint_append_unique(
+						buf, used, sizeof(buf), *key);
 			}
 		} else {
-			my_strcat(buf, menu->cmd_keys, sizeof(buf));
+			used = angdroid_menu_hint_append_keys_unique(
+				buf, used, sizeof(buf), menu->cmd_keys);
 		}
 	}
-	if (menu->switch_keys)
-		my_strcat(buf, menu->switch_keys, sizeof(buf));
+	used = angdroid_menu_hint_append_keys_unique(
+		buf, used, sizeof(buf), menu->switch_keys);
 
 	strdeldup(buf);
 	/* Hints for the current filtered page replace old modal/lingering keys.
