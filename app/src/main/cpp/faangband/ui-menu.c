@@ -139,7 +139,11 @@ static bool menu_action_handle(struct menu *m, const ui_event *event, int oid)
 	menu_action *acts = menu_priv(m);
 
 	if (event->type == EVT_SELECT) {
-		if (!(acts->flags & MN_ACT_GRAYED) && acts[oid].action) {
+		/* Gray state belongs to the selected action, not acts[0].
+		 * The same source-index guard used by Angband prevents a
+		 * disabled row from running after filtering or a tap. */
+		if (angdroid_menu_action_can_run(acts[oid].flags,
+			MN_ACT_GRAYED, acts[oid].action != NULL)) {
 			acts[oid].action(acts[oid].name, m->cursor);
 			return true;
 		}
