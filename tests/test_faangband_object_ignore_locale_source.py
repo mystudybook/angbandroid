@@ -20,8 +20,14 @@ for key in (
 assert '#include "../angband/zh-tw-ignore-quality-action.h"' in code
 assert "angdroid_ignore_quality_action_text(" in code
 assert "angdroid_zh_tw_enabled()" in code
-assert 'angdroid_zh_tw_enabled() ? "全部忽略 %s" : "All %s"' in code
-assert 'angdroid_zh_tw_enabled() ? "取消忽略全部 %s" : "Unignore all %s"' in code
+assert '#include "../angband/ignore-named-action-locale.h"' in code
+assert '#include "obj-desc-item-zh-tw.h"' in code
+assert "angdroid_ignore_named_action_text(" in code
+assert "angdroid_faangband_known_ego_ui_name(" in code
+assert "ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL | ODESC_ZH_TW" in code
+assert "soft_kbd_save_linger(&parent_keys);" in code
+assert 'soft_kbd_replace("");' in code
+assert "soft_kbd_restore_linger(&parent_keys, selected < 0);" in code
 assert "menu_dynamic_add(m, out_val, IGNORE_THIS_QUALITY)" in code
 assert code.count("char header_buf[256];") >= 3
 assert "menu_dynamic_longest_entry(m) + 3 + 2" in code
