@@ -49,6 +49,8 @@ assert helper.index("if (!Term || Term->wid < 3") < (
 pieces = {
     "single object": section(
         "static ui_event target_recall_loop_object(", "static bool aux_reinit("),
+    "hallucination": section(
+        "static bool aux_hallucinate(", "static bool aux_monster("),
     "monster and carried object": section(
         "static bool aux_monster(", "static bool aux_trap("),
     "trap": section("static bool aux_trap(", "static bool aux_object("),
@@ -56,11 +58,14 @@ pieces = {
     "terrain": section("static bool aux_terrain(", "static bool aux_wrapup("),
 }
 assert pieces["single object"].count("fa_target_inkey_described(") == 1
+assert pieces["hallucination"].count("fa_target_inkey_described(") == 1
+assert "button == 1 ? '\\n' : ESCAPE" in pieces["hallucination"]
+assert "auxst->press.key.mods = 0;" in pieces["hallucination"]
 assert pieces["monster and carried object"].count("fa_target_inkey_described(") == 2
 assert pieces["trap"].count("fa_target_inkey_described(") == 1
 assert pieces["object pile"].count("fa_target_inkey_described(") == 1
 assert pieces["terrain"].count("fa_target_inkey_described(") == 1
-assert TARGET.count("fa_target_inkey_described(") == 7
+assert TARGET.count("fa_target_inkey_described(") == 8
 assert TARGET.count("fa_target_draw_bounded_line(out_val, 0);") == 8
 assert "prt(out_val, 0, 0);" not in TARGET
 assert "display_object_recall_interactive" in pieces["single object"]
