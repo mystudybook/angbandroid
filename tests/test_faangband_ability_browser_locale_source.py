@@ -284,7 +284,7 @@ require(confirm,
         "if (width < 3)",
         "ke = inkey_ex();",
         "return (ke.type == EVT_KBRD || ke.type == EVT_BUTTON) &&")
-assert 'strnfmt(buf, 78, "%.70s[y/n] " ' not in confirm
+assert 'strnfmt(buf, 78, "%.70s[y/n] "' not in confirm
 assert "inkey_m();" not in confirm
 PROMPT = (FA / "ui-confirm-prompt-utf8.h").read_text(encoding="utf-8")
 require(PROMPT, "../angband/menu-text-fit.h",
