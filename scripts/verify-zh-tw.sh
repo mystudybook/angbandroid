@@ -77,6 +77,7 @@ run_check "FAangband character-history Unicode wrapping in host C99" sh "$ROOT/s
 run_check "FAangband CJK birth-history scroll and map choice source guard" python3 "$ROOT/tests/test_faangband_birth_history_editor_source.py"
 run_check "FAangband compact race/class details and bounded map chooser" python3 "$ROOT/tests/test_faangband_birth_compact_map_source.py"
 run_check "FAangband race/class trait paging and touch controls" python3 "$ROOT/tests/test_faangband_birth_traits_paging_source.py"
+run_check "FAangband race/class ability labels and portrait hints" python3 "$ROOT/tests/test_faangband_birth_ability_labels_source.py"
 run_check "FAangband monster totals, footer keys and narrow CJK columns" python3 "$ROOT/tests/test_faangband_knowledge_monster_locale_source.py"
 run_check "Clear stale item picker soft keys after invalid Android rotation" python3 "$ROOT/tests/test_item_picker_rotation_hints_source.py"
 run_check "Empty bag quiver footer repaint and rotated bounds" python3 "$ROOT/tests/test_empty_quiver_footer_source.py"
