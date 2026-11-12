@@ -382,7 +382,7 @@ assert 'prt(angdroid_game_ui_text(prompt' not in command_prompt
 COMMAND_GEN = (ROOT / "tests/native/generate_fa_command_prompt_host.py").read_text(
     encoding="utf-8")
 require(COMMAND_GEN, "found.group(0)", "EVT_RESIZE",
-        "push(EVT_MOUSE", "push(EVT_BUTTON", "Too narrow",
+        "push(EVT_MOUSE", "push(EVT_BUTTON", "No readable width",
         "draw_count == 3 && clear_count == 1")
 COMMAND_RUN = (ROOT / "scripts/test-fa-command-prompt.sh").read_text(
     encoding="utf-8")
