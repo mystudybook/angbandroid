@@ -873,6 +873,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_menu_visible_tags"
 "$BUILD_DIR/test_menu_visible_tags"
 
+# Scrolled and item viewports after Android rotation and filter shrink.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_menu_scroll_viewport.c" \
+    -o "$BUILD_DIR/test_menu_scroll_viewport"
+"$BUILD_DIR/test_menu_scroll_viewport"
+
 # Horizontal movement across invalid menu rows must terminate.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_menu_valid_cursor.c" \
