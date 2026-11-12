@@ -39,4 +39,58 @@ static inline size_t angdroid_fa_confirm_prompt_line(
     return cells + suffix_cols;
 }
 
+
+/* Generic get_char() prompt. Its choices are one-byte keyboard shortcuts.
+ * Display the full [options] hint whenever it fits. If a phone has fewer
+ * cells, show a compact [a+] marker (the '+' means there are more choices).
+ * The complete allowed key set still goes to Android's keyboard strip.
+ * Unlike printf %.70s, the question is truncated only at UTF-8 boundaries. */
+static inline size_t angdroid_fa_choice_prompt_line(
+    char *dest, size_t capacity, const char *question,
+    const char *options, int terminal_cols)
+{
+    size_t width, option_bytes, suffix_bytes, cells, used, shown;
+
+    if (!dest || capacity == 0) return 0;
+    dest[0] = '\0';
+    if (terminal_cols <= 0) return 0;
+    width = (size_t)terminal_cols;
+    if (width >= capacity) width = capacity - 1;
+    if (!width) return 0;
+    if (!options || !options[0]) {
+        return angdroid_menu_copy_columns(dest, capacity, question, width);
+    }
+
+    option_bytes = strlen(options);
+    /* One byte per shortcut; require enough space for "[", "]", space
+     * and the NUL before performing any addition or memcpy. */
+    if (option_bytes <= width - (width >= 3 ? 3 : width) &&
+        option_bytes <= capacity - 1 - (capacity >= 4 ? 3 : capacity - 1)) {
+        suffix_bytes = option_bytes + 3;
+        cells = angdroid_menu_copy_columns(
+            dest, capacity - suffix_bytes, question, width - suffix_bytes);
+        used = strlen(dest);
+        dest[used++] = '[';
+        memcpy(dest + used, options, option_bytes);
+        used += option_bytes;
+        dest[used++] = ']';
+        dest[used++] = ' ';
+        dest[used] = '\0';
+        return cells + suffix_bytes;
+    }
+
+    /* Preserve at least one choice plus an explicit truncation marker.
+     * At 1-3 cells we cannot show an honest multi-choice bracket label. */
+    if (width < 4)
+        return angdroid_menu_copy_columns(dest, capacity, "?", width);
+    shown = width - 3; /* '[', '+', ']' */
+    if (shown > option_bytes) shown = option_bytes;
+    dest[0] = '[';
+    memcpy(dest + 1, options, shown);
+    dest[shown + 1] = '+';
+    dest[shown + 2] = ']';
+    dest[shown + 3] = '\0';
+    return shown + 3;
+}
+
 #endif /* ANGDROID_FA_CONFIRM_PROMPT_UTF8_H */
