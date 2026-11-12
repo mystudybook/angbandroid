@@ -98,7 +98,7 @@ for game in ("angband", "faangband"):
     )[0]
     assert "int original_source = player->upkeep->command_wrk;" in switch
     assert "newmenu = (player->upkeep->command_wrk != original_source);" in switch
-    assert "\\n\\t\\tnewmenu = true;" not in switch
+    assert "newmenu = true;" not in switch
 
 for marker in (
     "angdroid_item_selection_viewport_count(0, false) == 0",
