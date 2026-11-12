@@ -58,6 +58,7 @@
 #include "inventory-list-display.h"
 #include "inventory-equip-mention.h"
 #include "item-selection-layout.h"
+#include "item-picker-switch-keys.h"
 #include "item-picker-tag-guard.h"
 
 /**
@@ -1181,6 +1182,7 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	ui_event evt = { 0 };
 	int inscrip;
 	struct object *obj = NULL;
+	char switch_keys[4];
 
 	/* Set up the menu */
 	menu_setpriv(m, num_obj, items);
@@ -1188,7 +1190,20 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 		m->selections = "0123456789";
 	else
 		m->selections = all_letters_nohjkl;
-	m->switch_keys = "/|-";
+	/* A switch key may otherwise leave the modal picker after an
+	 * invalid target (for example an empty quiver). Show only keys that
+	 * really lead to another allowed tab. Physical and soft keys agree. */
+	angdroid_item_picker_switch_keys(
+		switch_keys,
+		((((item_mode & USE_INVEN) != 0) || allow_all) &&
+			player->upkeep->command_wrk != USE_INVEN) ||
+		((((item_mode & USE_EQUIP) != 0) || allow_all) &&
+			player->upkeep->command_wrk != USE_EQUIP),
+		((q1 <= q2) || allow_all) &&
+			player->upkeep->command_wrk != USE_QUIVER,
+		((f1 <= f2) || allow_all) &&
+			player->upkeep->command_wrk != USE_FLOOR);
+	m->switch_keys = switch_keys;
 	m->flags = (MN_PVT_TAGS | MN_INSCRIP_TAGS);
 	m->browse_hook = item_menu_browser;
 
