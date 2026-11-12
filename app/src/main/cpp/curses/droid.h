@@ -33,7 +33,7 @@ extern void soft_kbd_save_linger(soft_kbd_linger_snapshot *saved);
 extern void soft_kbd_restore_linger(const soft_kbd_linger_snapshot *saved, int cancelled);
 extern void soft_kbd_replace(const char *keys);
 extern void soft_kbd_clear(int force);
-extern void soft_kbd_flush();
+extern void soft_kbd_flush(void);
 extern void soft_kbd_append(const char *keys);
 
 extern void android_debug(const char *msg);
