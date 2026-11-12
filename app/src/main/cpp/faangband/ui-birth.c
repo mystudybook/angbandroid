@@ -1142,9 +1142,18 @@ static enum birth_stage menu_question(enum birth_stage current,
 
 	enum birth_stage next = BIRTH_RESET;
 	
-	/* Print the question currently being asked. */
-	clear_question();
-	Term_putstr(QUESTION_COL, QUESTION_ROW, -1, COLOUR_YELLOW, menu_data->hint);
+    /* A Chinese hint may occupy two cells per glyph. Keep it in the
+     * terminal and leave the actual menu command keys untouched. */
+    clear_question();
+    if (Term && Term->wid > QUESTION_COL &&
+        QUESTION_ROW >= 0 && QUESTION_ROW < Term->hgt) {
+        char visible[384];
+        angdroid_menu_copy_columns(visible, sizeof(visible),
+            menu_data->hint, (size_t)(Term->wid - QUESTION_COL));
+        if (visible[0])
+            Term_putstr(QUESTION_COL, QUESTION_ROW, -1,
+                COLOUR_YELLOW, visible);
+    }
 
 	current_menu->cmd_keys = "?=*@\x18";	 /* ?, =, *, @, <ctl-X> */
 
