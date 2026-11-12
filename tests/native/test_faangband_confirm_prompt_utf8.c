@@ -6,7 +6,7 @@
 
 static unsigned long checks;
 #define CHECK(x) do { if (!(x)) { \
-    fprintf(stderr, "FAIL line %d: %s\\n", __LINE__, #x); \
+    fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #x); \
     return 1; } ++checks; } while (0)
 
 static int test_all_widths(void)
@@ -81,7 +81,7 @@ int main(void)
 {
     if (test_all_widths() || test_long_chinese_and_byte_boundaries())
         return 1;
-    printf("PASS: %lu FA confirmation UTF-8 width and capacity checks\\n",
+    printf("PASS: %lu FA confirmation UTF-8 width and capacity checks\n",
         checks);
     return 0;
 }
