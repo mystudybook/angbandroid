@@ -68,6 +68,7 @@ run_check "FAangband item examine/ignore zh-TW labels" python3 "$ROOT/tests/test
 run_check "FAangband knowledge category/Ego labels and nested ignore popup keys" python3 "$ROOT/tests/test_faangband_knowledge_ego_locale_source.py"
 run_check "FAangband object/rune/terrain/trap knowledge display locale" python3 "$ROOT/tests/test_faangband_knowledge_detail_locale_source.py"
 run_check "FAangband daily commands, store, input and options bilingual UI" python3 "$ROOT/tests/test_faangband_daily_ui_locale_source.py"
+run_check "FAangband option colours, visual menus and quality-ignore zh-TW" python3 "$ROOT/tests/test_faangband_options_visual_locale_source.py"
 run_check "FAangband monster totals, footer keys and narrow CJK columns" python3 "$ROOT/tests/test_faangband_knowledge_monster_locale_source.py"
 run_check "Clear stale item picker soft keys after invalid Android rotation" python3 "$ROOT/tests/test_item_picker_rotation_hints_source.py"
 run_check "Empty bag quiver footer repaint and rotated bounds" python3 "$ROOT/tests/test_empty_quiver_footer_source.py"
