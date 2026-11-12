@@ -638,6 +638,7 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"Display feature knowledge", "查看地形知識"},
         {"Display trap knowledge", "查看陷阱知識"},
         {"Display shapechange effects", "查看變形效果"},
+        {"Display contents of home", "查看家中物品"},
         {"Display hall of fame", "查看名人堂"},
         {"Display character history", "查看角色歷史"},
         {"Display equippable comparison", "比較可裝備物品"},
