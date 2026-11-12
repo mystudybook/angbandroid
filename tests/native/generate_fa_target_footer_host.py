@@ -12,12 +12,26 @@ found = re.search(r"^static void fa_target_draw_short_help\(int row\)\n\{.*?^\}"
 if not found:
     raise SystemExit("Missing production fa_target_draw_short_help()")
 
+
+def extract(name):
+    fn = re.search(
+        rf"^static void {name}\([^\n]*\)\n\{{.*?^\}}",
+        source, flags=re.MULTILINE | re.DOTALL)
+    if not fn:
+        raise SystemExit(f"Missing production {name}()")
+    return fn.group(0)
+
+
+bounded = extract("fa_target_draw_bounded_line")
+compact = extract("fa_target_draw_compact_help")
+
 header = r"""
 #include <stddef.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include "app/src/main/cpp/angband/menu-text-fit.h"
+#define TARGET_OUT_VAL_SIZE 256
 
 struct fake_term { int wid, hgt; };
 static struct fake_term actual = {80, 24};
@@ -65,6 +79,51 @@ int main(void)
                 (size_t)(width - 1));
         }
     }
+    /* Real monster/item/terrain lines must never render partial UTF-8
+     * or extend into another cell, including after a byte-limited format
+     * ends midway through a Chinese character. */
+    {
+        static const char *descriptions[] = {
+            "罕見的魔法武器，具有十分長的描述文字。",
+            "An exceptionally long object description in English.",
+            "精靈😀和其他寬字元",
+            "Truncated UTF-8: \xe4\xb8", "", NULL
+        };
+        size_t d;
+        for (d = 0; d < sizeof(descriptions) / sizeof(descriptions[0]); ++d) {
+            for (width = 1; width < 80; ++width) {
+                actual.wid = width;
+                actual.hgt = 12;
+                draws = erases = invalid_row = overflow = 0;
+                last_text[0] = '\0';
+                fa_target_draw_bounded_line(descriptions[d], 0);
+                CHECK(invalid_row == 0 && overflow == 0);
+                CHECK(draws + erases == 1);
+                CHECK(angdroid_utf8_display_columns(last_text) <=
+                    (size_t)(width - 1));
+                if (width == 1) CHECK(erases == 1);
+            }
+        }
+        actual.wid = 80;
+        actual.hgt = 12;
+        fa_target_draw_bounded_line("Truncated \xe4\xb8", 0);
+        CHECK(strcmp(last_text, "Truncated ??") == 0);
+
+        /* Compact help occupies just the footer. It needs no multir
+         * text engine and must remain valid on landscape height=1. */
+        for (width = 1; width < 80; ++width) {
+            actual.wid = width;
+            actual.hgt = 1;
+            draws = erases = invalid_row = overflow = 0;
+            last_text[0] = '\0';
+            fa_target_draw_compact_help(0);
+            CHECK(invalid_row == 0 && overflow == 0);
+            CHECK(draws + erases == 1);
+            CHECK(angdroid_utf8_display_columns(last_text) <=
+                (size_t)(width - 1));
+        }
+    }
+
     actual.wid = 16;
     actual.hgt = 24;
     draws = erases = invalid_row = overflow = 0;
@@ -87,4 +146,5 @@ int main(void)
 if len(sys.argv) != 2:
     raise SystemExit("usage: generate_fa_target_footer_host.py OUTPUT.c")
 Path(sys.argv[1]).write_text(
-    header + "\n" + found.group(0) + "\n" + test, encoding="utf-8")
+    header + "\n" + bounded + "\n" + compact + "\n"
+    + found.group(0) + "\n" + test, encoding="utf-8")
