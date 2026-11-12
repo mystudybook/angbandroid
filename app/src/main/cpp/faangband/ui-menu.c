@@ -538,6 +538,12 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 	int i;
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 
+	/* A key tag is one byte. Do not turn a Unicode/special key into
+	 * an unrelated ASCII tag by truncating it to char, and never
+	 * match a zero key against an empty C-string terminator. */
+	if (key.code == 0 || key.code > 0xff)
+		return -1;
+
 	if (menu->flags & MN_CASELESS_TAGS)
 		key.code = toupper((unsigned char) key.code);
 
