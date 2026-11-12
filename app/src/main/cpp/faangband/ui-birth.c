@@ -32,6 +32,7 @@
 #include "ui-help.h"
 #include "ui-input.h"
 #include "../angband/ui-input-utf8.h"
+#include "ui-birth-history-utf8.h"
 #include "ui-menu.h"
 #include "ui-options.h"
 #include "ui-player.h"
@@ -1819,24 +1820,22 @@ static enum birth_stage get_name_command(void)
 }
 
 static void get_screen_loc(size_t cursor, int *x, int *y, size_t n_lines,
-	size_t *line_starts, size_t *line_lengths)
+    const size_t *line_starts, const size_t *line_lengths)
 {
-	size_t lengths_so_far = 0;
-	size_t i;
+    size_t i, line = 0;
+    if (!x || !y) return;
+    *x = *y = 0;
+    if (!n_lines || !line_starts || !line_lengths) return;
 
-	if (!line_starts || !line_lengths) return;
-
-	for (i = 0; i < n_lines; i++) {
-		if (cursor >= line_starts[i]) {
-			if (cursor <= (line_starts[i] + line_lengths[i])) {
-				*y = i;
-				*x = cursor - lengths_so_far;
-				break;
-			}
-		}
-		/* +1 for the space */
-		lengths_so_far += line_lengths[i] + 1;
-	}
+    /* At a soft wrap the next line shares the previous line's ending
+     * scalar offset. Prefer the next line so the caret never gets stuck
+     * against the right edge when the user types a new character. */
+    for (i = 1; i < n_lines; ++i) {
+        if (cursor >= line_starts[i]) line = i;
+        else break;
+    }
+    *y = (int)line;
+    *x = (int)MIN(cursor - line_starts[line], line_lengths[line]);
 }
 
 /* The history editor is shown inside the character sheet. Its old
@@ -1863,52 +1862,58 @@ static int edit_text(char *buffer, int buflen) {
 		int x = 0, y = 0;
 		struct keypress ke;
 
-		region area = fa_birth_history_area();
-		textblock *tb = textblock_new();
+        region area = fa_birth_history_area();
+        size_t line_starts[256], line_lengths[256];
+        size_t n_lines, first_visible, draw;
+        int ulen;
 
-		size_t *line_starts = NULL, *line_lengths = NULL;
-		size_t n_lines;
-		/*
-		 * This is the total number of UTF-8 characters; can be less
-		 * less than len, the number of 8-bit units in the buffer,
-		 * if a single character is encoded with more than one 8-bit
-		 * unit.
-		 */
-		int ulen;
+        /* Wrap by terminal *cells*, not wide-character scalar counts.
+         * A 40-column portrait terminal must not display 40 Han glyphs
+         * on one textblock row. Use stack arrays: no ESC allocation leak. */
+        n_lines = angdroid_fa_history_wrap(buffer, (size_t)area.width,
+            line_starts, line_lengths, N_ELEMENTS(line_starts));
+        ulen = n_lines ? (int)(line_starts[n_lines - 1] +
+            line_lengths[n_lines - 1]) : 0;
+        if (cursor > ulen) cursor = ulen;
 
-		/* Display on screen */
-		clear_from(MAX(0, area.row - 1));
-		textblock_append(tb, "%s", buffer);
-		textui_textblock_place(tb, area, NULL);
+        get_screen_loc((size_t)cursor, &x, &y, n_lines,
+            line_starts, line_lengths);
+        first_visible = y >= area.page_rows ?
+            (size_t)(y - area.page_rows + 1) : 0;
 
-		n_lines = textblock_calculate_lines(tb,
-				&line_starts, &line_lengths, area.width);
-		ulen = (n_lines > 0) ? line_starts[n_lines - 1] +
-			line_lengths[n_lines - 1]: 0;
-
-        /* Scalar offsets are not CJK terminal columns. Convert the
-         * wrapped line start and logical cursor to display cells. */
-        get_screen_loc(cursor, &x, &y, n_lines, line_starts, line_lengths);
-        if (n_lines > 0 && y >= 0 && (size_t)y < n_lines) {
-            size_t start = line_starts[y];
-            size_t before = angdroid_input_cursor_columns(buffer, start);
-            size_t now = angdroid_input_cursor_columns(buffer, (size_t)cursor);
+        clear_from(MAX(0, area.row - 1));
+        for (draw = 0; draw < (size_t)area.page_rows &&
+                first_visible + draw < n_lines; ++draw) {
+            char original[256], visible[256];
+            size_t at = first_visible + draw;
+            angdroid_fa_history_copy_line(original, sizeof(original),
+                buffer, line_starts[at], line_lengths[at]);
+            angdroid_menu_copy_columns(visible, sizeof(visible),
+                original, (size_t)area.width);
+            if (visible[0] && Term)
+                c_put_str(COLOUR_WHITE, visible,
+                    area.row + (int)draw, area.col);
+        }
+        if (n_lines && (size_t)y < n_lines) {
+            size_t before = angdroid_input_cursor_columns(buffer,
+                line_starts[y]);
+            size_t now = angdroid_input_cursor_columns(buffer,
+                (size_t)cursor);
             size_t columns = now >= before ? now - before : 0;
             x = (int)MIN(columns, (size_t)MAX(0, area.width - 1));
         }
         if (Term && Term->wid > 0 && Term->hgt > 0) {
             int at_x = MIN(Term->wid - 1, area.col + x);
-            int at_y = MIN(Term->hgt - 1, area.row + y);
+            int at_y = MIN(Term->hgt - 1,
+                area.row + y - (int)first_visible);
             Term_gotoxy(at_x, at_y);
         }
 
 		ke = inkey();
 		switch (ke.code) {
 			case ESCAPE:
-                /* Release the wrapped-line allocation before cancelling. */
-                mem_free(line_starts);
-                mem_free(line_lengths);
-                textblock_free(tb);
+                /* The source string is unmodified on cancellation; all
+                 * wrapping state lives on the stack and needs no cleanup. */
                 return -1;
 
 			case KC_ENTER:
@@ -1923,21 +1928,21 @@ static int edit_text(char *buffer, int buflen) {
 				if (cursor < ulen) cursor++;
 				break;
 
-			case ARROW_DOWN: {
-                int add;
-                if (n_lines == 0 || y < 0 || (size_t)y >= n_lines)
-                    break;
-                add = line_lengths[y] + 1;
-				if (cursor + add < ulen) cursor += add;
-				break;
-			}
+			case ARROW_DOWN:
+                if (n_lines && y >= 0 && (size_t)(y + 1) < n_lines) {
+                    size_t across = (size_t)cursor - line_starts[y];
+                    cursor = (int)(line_starts[y + 1] +
+                        MIN(across, line_lengths[y + 1]));
+                }
+                break;
 
 			case ARROW_UP:
-				if (y > 0) {
-					int up = line_lengths[y - 1] + 1;
-					if (cursor - up >= 0) cursor -= up;
-				}
-				break;
+                if (n_lines && y > 0 && (size_t)y < n_lines) {
+                    size_t across = (size_t)cursor - line_starts[y];
+                    cursor = (int)(line_starts[y - 1] +
+                        MIN(across, line_lengths[y - 1]));
+                }
+                break;
 
 			case KC_END:
 				cursor = MAX(0, ulen);
@@ -2034,9 +2039,6 @@ static int edit_text(char *buffer, int buflen) {
 			}
 		}
 
-		mem_free(line_starts);
-		mem_free(line_lengths);
-		textblock_free(tb);
 	}
 
 	return 0;
