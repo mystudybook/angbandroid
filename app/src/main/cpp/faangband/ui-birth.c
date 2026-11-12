@@ -1368,13 +1368,16 @@ static enum birth_stage roller_command(bool first_call)
 			struct menu *m = menu_dynamic_new();
 
 			m->selections = labels;
-			menu_dynamic_add_label(m, "Reroll", 'r',
+			menu_dynamic_add_label(m, angdroid_game_ui_text("Reroll",
+                angdroid_zh_tw_enabled()), 'r',
 				ACT_CTX_BIRTH_ROLL_REROLL, labels);
 			if (prev_roll) {
-				menu_dynamic_add_label(m, "Retrieve previous",
+				menu_dynamic_add_label(m, angdroid_game_ui_text("Retrieve previous",
+                angdroid_zh_tw_enabled()),
 					'p', ACT_CTX_BIRTH_ROLL_PREV, labels);
 			}
-			menu_dynamic_add_label(m, "Accept", 'a',
+			menu_dynamic_add_label(m, angdroid_game_ui_text("Accept",
+                angdroid_zh_tw_enabled()), 'a',
 				ACT_CTX_BIRTH_ROLL_ACCEPT, labels);
 			menu_dynamic_add_label(m, angdroid_game_ui_text("Quit",
             angdroid_zh_tw_enabled()), 'q',
@@ -1678,17 +1681,21 @@ static enum birth_stage point_based_command(void)
 			m->selections = labels;
 			if (in.mouse.y == COSTS_ROW + stat
 					&& (buysell[stat] & 1)) {
-				menu_dynamic_add_label(m, "Sell", 's',
+				menu_dynamic_add_label(m, angdroid_game_ui_text("Sell",
+                angdroid_zh_tw_enabled()), 's',
 					ACT_CTX_BIRTH_PTS_SELL, labels);
 			}
 			if (in.mouse.y == COSTS_ROW + stat
 					&& (buysell[stat] & 2)) {
-				menu_dynamic_add_label(m, "Buy", 'b',
+				menu_dynamic_add_label(m, angdroid_game_ui_text("Buy",
+                angdroid_zh_tw_enabled()), 'b',
 					ACT_CTX_BIRTH_PTS_BUY, labels);
 			}
-			menu_dynamic_add_label(m, "Accept", 'a',
+			menu_dynamic_add_label(m, angdroid_game_ui_text("Accept",
+                angdroid_zh_tw_enabled()), 'a',
 				ACT_CTX_BIRTH_PTS_ACCEPT, labels);
-			menu_dynamic_add_label(m, "Reset", 'r',
+			menu_dynamic_add_label(m, angdroid_game_ui_text("Reset",
+                angdroid_zh_tw_enabled()), 'r',
 				ACT_CTX_BIRTH_PTS_RESET, labels);
 			menu_dynamic_add_label(m, angdroid_game_ui_text("Quit",
             angdroid_zh_tw_enabled()), 'q',
