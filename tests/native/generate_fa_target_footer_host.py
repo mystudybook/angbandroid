@@ -24,6 +24,11 @@ def extract(name):
 
 bounded = extract("fa_target_draw_bounded_line")
 compact = extract("fa_target_draw_compact_help")
+help_match = re.search(
+    r"^void target_display_help\([^\n]*\)\n\{.*?^\}",
+    source, flags=re.MULTILINE | re.DOTALL)
+if not help_match:
+    raise SystemExit("Missing production target_display_help()")
 
 header = r"""
 #include <stddef.h>
@@ -32,13 +37,41 @@ header = r"""
 #include <string.h>
 #include "app/src/main/cpp/angband/menu-text-fit.h"
 #define TARGET_OUT_VAL_SIZE 256
+#define HELP_HEIGHT 3
+#define CMD_IGNORE 1
+#define KEYMAP_MODE_ORIG 0
+#define KEYMAP_MODE_ROGUE 1
+#define OPT(p, field) 0
+#define KTRL(k) ((unsigned char)((k) & 0x1f))
+#define UN_KTRL(k) ((unsigned char)(((k) < 1 || (k) > 27) ? (k) + 64 : (k) + 96))
+#define strnfmt snprintf
 
 struct fake_term { int wid, hgt; };
 static struct fake_term actual = {80, 24};
 static struct fake_term *Term = &actual;
 static int draws, erases, invalid_row, overflow;
-static char last_text[128];
-static int angdroid_zh_tw_enabled(void) { return 1; }
+static int full_help_clears, help_clear_start, first_row, last_row;
+static int zh_flag = 1;
+static unsigned char ignore_key = 'i';
+static char last_text[512];
+static int angdroid_zh_tw_enabled(void) { return zh_flag; }
+static int Term_get_size(int *w, int *h)
+{
+    if (w) *w = actual.wid;
+    if (h) *h = actual.hgt;
+    return 0;
+}
+static void clear_from(int row)
+{
+    ++full_help_clears;
+    help_clear_start = row;
+}
+static unsigned char cmd_lookup_key(int cmd, int mode)
+{
+    (void)cmd;
+    (void)mode;
+    return ignore_key;
+}
 static const char *angdroid_game_ui_text(const char *text, int zh)
 {
     (void)text; (void)zh;
@@ -50,6 +83,8 @@ static void prt(const char *text, int row, int col)
     if (row < 0 || !Term || row >= Term->hgt) ++invalid_row;
     if (!text || !text[0]) { ++erases; return; }
     ++draws;
+    if (first_row < 0 || row < first_row) first_row = row;
+    if (row > last_row) last_row = row;
     snprintf(last_text, sizeof(last_text), "%s", text);
     if (angdroid_utf8_display_columns(text) >
         (size_t)(Term->wid - 1)) ++overflow;
@@ -124,6 +159,54 @@ int main(void)
         }
     }
 
+    /* In real play HELP_HEIGHT reserves only three rows. The
+     * full help must print no more than those rows and may only
+     * clear the reserved region, regardless of locale/mode. */
+    {
+        int zh, mode;
+        for (zh = 0; zh <= 1; ++zh) {
+            for (mode = 0; mode < 8; ++mode) {
+                actual.wid = 80;
+                actual.hgt = 24;
+                zh_flag = zh;
+                ignore_key = (mode & 1) ? 3 : 'i';
+                draws = erases = invalid_row = overflow = 0;
+                full_help_clears = 0;
+                first_row = -1;
+                last_row = -1;
+                target_display_help((mode & 1) != 0,
+                    (mode & 2) != 0, (mode & 4) != 0);
+                CHECK(full_help_clears == 1 && help_clear_start == 21);
+                CHECK(draws == HELP_HEIGHT && erases == 0);
+                CHECK(first_row == 21 && last_row == 23);
+                CHECK(invalid_row == 0 && overflow == 0);
+                CHECK(angdroid_utf8_display_columns(last_text) <= 79);
+            }
+        }
+    }
+    zh_flag = 1;
+    actual.wid = 80;
+    actual.hgt = 5;
+    draws = erases = invalid_row = overflow = 0;
+    full_help_clears = 0;
+    first_row = -1;
+    last_row = -1;
+    target_display_help(true, true, false);
+    CHECK(draws == 1 && full_help_clears == 0);
+    CHECK(first_row == 4 && last_row == 4);
+    CHECK(invalid_row == 0 && overflow == 0);
+
+    actual.wid = 32;
+    actual.hgt = 25;
+    draws = erases = invalid_row = overflow = 0;
+    full_help_clears = 0;
+    first_row = -1;
+    last_row = -1;
+    target_display_help(true, false, true);
+    CHECK(draws == 1 && full_help_clears == 0);
+    CHECK(first_row == 24 && last_row == 24);
+    CHECK(invalid_row == 0 && overflow == 0);
+
     actual.wid = 16;
     actual.hgt = 24;
     draws = erases = invalid_row = overflow = 0;
@@ -147,4 +230,5 @@ if len(sys.argv) != 2:
     raise SystemExit("usage: generate_fa_target_footer_host.py OUTPUT.c")
 Path(sys.argv[1]).write_text(
     header + "\n" + bounded + "\n" + compact + "\n"
-    + found.group(0) + "\n" + test, encoding="utf-8")
+    + found.group(0) + "\n" + help_match.group(0)
+    + "\n" + test, encoding="utf-8")
