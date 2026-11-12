@@ -28,6 +28,8 @@ assert "flashing_keys = true;" in replace
 assert 'Term_control_keys("${clear}");' in replace
 assert "my_strcat(soft_kbd_buffer" not in replace
 assert "extern void soft_kbd_replace(const char *keys);" in DROID_H
+assert "void soft_kbd_flush(void)" in DROID
+assert "extern void soft_kbd_flush(void);" in DROID_H
 
 hints = MENU.split("static void keys_to_ui(", 1)[1].split(
     "ui_event menu_select(", 1)[0]
