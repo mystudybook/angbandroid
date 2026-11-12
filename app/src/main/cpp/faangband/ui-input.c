@@ -1265,12 +1265,13 @@ char get_char(const char *prompt, const char *options, size_t len, char fallback
     keycode_t code = 0;
 
     if (!options || len == 0) return fallback;
-    /* Only one-byte shortcuts can be returned by this char API. Respect
-     * the advertised option count and never read past the source NUL. */
-    while (allowed_count < len && allowed_count < sizeof(allowed) - 1 &&
-            options[allowed_count]) {
-        allowed[allowed_count] = options[allowed_count];
-        ++allowed_count;
+    /* Only ASCII one-byte shortcuts can be returned by this char API.
+     * Respect the advertised source length, drop invalid UTF-8 bytes and
+     * never read beyond the options string's NUL. */
+    for (i = 0; i < len && allowed_count < sizeof(allowed) - 1 &&
+            options[i]; ++i) {
+        if ((unsigned char)options[i] <= 0x7fu)
+            allowed[allowed_count++] = options[i];
     }
     allowed[allowed_count] = '\0';
     if (!allowed_count) return fallback;
