@@ -1671,7 +1671,7 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
  */
 void display_object_recall(struct object *obj)
 {
-	char header_buf[120];
+	char header_buf[256];
 
 	textblock *tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
@@ -1705,7 +1705,7 @@ void display_object_kind_recall(struct object_kind *kind)
  */
 void display_object_recall_interactive(struct object *obj)
 {
-	char header_buf[120];
+	char header_buf[256];
 	textblock *tb;
 
 	event_signal(EVENT_MESSAGE_FLUSH);
@@ -1722,7 +1722,7 @@ void display_object_recall_interactive(struct object *obj)
  */
 void textui_obj_examine(void)
 {
-	char header_buf[120];
+	char header_buf[256];
 
 	textblock *tb;
 	region local_area = { 0, 0, 0, 0 };
