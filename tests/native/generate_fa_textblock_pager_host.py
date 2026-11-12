@@ -153,7 +153,6 @@ static void c_put_str(int color, const char *s, int row, int col)
 }
 static ui_event inkey_ex(void)
 {
-    ui_event empty = {EVT_NONE, {EVT_NONE, 0, 0}, {0}};
     struct event_record next;
     if (read_at >= queued) return (ui_event){EVT_ESCAPE,
         {EVT_ESCAPE, ESCAPE, 0}, {0}};
