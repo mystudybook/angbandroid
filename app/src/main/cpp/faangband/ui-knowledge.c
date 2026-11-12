@@ -2527,18 +2527,26 @@ static void display_feature(int col, int row, bool cursor, int oid )
         if (clipped[0]) c_prt(attr, clipped, row, col);
     }
 
-	if (tile_height == 1) {
-		/* Display symbols */
-		col = 65;
-		col += big_pad(col, row, feat_x_attr[LIGHTING_DARK][feat->fidx],
-					   feat_x_char[LIGHTING_DARK][feat->fidx]);
-		col += big_pad(col, row, feat_x_attr[LIGHTING_LIT][feat->fidx],
-					   feat_x_char[LIGHTING_LIT][feat->fidx]);
-		col += big_pad(col, row, feat_x_attr[LIGHTING_TORCH][feat->fidx],
-					   feat_x_char[LIGHTING_TORCH][feat->fidx]);
-		(void) big_pad(col, row, feat_x_attr[LIGHTING_LOS][feat->fidx],
-					   feat_x_char[LIGHTING_LOS][feat->fidx]);
-	}
+    if (tile_height == 1 && Term && Term->wid > 65) {
+        int visual_col = 65;
+        /* Each successive lighting symbol is optional on narrow screens. */
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                feat_x_attr[LIGHTING_DARK][feat->fidx],
+                feat_x_char[LIGHTING_DARK][feat->fidx]);
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                feat_x_attr[LIGHTING_LIT][feat->fidx],
+                feat_x_char[LIGHTING_LIT][feat->fidx]);
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                feat_x_attr[LIGHTING_TORCH][feat->fidx],
+                feat_x_char[LIGHTING_TORCH][feat->fidx]);
+        if (visual_col < Term->wid)
+            (void)big_pad(visual_col, row,
+                feat_x_attr[LIGHTING_LOS][feat->fidx],
+                feat_x_char[LIGHTING_LOS][feat->fidx]);
+    }
 }
 
 
@@ -2702,18 +2710,25 @@ static void display_trap(int col, int row, bool cursor, int oid )
         if (clipped[0]) c_prt(attr, clipped, row, col);
     }
 
-	if (tile_height == 1) {
-		/* Display symbols */
-		col = 65;
-		col += big_pad(col, row, trap_x_attr[LIGHTING_DARK][trap->tidx],
-				trap_x_char[LIGHTING_DARK][trap->tidx]);
-		col += big_pad(col, row, trap_x_attr[LIGHTING_LIT][trap->tidx],
-				trap_x_char[LIGHTING_LIT][trap->tidx]);
-		col += big_pad(col, row, trap_x_attr[LIGHTING_TORCH][trap->tidx],
-				trap_x_char[LIGHTING_TORCH][trap->tidx]);
-		(void) big_pad(col, row, trap_x_attr[LIGHTING_LOS][trap->tidx],
-				trap_x_char[LIGHTING_LOS][trap->tidx]);
-	}
+    if (tile_height == 1 && Term && Term->wid > 65) {
+        int visual_col = 65;
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                trap_x_attr[LIGHTING_DARK][trap->tidx],
+                trap_x_char[LIGHTING_DARK][trap->tidx]);
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                trap_x_attr[LIGHTING_LIT][trap->tidx],
+                trap_x_char[LIGHTING_LIT][trap->tidx]);
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                trap_x_attr[LIGHTING_TORCH][trap->tidx],
+                trap_x_char[LIGHTING_TORCH][trap->tidx]);
+        if (visual_col < Term->wid)
+            (void)big_pad(visual_col, row,
+                trap_x_attr[LIGHTING_LOS][trap->tidx],
+                trap_x_char[LIGHTING_LOS][trap->tidx]);
+    }
 }
 
 static int trap_order(int trap)
