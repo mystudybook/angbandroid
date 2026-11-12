@@ -24,7 +24,11 @@ assert '#include "../angband/ignore-named-action-locale.h"' in code
 assert '#include "obj-desc-item-zh-tw.h"' in code
 assert "angdroid_ignore_named_action_text(" in code
 assert "angdroid_faangband_known_ego_ui_name(" in code
-assert "ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL | ODESC_ZH_TW" in code
+# The known/flavored ignore label must respect the current language.
+# The original kind-awareness checks and stable ignore IDs remain in C.
+assert "ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL |" in code
+assert "(angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0)" in code
+assert "IGNORE_THIS_FLAVOR" in code and "UNIGNORE_THIS_FLAVOR" in code
 assert "soft_kbd_save_linger(&parent_keys);" in code
 assert 'soft_kbd_replace("");' in code
 assert "soft_kbd_restore_linger(&parent_keys, selected < 0);" in code
