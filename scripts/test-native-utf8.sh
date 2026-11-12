@@ -1021,6 +1021,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_ignore_named_action_locale"
 "$BUILD_DIR/test_ignore_named_action_locale"
 
+# Monster knowledge totals preserve the original counters in both locales.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_knowledge_kill_summary_locale.c" \
+    -o "$BUILD_DIR/test_knowledge_kill_summary_locale"
+"$BUILD_DIR/test_knowledge_kill_summary_locale"
+
 # Native bilingual version title and complete UTF-8 buffer boundary.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_version_header_text.c" \
