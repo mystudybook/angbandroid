@@ -1392,8 +1392,36 @@ static enum birth_stage roller_command(bool first_call)
 
 /* The locations of the "costs" area on the birth screen. */
 #define COSTS_ROW 2
-#define COSTS_COL (42 + 32)
-#define TOTAL_COL (42 + 19)
+
+/* FA's original x=74 cost column disappears on portrait terminals.
+ * Keep the exact original 80-column positions, but fit the same
+ * stat values/cursor in the available width on smaller phones. */
+static int fa_birth_costs_col(void)
+{
+    int wid = Term ? Term->wid : 80;
+    if (wid >= 80) return 42 + 32;
+    return MAX(0, wid - 9);
+}
+
+static int fa_birth_total_col(void)
+{
+    int wid = Term ? Term->wid : 80;
+    if (wid >= 80) return 42 + 19;
+    return MAX(0, wid - 17);
+}
+
+#define COSTS_COL fa_birth_costs_col()
+#define TOTAL_COL fa_birth_total_col()
+
+static void fa_birth_put_clipped(const char *message, int row, int col)
+{
+    char visible[192];
+    if (!Term || !message || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid) return;
+    angdroid_menu_copy_columns(visible, sizeof(visible), message,
+        (size_t)(Term->wid - col));
+    if (visible[0]) put_str(visible, row, col);
+}
 
 /*
  * Remember what's possible for a given stat.  0 means can't buy or sell.
@@ -1438,8 +1466,8 @@ static void point_based_points(game_event_type type, game_event_data *data,
 	int remaining = data->birthpoints.remaining;
 
 	/* Display the costs header */
-	put_str(angdroid_game_ui_text("Cost", angdroid_zh_tw_enabled()),
-        COSTS_ROW - 1, COSTS_COL);
+	fa_birth_put_clipped(angdroid_game_ui_text("Cost",
+        angdroid_zh_tw_enabled()), COSTS_ROW - 1, COSTS_COL);
 	
 	for (i = 0; i < STAT_MAX; i++) {
 		/* Remember what's allowed. */
@@ -1451,13 +1479,14 @@ static void point_based_points(game_event_type type, game_event_data *data,
 			buysell[i] |= 2;
 		}
 		/* Display cost */
-		put_str(format("%4d", spent[i]), COSTS_ROW + i, COSTS_COL);
+		fa_birth_put_clipped(format("%4d", spent[i]),
+            COSTS_ROW + i, COSTS_COL);
 		sum += spent[i];
 	}
 	
-	put_str(format(angdroid_game_ui_text("Total Cost: %2d/%2d",
-        angdroid_zh_tw_enabled()), sum, remaining + sum),
-		COSTS_ROW + STAT_MAX, TOTAL_COL);
+	fa_birth_put_clipped(format(angdroid_game_ui_text(
+        "Total Cost: %2d/%2d", angdroid_zh_tw_enabled()),
+        sum, remaining + sum), COSTS_ROW + STAT_MAX, TOTAL_COL);
 }
 
 static void point_based_start(void)
@@ -1511,7 +1540,9 @@ static enum birth_stage point_based_command(void)
 	enum birth_stage next = BIRTH_POINTBASED;
 
 	/* Place cursor just after cost of current stat */
-	Term_gotoxy(COSTS_COL + 4, COSTS_ROW + stat);
+    if (Term && Term->wid > 0 && Term->hgt > COSTS_ROW + stat)
+        Term_gotoxy(MIN(Term->wid - 1, COSTS_COL + 4),
+            COSTS_ROW + stat);
 
 	soft_kbd_flash("r\x18");
 
