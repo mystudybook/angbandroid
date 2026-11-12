@@ -83,7 +83,7 @@ assert "knowledge_actions[i].name = angdroid_game_ui_text(" in main_menu
 assert "knowledge_menu.title = angdroid_game_ui_text(" in main_menu
 assert "menu_setpriv(menu, N_ELEMENTS(knowledge_actions), knowledge_actions);" in main_menu
 assert "knowledge_actions[7].flags =" in main_menu
-action_block = main_menu.split("static menu_action knowledge_actions[] =", 1)[1].split("};", 1)[0]
+action_block = main_menu.split("};", 1)[0]
 action_count = len(re.findall(r"\{\s*0,\s*0,\s*\"Display ", action_block))
 assert action_count == 12, action_count
 assert '"Display contents of home", "查看家中物品"' in UI
