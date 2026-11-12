@@ -999,7 +999,11 @@ static char get_item_tag(struct menu *menu, int oid)
 {
 	struct object_menu_data *choice = menu_priv(menu);
 
-	return choice[oid].key;
+	/* Empty equipment slots are visible with SHOW_EMPTY, but should
+	 * never display an actionable item tag or read an invalid index. */
+	if (!angdroid_item_picker_row_in_range(oid, menu->count))
+		return 0;
+	return choice[oid].object ? choice[oid].key : 0;
 }
 
 /**
@@ -1009,6 +1013,8 @@ static int get_item_validity(struct menu *menu, int oid)
 {
 	struct object_menu_data *choice = menu_priv(menu);
 
+	if (!angdroid_item_picker_row_in_range(oid, menu->count))
+		return 0;
 	return (choice[oid].object != NULL) ? 1 : 0;
 }
 
@@ -1033,7 +1039,11 @@ static bool get_item_action(struct menu *menu, const ui_event *event, int oid)
 	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
 
 	if (event->type == EVT_SELECT) {
-		if (choice[oid].object && get_item_allow(choice[oid].object, cmd_lookup_key(item_cmd, mode),
+		/* A delayed tap or Enter must never dereference a removed slot.
+		 * Blank equipment placeholders cannot be selected. */
+		if (angdroid_item_picker_row_in_range(oid, menu->count) &&
+			choice[oid].object &&
+			get_item_allow(choice[oid].object, cmd_lookup_key(item_cmd, mode),
 						   item_cmd, is_harmless))
 			selection = choice[oid].object;
 	}
