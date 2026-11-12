@@ -501,9 +501,10 @@ static bool no_valid_row(struct menu *menu, int count)
 	int i;
 
 	for (i = 0; i < count; i++)
-		if (is_valid_row(menu, i))
+		if (menu_navigation_is_valid(menu, i))
 			return false;
 
+	/* Hidden rows are not painted or navigable with arrow keys. */
 	return true;
 }
 
@@ -549,7 +550,14 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 		int end = angdroid_menu_visible_tag_end(
 				n, top, menu->active.page_rows, paged);
 		for (i = first; i < end; i++) {
-			char c = menu->skin->get_tag(menu, i);
+			char c;
+
+			/* A relative key must match a painted row. Hidden/disabled
+			 * entries have no visible relative tag; they remain available
+			 * through intentionally assigned explicit tags. */
+			if (!menu_navigation_is_valid(menu, i))
+				continue;
+			c = menu->skin->get_tag(menu, i);
 
 			if ((menu->flags & MN_CASELESS_TAGS) && c)
 				c = toupper((unsigned char) c);
@@ -740,7 +748,10 @@ bool menu_handle_mouse(struct menu *menu, const ui_event *in,
 		new_cursor = menu->skin->get_cursor(in->mouse.y, in->mouse.x,
 				count, menu->top, &menu->active);
 	
-		if (is_valid_row(menu, new_cursor)) {
+		/* The hit-test returns a screen row, not an explicit tag.
+		 * Hidden rows exist in the model but were never drawn; a tap
+		 * on their blank cells must never activate their action. */
+		if (menu_navigation_is_valid(menu, new_cursor)) {
 			if (new_cursor == menu->cursor || !(menu->flags & MN_DBL_TAP))
 				out->type = EVT_SELECT;
 			else
