@@ -90,6 +90,7 @@ run_check "FAangband direction and target help source regression" python3 "$ROOT
 run_check "FAangband compact targeting help and UTF-8 monster/object/terrain details" python3 "$ROOT/tests/test_faangband_target_detail_source.py"
 run_check "FAangband target detail resize-safe native input" sh "$ROOT/scripts/test-fa-target-description-resize.sh"
 run_check "FAangband target detail input and rotation source contract" python3 "$ROOT/tests/test_faangband_target_description_resize_source.py"
+run_check "FAangband monster and object recall modal returns without double input" python3 "$ROOT/tests/test_faangband_target_modal_return_source.py"
 run_check "FAangband typed ability PF/OF labels with C99" sh "$ROOT/scripts/test-fa-birth-ability-labels.sh"
 run_check "FAangband elemental resistance/vulnerability source contract" python3 "$ROOT/tests/test_faangband_birth_elements_source.py"
 run_check "FAangband elemental resistance/weakness native C99" sh "$ROOT/scripts/test-fa-birth-elements.sh"
