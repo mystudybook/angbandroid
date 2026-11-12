@@ -543,8 +543,14 @@ static void fa_birth_configure_layout(void)
         roller_region = (region){ROLLER_COL, TABLE_ROW, 34, MENU_ROWS};
         return;
     }
-    menu_width = MIN(19, MAX(6, Term->wid / 2 - 3));
-    rows = MAX(1, MIN(14, Term->hgt - TABLE_ROW - 1));
+    if (Term->wid < 50) {
+        /* Stack detail below the selection list on very narrow phones. */
+        menu_width = MAX(1, MIN(36, Term->wid - RACE_COL - 1));
+        rows = MAX(1, MIN(6, Term->hgt - TABLE_ROW - 7));
+    } else {
+        menu_width = MIN(19, MAX(6, Term->wid / 2 - 3));
+        rows = MAX(1, MIN(14, Term->hgt - TABLE_ROW - 1));
+    }
     race_region = (region){RACE_COL, TABLE_ROW, menu_width, rows};
     class_region = race_region;
     roller_region = race_region;
@@ -631,6 +637,149 @@ static void skill_help(const int r_skills[], const int c_skills[], int mhp, int 
             infra * 10);
 }
 
+/* Show race/class basics beside the list on medium phones, or below
+ * the list on narrow ones. Each row has a bounded terminal-cell budget
+ * and cannot overwrite the current selection or bottom key hints. */
+static int fa_birth_help_start(void)
+{
+    return Term && Term->wid < 50 ?
+        TABLE_ROW + race_region.page_rows + 1 : TABLE_ROW;
+}
+
+static int fa_birth_help_col(void)
+{
+    return Term && Term->wid < 50 ?
+        QUESTION_COL : fa_birth_detail_col(RACE_AUX_COL);
+}
+
+static void fa_birth_help_clear(void)
+{
+    int row, col;
+    if (!Term || Term->wid <= 0 || Term->hgt <= 0) return;
+    row = fa_birth_help_start();
+    col = fa_birth_help_col();
+    if (col < 0 || col >= Term->wid) return;
+    for (; row < Term->hgt - 1; ++row)
+        Term_erase(col, row, Term->wid - col);
+}
+
+static void fa_birth_help_line(int *row, const char *label)
+{
+    int col, width;
+    char visible[384];
+    if (!row) return;
+    col = fa_birth_help_col();
+    if (Term && label && col >= 0 && col < Term->wid &&
+            *row >= 0 && *row < Term->hgt - 1) {
+        width = Term->wid - col;
+        angdroid_menu_copy_columns(visible, sizeof(visible),
+            label, (size_t)width);
+        if (visible[0]) c_put_str(COLOUR_L_BLUE, visible, *row, col);
+    }
+    ++*row;
+}
+
+static void fa_birth_compact_details(const struct player_race *race,
+    const struct player_class *clazz)
+{
+    int line, i, adj[STAT_MAX], skills[SKILL_MAX];
+    struct player_ability *ability;
+    bool zh = angdroid_zh_tw_enabled();
+    if (!Term || !race) return;
+    line = fa_birth_help_start();
+    fa_birth_help_clear();
+    if (clazz) {
+        fa_birth_help_line(&line, zh ?
+            format("職業：%s", angdroid_game_ui_text(clazz->name, true)) :
+            format("Class: %s", clazz->name));
+    } else {
+        fa_birth_help_line(&line, zh ?
+            format("種族：%s", angdroid_game_ui_text(race->name, true)) :
+            format("Race: %s", race->name));
+    }
+
+    for (i = 0; i < STAT_MAX; ++i)
+        adj[i] = race->r_adj[i] + (clazz ? clazz->c_adj[i] : 0);
+    for (i = 0; i < SKILL_MAX; ++i)
+        skills[i] = race->r_skills[i] + (clazz ? clazz->c_skills[i] : 0);
+
+    for (i = 0; i < (STAT_MAX + 1) / 2; ++i) {
+        int second = i + (STAT_MAX + 1) / 2;
+        if (second < STAT_MAX) {
+            fa_birth_help_line(&line, format("%s %+d  %s %+d",
+                stat_names_reduced[i], adj[i],
+                stat_names_reduced[second], adj[second]));
+        } else {
+            fa_birth_help_line(&line, format("%s %+d",
+                stat_names_reduced[i], adj[i]));
+        }
+    }
+    fa_birth_help_line(&line, zh ?
+        format("近戰 %+d  射擊 %+d", skills[SKILL_TO_HIT_MELEE],
+            skills[SKILL_TO_HIT_BOW]) :
+        format("Melee %+d  Bow %+d", skills[SKILL_TO_HIT_MELEE],
+            skills[SKILL_TO_HIT_BOW]));
+    fa_birth_help_line(&line, zh ?
+        format("生命骰 %+d  投擲 %+d",
+            race->r_mhp + (clazz ? clazz->c_mhp : 0),
+            skills[SKILL_TO_HIT_THROW]) :
+        format("Hit die %+d  Throw %+d",
+            race->r_mhp + (clazz ? clazz->c_mhp : 0),
+            skills[SKILL_TO_HIT_THROW]));
+    fa_birth_help_line(&line, zh ?
+        format("豁免 %+d  潛行 %+d", skills[SKILL_SAVE],
+            skills[SKILL_STEALTH]) :
+        format("Save %+d  Stealth %+d", skills[SKILL_SAVE],
+            skills[SKILL_STEALTH]));
+    fa_birth_help_line(&line, zh ?
+        format("解除 %+d/%+d  裝置 %+d",
+            skills[SKILL_DISARM_PHYS], skills[SKILL_DISARM_MAGIC],
+            skills[SKILL_DEVICE]) :
+        format("Disarm %+d/%+d Device %+d",
+            skills[SKILL_DISARM_PHYS], skills[SKILL_DISARM_MAGIC],
+            skills[SKILL_DEVICE]));
+    fa_birth_help_line(&line, zh ?
+        format("挖掘 %+d  搜索 %+d",
+            skills[SKILL_DIGGING], skills[SKILL_SEARCH]) :
+        format("Dig %+d  Search %+d",
+            skills[SKILL_DIGGING], skills[SKILL_SEARCH]));
+
+    if (!clazz) {
+        fa_birth_help_line(&line, zh ?
+            format("夜視 %d 英尺", race->infra * 10) :
+            format("Infravision %d ft", race->infra * 10));
+        if (world && world->name && strstr(world->name, "Wilderness"))
+            fa_birth_help_line(&line, zh ?
+                format("難度 %d  故鄉 %s", race->difficulty,
+                    angdroid_game_ui_text(race->hometown, true)) :
+                format("Difficulty %d  Home %s", race->difficulty,
+                    race->hometown));
+    } else if (clazz->magic.total_spells) {
+        int count;
+        struct magic_realm *realm = class_magic_realms(clazz, &count);
+        while (realm) {
+            struct magic_realm *next = realm->next;
+            fa_birth_help_line(&line, zh ?
+                format("魔法：%s", angdroid_game_ui_text(realm->name, true)) :
+                format("Magic: %s", realm->name));
+            mem_free(realm);
+            realm = next;
+        }
+    }
+    for (ability = player_abilities; ability; ability = ability->next) {
+        if (streq(ability->type, "object") &&
+                !(clazz ? of_has(clazz->flags, ability->index) :
+                    of_has(race->flags, ability->index))) continue;
+        if (streq(ability->type, "player") &&
+                !(clazz ? pf_has(clazz->pflags, ability->index) :
+                    pf_has(race->pflags, ability->index))) continue;
+        if (streq(ability->type, "element") &&
+                (clazz || race->el_info[ability->index].res_level !=
+                    ability->value)) continue;
+        fa_birth_help_line(&line, angdroid_game_ui_text(ability->name, zh));
+    }
+}
+
 static void race_help(int i, void *db, const region *l)
 {
     int detail_col = fa_birth_detail_col(RACE_AUX_COL);
@@ -644,6 +793,10 @@ static void race_help(int i, void *db, const region *l)
 	int flag_space = 3;
 
 	if (!r) return;
+    if (fa_birth_compact_layout()) {
+        fa_birth_compact_details(r, NULL);
+        return;
+    }
 
 	/* Output to the screen */
 	text_out_hook = text_out_to_screen;
@@ -731,6 +884,10 @@ static void class_help(int i, void *db, const region *l)
 	int flag_space = 5;
 
 	if (!c) return;
+    if (fa_birth_compact_layout()) {
+        fa_birth_compact_details(r, c);
+        return;
+    }
 
 	/* Output to the screen */
 	text_out_hook = text_out_to_screen;
