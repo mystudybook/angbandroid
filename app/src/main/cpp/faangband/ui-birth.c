@@ -31,6 +31,7 @@
 #include "ui-game.h"
 #include "ui-help.h"
 #include "ui-input.h"
+#include "../angband/ui-input-utf8.h"
 #include "ui-menu.h"
 #include "ui-options.h"
 #include "ui-player.h"
@@ -1821,6 +1822,21 @@ static void get_screen_loc(size_t cursor, int *x, int *y, size_t n_lines,
 	}
 }
 
+/* The history editor is shown inside the character sheet. Its old
+ * 71-column rectangle overflowed portrait phones, while the cursor was
+ * positioned in Unicode scalars rather than terminal display cells. */
+static region fa_birth_history_area(void)
+{
+    region area = { 1, HIST_INSTRUCT_ROW + 1, 71, 5 };
+    if (Term && Term->wid > 0 && Term->hgt > 0) {
+        area.col = Term->wid > 2 ? 1 : 0;
+        area.row = MIN(HIST_INSTRUCT_ROW + 1, MAX(0, Term->hgt - 4));
+        area.width = MIN(71, MAX(1, Term->wid - area.col - 1));
+        area.page_rows = MIN(5, MAX(1, Term->hgt - area.row));
+    }
+    return area;
+}
+
 static int edit_text(char *buffer, int buflen) {
 	int len = strlen(buffer);
 	bool done = false;
@@ -1830,7 +1846,7 @@ static int edit_text(char *buffer, int buflen) {
 		int x = 0, y = 0;
 		struct keypress ke;
 
-		region area = { 1, HIST_INSTRUCT_ROW + 1, 71, 5 };
+		region area = fa_birth_history_area();
 		textblock *tb = textblock_new();
 
 		size_t *line_starts = NULL, *line_lengths = NULL;
@@ -1844,7 +1860,7 @@ static int edit_text(char *buffer, int buflen) {
 		int ulen;
 
 		/* Display on screen */
-		clear_from(HIST_INSTRUCT_ROW);
+		clear_from(MAX(0, area.row - 1));
 		textblock_append(tb, "%s", buffer);
 		textui_textblock_place(tb, area, NULL);
 
@@ -1853,14 +1869,30 @@ static int edit_text(char *buffer, int buflen) {
 		ulen = (n_lines > 0) ? line_starts[n_lines - 1] +
 			line_lengths[n_lines - 1]: 0;
 
-		/* Set cursor to current editing position */
-		get_screen_loc(cursor, &x, &y, n_lines, line_starts, line_lengths);
-		Term_gotoxy(1 + x, 19 + y);
+        /* Scalar offsets are not CJK terminal columns. Convert the
+         * wrapped line start and logical cursor to display cells. */
+        get_screen_loc(cursor, &x, &y, n_lines, line_starts, line_lengths);
+        if (n_lines > 0 && y >= 0 && (size_t)y < n_lines) {
+            size_t start = line_starts[y];
+            size_t before = angdroid_input_cursor_columns(buffer, start);
+            size_t now = angdroid_input_cursor_columns(buffer, (size_t)cursor);
+            size_t columns = now >= before ? now - before : 0;
+            x = (int)MIN(columns, (size_t)MAX(0, area.width - 1));
+        }
+        if (Term && Term->wid > 0 && Term->hgt > 0) {
+            int at_x = MIN(Term->wid - 1, area.col + x);
+            int at_y = MIN(Term->hgt - 1, area.row + y);
+            Term_gotoxy(at_x, at_y);
+        }
 
 		ke = inkey();
 		switch (ke.code) {
 			case ESCAPE:
-				return -1;
+                /* Release the wrapped-line allocation before cancelling. */
+                mem_free(line_starts);
+                mem_free(line_lengths);
+                textblock_free(tb);
+                return -1;
 
 			case KC_ENTER:
 				done = true;
@@ -1875,7 +1907,10 @@ static int edit_text(char *buffer, int buflen) {
 				break;
 
 			case ARROW_DOWN: {
-				int add = line_lengths[y] + 1;
+                int add;
+                if (n_lines == 0 || y < 0 || (size_t)y >= n_lines)
+                    break;
+                add = line_lengths[y] + 1;
 				if (cursor + add < ulen) cursor += add;
 				break;
 			}
@@ -1998,11 +2033,6 @@ static enum birth_stage get_history_command(void)
 {
 	enum birth_stage next = 0;
 	struct keypress ke;
-	char old_history[240];
-
-	/* Save the original history */
-	my_strcpy(old_history, player->history, sizeof(old_history));
-
 	/* Ask for some history */
 	prt(angdroid_game_ui_text("Accept character history? [y/n]",
         angdroid_zh_tw_enabled()), 0, 0);
@@ -2018,7 +2048,15 @@ static enum birth_stage get_history_command(void)
 		next = BIRTH_BACK;
 	} else if (ke.code == 'N' || ke.code == 'n') {
 		char history[240];
-		my_strcpy(history, player->history, sizeof(history));
+        /* Never save an arbitrarily truncated UTF-8 prefix of a
+         * user-owned history when it does not fit the editor buffer. */
+        if (!angdroid_input_prefill_copy(history, sizeof(history),
+                player->history)) {
+            msg("%s", angdroid_zh_tw_enabled() ?
+                "角色背景故事過長或含有無效 UTF-8，無法安全編輯。" :
+                "Character history is too long or contains invalid UTF-8.");
+            return BIRTH_HISTORY_CHOICE;
+        }
 
 		switch (edit_text(history, sizeof(history))) {
 			case -1:
