@@ -38,6 +38,19 @@ static void test_terminal_geometry(void)
     }
 }
 
+static void test_dynamic_line_capacity(void)
+{
+    const size_t largest = SIZE_MAX / sizeof(size_t) - 1;
+    CHECK(angdroid_fa_ability_line_capacity(0) == 1);
+    CHECK(angdroid_fa_ability_line_capacity(1) == 2);
+    CHECK(angdroid_fa_ability_line_capacity(255) == 256);
+    CHECK(angdroid_fa_ability_line_capacity(256) == 257);
+    CHECK(angdroid_fa_ability_line_capacity(2048) == 2049);
+    CHECK(angdroid_fa_ability_line_capacity(largest) == largest + 1);
+    CHECK(angdroid_fa_ability_line_capacity(largest + 1) == 0);
+    CHECK(angdroid_fa_ability_line_capacity(SIZE_MAX) == 0);
+}
+
 static void test_description_paging(void)
 {
     size_t count;
@@ -67,6 +80,7 @@ int main(void)
 {
     test_terminal_geometry();
     test_description_paging();
+    test_dynamic_line_capacity();
     printf("PASS: %lu FA ability layout and paging checks\n", checks);
     return 0;
 }
