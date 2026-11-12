@@ -1172,8 +1172,9 @@ static bool use_context_menu_birth(struct menu *current_menu,
 		break;
 
 	case ACT_CTX_BIRTH_HELP:
+        /* Help, like trait paging, is read-only. Returning to the
+         * current race/class/roller selection must not restart birth. */
 		do_cmd_help();
-		menu_data->stage_inout = BIRTH_RESET;
 		out->type = EVT_SWITCH;
         break;
 
