@@ -516,9 +516,12 @@ bool textui_gain_spec_menu(int *pick)
                 visible_name = angdroid_fa_birth_ability_name(ability->name,
                     ability->type, ability->index, angdroid_zh_tw_enabled());
                 if (!visible_name) visible_name = ability->name;
+                /* On a narrow phone reserve the leading cells for the
+                 * selected ability name rather than a long fixed prefix.
+                 * The Yes/No prompt keeps its own [y/n] cells visible. */
                 if (get_check(format(
-                        angdroid_zh_tw_enabled() ? "確定選擇%s？" :
-                            "Definitely choose %s? ", visible_name))) {
+                        angdroid_zh_tw_enabled() ? "%s，確定學習？" :
+                            "%s: learn this specialty? ", visible_name))) {
                     accepted = true;
                     break;
                 }
