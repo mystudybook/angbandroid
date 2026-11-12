@@ -1532,12 +1532,14 @@ static bool textui_get_rep_dir(int *dp, bool allow_5)
 	int dir = 0;
 
 	ui_event ke;
+    char visible[256];
 
 	/* Initialize */
 	(*dp) = 0;
 
 	/* Get a direction */
 	while (!dir) {
+        bool resized = false;
 		/* Paranoia*/
 		event_signal(EVENT_MESSAGE_FLUSH);
 
@@ -1549,14 +1551,43 @@ static bool textui_get_rep_dir(int *dp, bool allow_5)
 		ke = inkey_ex();
 		inkey_scan = SCAN_OFF;
 
+        /* Rotation is a layout event, not a movement command. Never
+         * ring a warning bell or use the stale screen coordinates. */
+        if (ke.type == EVT_RESIZE) continue;
+        if (ke.type == EVT_ESCAPE) {
+            if (Term && Term->wid > 0 && Term->hgt > 0)
+                prt("", 0, 0);
+            return false;
+        }
+
 		if (ke.type == EVT_NONE ||
 				(ke.type == EVT_KBRD
 				&& !target_dir_allow(ke.key, allow_5))) {
-			prt(angdroid_game_ui_text(
+            const char *prompt = angdroid_game_ui_text(
                 "Direction or <click> (Escape to cancel)? ",
-                angdroid_zh_tw_enabled()), 0, 0);
-			ke = inkey_ex();
-		}
+                angdroid_zh_tw_enabled());
+            int width = Term && Term->hgt > 0 ? Term->wid - 1 : 0;
+
+            if (width < 3) {
+                /* A resize can leave the old direction prompt on a tiny
+                 * terminal. Clear it rather than accept a blind move. */
+                if (Term && Term->wid > 0 && Term->hgt > 0)
+                    prt("", 0, 0);
+                return false;
+            }
+            angdroid_menu_copy_columns(visible, sizeof(visible), prompt,
+                (size_t)width);
+            prt(visible, 0, 0);
+            ke = inkey_ex();
+        }
+
+        /* A terminal resize invalidates the previous prompt and any
+         * tap coordinates; redisplay with the latest column count. */
+        if (ke.type == EVT_RESIZE) continue;
+        if (ke.type == EVT_ESCAPE) {
+            prt("", 0, 0);
+            return false;
+        }
 
 		/* Check mouse coordinates, or get keypresses until a dir is chosen */
 		if (ke.type == EVT_MOUSE) {
@@ -1598,6 +1629,14 @@ static bool textui_get_rep_dir(int *dp, bool allow_5)
 
 				inkey_scan = player->opts.lazymove_delay;
 				ke = inkey_ex();
+                inkey_scan = SCAN_OFF;
+                if (ke.type == EVT_RESIZE) {
+                    /* A pending second direction cannot be resolved
+                     * against the pre-rotation terminal geometry. */
+                    dir = 0;
+                    resized = true;
+                    break;
+                }
 			}
 
 			/* 5 is equivalent to "escape" */
@@ -1610,7 +1649,7 @@ static bool textui_get_rep_dir(int *dp, bool allow_5)
 		}
 
 		/* Oops */
-		if (!dir) bell();
+		if (!dir && !resized) bell();
 	}
 
 	/* Clear the prompt */
