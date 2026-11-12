@@ -12,6 +12,10 @@ PROPS = (FA / "player-properties.c").read_text(encoding="utf-8")
 LORE = (FA / "ui-knowledge.c").read_text(encoding="utf-8")
 DUMP = (FA / "ui-player.c").read_text(encoding="utf-8")
 RUNNER = (ROOT / "scripts/verify-zh-tw.sh").read_text(encoding="utf-8")
+LAYOUT = (FA / "ui-ability-compact-layout.h").read_text(encoding="utf-8")
+HISTORY = (FA / "ui-birth-history-utf8.h").read_text(encoding="utf-8")
+C_TEST = (ROOT / "tests/native/test_faangband_ability_layout.c").read_text(encoding="utf-8")
+RUN_SCRIPT = (ROOT / "scripts/test-fa-ability-layout.sh").read_text(encoding="utf-8")
 
 
 def section(source, begin, end):
@@ -107,6 +111,41 @@ require(PROPS,
     "view_ability_menu(list, count);",
     "mem_free(list);")
 assert "ability_list[32]" not in PROPS
+
+# The selectable list and text description have independent bounded space;
+# portrait view and new specialty dialogs share the same resize callback.
+require(UI,
+    '#include "ui-ability-compact-layout.h"',
+    '#include "ui-birth-history-utf8.h"',
+    "static void fa_ability_layout_menu(struct menu *m)",
+    "static void fa_ability_resize_menu(struct menu *m)",
+    "static void fa_ability_draw_description(",
+    "menu_layout(m, &bounds);",
+    "fa_ability_detail_oid = -1;",
+    "fa_ability_detail_pages = total_pages;",
+    "fa_ability_draw_description(",
+    "angdroid_fa_history_wrap(text, (size_t)width,",
+    "angdroid_fa_history_copy_line(raw, sizeof(raw),",
+    "angdroid_menu_copy_columns(visible, sizeof(visible), raw,",
+    "Term_erase(0, row, Term->wid);",
+    "fa_ability_handle_page(",
+    "fa_ability_page_touch",
+    "event->mouse.y != Term->hgt - 1",
+    "key.key.code = event->mouse.x < Term->wid / 2 ? '[' : ']';")
+assert UI.count('menu.cmd_keys = "[]";') == 2
+assert UI.count("fa_ability_layout_menu(&menu);") >= 2
+assert "70, -99" not in UI and "text_out_wrap = 60;" not in UI
+assert "fa_ability_resize_menu };" in UI
+assert "gain_spec_action, fa_ability_resize_menu };" in UI
+assert "angdroid_fa_ability_page_clamp(" in UI
+assert "void fa_ability_layout_menu" in UI
+assert "int angdroid_fa_ability_plan(" in LAYOUT
+assert "int angdroid_fa_ability_page_clamp(" in LAYOUT
+assert "angdroid_fa_history_wrap(" in HISTORY
+assert "test_terminal_geometry(void)" in C_TEST
+assert "test_description_paging(void)" in C_TEST
+assert '-std=c99 -Wall -Wextra -Werror -pedantic' in RUN_SCRIPT
+assert 'test-fa-ability-layout.sh' in RUNNER
 
 # Export and original player ability data are deliberately not localized.
 dump = section(DUMP, "void write_character_dump(", "bool dump_save(")
