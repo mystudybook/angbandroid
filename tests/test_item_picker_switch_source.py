@@ -21,6 +21,11 @@ for key in ("keys[count++] = '/';", "keys[count++] = '|';",
             "keys[count++] = '-';", "keys[count] = '\\0';"):
     assert key in SHARED, key
 assert "if (!keys)" in SHARED
+assert "static inline int angdroid_item_picker_allow_blank_switch(" in SHARED
+assert "selectable_objects <= 0 && switch_keys && switch_keys[0]" in SHARED
+assert "placeholder_only_equipment_switches();" in NATIVE
+assert "count <= 12" in NATIVE
+assert "!angdroid_item_picker_allow_blank_switch(12," in NATIVE
 
 for variant in ("angband", "faangband"):
     path = CPP / variant / "ui-object.c"
