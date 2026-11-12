@@ -499,7 +499,15 @@ static void birthmenu_display(struct menu *menu, int oid, bool cursor,
 	struct birthmenu_data *data = menu->menu_data;
 
 	uint8_t attr = curs_attrs[CURS_KNOWN][0 != cursor];
-	c_put_str(attr, data->items[oid], row, col);
+    /* Only visible words are localized; selection ID is unchanged. */
+    if (Term && col >= 0 && col < Term->wid && width > 0) {
+        char visible[256];
+        const char *label = angdroid_game_ui_text(data->items[oid],
+            angdroid_zh_tw_enabled());
+        angdroid_menu_copy_columns(visible, sizeof(visible), label,
+            (size_t)MIN(width, Term->wid - col));
+        if (visible[0]) c_put_str(attr, visible, row, col);
+    }
 }
 
 /**
@@ -517,17 +525,23 @@ static void skill_help(const int r_skills[], const int c_skills[], int mhp, int 
 	for (i = 0; i < SKILL_MAX ; ++i)
 		skills[i] = (r_skills ? r_skills[i] : 0 ) + (c_skills ? c_skills[i] : 0);
 
-	text_out_e("Hit/Shoot/Throw: %+d/%+d/%+d  Hit die: %2d\n",
+	text_out_e(angdroid_zh_tw_enabled() ?
+        "近戰／射擊／投擲：%+d/%+d/%+d  生命骰：%2d\n" : "Hit/Shoot/Throw: %+d/%+d/%+d  Hit die: %2d\n",
 			   skills[SKILL_TO_HIT_MELEE], skills[SKILL_TO_HIT_BOW],
 			   skills[SKILL_TO_HIT_THROW], mhp);
-	text_out_e("Disarm: %+3d/%+3d   Devices: %+3d\n", skills[SKILL_DISARM_PHYS],
+	text_out_e(angdroid_zh_tw_enabled() ?
+        "解除陷阱：%+3d/%+3d  魔法裝置：%+3d\n" : "Disarm: %+3d/%+3d   Devices: %+3d\n", skills[SKILL_DISARM_PHYS],
 			   skills[SKILL_DISARM_MAGIC], skills[SKILL_DEVICE]);
-	text_out_e("Save:       %+3d   Stealth: %+3d\n", skills[SKILL_SAVE],
+	text_out_e(angdroid_zh_tw_enabled() ?
+        "豁免：%+3d  潛行：%+3d\n" : "Save:       %+3d   Stealth: %+3d\n", skills[SKILL_SAVE],
 			   skills[SKILL_STEALTH]);
-	text_out_e("Digging:    %+3d   Search:  %+3d\n", skills[SKILL_DIGGING],
+	text_out_e(angdroid_zh_tw_enabled() ?
+        "挖掘：%+3d  搜索：%+3d\n" : "Digging:    %+3d   Search:  %+3d\n", skills[SKILL_DIGGING],
 			   skills[SKILL_SEARCH]);
 	if (infra >= 0)
-		text_out_e("Infravision:  %d ft\n", infra * 10);
+		text_out_e(angdroid_zh_tw_enabled() ?
+            "夜視：%d 英尺\n" : "Infravision:  %d ft\n",
+            infra * 10);
 }
 
 static void race_help(int i, void *db, const region *l)
@@ -568,7 +582,9 @@ static void race_help(int i, void *db, const region *l)
 	skill_help(r->r_skills, NULL, r->r_mhp, r->infra);
 	if (strstr(world->name, "Wilderness")) {
 		uint8_t color = COLOUR_RED;
-		text_out_e("Difficulty: Level %d\n", r->difficulty);
+		text_out_e(angdroid_zh_tw_enabled() ?
+            "難度：等級 %d\n" : "Difficulty: Level %d\n",
+            r->difficulty);
 
 		/* Color code difficulty factor */
 		if (r->difficulty < 3) {
@@ -577,7 +593,9 @@ static void race_help(int i, void *db, const region *l)
 			color = COLOUR_ORANGE;
 		}
 
-		text_out_c(color, "Home town: %-15s", r->hometown);
+		text_out_c(color, angdroid_zh_tw_enabled() ?
+            "故鄉：%s" : "Home town: %-15s",
+            angdroid_game_ui_text(r->hometown, angdroid_zh_tw_enabled()));
 	}
 	text_out_e("\n");
 
@@ -593,7 +611,8 @@ static void race_help(int i, void *db, const region *l)
 				   (r->el_info[ability->index].res_level != ability->value)) {
 			continue;
 		}
-		text_out_e("\n%s", ability->name);
+		text_out_e("\n%s", angdroid_game_ui_text(ability->name,
+            angdroid_zh_tw_enabled()));
 		n_flags++;
 	}
 
@@ -650,7 +669,8 @@ static void class_help(int i, void *db, const region *l)
 		struct magic_realm *realm = class_magic_realms(c, &count), *realm_next;
 		char buf[120];
 
-		my_strcpy(buf, realm->name, sizeof(buf));
+		my_strcpy(buf, angdroid_game_ui_text(realm->name,
+            angdroid_zh_tw_enabled()), sizeof(buf));
 		realm_next = realm->next;
 		mem_free(realm);
 		realm = realm_next;
@@ -658,17 +678,21 @@ static void class_help(int i, void *db, const region *l)
 			while (realm) {
 				count--;
 				if (count) {
-					my_strcat(buf, ", ", sizeof(buf));
+					my_strcat(buf, angdroid_zh_tw_enabled() ? "、" : ", ",
+                        sizeof(buf));
 				} else {
-					my_strcat(buf, " and ", sizeof(buf));
+					my_strcat(buf, angdroid_zh_tw_enabled() ? "與" : " and ",
+                        sizeof(buf));
 				}
-				my_strcat(buf, realm->name, sizeof(buf));
+				my_strcat(buf, angdroid_game_ui_text(realm->name,
+                    angdroid_zh_tw_enabled()), sizeof(buf));
 				realm_next = realm->next;
 				mem_free(realm);
 				realm = realm_next;
 			}
 		}
-		text_out_e("\nLearns %s magic", buf);
+		text_out_e(angdroid_zh_tw_enabled() ?
+            "\n可學習%s魔法" : "\nLearns %s magic", buf);
 	}
 
 	for (ability = player_abilities; ability; ability = ability->next) {
@@ -683,7 +707,8 @@ static void class_help(int i, void *db, const region *l)
 			continue;
 		}
 
-		text_out_e("\n%s", ability->name);
+		text_out_e("\n%s", angdroid_game_ui_text(ability->name,
+            angdroid_zh_tw_enabled()));
 		n_flags++;
 	}
 
@@ -735,16 +760,21 @@ static bool use_context_menu_birth(struct menu *current_menu,
 	m = menu_dynamic_new();
 
 	m->selections = labels;
-	menu_dynamic_add_label(m, "Show birth options", '=',
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Show birth options",
+            angdroid_zh_tw_enabled()), '=',
 		ACT_CTX_BIRTH_OPT, labels);
 	if (menu_data->allow_random) {
-		menu_dynamic_add_label(m, "Select one at random", '*',
+		menu_dynamic_add_label(m, angdroid_game_ui_text("Select one at random",
+            angdroid_zh_tw_enabled()), '*',
 			ACT_CTX_BIRTH_RAND, labels);
 	}
-	menu_dynamic_add_label(m, "Finish with random choices", '@',
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Finish with random choices",
+            angdroid_zh_tw_enabled()), '@',
 		ACT_CTX_BIRTH_FINISH_RAND, labels);
-	menu_dynamic_add_label(m, "Quit", 'q', ACT_CTX_BIRTH_QUIT, labels);
-	menu_dynamic_add_label(m, "Help", '?', ACT_CTX_BIRTH_HELP, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Quit",
+            angdroid_zh_tw_enabled()), 'q', ACT_CTX_BIRTH_QUIT, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Help",
+            angdroid_zh_tw_enabled()), '?', ACT_CTX_BIRTH_HELP, labels);
 
 	screen_save();
 
@@ -1291,9 +1321,11 @@ static enum birth_stage roller_command(bool first_call)
 			}
 			menu_dynamic_add_label(m, "Accept", 'a',
 				ACT_CTX_BIRTH_ROLL_ACCEPT, labels);
-			menu_dynamic_add_label(m, "Quit", 'q',
+			menu_dynamic_add_label(m, angdroid_game_ui_text("Quit",
+            angdroid_zh_tw_enabled()), 'q',
 				ACT_CTX_BIRTH_ROLL_QUIT, labels);
-			menu_dynamic_add_label(m, "Help", '?',
+			menu_dynamic_add_label(m, angdroid_game_ui_text("Help",
+            angdroid_zh_tw_enabled()), '?',
 				ACT_CTX_BIRTH_ROLL_HELP, labels);
 
 			screen_save();
@@ -1572,7 +1604,8 @@ static enum birth_stage point_based_command(void)
 				ACT_CTX_BIRTH_PTS_ACCEPT, labels);
 			menu_dynamic_add_label(m, "Reset", 'r',
 				ACT_CTX_BIRTH_PTS_RESET, labels);
-			menu_dynamic_add_label(m, "Quit", 'q',
+			menu_dynamic_add_label(m, angdroid_game_ui_text("Quit",
+            angdroid_zh_tw_enabled()), 'q',
 				ACT_CTX_BIRTH_PTS_QUIT, labels);
 
 			screen_save();
