@@ -1019,12 +1019,15 @@ static int context_menu_store(struct store_context *ctx, const int oid, int mx, 
 	char *labels = string_make(lower_case);
 	m->selections = labels;
 
-	menu_dynamic_add_label(m, "Inspect inventory", 'I', ACT_INSPECT_INVEN, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Inspect inventory",
+        angdroid_zh_tw_enabled()), 'I', ACT_INSPECT_INVEN, labels);
 	if (!ctx->inspect_only) {
-		menu_dynamic_add_label(m, home ? "Stash" : "Sell", 'd',
-			ACT_SELL, labels);
+		menu_dynamic_add_label(m,
+            angdroid_zh_tw_enabled() ? (home ? "存放" : "出售") :
+                (home ? "Stash" : "Sell"), 'd', ACT_SELL, labels);
 	}
-	menu_dynamic_add_label(m, "Exit", '`', ACT_EXIT, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Exit",
+        angdroid_zh_tw_enabled()), '`', ACT_EXIT, labels);
 
 	/* Hack -- no flush needed */
 	msg_flag = false;
@@ -1033,7 +1036,10 @@ static int context_menu_store(struct store_context *ctx, const int oid, int mx, 
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt("(Enter to select, ESC) Command:", 0, 0);
+    prt("", 0, 0);
+    fa_store_put_clipped(COLOUR_WHITE,
+        angdroid_game_ui_text("(Enter to select, ESC) Command:",
+            angdroid_zh_tw_enabled()), 0, 0, Term->wid);
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
@@ -1093,19 +1099,24 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 	m = menu_dynamic_new();
 
 	object_desc(header, sizeof(header), obj,
-		ODESC_PREFIX | ODESC_FULL | ((home) ? 0 : ODESC_STORE) | ODESC_ZH_TW, player);
+		ODESC_PREFIX | ODESC_FULL | ((home) ? 0 : ODESC_STORE) |
+        (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	labels = string_make(lower_case);
 	m->selections = labels;
 
-	menu_dynamic_add_label(m, "Examine", (OPT(player, rogue_like_commands))
+	menu_dynamic_add_label(m,
+        angdroid_game_ui_text("Examine", angdroid_zh_tw_enabled()),
+        (OPT(player, rogue_like_commands))
 		? 'x' : 'l', ACT_EXAMINE, labels);
 	if (!ctx->inspect_only) {
-		menu_dynamic_add_label(m, home ? "Take" : "Buy", 'p',
-			ACT_BUY, labels);
+		menu_dynamic_add_label(m,
+            angdroid_zh_tw_enabled() ? (home ? "取出" : "購買") :
+                (home ? "Take" : "Buy"), 'p', ACT_BUY, labels);
 		if (obj->number > 1) {
-			menu_dynamic_add_label(m, home ? "Take one" : "Buy one",
-				'o', ACT_BUY_ONE, labels);
+			menu_dynamic_add_label(m, angdroid_game_ui_text(
+                home ? "Take one" : "Buy one", angdroid_zh_tw_enabled()),
+                'o', ACT_BUY_ONE, labels);
 		}
 		/*
 		 * This a bit of a hack so 'g' acts like 'p' (as it does when
@@ -1125,7 +1136,12 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt(format("(Enter to select, ESC) Command for %s:", header), 0, 0);
+    prt("", 0, 0);
+    fa_store_put_clipped(COLOUR_WHITE,
+        angdroid_zh_tw_enabled() ?
+            format("Enter 選取／Esc 返回：%s", header) :
+            format("(Enter to select, ESC) Command for %s:", header),
+        0, 0, Term->wid);
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
@@ -1247,11 +1263,17 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 				/* use the old way of purchasing items */
 				msg_flag = false;
 				if (!store_is_home(store)) {
-					prt("Purchase which item? (ESC to cancel, Enter to select)",
-						0, 0);
+                    fa_store_put_clipped(COLOUR_WHITE,
+                        angdroid_game_ui_text(
+                            "Purchase which item? (ESC to cancel, Enter to select)",
+                            angdroid_zh_tw_enabled()),
+                        0, 0, Term->wid);
 				} else {
-					prt("Get which item? (Esc to cancel, Enter to select)",
-						0, 0);
+                    fa_store_put_clipped(COLOUR_WHITE,
+                        angdroid_game_ui_text(
+                            "Get which item? (Esc to cancel, Enter to select)",
+                            angdroid_zh_tw_enabled()),
+                        0, 0, Term->wid);
 				}
 				oid = store_get_stock(m);
 				prt("", 0, 0);
@@ -1263,8 +1285,11 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 			case 'x':
 				/* use the old way of examining items */
 				msg_flag = false;
-				prt("Examine which item? (ESC to cancel, Enter to select)",
-					0, 0);
+                fa_store_put_clipped(COLOUR_WHITE,
+                    angdroid_game_ui_text(
+                        "Examine which item? (ESC to cancel, Enter to select)",
+                        angdroid_zh_tw_enabled()),
+                    0, 0, Term->wid);
 				oid = store_get_stock(m);
 				prt("", 0, 0);
 				if (oid >= 0) {
@@ -1403,7 +1428,9 @@ void textui_store_knowledge(struct store *store)
 	clear_from(0);
 
 	if (!store) {
-		prt("You have no home!", 15, 0);
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_zh_tw_enabled() ? "你目前沒有住家！" :
+                "You have no home!", 15, 0, Term->wid);
 		anykey();
 		screen_load();
 		return;
@@ -1451,7 +1478,8 @@ void enter_store(game_event_type type, game_event_data *data, void *user)
 
 	/* Check that we're on a store */
 	if (!store) {
-		msg("You see no store here.");
+        msg("%s", angdroid_game_ui_text(
+            "You see no store here.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
