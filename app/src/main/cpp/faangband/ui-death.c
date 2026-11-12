@@ -186,27 +186,34 @@ static void display_exit_screen(void)
 static char *get_personalized_string(uint8_t choice)
 {
 	static char tmp[80], info[80];
-	uint8_t n, i;
-	bool no_string = true;
+    char cleaned[80];
+    size_t n;
+    bool punctuation;
 
 	/* Clear last line */
 	clear_from(15);
 
 	/* Prompt and ask */
 	if (choice == 1) {
-		prt("Enter a message for your character's ghost", 15, 0);
-		prt("above, or hit ESCAPE.", 16, 0);
+		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "輸入角色幽靈的留言：" : "Enter a message for your character's ghost", 15, 0);
+		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "完成後按 Esc 離開。" : "above, or hit ESCAPE.", 16, 0);
 	} else if (choice == 2) {
-		prt("Enter an addition to your character ghost's", 15, 0);
-		prt("description above, or hit ESCAPE.", 16, 0);
+		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "輸入角色幽靈的描述補充：" : "Enter an addition to your character ghost's", 15, 0);
+		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "完成後按 Esc 離開。" : "description above, or hit ESCAPE.", 16, 0);
 	} else
 		return NULL;
 
-	strnfmt(info, sizeof(info),"(%d characters maximum.  Entry will be used as",
-			79);
+	strnfmt(info, sizeof(info), angdroid_zh_tw_enabled() ?
+            "最多 %d 位元組，內容會作為" :
+            "(%d characters maximum.  Entry will be used as", 79);
 
-	prt(info, 17, 0);
-	prt("(a) sentence(s).)", 18, 0);
+	fa_death_print_prompt(info, 17);
+	fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "一句或數句幽靈台詞。" : "(a) sentence(s).)", 18);
 
 	/* Ask until happy */
 	while (1) {
@@ -220,35 +227,33 @@ static char *get_personalized_string(uint8_t choice)
 		break;
 	}
 
-	/* Pad the string (to clear junk and allow room for a ending) */
-	strnfmt(tmp, sizeof(tmp), "%-79.79s", tmp);
+    /* A UTF-8 Chinese ghost message may contain multibyte codepoints.
+     * Never split a codepoint, and never run ctype on a signed UTF-8 byte.
+     * Bones files continue to store the exact original byte-oriented format. */
+    angdroid_utf8_copy_complete(cleaned, sizeof(cleaned), tmp);
+    n = strlen(cleaned);
+    while (n > 0 && cleaned[n - 1] == ' ')
+        cleaned[--n] = '\0';
+    if (n == 0) return NULL;
 
-	/* Ensure that strings end like a sentence, and neatly clip the string. */
-	for (n = 78; n > 0 ; n--) {
-		if ((tmp[n] == ' ') || (tmp[n] == '\0')) continue;
-		no_string = false;
-		if ((tmp[n] == '!') || (tmp[n] == '.') || (tmp[n] == '?')) {
-			tmp[n + 1] = '\0';
-			for (i = n + 2; i < 80; i++) {
-				tmp[i] = '\0';
-			}
-			break;
-		} else {
-			tmp[n + 1] = '.';
-			tmp[n + 2] = '\0';
-			for (i = n + 3; i < 80; i++) {
-				tmp[i] = '\0';
-			}
-			break;
-		}
-	}
+    punctuation = (cleaned[n - 1] == '.' ||
+        cleaned[n - 1] == '!' || cleaned[n - 1] == '?');
+    if (n >= 3) {
+        const char *end = cleaned + n - 3;
+        if (memcmp(end, "。", 3) == 0 ||
+            memcmp(end, "！", 3) == 0 ||
+            memcmp(end, "？", 3) == 0)
+            punctuation = true;
+    }
+    if (!punctuation && n < sizeof(cleaned) - 2) {
+        cleaned[n++] = '.';
+        cleaned[n] = '\0';
+    }
 
-	/* Start the sentence with a capital letter. */
-	if (islower(tmp[0]))
-		tmp[0] = toupper(tmp[0]);
-
-	/* Return the string */
-	return no_string ? NULL : tmp;
+    if (cleaned[0] >= 'a' && cleaned[0] <= 'z')
+        cleaned[0] = (char)(cleaned[0] - 'a' + 'A');
+    my_strcpy(tmp, cleaned, sizeof(tmp));
+    return tmp;
 
 }
 
@@ -334,9 +339,12 @@ static void make_bones(void)
 	Term_clear();
 
 	/* Ask if the player wants to add a personalized string. */
-	prt("Information about your character has been saved", 15, 0);
-	prt("in a bones file.  Would you like to give the", 16, 0);
-	prt("ghost a special message or description? (y/n)", 17, 0);
+	fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "角色資料已儲存於幽靈紀錄。" : "Information about your character has been saved", 15, 0);
+	fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "要為角色的幽靈加上特別的" : "in a bones file.  Would you like to give the", 16, 0);
+	fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "留言或描述嗎？(y/n)" : "ghost a special message or description? (y/n)", 17, 0);
 
 	while (no_answer) {
 
@@ -350,9 +358,12 @@ static void make_bones(void)
 
 		/* Determine what the personalized string will be used for.  */
 		if ((answer.key.code == 'Y') || (answer.key.code == 'y')) {
-			prt("Will you add something for your ghost to say,", 15, 0);
-			prt("or add to the monster description?", 16, 0);
-			prt("((M)essage/(D)escription/ESC for neither)", 17, 0);
+			fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "要加入幽靈說的話，" : "Will you add something for your ghost to say,", 15, 0);
+			fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "還是補充怪物描述？" : "or add to the monster description?", 16, 0);
+			fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "(M) 留言／(D) 描述／Esc 跳過" : "((M)essage/(D)escription/ESC for neither)", 17, 0);
 
 			while (1) {
 				answer = inkey_ex();
@@ -538,7 +549,8 @@ static void death_info(const char *title, int row)
 			Term_clear();
 
 			/* Show 12 items */
-			for (line = 0; obj && line < 12; obj = obj->next, line++) {
+			for (line = 0; obj && line < MIN(12, MAX(1, Term->hgt - 5));
+                obj = obj->next, line++) {
 				uint8_t attr;
 
 				char o_name[192];
