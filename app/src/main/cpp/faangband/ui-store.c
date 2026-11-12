@@ -527,8 +527,9 @@ static bool store_get_check(const char *prompt)
 {
 	struct keypress ch;
 
-	/* Prompt for it */
-	fa_store_put_clipped(COLOUR_WHITE, prompt, 0, 0,
+    /* A shorter localized label must erase the previous top-line text. */
+    prt("", 0, 0);
+    fa_store_put_clipped(COLOUR_WHITE, prompt, 0, 0,
         Term ? Term->wid : 0);
 
 	/* Get an answer */
@@ -1309,12 +1310,14 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 				/* use the old way of purchasing items */
 				msg_flag = false;
 				if (!store_is_home(store)) {
+                    prt("", 0, 0);
                     fa_store_put_clipped(COLOUR_WHITE,
                         angdroid_game_ui_text(
                             "Purchase which item? (ESC to cancel, Enter to select)",
                             angdroid_zh_tw_enabled()),
                         0, 0, Term->wid);
 				} else {
+                    prt("", 0, 0);
                     fa_store_put_clipped(COLOUR_WHITE,
                         angdroid_game_ui_text(
                             "Get which item? (Esc to cancel, Enter to select)",
@@ -1331,6 +1334,7 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 			case 'x':
 				/* use the old way of examining items */
 				msg_flag = false;
+                prt("", 0, 0);
                 fa_store_put_clipped(COLOUR_WHITE,
                     angdroid_game_ui_text(
                         "Examine which item? (ESC to cancel, Enter to select)",
