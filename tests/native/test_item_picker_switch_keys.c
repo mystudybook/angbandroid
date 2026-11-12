@@ -62,11 +62,50 @@ static void placeholder_only_equipment_switches(void)
     assert(!angdroid_item_picker_allow_blank_switch(12, "/|-"));
 }
 
+/* Native menu-key routing: a SHOW_EMPTY picker may have rows but
+ * zero *selectable* objects. Horizontal arrows are source changes only
+ * when the item skin explicitly opted in to blank keyboard input. */
+static void blank_picker_direction_keys(void)
+{
+    const int empty_flag = 0x80;
+    const int directions[] = {-1, 0, 1};
+    int flags, is_item_skin, has_switch_keys, x, y;
+
+    for (flags = 0; flags < 256; ++flags)
+        for (is_item_skin = 0; is_item_skin <= 1; ++is_item_skin)
+            for (has_switch_keys = 0; has_switch_keys <= 1; ++has_switch_keys)
+                for (x = 0; x < 3; ++x)
+                    for (y = 0; y < 3; ++y) {
+                        int dx = directions[x];
+                        int dy = directions[y];
+                        int expected = (flags & empty_flag) &&
+                            is_item_skin && has_switch_keys &&
+                            dx != 0 && dy == 0;
+                        int actual = angdroid_item_picker_blank_arrow_switch(
+                            flags, empty_flag, is_item_skin,
+                            has_switch_keys, dx, dy);
+                        assert(!!actual == !!expected);
+                    }
+    /* Never let vertical/diagonal arrows select a placeholder slot. */
+    assert(!angdroid_item_picker_blank_arrow_switch(
+        empty_flag, empty_flag, 1, 1, 0, 1));
+    assert(!angdroid_item_picker_blank_arrow_switch(
+        empty_flag, empty_flag, 1, 1, 1, 1));
+    /* This fallback must not activate for an empty shop. */
+    assert(!angdroid_item_picker_blank_arrow_switch(
+        empty_flag, empty_flag, 0, 1, 1, 0));
+    assert(angdroid_item_picker_blank_arrow_switch(
+        empty_flag, empty_flag, 1, 1, -1, 0));
+    assert(angdroid_item_picker_blank_arrow_switch(
+        empty_flag, empty_flag, 1, 1, 1, 0));
+}
+
 int main(void)
 {
     available_tab_combinations();
     no_unusable_tab_is_advertised();
     placeholder_only_equipment_switches();
+    blank_picker_direction_keys();
     puts("PASS: only actionable inventory/equipment/quiver/floor tab shortcuts");
     return 0;
 }
