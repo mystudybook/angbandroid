@@ -129,6 +129,8 @@ require(UI,
     "angdroid_menu_copy_columns(visible, sizeof(visible), raw,",
     "Term_erase(0, row, Term->wid);",
     "fa_ability_handle_page(",
+    "static bool fa_ability_view_action(",
+    "if (event && event->type == EVT_SELECT) return true;",
     "fa_ability_page_touch",
     "event->mouse.y != Term->hgt - 1",
     "key.key.code = event->mouse.x < Term->wid / 2 ? '[' : ']';")
