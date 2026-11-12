@@ -2970,11 +2970,15 @@ static void shape_lore_append_skills(textblock *tb,
 
 	for (i = 0; i < SKILL_MAX; ++i) {
 		if (s->skills[i] != 0) {
-			shape_lore_helper_append_to_list(
-				format("%+d to %s", s->skills[i],
-                    angdroid_shape_term(skill_index_to_name(i),
-                        angdroid_zh_tw_enabled())),
-				&msgs, &nmax, &n);
+			{
+                const char *label = angdroid_shape_term(
+                    skill_index_to_name(i), angdroid_zh_tw_enabled());
+                const char *caption = angdroid_zh_tw_enabled() ?
+                    format("%s %+d", label, s->skills[i]) :
+                    format("%+d to %s", s->skills[i], label);
+                shape_lore_helper_append_to_list(caption,
+                    &msgs, &nmax, &n);
+            }
 		}
 	}
 
@@ -3002,13 +3006,16 @@ static void shape_lore_append_non_stat_modifiers(textblock *tb,
 
 	for (i = STAT_MAX; i < OBJ_MOD_MAX; ++i) {
 		if (s->modifiers[i] != 0) {
-			shape_lore_helper_append_to_list(
-				format("%+d to %s",
-					s->modifiers[i],
-					angdroid_shape_term(
-                        lookup_obj_property(OBJ_PROPERTY_MOD, i)->name,
-                        angdroid_zh_tw_enabled())),
-				&msgs, &nmax, &n);
+			{
+                const char *label = angdroid_shape_term(
+                    lookup_obj_property(OBJ_PROPERTY_MOD, i)->name,
+                    angdroid_zh_tw_enabled());
+                const char *caption = angdroid_zh_tw_enabled() ?
+                    format("%s %+d", label, s->modifiers[i]) :
+                    format("%+d to %s", s->modifiers[i], label);
+                shape_lore_helper_append_to_list(caption,
+                    &msgs, &nmax, &n);
+            }
 		}
 	}
 
@@ -3036,13 +3043,16 @@ static void shape_lore_append_stat_modifiers(textblock *tb,
 
 	for (i = 0; i < STAT_MAX; ++i) {
 		if (s->modifiers[i] != 0) {
-			shape_lore_helper_append_to_list(
-				format("%+d to %s",
-					s->modifiers[i],
-					angdroid_shape_term(
-                        lookup_obj_property(OBJ_PROPERTY_MOD, i)->name,
-                        angdroid_zh_tw_enabled())),
-				&msgs, &nmax, &n);
+			{
+                const char *label = angdroid_shape_term(
+                    lookup_obj_property(OBJ_PROPERTY_MOD, i)->name,
+                    angdroid_zh_tw_enabled());
+                const char *caption = angdroid_zh_tw_enabled() ?
+                    format("%s %+d", label, s->modifiers[i]) :
+                    format("%+d to %s", s->modifiers[i], label);
+                shape_lore_helper_append_to_list(caption,
+                    &msgs, &nmax, &n);
+            }
 		}
 	}
 
@@ -3072,13 +3082,16 @@ static void shape_lore_append_resistances(textblock *tb,
 
 	for (i = 0; i < ELEM_MAX; ++i) {
 		if (s->el_info[i].res_level == RES_LEVEL_MAX) {
-			imm[nimm] = projections[i].name;
+			imm[nimm] = angdroid_shape_term(
+                projections[i].name, angdroid_zh_tw_enabled());
 			++nimm;
 		} else if (s->el_info[i].res_level < RES_LEVEL_BASE) {
-			res[nres] = projections[i].name;
+			res[nres] = angdroid_shape_term(
+                projections[i].name, angdroid_zh_tw_enabled());
 			++nres;
 		} else if (s->el_info[i].res_level > RES_LEVEL_BASE) {
-			vul[nvul] = projections[i].name;
+			vul[nvul] = angdroid_shape_term(
+                projections[i].name, angdroid_zh_tw_enabled());
 			++nvul;
 		}
 	}
@@ -3123,7 +3136,8 @@ static void shape_lore_append_protection_flags(textblock *tb,
 		if (prop->subtype == OFT_PROT &&
 			of_has(s->flags, prop->index)) {
 			shape_lore_helper_append_to_list(
-				prop->desc, &msgs, &nmax, &n);
+				angdroid_shape_misc_desc(prop->desc,
+                    angdroid_zh_tw_enabled()), &msgs, &nmax, &n);
 		}
 	}
 
@@ -3155,7 +3169,8 @@ static void shape_lore_append_sustains(textblock *tb,
 
 		if (of_has(s->flags, sustain_flag(prop->index))) {
 			shape_lore_helper_append_to_list(
-				prop->name, &msgs, &nmax, &n);
+				angdroid_shape_term(prop->name,
+                    angdroid_zh_tw_enabled()), &msgs, &nmax, &n);
 		}
 	}
 
