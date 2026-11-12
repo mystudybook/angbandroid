@@ -65,6 +65,16 @@ require(learn, "lookup_ability(\"player\", idx, 0)",
         "angdroid_menu_copy_columns(visible, sizeof(visible), name,",
         "c_put_str(attr, visible, row, col);")
 
+action = section(UI, "static bool gain_spec_action(",
+                 "static void gain_spec_menu_browser(")
+require(action,
+        "if (!e || !d) return false;",
+        "if (fa_ability_handle_page(menu, e, oid)) return true;",
+        "oid < 0 || oid >= d->spec_known",
+        "!check_specialty_gain(d->specialties[oid])",
+        "d->selected_spec = d->specialties[oid];",
+        "return e->type != EVT_MOUSE;")
+
 learn_browser = section(UI, "static void gain_spec_menu_browser(",
                         "bool textui_gain_spec_menu(")
 require(learn_browser, "if (!ability) return;",
@@ -74,8 +84,19 @@ learn_menu = section(UI, "bool textui_gain_spec_menu(",
                      "void textui_interact_with_specialties(")
 require(learn_menu, '"學習哪項專精（%c-%c，Esc 離開，剩餘 %d 次）？"',
         '"確定選擇%s？"', "menu_select(&menu, EVT_SELECT, true);",
-        "d->selected_spec = 0;", "if (evt.type != EVT_ESCAPE)",
+        "d->selected_spec = 0;",
+        "if (evt.type != EVT_SELECT) break;",
+        "bool accepted = false;",
+        "accepted = true;",
+        "if (accepted)",
+        "*pick = d->selected_spec;",
+        "return accepted;",
+        "clear_from(0);",
+        "fa_ability_layout_menu(&menu);",
         "mem_free(d->specialties);")
+assert "if (evt.type != EVT_ESCAPE)" not in learn_menu
+assert learn_menu.index("if (accepted)") < learn_menu.index(
+    "*pick = d->selected_spec;")
 assert "pf_on(" not in UI and "pf_off(" not in UI
 assert "cmdq_push(" not in UI
 
@@ -184,6 +205,15 @@ assert "angdroid_fa_ability_line_capacity(strlen(long_text))" in HISTORY_TEST
 assert "angdroid_fa_ability_line_capacity(size_t bytes)" in LAYOUT
 assert '-std=c99 -Wall -Wextra -Werror -pedantic' in RUN_SCRIPT
 assert 'test-fa-ability-layout.sh' in RUNNER
+assert 'test-fa-ability-action.sh' in RUNNER
+ACTION_GEN = (ROOT / "tests/native/generate_fa_ability_action_host.py").read_text(
+    encoding="utf-8")
+assert "matched.group(0)" in ACTION_GEN
+assert "EVT_MOUSE" in ACTION_GEN and "EVT_SELECT" in ACTION_GEN
+ACTION_RUN = (ROOT / "scripts/test-fa-ability-action.sh").read_text(
+    encoding="utf-8")
+assert "generate_fa_ability_action_host.py" in ACTION_RUN
+assert "-std=c99 -Wall -Wextra -Werror -pedantic" in ACTION_RUN
 
 # Export and original player ability data are deliberately not localized.
 dump = section(DUMP, "void write_character_dump(", "bool dump_save(")
