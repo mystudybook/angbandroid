@@ -174,6 +174,16 @@ static ui_event fa_target_inkey_described(
     for (;;) {
         press = inkey_ex();
         if (press.type == EVT_RESIZE) {
+            /* A terminal that cannot show a meaningful target row must
+             * cancel, not silently accept the next queued mouse/key. */
+            if (!Term || Term->wid < 3 || Term->hgt < 1) {
+                if (Term && Term->wid > 0 && Term->hgt > 0)
+                    prt("", 0, 0);
+                press.type = EVT_KBRD;
+                press.key.code = ESCAPE;
+                press.key.mods = 0;
+                return press;
+            }
             fa_target_draw_bounded_line(description, 0);
             move_cursor_relative(y, x);
             continue;
