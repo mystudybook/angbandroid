@@ -24,4 +24,13 @@ static inline void angdroid_item_picker_switch_keys(
     keys[count] = '\0';
 }
 
+/* SHOW_EMPTY equipment may render multiple placeholder rows while none
+ * contains an object. Those rows are not selectable, but /, | and - must
+ * still be passed to the picker so it can open another allowed source. */
+static inline int angdroid_item_picker_allow_blank_switch(
+    int selectable_objects, const char *switch_keys)
+{
+    return selectable_objects <= 0 && switch_keys && switch_keys[0] != '\0';
+}
+
 #endif /* ANGDROID_ITEM_PICKER_SWITCH_KEYS_H */
