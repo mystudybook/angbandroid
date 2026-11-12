@@ -787,8 +787,11 @@ static int fa_target_floor_list_index(
             return -1;
         return y - 1;
     }
+    /* The label set may contain uppercase shortcuts for larger piles.
+     * Only pass printable one-byte codes to strchr(), never NUL or a
+     * truncated special/Unicode key that could match a false label. */
     if (press.type == EVT_KBRD &&
-            press.key.code >= 'a' && press.key.code <= 'z') {
+            press.key.code >= 33 && press.key.code <= 126) {
         const char *label = strchr(all_letters_nohjkl,
             (char)press.key.code);
         if (label && label - all_letters_nohjkl < floor_count)
