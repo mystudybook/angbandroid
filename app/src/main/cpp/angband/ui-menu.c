@@ -826,8 +826,19 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 		/* Escape stops us here */
 		out->type = EVT_ESCAPE;
 	} else if (count <= 0) {
-		/* Menus with no rows can't be navigated or used, so eat keypresses */
-		eat = true;
+		/* Empty item pickers retain a blank display row so keyboard
+		 * arrows can move to an available inventory/equipment source.
+		 * Never activate a missing item or enable this path for stores. */
+		if ((menu->flags & MN_ALLOW_EMPTY_INPUT) &&
+			menu->skin == &menu_skin_object && menu->switch_keys) {
+			int dir = target_dir(in->key);
+			if (dir && ddx[dir] && !ddy[dir])
+				*out = menu->skin->process_dir(menu, dir);
+			else
+				eat = true;
+		} else {
+			eat = true;
+		}
 	} else if (in->key.code == ' ') {
 		/* Keep the last item reachable even when the next page starts
 		 * exactly at count - 1. Skip disabled rows without selecting
