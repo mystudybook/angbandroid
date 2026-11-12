@@ -868,11 +868,13 @@ static void fa_birth_compact_details(const struct player_race *race,
     }
     for (ability = player_abilities; ability; ability = ability->next) {
         if (streq(ability->type, "object") &&
-                !(clazz ? of_has(clazz->flags, ability->index) :
-                    of_has(race->flags, ability->index))) continue;
+                (ability->index >= OF_MAX ||
+                 !(clazz ? of_has(clazz->flags, ability->index) :
+                    of_has(race->flags, ability->index)))) continue;
         if (streq(ability->type, "player") &&
-                !(clazz ? pf_has(clazz->pflags, ability->index) :
-                    pf_has(race->pflags, ability->index))) continue;
+                (ability->index >= PF_MAX ||
+                 !(clazz ? pf_has(clazz->pflags, ability->index) :
+                    pf_has(race->pflags, ability->index)))) continue;
         if (streq(ability->type, "element") &&
                 (clazz || ability->index >= ELEM_MAX ||
                  race->el_info[ability->index].res_level !=
@@ -977,10 +979,12 @@ static void race_help(int i, void *db, const region *l)
 	for (ability = player_abilities; ability; ability = ability->next) {
 		if (n_flags >= flag_space) break;
 		if (streq(ability->type, "object") &&
-			!of_has(r->flags, ability->index)) {
+            (ability->index >= OF_MAX ||
+             !of_has(r->flags, ability->index))) {
 			continue;
 		} else if (streq(ability->type, "player") &&
-				   !pf_has(r->pflags, ability->index)) {
+                   (ability->index >= PF_MAX ||
+                    !pf_has(r->pflags, ability->index))) {
 			continue;
 		} else if (streq(ability->type, "element") &&
                    (ability->index >= ELEM_MAX ||
@@ -1088,10 +1092,12 @@ static void class_help(int i, void *db, const region *l)
 	for (ability = player_abilities; ability; ability = ability->next) {
 		if (n_flags >= flag_space) break;
 		if (streq(ability->type, "object") &&
-			!of_has(c->flags, ability->index)) {
+            (ability->index >= OF_MAX ||
+             !of_has(c->flags, ability->index))) {
 			continue;
 		} else if (streq(ability->type, "player") &&
-				   !pf_has(c->pflags, ability->index)) {
+                   (ability->index >= PF_MAX ||
+                    !pf_has(c->pflags, ability->index))) {
 			continue;
 		} else if (streq(ability->type, "element")) {
 			continue;
