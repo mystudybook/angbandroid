@@ -147,7 +147,8 @@ require(UI,
     "if (event && event->type == EVT_SELECT) return true;",
     "fa_ability_page_touch",
     "event->mouse.y != Term->hgt - 1",
-    "key.key.code = event->mouse.x < Term->wid / 2 ? '[' : ']';")
+    "event->mouse.x >= MIN(Term->wid, 80)",
+    "key.key.code = event->mouse.x < MIN(Term->wid, 80) / 2 ? '[' : ']';")
 assert UI.count('menu.cmd_keys = "[]";') == 2
 assert UI.count("fa_ability_layout_menu(&menu);") >= 2
 assert "70, -99" not in UI and "text_out_wrap = 60;" not in UI
@@ -157,6 +158,8 @@ assert "angdroid_fa_ability_page_clamp(" in UI
 assert "loc.page_rows" not in UI  # stale variable from the old layout
 assert "starts[256]" not in UI
 assert "capacity = angdroid_fa_ability_line_capacity(strlen(text));" in UI
+assert "#include <limits.h>" in UI
+assert "total_pages = pages > (size_t)INT_MAX ? INT_MAX : (int)pages;" in UI
 assert "starts = mem_alloc(capacity * sizeof(*starts));" in UI
 assert "lengths = mem_alloc(capacity * sizeof(*lengths));" in UI
 assert "mem_free(lengths);" in UI and "mem_free(starts);" in UI
