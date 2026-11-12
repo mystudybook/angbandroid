@@ -2030,12 +2030,23 @@ static void display_object(int col, int row, bool cursor, int oid)
 		my_strcat(o_name, angdroid_knowledge_tried_suffix(
             angdroid_zh_tw_enabled()), sizeof(o_name));
 
-    /* Keep metadata separate from the CJK item name. */
-    if (Term && col >= 0 && col < Term->wid) {
-        char clipped[256];
-        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
-            o_name, col, 45, Term->wid);
-        if (clipped[0]) c_prt(attr, clipped, row, col);
+    /* Identification and show_flavors remain canonical. Translate only
+     * a kind whose real name has already been learned and whose flavor is
+     * not currently requested by the player's display preference. */
+    {
+        const char *visible_name = o_name;
+        if (angdroid_zh_tw_enabled() && kind->aware &&
+            (!kind->flavor || !OPT(player, show_flavors))) {
+            const char *localized = angdroid_faangband_known_kind_ui_name(
+                kind->name, tval_find_name(kind->tval), true);
+            if (localized) visible_name = localized;
+        }
+        if (Term && col >= 0 && col < Term->wid) {
+            char clipped[256];
+            angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+                visible_name, col, 45, Term->wid);
+            if (clipped[0]) c_prt(attr, clipped, row, col);
+        }
     }
 
     if (((aware && kind_is_ignored_aware(kind)) ||
