@@ -55,7 +55,7 @@ class ItemPickerTagLocaleSourceTest(unittest.TestCase):
         self.assertIn("static char header[288];", UI)
         self.assertIn("char out_val[256];", menu)
         self.assertIn('strnfmt(header, sizeof(header), "(%s)", out_val);', menu)
-        self.assertIn('m->switch_keys = switch_keys;', UI)
+        self.assertIn('m->switch_keys = switch_keys[0] ? switch_keys : NULL;', UI)
         self.assertIn('angdroid_item_picker_switch_keys(', UI)
         self.assertNotIn('m->switch_keys = "/|-";', UI)
         self.assertIn("menu_select(m, 0, true);", UI)
