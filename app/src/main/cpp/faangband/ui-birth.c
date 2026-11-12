@@ -778,6 +778,21 @@ static void fa_birth_compact_details(const struct player_race *race,
                     ability->value)) continue;
         fa_birth_help_line(&line, angdroid_game_ui_text(ability->name, zh));
     }
+    if (Term && line > Term->hgt - 1 &&
+            Term->hgt - 2 >= fa_birth_help_start()) {
+        int col = fa_birth_help_col();
+        char visible[192];
+        const char *hint = zh ? "…橫向可查看更多特性" :
+            "...rotate for more traits";
+        if (col >= 0 && col < Term->wid) {
+            Term_erase(col, Term->hgt - 2, Term->wid - col);
+            angdroid_menu_copy_columns(visible, sizeof(visible),
+                hint, (size_t)(Term->wid - col));
+            if (visible[0])
+                c_put_str(COLOUR_YELLOW, visible,
+                    Term->hgt - 2, col);
+        }
+    }
 }
 
 static void race_help(int i, void *db, const region *l)
