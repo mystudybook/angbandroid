@@ -11,6 +11,8 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 src = (ROOT / "app/src/main/cpp/faangband/ui-output.c").read_text(
     encoding="utf-8")
+core_src = (ROOT / "app/src/main/cpp/faangband/z-textblock.c").read_text(
+    encoding="utf-8")
 
 
 def extract(signature):
@@ -22,7 +24,21 @@ def extract(signature):
     return hit.group(0)
 
 
+def extract_core(signature):
+    found = re.search(
+        rf"^{re.escape(signature)}\n\{{.*?^\}}",
+        core_src, flags=re.MULTILINE | re.DOTALL)
+    if not found:
+        raise SystemExit(f"Missing core function: {signature}")
+    return found.group(0)
+
+
 actual = [
+    extract_core("static void new_line(size_t **line_starts, size_t **line_lengths,"
+                 "\n\t\tsize_t *n_lines, size_t *cur_line,"
+                 "\n\t\tsize_t start, size_t len)"),
+    extract_core("size_t textblock_calculate_display_lines(textblock *tb, size_t **line_starts,"
+                 "\n        size_t **line_lengths, size_t width)"),
     extract("static void display_area(const wchar_t *text, const uint8_t *attrs,"
             "\n        size_t *line_starts, size_t *line_lengths,"
             "\n        size_t n_lines, region area, size_t line_from)"),
@@ -65,6 +81,7 @@ typedef struct region {
 typedef struct textblock {
     wchar_t text[512];
     uint8_t attrs[512];
+    size_t strlen;
 } textblock;
 
 struct terminal { int wid, hgt; };
@@ -76,7 +93,7 @@ struct event_record {
 };
 static struct event_record queue[128];
 static size_t queued, read_at;
-static int bad_coordinates, erases, draws, layout_calls, saved, loaded;
+static int bad_coordinates, erases, draws, saved, loaded;
 static int footer_calls, lines_allocated, lines_freed;
 static int lang_zh = 1;
 
@@ -101,6 +118,13 @@ static void mem_free(void *item)
     if (item) ++lines_freed;
     free(item);
 }
+static void *mem_realloc(void *item, size_t bytes)
+{
+    void *result = realloc(item, bytes);
+    if (!result) abort();
+    if (!item) ++lines_allocated;
+    return result;
+}
 static const wchar_t *textblock_text(textblock *tb)
 {
     return tb ? tb->text : NULL;
@@ -108,24 +132,6 @@ static const wchar_t *textblock_text(textblock *tb)
 static const uint8_t *textblock_attrs(textblock *tb)
 {
     return tb ? tb->attrs : NULL;
-}
-static size_t textblock_calculate_lines(textblock *tb, size_t **starts,
-        size_t **lengths, size_t width)
-{
-    size_t n, total, i;
-    ++layout_calls;
-    if (!tb || !tb->text[0] || width == 0) return 0;
-    total = wcslen(tb->text);
-    n = (total + width - 1) / width;
-    *starts = calloc(n, sizeof(**starts));
-    *lengths = calloc(n, sizeof(**lengths));
-    if (!*starts || !*lengths) abort();
-    lines_allocated += 2;
-    for (i = 0; i < n; ++i) {
-        (*starts)[i] = i * width;
-        (*lengths)[i] = MIN(width, total - i * width);
-    }
-    return n;
 }
 static void Term_erase(int col, int row, int width)
 {
@@ -168,7 +174,7 @@ static void reset(int width, int height)
     device.wid = width;
     device.hgt = height;
     queued = read_at = 0;
-    bad_coordinates = erases = draws = layout_calls = 0;
+    bad_coordinates = erases = draws = 0;
     saved = loaded = footer_calls = 0;
     lines_allocated = lines_freed = 0;
     lang_zh = 1;
@@ -191,18 +197,66 @@ static unsigned long checks;
     fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #x); \
     return 1; } ++checks; } while (0)
 
+/* Verify exact source-character slices for mixed Han/English content.
+ * The UTF-8 terminal-cell layout is extracted from the real engine. */
+static int check_column_lines(void)
+{
+    textblock block = {{0}, {0}, 0};
+    size_t *starts = NULL, *lengths = NULL, n;
+    static const wchar_t example[] = {
+        L'甲', L'乙', L'A', L'\n', L'B', L' ', L'甲', L'C'
+    };
+    size_t i;
+    for (i = 0; i < sizeof(example) / sizeof(example[0]); ++i)
+        block.text[i] = example[i];
+    block.strlen = sizeof(example) / sizeof(example[0]);
+
+    n = textblock_calculate_display_lines(&block, &starts, &lengths, 3);
+    CHECK(n == 4);
+    CHECK(starts[0] == 0 && lengths[0] == 1);
+    CHECK(starts[1] == 1 && lengths[1] == 2);
+    CHECK(starts[2] == 4 && lengths[2] == 1);
+    CHECK(starts[3] == 6 && lengths[3] == 2);
+    mem_free(starts); mem_free(lengths);
+    starts = lengths = NULL;
+
+    n = textblock_calculate_display_lines(&block, &starts, &lengths, 80);
+    CHECK(n == 2);
+    CHECK(starts[0] == 0 && lengths[0] == 3);
+    CHECK(starts[1] == 4 && lengths[1] == 4);
+    mem_free(starts); mem_free(lengths);
+    starts = lengths = NULL;
+
+    block.text[0] = L'甲';
+    block.text[1] = L'\n';
+    block.text[2] = L'乙';
+    block.strlen = 3;
+    n = textblock_calculate_display_lines(&block, &starts, &lengths, 1);
+    CHECK(n == 2);
+    CHECK(starts[0] == 0 && lengths[0] == 1);
+    CHECK(starts[1] == 2 && lengths[1] == 1);
+    mem_free(starts); mem_free(lengths);
+
+    CHECK(textblock_calculate_display_lines(&block, NULL, NULL, 3) == 0);
+    CHECK(textblock_calculate_display_lines(&block, &starts, &lengths, 0) == 0);
+    return 0;
+}
+
 int main(void)
 {
-    textblock tb = {{0}, {0}};
+    textblock tb = {{0}, {0}, 0};
     region whole = {0, 0, 0, 0};
     struct keypress result;
     int i;
+
+    if (check_column_lines()) return 1;
 
     for (i = 0; i < 280; ++i) {
         tb.text[i] = L'a';
         tb.attrs[i] = 1;
     }
     tb.text[280] = L'\0';
+    tb.strlen = 280;
 
     reset(12, 4);
     push(EVT_KBRD, ARROW_DOWN, 0, 0, 0);
@@ -212,7 +266,7 @@ int main(void)
     push(EVT_KBRD, ESCAPE, 0, 0, 0);
     result = textui_textblock_show(&tb, whole, "超長文字說明");
     CHECK(result.code == ESCAPE && read_at == 5);
-    CHECK(layout_calls >= 2 && bad_coordinates == 0);
+    CHECK(lines_allocated >= 4 && bad_coordinates == 0);
     CHECK(saved == 1 && loaded == 1);
     CHECK(lines_allocated == lines_freed);
 
@@ -234,6 +288,7 @@ int main(void)
 
     reset(20, 5);
     tb.text[0] = L'\0';
+    tb.strlen = 0;
     push(EVT_KBRD, 'z', 0, 0, 0);
     result = textui_textblock_show(&tb, whole, "No content");
     CHECK(result.code == 'z' && bad_coordinates == 0);
@@ -245,6 +300,7 @@ int main(void)
         tb.attrs[i] = 1;
     }
     tb.text[100] = L'\0';
+    tb.strlen = 100;
     for (i = 0; i < 60; ++i)
         push(EVT_KBRD, ARROW_DOWN, 0, 0, 0);
     push(EVT_KBRD, 'q', 0, 0, 0);
