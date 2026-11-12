@@ -466,6 +466,40 @@ static region race_region = {RACE_COL, TABLE_ROW, 17, MENU_ROWS};
 static region class_region = {CLASS_COL, TABLE_ROW, 17, MENU_ROWS};
 static region roller_region = {ROLLER_COL, TABLE_ROW, 34, MENU_ROWS};
 
+/* Landscape terminals keep the traditional three-column birth sheet.
+ * On portrait terminals each step gets a focused, selectable menu with
+ * its detail pane to the right; prior steps are available via ESC. */
+static bool fa_birth_compact_layout(void)
+{
+    return Term && Term->wid > 0 && Term->wid < 76;
+}
+
+static int fa_birth_detail_col(int normal_col)
+{
+    if (!fa_birth_compact_layout()) return normal_col;
+    return MIN(MAX(0, Term->wid - 1),
+        race_region.col + race_region.width + 1);
+}
+
+static void fa_birth_configure_layout(void)
+{
+    int menu_width, rows;
+    if (!fa_birth_compact_layout()) {
+        race_region = (region){RACE_COL, TABLE_ROW, 17, MENU_ROWS};
+        class_region = (region){CLASS_COL, TABLE_ROW, 17, MENU_ROWS};
+        roller_region = (region){ROLLER_COL, TABLE_ROW, 34, MENU_ROWS};
+        return;
+    }
+    menu_width = MIN(19, MAX(6, Term->wid / 2 - 3));
+    rows = MAX(1, MIN(14, Term->hgt - TABLE_ROW - 1));
+    race_region = (region){RACE_COL, TABLE_ROW, menu_width, rows};
+    class_region = race_region;
+    roller_region = race_region;
+}
+
+/* Display only: never changes enum birth_stage or the race/class IDs. */
+
+
 /**
  * We use different menu "browse functions" to display the help text
  * sometimes supplied with the menu items - currently just the list
@@ -546,6 +580,8 @@ static void skill_help(const int r_skills[], const int c_skills[], int mhp, int 
 
 static void race_help(int i, void *db, const region *l)
 {
+    int detail_col = fa_birth_detail_col(RACE_AUX_COL);
+    int saved_wrap = text_out_wrap;
 	int j;
 	struct player_race *r = player_id2race(i);
 	int len = (STAT_MAX + 1) / 2;
@@ -560,8 +596,10 @@ static void race_help(int i, void *db, const region *l)
 	text_out_hook = text_out_to_screen;
 	
 	/* Indent output */
-	text_out_indent = RACE_AUX_COL;
-	Term_gotoxy(RACE_AUX_COL, TABLE_ROW);
+	text_out_indent = detail_col;
+    if (fa_birth_compact_layout() && Term->wid > detail_col + 2)
+        text_out_wrap = Term->wid - 1;
+    Term_gotoxy(detail_col, TABLE_ROW);
 
 	for (j = 0; j < len; j++) {  
 		const char *name = stat_names_reduced[j];
@@ -621,12 +659,15 @@ static void race_help(int i, void *db, const region *l)
 		n_flags++;
 	}
 
-	/* Reset text_out() indentation */
-	text_out_indent = 0;
+    /* Do not leak a phone-specific wrap setting into the next screen. */
+    text_out_indent = 0;
+    text_out_wrap = saved_wrap;
 }
 
 static void class_help(int i, void *db, const region *l)
 {
+    int detail_col = fa_birth_detail_col(CLASS_AUX_COL);
+    int saved_wrap = text_out_wrap;
 	int j;
 	struct player_class *c = player_id2class(i);
 	const struct player_race *r = player->race;
@@ -642,8 +683,10 @@ static void class_help(int i, void *db, const region *l)
 	text_out_hook = text_out_to_screen;
 	
 	/* Indent output */
-	text_out_indent = CLASS_AUX_COL;
-	Term_gotoxy(CLASS_AUX_COL, TABLE_ROW);
+	text_out_indent = detail_col;
+    if (fa_birth_compact_layout() && Term->wid > detail_col + 2)
+        text_out_wrap = Term->wid - 1;
+    Term_gotoxy(detail_col, TABLE_ROW);
 
 	for (j = 0; j < len; j++) {  
 		const char *name = stat_names_reduced[j];
@@ -717,8 +760,9 @@ static void class_help(int i, void *db, const region *l)
 		n_flags++;
 	}
 
-	/* Reset text_out() indentation */
-	text_out_indent = 0;
+    /* Do not leak a phone-specific wrap setting into the next screen. */
+    text_out_indent = 0;
+    text_out_wrap = saved_wrap;
 }
 
 /**
@@ -884,6 +928,8 @@ static void setup_menus(void)
 	};
 
 	struct birthmenu_data *mdata;
+
+    fa_birth_configure_layout();
 
 	/* Count the races */
 	n = 0;
@@ -2096,13 +2142,17 @@ int textui_do_birth(void)
 				print_menu_instructions();
 
 				if (current_stage > BIRTH_RACE_CHOICE) {
-					menu_refresh(&race_menu, false);
+                    /* Compact mode deliberately shows only the current
+                     * choice list, not three overlapping columns. */
+                    if (!fa_birth_compact_layout())
+                        menu_refresh(&race_menu, false);
 					menu = &class_menu;
 					command = CMD_CHOOSE_CLASS;
 				}
 
 				if (current_stage > BIRTH_CLASS_CHOICE) {
-					menu_refresh(&class_menu, false);
+                    if (!fa_birth_compact_layout())
+                        menu_refresh(&class_menu, false);
 					menu = &roller_menu;
 				}
 
