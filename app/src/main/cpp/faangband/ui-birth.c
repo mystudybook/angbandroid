@@ -1896,6 +1896,16 @@ static int edit_text(char *buffer, int buflen) {
             (size_t)(y - area.page_rows + 1) : 0;
 
         clear_from(MAX(0, area.row - 1));
+        /* When a background story spans more rows than the phone can
+         * show, tell the player which wrapped line they're editing.
+         * The cursor and text remain editable above/below the viewport. */
+        if (Term && area.row > 0) {
+            const char *status = angdroid_zh_tw_enabled() ?
+                "背景第 %d/%d 行 · ↑↓ 移動 · Enter 完成／Esc 取消" :
+                "History line %d/%d - arrows move - Enter/Esc";
+            fa_birth_prompt_left(format(status, y + 1, (int)n_lines),
+                area.row - 1);
+        }
         for (draw = 0; draw < (size_t)area.page_rows &&
                 first_visible + draw < n_lines; ++draw) {
             char original[256], visible[256];
