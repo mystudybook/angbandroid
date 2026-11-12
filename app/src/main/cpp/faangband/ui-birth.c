@@ -1088,6 +1088,21 @@ static bool use_context_menu_birth(struct menu *current_menu,
 	int selected;
 
 	assert(in->type == EVT_MOUSE);
+    /* The detail footer is also touchable: tap the left or right half
+     * to page traits while retaining the same selected class/race. */
+    if (Term && fa_birth_compact_layout() &&
+            fa_birth_detail_page_count > 1 &&
+            (menu_data->stage_inout == BIRTH_RACE_CHOICE ||
+             menu_data->stage_inout == BIRTH_CLASS_CHOICE) &&
+            in->mouse.y == Term->hgt - 2 &&
+            in->mouse.x >= fa_birth_help_col() &&
+            in->mouse.x < Term->wid) {
+        int middle = fa_birth_help_col() +
+            (Term->wid - fa_birth_help_col()) / 2;
+        fa_birth_detail_change_page(in->mouse.x < middle ? -1 : 1);
+        out->type = EVT_SWITCH;
+        return true;
+    }
 	if (in->mouse.y != QUESTION_ROW && in->mouse.y != QUESTION_ROW + 1) {
 		return false;
 	}
@@ -2659,6 +2674,14 @@ static void ui_enter_birthscreen(game_event_type type, game_event_data *data,
 {
 	/* Set the ugly static global that tells us if quickstart's available. */
 	quickstart_allowed = data->flag;
+    /* A new game must not inherit the previous creation session's
+     * detail-page offset or cursor identity. */
+    fa_birth_detail_page = 0;
+    fa_birth_detail_page_count = 1;
+    fa_birth_detail_last_oid = -1;
+    fa_birth_detail_last_class = false;
+    fa_birth_layout_width = -1;
+    fa_birth_layout_height = -1;
 
 	setup_menus();
 }
