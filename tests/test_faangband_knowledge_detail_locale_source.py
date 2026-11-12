@@ -63,7 +63,7 @@ require(obj,
     'kind->name, tval_find_name(kind->tval), true',
     'if (localized) visible_name = localized;',
     'angdroid_knowledge_clip_label(clipped, sizeof(clipped),',
-    'o_name, col, 45, Term->wid', # original source key documented below
+    'visible_name, col, 45, Term->wid',
     'angdroid_game_ui_text("Yes", angdroid_zh_tw_enabled())',
     'inscrip, 55, 75, Term->wid',
     'tile_height == 1 && Term && Term->wid > 76',
