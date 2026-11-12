@@ -2138,6 +2138,14 @@ int textui_do_birth(void)
 				struct menu *menu = &race_menu;
 				cmd_code command = CMD_CHOOSE_RACE;
 
+                /* A phone may rotate after the first creation step.
+                 * Rebuild terminal regions without touching cursor, race
+                 * IDs, choices, or the CMD_CHOOSE_* queue. */
+                fa_birth_configure_layout();
+                menu_layout(&race_menu, &race_region);
+                menu_layout(&class_menu, &class_region);
+                menu_layout(&roller_menu, &roller_region);
+
 				Term_clear();
 				print_menu_instructions();
 
