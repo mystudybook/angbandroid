@@ -56,7 +56,9 @@ require(compact,
     "of_has(clazz->flags, ability->index)",
     "pf_has(race->pflags, ability->index)",
     "mem_free(realm);",
-    "…橫向可查看更多特性",
+    "fa_birth_detail_page_count = MAX(1,",
+    "format(\"特性 %d/%d：按 [ 上頁、] 下頁\"",
+    "fa_birth_help_line(&line, angdroid_game_ui_text(ability->name, zh));",
 )
 assert "cmdq_push(" not in compact
 assert "CMD_CHOOSE_RACE" not in compact
