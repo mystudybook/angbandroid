@@ -45,6 +45,25 @@ int main(void)
     assert(angdroid_item_selection_footer_row(1, 0, 22, 0) == -1);
     assert(angdroid_item_selection_footer_row(1, 10, 22, -1) == -1);
 
+    /* A source with zero selectable objects is still navigable when
+     * another inventory/equipment/quiver/floor tab can be opened.
+     * The placeholder viewport row is not a real item: the actual menu
+     * count remains zero, so touch and Enter cannot select an object. */
+    assert(angdroid_item_selection_viewport_count(0, false) == 0);
+    assert(angdroid_item_selection_viewport_count(0, true) == 1);
+    assert(angdroid_item_selection_viewport_count(-1, false) == 0);
+    assert(angdroid_item_selection_viewport_count(-1, true) == 1);
+    assert(angdroid_item_selection_viewport_count(1, false) == 1);
+    assert(angdroid_item_selection_viewport_count(23, true) == 23);
+    assert(angdroid_item_selection_viewport_count(INT_MAX, true) == INT_MAX);
+    assert(angdroid_item_selection_region(22, 12, 16, 42, 25, 9,
+        angdroid_item_selection_viewport_count(0, true), false, &l));
+    assert(l.page_rows == 1);
+    assert(angdroid_menu_scrolling_hit(
+        l.row, l.row, l.page_rows, 0, 0) == -1);
+    assert(!angdroid_item_selection_region(22, 12, 16, 42, 25, 9,
+        angdroid_item_selection_viewport_count(0, false), false, &l));
+
     for (w = 0; w <= 160; ++w) {
         for (h = 0; h <= 40; ++h) {
             for (count = 0; count <= 55; count += 5) {
