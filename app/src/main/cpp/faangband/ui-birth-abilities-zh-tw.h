@@ -123,6 +123,29 @@ static inline const char *angdroid_fa_birth_ability_name(
         case OF_TRAP_IMMUNE: return "免疫陷阱";
         case OF_THROWING: return "投擲武器";
         case OF_PERFECT_BALANCE: return "完美平衡";
+        /* Additional positive and negative traits. Keep drawbacks as
+         * drawbacks, and leave the source flag values unchanged. */
+        case OF_TWO_HANDED_DES: return "適合雙手持用";
+        case OF_TWO_HANDED_REQ: return "必須雙手持用";
+        case OF_BURNS_OUT: return "會耗盡光源";
+        case OF_TAKES_FUEL: return "需要燃料";
+        case OF_NO_FUEL: return "無須燃料";
+        case OF_IMPAIR_HP: return "削弱生命恢復";
+        case OF_IMPAIR_MANA: return "削弱魔力恢復";
+        case OF_AFRAID: return "容易恐懼";
+        case OF_NO_TELEPORT: return "無法傳送";
+        case OF_AGGRAVATE: return "吸引怪物";
+        case OF_DRAIN_EXP: return "流失經驗";
+        case OF_STICKY: return "裝備難以卸除";
+        case OF_FRAGILE: return "容易損壞";
+        case OF_LIGHT_2: return "照明等級 2";
+        case OF_LIGHT_3: return "照明等級 3";
+        case OF_DIG_1: return "挖掘加成 1";
+        case OF_DIG_2: return "挖掘加成 2";
+        case OF_DIG_3: return "挖掘加成 3";
+        case OF_EXPLODE: return "爆炸效果";
+        case OF_DARKNESS: return "散發黑暗";
+        case OF_MULTIPLY_WEIGHT: return "增加重量";
         default: break;
         }
     }
