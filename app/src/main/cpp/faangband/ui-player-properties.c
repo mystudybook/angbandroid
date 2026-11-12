@@ -25,6 +25,10 @@
 #include "ui-player-properties.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/zh-tw-player-ability.h"
+#include "../angband/menu-text-fit.h"
+#include "ui-birth-abilities-zh-tw.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -40,44 +44,39 @@ static char view_ability_tag(struct menu *menu, int oid)
  * Display an entry on the gain ability menu
  */
 static void view_ability_display(struct menu *menu, int oid, bool cursor,
-	int row, int col, int width)
+    int row, int col, int width)
 {
-	char buf[80];
-	uint8_t color;
-	struct player_ability *choices = menu->menu_data;
+    char buf[256], visible[256];
+    uint8_t color;
+    bool zh = angdroid_zh_tw_enabled();
+    const struct player_ability *choices = menu->menu_data;
+    const char *name = angdroid_fa_birth_ability_name(
+        choices[oid].name, choices[oid].type, choices[oid].index, zh);
 
-	switch (choices[oid].group) {
-	case PLAYER_FLAG_SPECIAL:
-		{
-			strnfmt(buf, sizeof(buf), "Specialty Ability: %s",
-				choices[oid].name);
-			color = COLOUR_GREEN;
-			break;
-		}
-	case PLAYER_FLAG_CLASS:
-		{
-			strnfmt(buf, sizeof(buf), "Class: %s",
-				choices[oid].name);
-			color = COLOUR_UMBER;
-			break;
-		}
-	case PLAYER_FLAG_RACE:
-		{
-			strnfmt(buf, sizeof(buf), "Racial: %s",
-				choices[oid].name);
-			color = COLOUR_ORANGE;
-			break;
-		}
-	default:
-		{
-			my_strcpy(buf, "Mysterious", sizeof(buf));
-			color = COLOUR_PURPLE;
-		}
-	}
+    switch (choices[oid].group) {
+    case PLAYER_FLAG_SPECIAL:
+        strnfmt(buf, sizeof(buf), zh ? "特殊能力：%s" :
+            "Specialty Ability: %s", name);
+        color = COLOUR_GREEN;
+        break;
+    case PLAYER_FLAG_CLASS:
+        strnfmt(buf, sizeof(buf), zh ? "職業能力：%s" : "Class: %s", name);
+        color = COLOUR_UMBER;
+        break;
+    case PLAYER_FLAG_RACE:
+        strnfmt(buf, sizeof(buf), zh ? "種族能力：%s" : "Racial: %s", name);
+        color = COLOUR_ORANGE;
+        break;
+    default:
+        my_strcpy(buf, zh ? "神祕能力" : "Mysterious", sizeof(buf));
+        color = COLOUR_PURPLE;
+        break;
+    }
 
-	/* Print it */
-	c_put_str(cursor ? COLOUR_WHITE : color, buf, row, col);
-
+    /* Do not clip a multi-byte name in the middle of a Chinese glyph. */
+    angdroid_menu_copy_columns(visible, sizeof(visible), buf,
+        width > 0 ? (size_t)width : 0);
+    c_put_str(cursor ? COLOUR_WHITE : color, visible, row, col);
 }
 
 
@@ -96,7 +95,9 @@ static void view_ability_menu_browser(int oid, void *data, const region *loc)
 
 	clear_from(loc->row + loc->page_rows);
 	Term_gotoxy(loc->col, loc->row + loc->page_rows);
-	text_out_c(COLOUR_L_BLUE, "\n%s\n", (char *) choices[oid].desc);
+	text_out_c(COLOUR_L_BLUE, "\n%s\n",
+        angdroid_ability_description(choices[oid].desc,
+            angdroid_zh_tw_enabled()));
 
 	/* XXX */
 	text_out_pad = 0;
@@ -113,15 +114,19 @@ void textui_view_ability_menu(struct player_ability *ability_list,
 	struct menu menu;
 	menu_iter menu_f = { view_ability_tag, 0, view_ability_display, 0, 0 };
 	region loc = { 0, 0, 70, -99 };
-	char buf[80];
+	char buf[160];
+
+    if (!ability_list || num_abilities <= 0) return;
 
 	/* Save the screen and clear it */
 	screen_save();
 
 	/* Prompt choices */
-	strnfmt(buf, sizeof(buf),
-		"Race and class abilities (%c-%c, ESC=exit): ",
-		all_letters_nohjkl[0], all_letters_nohjkl[num_abilities - 1]);
+    strnfmt(buf, sizeof(buf),
+        angdroid_zh_tw_enabled() ?
+            "種族與職業能力（%c-%c，Esc 離開）：" :
+            "Race and class abilities (%c-%c, ESC=exit): ",
+        all_letters_nohjkl[0], all_letters_nohjkl[num_abilities - 1]);
 
 	/* Set up the menu */
 	menu_init(&menu, MN_SKIN_SCROLL, &menu_f);
@@ -185,17 +190,23 @@ static char gain_spec_tag(struct menu *menu, int oid)
  * Display an entry on the gain specialty menu
  */
 static void gain_spec_display(struct menu *menu, int oid, bool cursor, int row,
-					   int col, int width)
+    int col, int width)
 {
-	struct spec_menu_data *d = menu_priv(menu);
-	int idx = d->specialties[oid];
-	uint8_t attr = (cursor ? COLOUR_L_GREEN : COLOUR_GREEN);
-	struct player_ability *ability = lookup_ability("player", idx, 0);
+    struct spec_menu_data *d = menu_priv(menu);
+    int idx = d->specialties[oid];
+    struct player_ability *ability = lookup_ability("player", idx, 0);
+    uint8_t attr = cursor ? COLOUR_L_GREEN : COLOUR_GREEN;
+    char visible[256];
+    const char *name;
 
-	/* Print it */
-	c_put_str(attr, ability->name, row, col);
-
+    if (!ability) return;
+    name = angdroid_fa_birth_ability_name(ability->name,
+        ability->type, ability->index, angdroid_zh_tw_enabled());
+    angdroid_menu_copy_columns(visible, sizeof(visible), name,
+        width > 0 ? (size_t)width : 0);
+    c_put_str(attr, visible, row, col);
 }
+
 
 /**
  * Deal with events on the gain specialty menu
@@ -222,16 +233,19 @@ static void gain_spec_menu_browser(int oid, void *data, const region *loc)
 	int idx = d->specialties[oid];
 	struct player_ability *ability = lookup_ability("player", idx, 0);
 
+	if (!ability) return;
+
 	/* Redirect output to the screen */
 	text_out_hook = text_out_to_screen;
 	text_out_wrap = 60;
 	text_out_indent = loc->col - 1;
 	text_out_pad = 1;
 
-
 	clear_from(loc->row + loc->page_rows);
 	Term_gotoxy(loc->col, loc->row + loc->page_rows + 1);
-	text_out_to_screen(COLOUR_DEEP_L_BLUE, (char *) ability->desc);
+	text_out_to_screen(COLOUR_DEEP_L_BLUE,
+        (char *)angdroid_ability_description(ability->desc,
+            angdroid_zh_tw_enabled()));
 
 	/* Reset */
 	text_out_pad = 0;
@@ -254,7 +268,7 @@ bool textui_gain_spec_menu(int *pick)
 
 	size_t i;
 
-	char buf[80];
+	char buf[192];
 
 	/* Count the learnable specialties */
 	d->spec_known = 0;
@@ -266,8 +280,9 @@ bool textui_gain_spec_menu(int *pick)
 
 	/* We are out of specialties - should never happen */
 	if (!d->spec_known) {
-		msg("No specialties available.");
-		screen_load();
+		msg("%s", angdroid_zh_tw_enabled() ?
+            "沒有可學習的專精能力。" : "No specialties available.");
+        mem_free(d);
 		return false;
 	}
 
@@ -287,9 +302,10 @@ bool textui_gain_spec_menu(int *pick)
 	clear_from(0);
 
 	/* Prompt choices */
-	strnfmt(buf, sizeof(buf),
-			"(Specialties: %c-%c, ESC=exit) Gain which specialty (%d available)? ",
-			I2A(0), I2A(d->spec_known - 1), player->upkeep->new_specialties);
+    strnfmt(buf, sizeof(buf), angdroid_zh_tw_enabled() ?
+            "學習哪項專精（%c-%c，Esc 離開，剩餘 %d 次）？" :
+            "(Specialties: %c-%c, ESC=exit) Gain which specialty (%d available)? ",
+            I2A(0), I2A(d->spec_known - 1), player->upkeep->new_specialties);
 
 	/* Set up the menu */
 	menu_init(&menu, MN_SKIN_SCROLL, &menu_f);
@@ -311,8 +327,12 @@ bool textui_gain_spec_menu(int *pick)
 			struct player_ability *ability = lookup_ability("player", idx, 0);
 			region_erase_bordered(&loc);
 			menu_layout(&menu, &loc);
-			if (get_check(format("Definitely choose %s? ",
-					ability->name))) {
+            if (ability && get_check(format(
+                    angdroid_zh_tw_enabled() ? "確定選擇%s？" :
+                        "Definitely choose %s? ",
+                    angdroid_fa_birth_ability_name(ability->name,
+                        ability->type, ability->index,
+                        angdroid_zh_tw_enabled())))) {
 				break;
 			}
 			d->selected_spec = 0;
@@ -324,6 +344,8 @@ bool textui_gain_spec_menu(int *pick)
 
 	/* Load screen */
 	screen_load();
+    mem_free(d->specialties);
+    mem_free(d);
 
 	return (evt.type != EVT_ESCAPE);
 }
@@ -344,7 +366,9 @@ void textui_interact_with_specialties(void)
 
 	/* Interact and choose. */
 	while (get_com_ex
-		   ("View abilities or Learn specialty (l/v/ESC)?", &answer)) {
+		   (angdroid_zh_tw_enabled() ?
+            "學習專精或檢視能力（l/v/Esc）？" :
+            "View abilities or Learn specialty (l/v/ESC)?", &answer)) {
 		/* New ability */
 		if ((answer.key.code == 'L') || (answer.key.code == 'l')) {
 			gain_specialty();
