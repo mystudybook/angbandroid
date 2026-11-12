@@ -58,6 +58,7 @@
 #include "../angband/item-picker-start-source.h"
 #include "../angband/item-picker-tag-guard.h"
 #include "../angband/zh-tw-ui.h"
+#include "../angband/zh-tw-inscription-confirm.h"
 #include "../angband/zh-tw-ignore-quality-action.h"
 #include "../angband/ignore-named-action-locale.h"
 #include "obj-desc-item-zh-tw.h"
@@ -716,7 +717,12 @@ bool get_item_allow(const struct object *obj, unsigned char ch, cmd_code cmd,
 		if (!verb)
 			verb = "do that with";
 
-		strnfmt(prompt_buf, sizeof(prompt_buf), "Really %s", verb);
+        /* Inscription confirmation is display-only; the original !*
+         * and !key checks and repeated n confirmations are untouched.
+         * Unknown verbs retain their original English wording. */
+        if (!angdroid_inscription_confirm_prefix(prompt_buf,
+                sizeof(prompt_buf), verb, angdroid_zh_tw_enabled()))
+            strnfmt(prompt_buf, sizeof(prompt_buf), "Really %s", verb);
 
 		/* Prompt for confirmation n times */
 		while (n--) {
