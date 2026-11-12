@@ -72,6 +72,8 @@
 #include "../angband/knowledge-monster-label.h"
 #include "../angband/zh-tw-knowledge-kill-summary.h"
 #include "../angband/zh-tw-shape-lore.h"
+#include "../angband/zh-tw-player-ability.h"
+#include "ui-birth-elements-zh-tw.h"
 #include "../angband/zh-tw-symbol-query.h"
 #include "../angband/zh-tw-terrain-trap.h"
 #include "../angband/zh-tw-spell-names.h"
@@ -3166,6 +3168,17 @@ static void shape_lore_append_stat_modifiers(textblock *tb,
 }
 
 
+/* Use the same native ELEM_ labels as the birth screen. The English
+ * projection names and resistance percentages remain unchanged. */
+static const char *fa_shape_element_visible_name(int index)
+{
+    bool zh = angdroid_zh_tw_enabled();
+    const char *localized = zh ? angdroid_fa_birth_element_name(index) : NULL;
+    return localized ? localized :
+        angdroid_shape_term(projections[index].name, zh);
+}
+
+
 static void shape_lore_append_resistances(textblock *tb,
 	const struct player_shape *s)
 {
@@ -3177,16 +3190,13 @@ static void shape_lore_append_resistances(textblock *tb,
 
 	for (i = 0; i < ELEM_MAX; ++i) {
 		if (s->el_info[i].res_level == RES_LEVEL_MAX) {
-			imm[nimm] = angdroid_shape_term(
-                projections[i].name, angdroid_zh_tw_enabled());
+			imm[nimm] = fa_shape_element_visible_name(i);
 			++nimm;
 		} else if (s->el_info[i].res_level < RES_LEVEL_BASE) {
-			res[nres] = angdroid_shape_term(
-                projections[i].name, angdroid_zh_tw_enabled());
+			res[nres] = fa_shape_element_visible_name(i);
 			++nres;
 		} else if (s->el_info[i].res_level > RES_LEVEL_BASE) {
-			vul[nvul] = angdroid_shape_term(
-                projections[i].name, angdroid_zh_tw_enabled());
+			vul[nvul] = fa_shape_element_visible_name(i);
 			++nvul;
 		}
 	}
@@ -3316,9 +3326,14 @@ static void shape_lore_append_misc_flags(textblock *tb,
 	for (ability = player_abilities; ability; ability = ability->next) {
 		if (streq(ability->type, "player") &&
 			pf_has(s->pflags, ability->index)) {
-			textblock_append(tb, "%s%s", (n > 0) ? "  " : "",
-                angdroid_shape_misc_desc(ability->desc,
-                    angdroid_zh_tw_enabled()));
+            const char *localized = angdroid_ability_description(
+                ability->desc, angdroid_zh_tw_enabled());
+            if (localized == ability->desc) {
+                localized = angdroid_shape_misc_desc(ability->desc,
+                    angdroid_zh_tw_enabled());
+            }
+            textblock_append(tb, "%s%s", (n > 0) ? "  " : "",
+                localized ? localized : "");
 			++n;
 		}
 	}
