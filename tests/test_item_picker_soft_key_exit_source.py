@@ -89,4 +89,32 @@ for marker in (
     assert marker in NATIVE, marker
 assert "test_soft_kbd_replace.c" in RUN
 assert "test_item_picker_soft_key_exit_source.py" in VERIFY
+# The whole picker (not each tab) owns the parent's lingering prompt.
+SCOPE = (CURSES / "soft-kbd-linger-scope.h").read_text(encoding="utf-8")
+HEADER = (CURSES / "droid.h").read_text(encoding="utf-8")
+assert "soft_kbd_linger_snapshot" in SCOPE
+assert "angdroid_soft_kbd_capture_linger(" in SCOPE
+assert "angdroid_soft_kbd_recover_linger(" in SCOPE
+assert "if (!cancelled" in SCOPE
+assert "soft_kbd_save_linger(" in HEADER
+assert "soft_kbd_restore_linger(" in HEADER
+assert "soft_kbd_save_linger(" in DROID
+assert "soft_kbd_restore_linger(" in DROID
+assert "flashing_keys = false;" in DROID.split(
+    "void soft_kbd_restore_linger(", 1)[1].split("void soft_kbd_clear(", 1)[0]
+for variant in ("angband", "faangband"):
+    obj = (CPP / variant / "ui-object.c").read_text(encoding="utf-8")
+    picker = obj.split("bool textui_get_item(", 1)[1].split(
+        "/* Object recall", 1)[0]
+    assert "soft_kbd_linger_snapshot outer_keys;" in picker, variant
+    assert "soft_kbd_save_linger(&outer_keys);" in picker, variant
+    assert "soft_kbd_restore_linger(&outer_keys, *choice == NULL);" in picker, variant
+    assert picker.index("soft_kbd_save_linger(&outer_keys);") < picker.index(
+        "while (true) {"
+    ), variant
+    assert picker.index("soft_kbd_restore_linger(&outer_keys, *choice == NULL);") > picker.index(
+        "*choice = item_menu("
+    ), variant
+assert "test_soft_kbd_linger_scope.c" in RUN
+
 print("PASS: both engines clear item soft keys on switch, select and cancel")
