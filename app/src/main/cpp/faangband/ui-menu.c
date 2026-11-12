@@ -906,6 +906,7 @@ static void keys_to_ui(struct menu *menu)
 	int cursor;
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 	int first = 0, end = n;
+	bool paged;
 
 	/* Do not publish a previous inventory page's keys while Android's
 	 * terminal is between portrait/landscape layout sizes. */
@@ -917,7 +918,7 @@ static void keys_to_ui(struct menu *menu)
 		soft_kbd_replace("");
 		return;
 	}
-	bool paged = fa_menu_relative_tags_paged(menu);
+	paged = fa_menu_relative_tags_paged(menu);
 
 	/* Only visible relative tags belong on the current soft keyboard
 	 * page. Avoid scanning thousands of offscreen rows on every frame.
