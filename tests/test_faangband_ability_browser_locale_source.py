@@ -351,5 +351,44 @@ assert "generate_fa_choice_input_host.py" in CHOICE_RUN
 assert "-std=c99 -Wall -Wextra -Werror -pedantic" in CHOICE_RUN
 assert "test-fa-choice-input.sh" in RUNNER
 
+# An invalid resize must erase the previously painted modal question.
+check_modal = section(INPUT, "static bool textui_get_check(",
+                      "/* TODO: refactor get_check() in terms of get_char() */")
+generic_choice = section(INPUT, "char get_char(const char *prompt,",
+                         " * Text-native way of getting a filename.")
+for snippet in (check_modal, generic_choice):
+    assert "if (width < 3)" in snippet
+    assert 'if (Term && Term->wid > 0 && Term->hgt > 0)' in snippet
+    assert 'prt("", 0, 0);' in snippet
+
+# The l/v/Esc command prompt is also a localized terminal line. It
+# must no longer draw a raw translated string or swallow resize events.
+command_prompt = section(INPUT, "bool get_com_ex(const char *prompt,",
+                         " * Pause for user response")
+require(command_prompt,
+        "angdroid_game_ui_text(",
+        "char visible[512];",
+        "angdroid_menu_copy_columns(visible, sizeof(visible), display,",
+        "ke = inkey_ex();",
+        "if (ke.type == EVT_RESIZE || ke.type == EVT_NONE)",
+        "if (width < 3)",
+        "ke.type = EVT_KBRD;",
+        "ke.key.code = ESCAPE;",
+        "if (ke.type == EVT_BUTTON)",
+        "if (ke.type == EVT_KBRD || ke.type == EVT_MOUSE)",
+        "*command = ke;")
+assert "ke = inkey_m();" not in command_prompt
+assert 'prt(angdroid_game_ui_text(prompt' not in command_prompt
+COMMAND_GEN = (ROOT / "tests/native/generate_fa_command_prompt_host.py").read_text(
+    encoding="utf-8")
+require(COMMAND_GEN, "found.group(0)", "EVT_RESIZE",
+        "push(EVT_MOUSE", "push(EVT_BUTTON", "Too narrow",
+        "draw_count == 3 && clear_count == 1")
+COMMAND_RUN = (ROOT / "scripts/test-fa-command-prompt.sh").read_text(
+    encoding="utf-8")
+assert "generate_fa_command_prompt_host.py" in COMMAND_RUN
+assert "-std=c99 -Wall -Wextra -Werror -pedantic" in COMMAND_RUN
+assert "test-fa-command-prompt.sh" in RUNNER
+
 assert "test_faangband_ability_browser_locale_source.py" in RUNNER
 print("PASS: FA specialty browsers, typed labels and shape knowledge source guard")
