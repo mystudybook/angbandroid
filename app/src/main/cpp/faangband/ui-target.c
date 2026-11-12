@@ -141,12 +141,50 @@ static void fa_target_draw_short_help(int row)
     prt(visible, row, 0);
 }
 
+/* One visual terminal row for target details and compact help. Source
+ * descriptions may already have reached their fixed byte formatter limit:
+ * replacing an incomplete final UTF-8 sequence with '?' avoids broken
+ * wide glyphs, while leaving all game and monster data unchanged. */
+static void fa_target_draw_bounded_line(const char *description, int row)
+{
+    char visible[TARGET_OUT_VAL_SIZE];
+    int width;
+
+    if (!Term || Term->hgt <= 0 || row < 0 || row >= Term->hgt)
+        return;
+    width = Term->wid - 1;
+    if (width < 1) {
+        prt("", row, 0);
+        return;
+    }
+    angdroid_menu_copy_columns(visible, sizeof(visible), description,
+        (size_t)width);
+    prt(visible, row, 0);
+}
+
+/* A short landscape terminal cannot safely show the full multi-line help.
+ * Keep map rows available and put the essential controls in its footer. */
+static void fa_target_draw_compact_help(int row)
+{
+    fa_target_draw_bounded_line(angdroid_zh_tw_enabled() ?
+        "方向／點擊查看，t 設目標，q 離開，? 說明" :
+        "Dir/click: look, t: target, q: exit, ?: help", row);
+}
+
 void target_display_help(bool monster, bool object, bool free)
 {
 	/* Determine help location */
     int wid, hgt, help_loc;
     int saved_wrap = text_out_wrap;
     Term_get_size(&wid, &hgt);
+    if (wid <= 1 || hgt <= 0) return;
+    if (hgt <= HELP_HEIGHT + 2) {
+        /* On a tiny rotated phone, clearing HELP_HEIGHT rows would
+         * erase the entire map, and wrapped help could escape the
+         * available terminal bounds. Use a single bounded footer. */
+        fa_target_draw_compact_help(hgt - 1);
+        return;
+    }
     help_loc = MAX(0, hgt - HELP_HEIGHT);
 
     /* CJK glyphs use two terminal cells. Constrain wrapping to the
@@ -346,7 +384,7 @@ static ui_event target_recall_loop_object(struct object *obj, int y, int x,
 						"%s%s%s%s, %s.", s1, s2, s3, o_name, coords);
 			}
 
-			prt(out_val, 0, 0);
+			fa_target_draw_bounded_line(out_val, 0);
 			move_cursor_relative(y, x);
 			press = inkey_m();
 		}
@@ -437,7 +475,7 @@ static bool aux_hallucinate(struct chunk *c, struct player *p,
 			name_strange,
 			auxst->coord_desc);
 	}
-	prt(out_val, 0, 0);
+	fa_target_draw_bounded_line(out_val, 0);
 	move_cursor_relative(auxst->grid.y, auxst->grid.x);
 
 	auxst->press.key = inkey();
@@ -517,7 +555,7 @@ static bool aux_monster(struct chunk *c, struct player *p,
 					auxst->coord_desc);
 			}
 
-			prt(out_val, 0, 0);
+			fa_target_draw_bounded_line(out_val, 0);
 
 			/* Place cursor */
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
@@ -594,7 +632,7 @@ static bool aux_monster(struct chunk *c, struct player *p,
 				(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
 				(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
 
-			prt(out_val, 0, 0);
+			fa_target_draw_bounded_line(out_val, 0);
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
 			auxst->press = inkey_m();
 
@@ -674,7 +712,7 @@ static bool aux_trap(struct chunk *c, struct player *p,
 				auxst->coord_desc);
 		}
 
-		prt(out_val, 0, 0);
+		fa_target_draw_bounded_line(out_val, 0);
 
 		/* Place cursor */
 		move_cursor_relative(auxst->grid.y, auxst->grid.x);
@@ -746,7 +784,7 @@ static bool aux_object(struct chunk *c, struct player *p,
 					auxst->coord_desc);
 			}
 
-			prt(out_val, 0, 0);
+			fa_target_draw_bounded_line(out_val, 0);
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
 			auxst->press = inkey_m();
 
@@ -772,7 +810,7 @@ static bool aux_object(struct chunk *c, struct player *p,
 						| OLIST_GOLD), NULL);
 
 					/* Describe the pile */
-					prt(out_val, 0, 0);
+					fa_target_draw_bounded_line(out_val, 0);
 					auxst->press = inkey_m();
 
 					/* Load screen */
@@ -873,7 +911,7 @@ static bool aux_terrain(struct chunk *c, struct player *p,
 			auxst->coord_desc);
 	}
 
-	prt(out_val, 0, 0);
+	fa_target_draw_bounded_line(out_val, 0);
 	move_cursor_relative(auxst->grid.y, auxst->grid.x);
 	auxst->press = inkey_m();
 
