@@ -417,10 +417,13 @@ static void display_columns(struct menu *menu, int cursor, int *top, region *loc
 	cols = 1 + (n - 1) / rows;
 	colw = angdroid_menu_fit_column_width(23, loc->width, 0, cols);
 	for (c = 0; c < cols && c < loc->width / colw; c++) {
-		for (r = 0; r < rows; r++) {
-			int pos = c * rows + r;
-			if (pos < n)
-				display_menu_row(menu, pos, 0, pos == cursor,
+		int base = c * rows;
+		/* In a partially filled final column, do not compute base + r
+		 * for rows beyond count. It could overflow int at INT_MAX and
+		 * must not render a cell that touch hit-testing will reject. */
+		for (r = 0; r < rows && r < n - base; r++) {
+			int pos = base + r;
+			display_menu_row(menu, pos, 0, pos == cursor,
 					row + r, col + c * colw, colw);
 		}
 	}
