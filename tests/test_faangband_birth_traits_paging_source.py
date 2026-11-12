@@ -79,6 +79,12 @@ need(touch,
     "fa_birth_detail_change_page(-1);",
     "fa_birth_detail_change_page(1);",
 )
+# The touch Help button may open instructions, but must never send the
+# player back to BIRTH_RESET and discard creation progress.
+help_case = touch.split("case ACT_CTX_BIRTH_HELP:", 1)[1].split(
+    "case ACT_CTX_BIRTH_PREV_DETAILS:", 1)[0]
+need(help_case, "do_cmd_help();", "out->type = EVT_SWITCH;", "break;")
+assert "menu_data->stage_inout = BIRTH_RESET;" not in help_case
 
 question = part("static enum birth_stage menu_question(",
                 "static enum birth_stage roller_command(")
