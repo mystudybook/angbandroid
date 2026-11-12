@@ -2196,8 +2196,10 @@ static const char *o_xtra_prompt(int oid)
 {
 	struct object_kind *kind = objkind_byid(oid);
 
-	const char *no_insc = ", 's' to toggle ignore, 'r'ecall, '{'";
-	const char *with_insc = ", 's' to toggle ignore, 'r'ecall, '{', '}'";
+    const char *no_insc = ", 's' to toggle ignore, 'r'ecall, '{'";
+    const char *with_insc = ", 's' to toggle ignore, 'r'ecall, '{', '}'";
+    const char *no_ignore = ", 'r'ecall, '{'";
+    const char *no_ignore_with_note = ", 'r'ecall, '{', '}'";
 
 	if (!kind) return NULL;
 
@@ -2206,9 +2208,9 @@ static const char *o_xtra_prompt(int oid)
     if (ignore_tval(kind->tval)) soft_kbd_flash("s");
     if (kind->aware ? kind->note_aware : kind->note_unaware) {
         soft_kbd_flash("}");
-        return with_insc;
+        return ignore_tval(kind->tval) ? with_insc : no_ignore_with_note;
     }
-    return no_insc;
+    return ignore_tval(kind->tval) ? no_insc : no_ignore;
 }
 
 /**
@@ -2374,7 +2376,9 @@ static void rune_lore(int oid)
         rune_name(oid), angdroid_zh_tw_enabled(),
         localized_title, sizeof(localized_title)));
 
-    my_strcap(title);
+    /* ASCII capitalization is not meaningful for UTF-8 CJK glyphs. */
+        if ((unsigned char)title[0] < 0x80u)
+            my_strcap(title);
     textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
     textblock_append(tb, "\n");
     textblock_append(tb, "%s", angdroid_zh_tw_rune_description(
@@ -2582,7 +2586,9 @@ static void feat_lore(int oid)
 		char *title = string_make(angdroid_terrain_name(
             feat->name, angdroid_zh_tw_enabled()));
 
-		my_strcap(title);
+		/* ASCII capitalization is not meaningful for UTF-8 CJK glyphs. */
+        if ((unsigned char)title[0] < 0x80u)
+            my_strcap(title);
 		textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
 		string_free(title);
 		textblock_append(tb, "\n");
@@ -2783,7 +2789,9 @@ static void trap_lore(int oid)
 										  "if you're unlucky it also ", 0,
 										  false);
 
-		my_strcap(title);
+		/* ASCII capitalization is not meaningful for UTF-8 CJK glyphs. */
+        if ((unsigned char)title[0] < 0x80u)
+            my_strcap(title);
 		textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
 		string_free(title);
 		textblock_append(tb, "\n");
