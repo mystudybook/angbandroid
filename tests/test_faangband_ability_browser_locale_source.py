@@ -99,7 +99,8 @@ require(learn_browser, "if (!ability) return;",
 learn_menu = section(UI, "bool textui_gain_spec_menu(",
                      "void textui_interact_with_specialties(")
 require(learn_menu, '"學習哪項專精（%c-%c，Esc 離開，剩餘 %d 次）？"',
-        '"確定選擇%s？"', "menu_select(&menu, EVT_SELECT, true);",
+        '"%s，確定學習？"', '"%s: learn this specialty? "',
+        "menu_select(&menu, EVT_SELECT, true);",
         "d->selected_spec = 0;",
         "if (evt.type != EVT_SELECT) break;",
         "bool accepted = false;",
@@ -270,5 +271,42 @@ dump = section(DUMP, "void write_character_dump(", "bool dump_save(")
 require(dump, '"  [Character Equipment]\\n\\n"',
         'lookup_ability("player", i, 0)->name',
         'option_name(opt)')
+# The common FAangband confirmation input must not truncate UTF-8 in
+# raw bytes, including long or malformed labels, or hide the Yes/No keys.
+confirm = section(INPUT, "static bool textui_get_check(",
+                  "/* TODO: refactor get_check() in terms of get_char() */")
+require(INPUT, '#include "ui-confirm-prompt-utf8.h"')
+require(confirm,
+        "angdroid_fa_confirm_prompt_line(buf, sizeof(buf), prompt, width);",
+        "if (ke.type == EVT_RESIZE)",
+        "soft_kbd_replace(\"\");",
+        'soft_kbd_flash("${yes_no}");',
+        "if (width < 3)",
+        "ke = inkey_ex();",
+        "return (ke.type == EVT_KBRD || ke.type == EVT_BUTTON) &&")
+assert "%.70s" not in confirm and "inkey_m();" not in confirm
+PROMPT = (FA / "ui-confirm-prompt-utf8.h").read_text(encoding="utf-8")
+require(PROMPT, "../angband/menu-text-fit.h",
+        "angdroid_fa_confirm_prompt_line(",
+        "if (width > capacity - 1) width = capacity - 1;",
+        "angdroid_menu_copy_columns(dest, capacity - suffix_bytes,",
+        'memcpy(dest + used, suffix, suffix_bytes + 1);')
+NATIVE_CONFIRM = (ROOT / "tests/native/test_faangband_confirm_prompt_utf8.c").read_text(
+    encoding="utf-8")
+assert "test_all_widths(void)" in NATIVE_CONFIRM
+assert "test_long_chinese_and_byte_boundaries(void)" in NATIVE_CONFIRM
+CONFIRM_GENERATOR = (
+    ROOT / "tests/native/generate_fa_confirm_check_host.py").read_text(
+        encoding="utf-8")
+assert "match.group(0)" in CONFIRM_GENERATOR
+assert 'textui_get_check\\(const char' in CONFIRM_GENERATOR
+assert "EVT_RESIZE" in CONFIRM_GENERATOR
+CONFIRM_RUNNER = (ROOT / "scripts/test-fa-confirm-check.sh").read_text(
+    encoding="utf-8")
+assert "generate_fa_confirm_check_host.py" in CONFIRM_RUNNER
+assert "test_faangband_confirm_prompt_utf8.c" in CONFIRM_RUNNER
+assert "-std=c99 -Wall -Wextra -Werror -pedantic" in CONFIRM_RUNNER
+assert "test-fa-confirm-check.sh" in RUNNER
+
 assert "test_faangband_ability_browser_locale_source.py" in RUNNER
 print("PASS: FA specialty browsers, typed labels and shape knowledge source guard")
