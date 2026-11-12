@@ -15,10 +15,11 @@ function = source.split("static void keys_to_ui(struct menu *menu)", 1)[1].split
 checks = {
     "filter item indexes": "angdroid_menu_action_item_index(",
     "reject stale filter entries": "if (oid < 0)",
-    "bounded hint append": "angdroid_menu_hint_append(temp, current,",
-    "hint buffer size": "sizeof(temp), sel)",
+    "bounded unique hint append": "angdroid_menu_hint_append_unique(",
+    "reserve fixed keys": "angdroid_menu_hint_tag_capacity(" ,
     "preserve visible row tags": "menu->skin->get_tag(menu, cursor)",
     "preserve original item keys": "menu->row_funcs->get_tag(menu, oid)",
+    "dedupe fixed keys": "angdroid_menu_hint_append_keys_unique(",
 }
 for name, fragment in checks.items():
     if fragment not in function:
@@ -34,7 +35,7 @@ if "soft_kbd_replace(buf);" not in function:
 if "soft_kbd_flash(buf);" in function or "if (strlen(buf) > 0)" in function:
     raise SystemExit("FAIL: old soft keyboard hint accumulation survived")
 
-for forbidden in ("menu->filter_list[oid]", "temp[current++]"):
+for forbidden in ("menu->filter_list[oid]", "temp[current++]", "my_strcat(buf, temp"):
     if forbidden in function:
         raise SystemExit(f"FAIL: unsafe legacy shortcut hint pattern: {forbidden}")
 
