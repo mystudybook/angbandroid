@@ -268,12 +268,15 @@ static bool map_menu_handler(struct menu *m, const ui_event *e, int oid)
 		return false;
 	} else if (e->type == EVT_KBRD) {
 		/* Get help */
-		if (e->key.code == '?') {
-			screen_save();
-			show_file("mapmode.txt", NULL, 0, 0);
-			screen_load();
-		}
-		return false;
+        if (e->key.code == '?') {
+            screen_save();
+            show_file("mapmode.txt", NULL, 0, 0);
+            screen_load();
+            /* Help is informational: keep the map picker active, and
+             * don't accidentally accept an unconfirmed map. */
+            return true;
+        }
+        return false;
 	}
 	return true;
 }
@@ -310,12 +313,27 @@ static void map_menu_browser(int oid, void *data, const region *loc)
     text_out_wrap = saved_wrap;
 }
 
+/* Recompute the map chooser geometry after a phone rotation. Native
+ * region math clamps the viewport, but does not choose a new width/row
+ * for this map-specific explanatory picker. */
+static void fa_birth_map_menu_resize(struct menu *m)
+{
+    region loc = { 5, 14, 70, -99 };
+    if (!m || !Term || Term->wid <= 0 || Term->hgt <= 0) return;
+    loc.col = MIN(5, MAX(0, Term->wid / 8));
+    loc.row = MIN(14, MAX(0, Term->hgt / 3));
+    loc.width = MAX(1, MIN(70, Term->wid - loc.col - 1));
+    loc.page_rows = MIN(m->count + 1,
+        MAX(1, Term->hgt - loc.row - 3));
+    menu_layout(m, &loc);
+}
+
 static const menu_iter map_menu_iter = {
 	NULL,						/* get_tag = NULL, use lowercase selections */
 	NULL,						/* no validity hook */
 	map_menu_display,
 	map_menu_handler,
-	NULL						/* no resize hook */
+    fa_birth_map_menu_resize /* rotate or resize */
 };
 
 /**
@@ -421,8 +439,7 @@ static enum birth_stage get_map_command(void)
 				quit(NULL);
 			} else {
 				cmdq_push(CMD_CHOOSE_MAP);
-				cmd_set_arg_choice(cmdq_peek(), "choice",
-					m->cursor);
+				cmd_set_arg_choice(cmdq_peek(), "choice", map);
 				next = BIRTH_RACE_CHOICE;
 			}
 		}
