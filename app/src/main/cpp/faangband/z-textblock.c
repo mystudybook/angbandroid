@@ -37,6 +37,7 @@
 #include "z-virt.h"
 #include "z-form.h"
 #include "z-file.h"
+#include "../curses/unicode_width.h"
 
 #define TEXTBLOCK_LEN_INITIAL		128
 #define TEXTBLOCK_LEN_INCR(x)		((x) + 128)
@@ -313,6 +314,69 @@ size_t textblock_calculate_lines(textblock *tb, size_t **line_starts, size_t **l
 		total_lines--;
 
 	return total_lines;
+}
+
+/* Wrap text for the phone's terminal-cell width, not wchar_t count.
+ * This is separate from textblock_calculate_lines() so historical file
+ * exports keep their established character-oriented wrapping.
+ *
+ * Each returned start/length indexes the ORIGINAL wide-character buffer.
+ * Explicit newlines create new rows, spaces may be removed at word breaks,
+ * and a scalar wider than the entire window gets its own row (rendered as
+ * '?' by the textblock screen painter rather than silently disappearing).
+ */
+size_t textblock_calculate_display_lines(textblock *tb, size_t **line_starts,
+        size_t **line_lengths, size_t width)
+{
+    const wchar_t *text;
+    size_t count = 0, allocated = 0, begin = 0, length;
+
+    if (!tb || !line_starts || !line_lengths || width == 0) return 0;
+    text = textblock_text(tb);
+    length = tb->strlen;
+    if (!text || !length) return 0;
+
+    while (begin < length) {
+        size_t cursor = begin, cells = 0, space = (size_t)-1;
+
+        if (text[begin] == L'\n') {
+            new_line(line_starts, line_lengths, &allocated, &count,
+                begin, 0);
+            ++begin;
+            continue;
+        }
+
+        while (cursor < length && text[cursor] != L'\n') {
+            size_t columns = (size_t)angdroid_terminal_columns(
+                (uint32_t)text[cursor]);
+            if (columns > width - cells) break;
+            if (text[cursor] == L' ') space = cursor;
+            cells += columns;
+            ++cursor;
+        }
+
+        if (cursor == length || text[cursor] == L'\n') {
+            new_line(line_starts, line_lengths, &allocated, &count,
+                begin, cursor - begin);
+            begin = cursor < length ? cursor + 1 : cursor;
+        } else if (space != (size_t)-1 && space > begin) {
+            /* Wrap at the last visible word boundary. Do not lose the
+             * next word or re-display the separator as an empty row. */
+            new_line(line_starts, line_lengths, &allocated, &count,
+                begin, space - begin);
+            begin = space + 1;
+            while (begin < length && text[begin] == L' ') ++begin;
+        } else {
+            /* One wide character cannot fit a 1-column window. Keep
+             * the index and let screen drawing substitute a '?' glyph. */
+            if (cursor == begin) ++cursor;
+            new_line(line_starts, line_lengths, &allocated, &count,
+                begin, cursor - begin);
+            begin = cursor;
+        }
+    }
+
+    return count;
 }
 
 /**
