@@ -207,7 +207,12 @@ enum
 	/* Only menus whose row handler explicitly processes EVT_MOUSE should
 	 * receive a raw item tap. Normal inventory/equipment menus instead
 	 * receive one EVT_SELECT, so their item callback is not skipped. */
-	MN_MOUSE_ROW_ACTION = 0x100
+	MN_MOUSE_ROW_ACTION = 0x100,
+
+	/* A purely decorative browse hook may paint a reserved footer even
+	 * if no item is selectable (e.g. empty inventory, nonempty quiver).
+	 * Opt in explicitly; normal browse hooks still require a valid oid. */
+	MN_BROWSE_WITHOUT_SELECTION = 0x200
 };
 
 
