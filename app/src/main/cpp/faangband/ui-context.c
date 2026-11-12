@@ -49,10 +49,61 @@
 #include "ui-store.h"
 #include "ui-target.h"
 #include "wizard.h"
+#include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
+
+
+/* Display-only translation. Never substitute command IDs, shortcut keys,
+ * identity checks, or selections with translated strings. */
+static const char *fa_context_ui_text(const char *english)
+{
+    static const struct { const char *english, *zh_tw; } fa_labels[] = {
+        {"Use", "使用"}, {"Cast", "施法"},
+        {"Go Up", "上樓"}, {"Go Down", "下樓"},
+        {"Cast On", "對目標施法"},
+        {"Attack", "攻擊"}, {"Alter", "互動"},
+        {"Disarm Chest", "解除寶箱陷阱"},
+        {"Open Chest", "開啟寶箱"},
+        {"Open Disarmed Chest", "開啟已解除陷阱的寶箱"},
+        {"Steal", "偷竊"}, {"Disarm", "解除陷阱"},
+        {"Jump Onto", "跳到此處"}, {"Close", "關閉"},
+        {"Open", "開啟"}, {"Lock", "上鎖"},
+        {"Tunnel", "挖掘"}, {"Fire On", "向目標射擊"},
+        {"Throw To", "向目標投擲"},
+        {"Study", "學習法術"}, {"Browse", "瀏覽法術"},
+        {"Aim", "瞄準魔杖"}, {"Zap", "使用魔棒"},
+        {"Read", "閱讀"}, {"Quaff", "飲用"},
+        {"Eat", "食用"}, {"Activate", "啟動"},
+        {"Fire", "射擊"}, {"Refill", "補充燃料"},
+        {"Take off", "卸下"}, {"Equip", "裝備"},
+        {"Drop", "丟棄"}, {"Throw", "投擲"},
+        {"Inscribe", "刻字"}, {"Uninscribe", "清除刻字"},
+        {"Unignore", "取消忽略"}, {"Ignore", "忽略"}
+    };
+    size_t i;
+    if (!angdroid_zh_tw_enabled() || !english) return english;
+    for (i = 0; i < N_ELEMENTS(fa_labels); ++i) {
+        if (streq(english, fa_labels[i].english))
+            return fa_labels[i].zh_tw;
+    }
+    return angdroid_game_ui_text(english, true);
+}
+
+/* The prompt row owns only Term->wid display cells. */
+static void fa_context_print_prompt(const char *label)
+{
+    char clipped[512];
+    if (!Term || !label || Term->wid <= 0) return;
+    angdroid_menu_copy_columns(clipped, sizeof(clipped), label,
+        (size_t)Term->wid);
+    prt("", 0, 0);
+    prt(clipped, 0, 0);
+}
 
 #define ADD_LABEL(text, cmd, valid) { \
 	cmdkey = cmd_lookup_key_unktrl((cmd), mode); \
-	menu_dynamic_add_label_valid(m, (text), cmdkey, (cmd), labels, (valid)); \
+	menu_dynamic_add_label_valid(m, fa_context_ui_text((text)), cmdkey, (cmd), labels, (valid)); \
 }
 
 /**
@@ -98,25 +149,25 @@ static int context_menu_player_2(int mx, int my)
 	labels = string_make(lower_case);
 	m->selections = labels;
 
-	menu_dynamic_add_label(m, "Knowledge", '~', MENU_VALUE_KNOWLEDGE, labels);
-	menu_dynamic_add_label(m, "Show Map", 'M', MENU_VALUE_MAP, labels);
-	menu_dynamic_add_label(m, "^Show Messages", 'P', MENU_VALUE_MESSAGES,
+	menu_dynamic_add_label(m, fa_context_ui_text("Knowledge"), '~', MENU_VALUE_KNOWLEDGE, labels);
+	menu_dynamic_add_label(m, fa_context_ui_text("Show Map"), 'M', MENU_VALUE_MAP, labels);
+	menu_dynamic_add_label(m, fa_context_ui_text("^Show Messages"), 'P', MENU_VALUE_MESSAGES,
 						   labels);
-	menu_dynamic_add_label(m, "Show Monster List", '[', MENU_VALUE_MONSTERS,
+	menu_dynamic_add_label(m, fa_context_ui_text("Show Monster List"), '[', MENU_VALUE_MONSTERS,
 						   labels);
-	menu_dynamic_add_label(m, "Show Object List", ']', MENU_VALUE_OBJECTS,
+	menu_dynamic_add_label(m, fa_context_ui_text("Show Object List"), ']', MENU_VALUE_OBJECTS,
 						   labels);
 
 	/* Ignore toggle has different keys, but we don't have a way to look them
 	 * up (see ui-game.c). */
 	cmdkey = (mode == KEYMAP_MODE_ORIG) ? 'K' : 'O';
-	menu_dynamic_add_label(m, "Toggle Ignored", cmdkey,
+	menu_dynamic_add_label(m, fa_context_ui_text("Toggle Ignored"), cmdkey,
 						   MENU_VALUE_TOGGLE_IGNORED, labels);
 
 	ADD_LABEL("Ignore an item", CMD_IGNORE, MN_ROW_VALID);
 
-	menu_dynamic_add_label(m, "Options", '=', MENU_VALUE_OPTIONS, labels);
-	menu_dynamic_add_label(m, "Commands", '?', MENU_VALUE_HELP, labels);
+	menu_dynamic_add_label(m, fa_context_ui_text("Options"), '=', MENU_VALUE_OPTIONS, labels);
+	menu_dynamic_add_label(m, fa_context_ui_text("Commands"), '?', MENU_VALUE_HELP, labels);
 
 	/* Hack -- no flush needed */
 	msg_flag = false;
@@ -125,7 +176,7 @@ static int context_menu_player_2(int mx, int my)
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt("(Enter to select, ESC) Command:", 0, 0);
+	fa_context_print_prompt(angdroid_game_ui_text("(Enter to select, ESC) Command:", angdroid_zh_tw_enabled()));
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
@@ -281,13 +332,13 @@ int context_menu_player(int mx, int my)
 	/* Looking has different keys, but we don't have a way to look them up
 	 * (see ui-game.c). */
 	cmdkey = (mode == KEYMAP_MODE_ORIG) ? 'l' : 'x';
-	menu_dynamic_add_label(m, "Look", cmdkey, MENU_VALUE_LOOK, labels);
+	menu_dynamic_add_label(m, fa_context_ui_text("Look"), cmdkey, MENU_VALUE_LOOK, labels);
 
 	/* 'R' is used for resting in both keymaps. */
-	menu_dynamic_add_label(m, "Rest", 'R', MENU_VALUE_REST, labels);
+	menu_dynamic_add_label(m, fa_context_ui_text("Rest"), 'R', MENU_VALUE_REST, labels);
 
 	/* 'i' is used for inventory in both keymaps. */
-	menu_dynamic_add_label(m, "Inventory", 'i', MENU_VALUE_INVENTORY, labels);
+	menu_dynamic_add_label(m, fa_context_ui_text("Inventory"), 'i', MENU_VALUE_INVENTORY, labels);
 
 	/* if object under player add pickup option */
 	obj = square_object(cave, player->grid);
@@ -295,20 +346,20 @@ int context_menu_player(int mx, int my)
 			menu_row_validity_t valid;
 
 			/* 'f' isn't in rogue keymap, so we can use it here. */
-  			menu_dynamic_add_label(m, "Floor", 'f', MENU_VALUE_FLOOR, labels);
+  			menu_dynamic_add_label(m, fa_context_ui_text("Floor"), 'f', MENU_VALUE_FLOOR, labels);
 			valid = (inven_carry_okay(obj)) ? MN_ROW_VALID : MN_ROW_INVALID;
 			ADD_LABEL("Pick up", CMD_PICKUP, valid);
 	}
 
 	/* 'C' is used for the character sheet in both keymaps. */
-	menu_dynamic_add_label(m, "Character", 'C', MENU_VALUE_CHARACTER, labels);
+	menu_dynamic_add_label(m, fa_context_ui_text("Character"), 'C', MENU_VALUE_CHARACTER, labels);
 
 	if (!OPT(player, center_player)) {
-		menu_dynamic_add_label(m, "^Center Map", 'L', MENU_VALUE_CENTER_MAP,
+		menu_dynamic_add_label(m, fa_context_ui_text("^Center Map"), 'L', MENU_VALUE_CENTER_MAP,
 							   labels);
 	}
 
-	menu_dynamic_add_label(m, "Other", ' ', MENU_VALUE_OTHER, labels);
+	menu_dynamic_add_label(m, fa_context_ui_text("Other"), ' ', MENU_VALUE_OTHER, labels);
 
 	/* Hack -- no flush needed */
 	msg_flag = false;
@@ -317,7 +368,7 @@ int context_menu_player(int mx, int my)
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt("(Enter to select, ESC) Command:", 0, 0);
+	fa_context_print_prompt(angdroid_game_ui_text("(Enter to select, ESC) Command:", angdroid_zh_tw_enabled()));
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
@@ -390,7 +441,7 @@ int context_menu_player(int mx, int my)
 
 		case MENU_VALUE_LOOK:
 			if (target_set_interactive(TARGET_LOOK, player->grid.x, player->grid.y))
-				msg("Target Selected.");
+				msg("%s", angdroid_game_ui_text("Target Selected.", angdroid_zh_tw_enabled()));
 			break;
 
 		case MENU_VALUE_CHARACTER:
@@ -438,11 +489,11 @@ int context_menu_cave(struct chunk *c, int y, int x, int adjacent, int mx,
 	/* Looking has different keys, but we don't have a way to look them up
 	 * (see ui-game.c). */
 	cmdkey = (mode == KEYMAP_MODE_ORIG) ? 'l' : 'x';
-	menu_dynamic_add_label(m, "Look At", cmdkey, MENU_VALUE_LOOK, labels);
+	menu_dynamic_add_label(m, fa_context_ui_text("Look At"), cmdkey, MENU_VALUE_LOOK, labels);
 
 	if (square(c, grid)->mon)
 		/* '/' is used for recall in both keymaps. */
-		menu_dynamic_add_label(m, "Recall Info", '/', MENU_VALUE_RECALL,
+		menu_dynamic_add_label(m, fa_context_ui_text("Recall Info"), '/', MENU_VALUE_RECALL,
 							   labels);
 
 	ADD_LABEL("Use Item On", CMD_USE, MN_ROW_VALID);
@@ -492,7 +543,7 @@ int context_menu_cave(struct chunk *c, int y, int x, int adjacent, int mx,
 	} else {
 		/* ',' is used for ignore in rogue keymap, so we'll just swap letters */
 		cmdkey = (mode == KEYMAP_MODE_ORIG) ? ',' : '.';
-		menu_dynamic_add_label(m, "Pathfind To", cmdkey, CMD_PATHFIND, labels);
+		menu_dynamic_add_label(m, fa_context_ui_text("Pathfind To"), cmdkey, CMD_PATHFIND, labels);
 
 		ADD_LABEL("Walk Towards", CMD_WALK, MN_ROW_VALID);
 		ADD_LABEL("Run Towards", CMD_RUN, MN_ROW_VALID);
@@ -593,7 +644,7 @@ int context_menu_cave(struct chunk *c, int y, int x, int adjacent, int mx,
 		case MENU_VALUE_LOOK:
 			/* Look at the spot */
 			if (target_set_interactive(TARGET_LOOK, x, y)) {
-				msg("Target Selected.");
+				msg("%s", angdroid_game_ui_text("Target Selected.", angdroid_zh_tw_enabled()));
 			}
 			break;
 
@@ -670,7 +721,7 @@ int context_menu_object(struct object *obj)
 	m->selections = labels;
 
 	/* 'I' is used for inspect in both keymaps. */
-	menu_dynamic_add_label(m, "Inspect", 'I', MENU_VALUE_INSPECT, labels);
+	menu_dynamic_add_label(m, fa_context_ui_text("Inspect"), 'I', MENU_VALUE_INSPECT, labels);
 
 	if (obj_can_browse(obj)) {
 		if (obj_can_cast_from(obj) && player_can_cast(player, false))
@@ -730,7 +781,7 @@ int context_menu_object(struct object *obj)
 			if (obj->number > 1) {
 				/* 'D' is used for ignore in rogue keymap, so swap letters. */
 				cmdkey = (mode == KEYMAP_MODE_ORIG) ? 'D' : 'A';
-				menu_dynamic_add_label(m, "Drop All", cmdkey,
+				menu_dynamic_add_label(m, fa_context_ui_text("Drop All"), cmdkey,
 									   MENU_VALUE_DROP_ALL, labels);
 			}
 		} else if (store_at(cave, player->grid) == store_home(player)) {
@@ -739,7 +790,7 @@ int context_menu_object(struct object *obj)
 			if (obj->number > 1) {
 				/* 'D' is used for ignore in rogue keymap, so swap letters. */
 				cmdkey = (mode == KEYMAP_MODE_ORIG) ? 'D' : 'A';
-				menu_dynamic_add_label(m, "Drop All", cmdkey,
+				menu_dynamic_add_label(m, fa_context_ui_text("Drop All"), cmdkey,
 									   MENU_VALUE_DROP_ALL, labels);
 			}
 		} else if (store_will_buy_tester(obj)) {
@@ -929,7 +980,7 @@ static int show_command_list(struct cmd_info cmd_list[], int size, int mx,
 	screen_save();
 	region_erase_bordered(&m->boundary);
 
-	prt("(Enter to select, ESC) Command:", 0, 0);
+	fa_context_print_prompt(angdroid_game_ui_text("(Enter to select, ESC) Command:", angdroid_zh_tw_enabled()));
 	selected = menu_dynamic_select(m);
 	menu_dynamic_free(m);
 
@@ -954,19 +1005,19 @@ int context_menu_command(int mx, int my)
 	}
 
 	m->selections = lower_case;
-	menu_dynamic_add(m, "Item", 1);
-	menu_dynamic_add(m, "Action", 2);
-	menu_dynamic_add(m, "Item Management", 3);
-	menu_dynamic_add(m, "Info", 4);
-	menu_dynamic_add(m, "Util", 5);
-	menu_dynamic_add(m, "Misc", 6);
+	menu_dynamic_add(m, fa_context_ui_text("Item"), 1);
+	menu_dynamic_add(m, fa_context_ui_text("Action"), 2);
+	menu_dynamic_add(m, fa_context_ui_text("Item Management"), 3);
+	menu_dynamic_add(m, fa_context_ui_text("Info"), 4);
+	menu_dynamic_add(m, fa_context_ui_text("Util"), 5);
+	menu_dynamic_add(m, fa_context_ui_text("Misc"), 6);
 
 	menu_dynamic_calc_location(m, mx, my);
 
 	screen_save();
 	region_erase_bordered(&m->boundary);
 
-	prt("(Enter to select, ESC) Command:", 0, 0);
+	fa_context_print_prompt(angdroid_game_ui_text("(Enter to select, ESC) Command:", angdroid_zh_tw_enabled()));
 	selected = menu_dynamic_select(m);
 	menu_dynamic_free(m);
 
@@ -1055,7 +1106,7 @@ void textui_process_click(ui_event e)
 			} else if (e.mouse.mods & KC_MOD_ALT) {
 				/* alt-click - look */
 				if (target_set_interactive(TARGET_LOOK, x, y)) {
-					msg("Target Selected.");
+					msg("%s", angdroid_game_ui_text("Target Selected.", angdroid_zh_tw_enabled()));
 				}
 			} else {
 				/* Pathfind does not work well on trap detection borders,
