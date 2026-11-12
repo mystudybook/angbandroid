@@ -55,6 +55,7 @@
 #include "../angband/inventory-equip-mention.h"
 #include "../angband/item-selection-layout.h"
 #include "../angband/item-picker-switch-keys.h"
+#include "../angband/item-picker-start-source.h"
 #include "../angband/zh-tw-ui.h"
 
 /**
@@ -1459,37 +1460,32 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 
 	/* Require at least one legal choice */
 	if (allow_inven || allow_equip || allow_quiver || allow_floor) {
-		/* Use throwing menu if at all possible */
+		/* Throwing remains an explicit higher-priority view. Otherwise
+		 * begin with an allowed tab containing at least one real item,
+		 * instead of inheriting a now-empty inventory page. */
 		if (show_throwing && throwing_num) {
 			player->upkeep->command_wrk = SHOW_THROWING;
-
-			/* Start where requested if possible */
-		} else if ((player->upkeep->command_wrk == USE_EQUIP) && allow_equip)
-			player->upkeep->command_wrk = USE_EQUIP;
-		else if ((player->upkeep->command_wrk == USE_INVEN) && allow_inven)
-			player->upkeep->command_wrk = USE_INVEN;
-		else if ((player->upkeep->command_wrk == USE_QUIVER) && allow_quiver)
-			player->upkeep->command_wrk = USE_QUIVER;
-		else if ((player->upkeep->command_wrk == USE_FLOOR) && allow_floor)
-			player->upkeep->command_wrk = USE_FLOOR;
-
-		/* If we are obviously using the quiver then start on quiver */
-		else if (quiver_tags && allow_quiver && (cmd != CMD_USE))
-			player->upkeep->command_wrk = USE_QUIVER;
-
-		/* Otherwise choose whatever is allowed */
-		else if (use_inven && allow_inven)
-			player->upkeep->command_wrk = USE_INVEN;
-		else if (use_equip && allow_equip)
-			player->upkeep->command_wrk = USE_EQUIP;
-		else if (use_quiver && allow_quiver)
-			player->upkeep->command_wrk = USE_QUIVER;
-		else if (use_floor && allow_floor)
-			player->upkeep->command_wrk = USE_FLOOR;
-
-		/* If nothing to choose, use (empty) inventory */
-		else
-			player->upkeep->command_wrk = USE_INVEN;
+		} else {
+			angdroid_item_picker_start_options start = {
+				player->upkeep->command_wrk,
+				{ USE_INVEN, USE_EQUIP, USE_QUIVER, USE_FLOOR },
+				(allow_inven ? ANGDROID_PICKER_INVEN : 0u) |
+				(allow_equip ? ANGDROID_PICKER_EQUIP : 0u) |
+				(allow_quiver ? ANGDROID_PICKER_QUIVER : 0u) |
+				(allow_floor ? ANGDROID_PICKER_FLOOR : 0u),
+				(i1 <= i2 ? ANGDROID_PICKER_INVEN : 0u) |
+				(e1 <= e2 ? ANGDROID_PICKER_EQUIP : 0u) |
+				(q1 <= q2 ? ANGDROID_PICKER_QUIVER : 0u) |
+				(f1 <= f2 ? ANGDROID_PICKER_FLOOR : 0u),
+				(use_inven ? ANGDROID_PICKER_INVEN : 0u) |
+				(use_equip ? ANGDROID_PICKER_EQUIP : 0u) |
+				(use_quiver ? ANGDROID_PICKER_QUIVER : 0u) |
+				(use_floor ? ANGDROID_PICKER_FLOOR : 0u),
+				quiver_tags && cmd != CMD_USE
+			};
+			player->upkeep->command_wrk =
+				angdroid_item_picker_initial_source(&start);
+		}
 
 		while (true) {
 			int j;
