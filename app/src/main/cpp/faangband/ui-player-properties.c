@@ -98,7 +98,9 @@ static void fa_ability_draw_description(const char *description,
     fa_ability_detail_page = page;
     fa_ability_detail_pages = total_pages;
 
-    /* Repaint only the detail region, never the selectable list. */
+    /* Repaint the separator and detail region, never the selectable
+     * list. After rotation, old rows must not linger in the gap. */
+    if (first > 0) Term_erase(0, first - 1, Term->wid);
     for (row = first; row < Term->hgt; ++row)
         Term_erase(0, row, Term->wid);
     for (i = 0; i < content_rows; ++i) {
@@ -160,6 +162,15 @@ static bool fa_ability_page_touch(struct menu *m,
     return fa_ability_handle_page(m, &key, m->cursor);
 }
 
+
+/* Browsing does not choose a specialty. A second tap on the same
+ * row should keep this screen open; Esc is the explicit exit. */
+static bool fa_ability_view_action(struct menu *m,
+    const ui_event *event, int oid)
+{
+    if (event && event->type == EVT_SELECT) return true;
+    return fa_ability_handle_page(m, event, oid);
+}
 
 static char view_ability_tag(struct menu *menu, int oid)
 {
@@ -242,7 +253,7 @@ void textui_view_ability_menu(struct player_ability *ability_list,
 {
 	struct menu menu;
 	menu_iter menu_f = { view_ability_tag, 0, view_ability_display,
-        fa_ability_handle_page, fa_ability_resize_menu };
+        fa_ability_view_action, fa_ability_resize_menu };
 	char buf[160];
     int last_shortcut;
 
