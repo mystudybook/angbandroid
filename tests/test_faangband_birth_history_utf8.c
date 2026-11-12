@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "../app/src/main/cpp/faangband/ui-birth-history-utf8.h"
+#include "../app/src/main/cpp/faangband/ui-ability-compact-layout.h"
 
 static int expect(const char *s, size_t width, size_t expected,
         size_t *want_starts, size_t *want_lengths)
@@ -69,6 +70,27 @@ int main(void)
             "甲乙", 0, 2) != 3 || strcmp(line, "甲"))
         return 1;
 
-    puts("PASS: FA history wrap: ASCII, Han, mixed, newline, buffer bounds");
+    /* Regression: the ability browser must be able to show hundreds of
+     * explicit Han lines instead of losing everything beyond line 256. */
+    {
+        char long_text[1400];
+        char last[16];
+        size_t starts[1400], lengths[1400], count, cap;
+        size_t i;
+        for (i = 0; i < 320; ++i)
+            memcpy(long_text + 4 * i, "甲\n", 4);
+        memcpy(long_text + 1280, "乙", 4);
+        cap = angdroid_fa_ability_line_capacity(strlen(long_text));
+        if (cap != 1284) return 1;
+        count = angdroid_fa_history_wrap(long_text, 16,
+            starts, lengths, cap);
+        if (count != 321 || starts[320] != 640 ||
+            lengths[320] != 1) return 1;
+        angdroid_fa_history_copy_line(last, sizeof(last),
+            long_text, starts[320], lengths[320]);
+        if (strcmp(last, "乙")) return 1;
+    }
+
+    puts("PASS: FA history wrap: ASCII, Han, mixed, newline, 321 lines");
     return 0;
 }
