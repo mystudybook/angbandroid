@@ -31,6 +31,13 @@ assert "angdroid_game_ui_text(pvs, true)" in browser
 assert "angdroid_game_ui_text(pedit, true)" in browser
 assert "angdroid_game_ui_text(xtra, true)" in browser
 assert '"方向鍵移動%s%s%s，Esc 返回"' in browser
+assert 'if (wid < 12 || hgt < 9)' in browser
+assert '"知識圖鑑：%s"' in browser
+assert '"Knowledge - %s"' in browser
+assert "angdroid_knowledge_clip_label(visible_title," in browser
+assert "angdroid_utf8_display_columns(full_prompt)" in browser
+assert '"Esc 返回" : "Esc"' in browser
+assert "my_strcpy(full_prompt, short_prompt, sizeof(full_prompt));" in browser
 assert "angdroid_knowledge_clip_label(visible_prompt," in browser
 assert "if (angdroid_zh_tw_enabled())" in browser
 assert browser.index("soft_kbd_clear(true);") < browser.index("ke = inkey_ex();")
