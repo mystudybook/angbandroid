@@ -82,6 +82,7 @@ run_check "FAangband specialty browsers and shape knowledge display" python3 "$R
 run_check "FAangband portrait ability browser C99 layout and description pages" sh "$ROOT/scripts/test-fa-ability-layout.sh"
 run_check "FAangband native specialty mouse and selection dispatch" sh "$ROOT/scripts/test-fa-ability-action.sh"
 run_check "FAangband native Android ability modal hint lifecycle" sh "$ROOT/scripts/test-fa-ability-hints.sh"
+run_check "FAangband native UTF-8 Yes/No prompt and resize handling" sh "$ROOT/scripts/test-fa-confirm-check.sh"
 run_check "FAangband typed ability PF/OF labels with C99" sh "$ROOT/scripts/test-fa-birth-ability-labels.sh"
 run_check "FAangband elemental resistance/vulnerability source contract" python3 "$ROOT/tests/test_faangband_birth_elements_source.py"
 run_check "FAangband elemental resistance/weakness native C99" sh "$ROOT/scripts/test-fa-birth-elements.sh"
