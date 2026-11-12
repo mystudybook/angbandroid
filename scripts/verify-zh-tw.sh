@@ -74,6 +74,7 @@ run_check "FAangband character sheet, spell browser and savefile picker zh-TW" p
 run_check "FAangband death, ghost, birth and item-language source regression" python3 "$ROOT/tests/test_faangband_death_birth_locale_source.py"
 run_check "FAangband world map, birth portrait UI and inscription confirmation" python3 "$ROOT/tests/test_faangband_birth_map_touch_locale_source.py"
 run_check "FAangband character-history Unicode wrapping in host C99" sh "$ROOT/scripts/test-fa-birth-history-utf8.sh"
+run_check "FAangband CJK birth-history scroll and map choice source guard" python3 "$ROOT/tests/test_faangband_birth_history_editor_source.py"
 run_check "FAangband monster totals, footer keys and narrow CJK columns" python3 "$ROOT/tests/test_faangband_knowledge_monster_locale_source.py"
 run_check "Clear stale item picker soft keys after invalid Android rotation" python3 "$ROOT/tests/test_item_picker_rotation_hints_source.py"
 run_check "Empty bag quiver footer repaint and rotated bounds" python3 "$ROOT/tests/test_empty_quiver_footer_source.py"
