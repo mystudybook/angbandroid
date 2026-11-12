@@ -29,6 +29,7 @@
 #include "../angband/zh-tw-player-ability.h"
 #include "../angband/menu-text-fit.h"
 #include "ui-birth-abilities-zh-tw.h"
+#include "ui-birth-elements-zh-tw.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -54,6 +55,19 @@ static void view_ability_display(struct menu *menu, int oid, bool cursor,
     const struct player_ability *choices = menu->menu_data;
     const char *name = angdroid_fa_birth_ability_name(
         choices[oid].name, choices[oid].type, choices[oid].index, zh);
+
+    /* Race abilities may be element records, not PF or OF flags.
+     * Translate using the native damage percentage, never the English
+     * source name; all neutral/unknown values keep the source label. */
+    if (zh && choices[oid].type && streq(choices[oid].type, "element")) {
+        const char *element = angdroid_fa_birth_element_name(choices[oid].index);
+        int tier = angdroid_fa_birth_element_resistance(choices[oid].value);
+        if (element) {
+            if (tier == 2) name = format("免疫：%s", element);
+            else if (tier == 1) name = format("抗性：%s", element);
+            else if (tier == -1) name = format("弱點：%s", element);
+        }
+    }
 
     switch (choices[oid].group) {
     case PLAYER_FLAG_SPECIAL:
