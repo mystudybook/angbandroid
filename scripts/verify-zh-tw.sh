@@ -152,6 +152,7 @@ run_check "NPP041 native quantity bridge, language-specific all semantics and ho
 run_check "Android quantity slider JDK overflow regression" sh "$ROOT/scripts/test-quantity-popup.sh"
 run_check "Queued store input and stale cursor invalidation" python3 "$ROOT/tests/test_store_input_invalidation_source.py"
 run_check "Scrolled store popups and empty-stock commands" python3 "$ROOT/tests/test_store_menu_flow_source.py"
+run_check "Rotated Angband scroll viewports and FA disabled menu actions" python3 "$ROOT/tests/test_menu_rotation_scroll_source.py"
 run_check "Selected native menu action state" python3 "$ROOT/tests/test_menu_action_guard_source.py"
 run_check "Native menu CJK column clipping" python3 "$ROOT/tests/test_menu_text_fit_source.py"
 run_check "Compact menu layout on Android rotation" python3 "$ROOT/tests/test_menu_compact_layout_source.py"
