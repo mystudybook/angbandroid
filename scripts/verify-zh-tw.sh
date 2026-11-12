@@ -64,6 +64,7 @@ run_check "Equipment mention 14-column and UTF-8 safety" python3 "$ROOT/tests/te
 run_check "Rotated item-selection and compact shop prompts" python3 "$ROOT/tests/test_item_selection_rotation_source.py"
 run_check "Knowledge glyph strict Unicode input and bilingual autoinscriptions" python3 "$ROOT/tests/test_knowledge_glyph_codepoint_locale_source.py"
 run_check "Empty item picker can switch tabs without selecting a fake object" python3 "$ROOT/tests/test_empty_item_picker_source.py"
+run_check "Prefer populated starting item tabs in Angband and FAangband" python3 "$ROOT/tests/test_item_picker_start_source.py"
 run_check "Picker available tabs and FA bilingual Unicode prompt geometry" python3 "$ROOT/tests/test_item_picker_switch_source.py"
 run_check "Item picker numeric quiver tag, localized cancel hint and CJK recall titles" python3 "$ROOT/tests/test_item_picker_tag_locale_source.py"
 run_check "UI-only item name localization and export isolation" python3 "$ROOT/tests/test_visible_item_name_localization.py"
