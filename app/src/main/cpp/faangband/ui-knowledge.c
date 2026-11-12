@@ -2190,11 +2190,14 @@ static const char *o_xtra_prompt(int oid)
 
 	if (!kind) return NULL;
 
-	/* Appropriate prompt */
-	if (kind->aware)
-		return kind->note_aware ? with_insc : no_insc;
-	else
-		return kind->note_unaware ? with_insc : no_insc;
+    /* Only advertise the keys actually active on this object. */
+    soft_kbd_flash("r{");
+    if (ignore_tval(kind->tval)) soft_kbd_flash("s");
+    if (kind->aware ? kind->note_aware : kind->note_unaware) {
+        soft_kbd_flash("}");
+        return with_insc;
+    }
+    return no_insc;
 }
 
 /**
@@ -2381,8 +2384,12 @@ static const char *rune_xtra_prompt(int oid)
 	const char *no_insc = ", 'r'ecall, '{'";
 	const char *with_insc = ", 'r'ecall, '{', '}'";
 
-	/* Appropriate prompt */
-	return rune_note(oid) ? with_insc : no_insc;
+    soft_kbd_flash("r{");
+    if (rune_note(oid)) {
+        soft_kbd_flash("}");
+        return with_insc;
+    }
+    return no_insc;
 }
 
 /**
@@ -2496,7 +2503,14 @@ static void display_feature(int col, int row, bool cursor, int oid )
 	struct feature *feat = &f_info[oid];
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 
-	c_prt(attr, feat->name, row, col);
+    /* Translate visible terrain names without changing feature IDs/order. */
+    if (Term && col >= 0 && col < Term->wid) {
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            angdroid_terrain_name(feat->name, angdroid_zh_tw_enabled()),
+            col, 64, Term->wid);
+        if (clipped[0]) c_prt(attr, clipped, row, col);
+    }
 
 	if (tile_height == 1) {
 		/* Display symbols */
@@ -2554,13 +2568,15 @@ static void feat_lore(int oid)
 
 	if (feat->desc) {
 		textblock *tb = textblock_new();
-		char *title = string_make(feat->name);
+		char *title = string_make(angdroid_terrain_name(
+            feat->name, angdroid_zh_tw_enabled()));
 
 		my_strcap(title);
 		textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
 		string_free(title);
 		textblock_append(tb, "\n");
-		textblock_append(tb, "%s", feat->desc);
+		textblock_append(tb, "%s", angdroid_terrain_lore(
+            feat->name, feat->desc, angdroid_zh_tw_enabled()));
 		textblock_append(tb, "\n");
 		textui_textblock_show(tb, SCREEN_REGION, NULL);
 		textblock_free(tb);
@@ -2568,8 +2584,9 @@ static void feat_lore(int oid)
 }
 static const char *feat_prompt(int oid)
 {
-	(void)oid;
-		switch (f_uik_lighting) {
+    (void)oid;
+    soft_kbd_flash("tT");
+    switch (f_uik_lighting) {
 				case LIGHTING_LIT:  return ", 't/T' for lighting (lit)";
                 case LIGHTING_TORCH: return ", 't/T' for lighting (torch)";
 				case LIGHTING_LOS:  return ", 't/T' for lighting (LOS)";
@@ -2660,7 +2677,13 @@ static void display_trap(int col, int row, bool cursor, int oid )
 	struct trap_kind *trap = &trap_info[oid];
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 
-	c_prt(attr, trap->desc, row, col);
+    if (Term && col >= 0 && col < Term->wid) {
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            angdroid_trap_name(trap->desc, angdroid_zh_tw_enabled()),
+            col, 64, Term->wid);
+        if (clipped[0]) c_prt(attr, clipped, row, col);
+    }
 
 	if (tile_height == 1) {
 		/* Display symbols */
@@ -2742,7 +2765,8 @@ static void trap_lore(int oid)
 
 	if (trap->text) {
 		textblock *tb = textblock_new();
-		char *title = string_make(trap->desc);
+		char *title = string_make(angdroid_trap_name(
+            trap->desc, angdroid_zh_tw_enabled()));
 		textblock *tbe = effect_describe(trap->effect, "This trap ", 0, false);
 		textblock *tbex = effect_describe(trap->effect_xtra,
 										  "if you're unlucky it also ", 0,
@@ -2752,7 +2776,8 @@ static void trap_lore(int oid)
 		textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
 		string_free(title);
 		textblock_append(tb, "\n");
-		textblock_append(tb, "%s", trap->text);
+		textblock_append(tb, "%s", angdroid_trap_lore(
+            trap->text, angdroid_zh_tw_enabled()));
 		textblock_append(tb, "\n");
 		if (tbe) {
 			textblock_append(tb, "\n");
@@ -2772,8 +2797,9 @@ static void trap_lore(int oid)
 
 static const char *trap_prompt(int oid)
 {
-	(void)oid;
-	return ", 't' to cycle lighting";
+    (void)oid;
+    soft_kbd_flash("tT");
+    return ", 't/T' to cycle lighting";
 }
 
 /**
