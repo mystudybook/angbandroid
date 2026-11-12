@@ -12,6 +12,16 @@ typedef struct {
     int col, row, width, page_rows;
 } angdroid_item_selection_layout;
 
+/* Keep an empty picker visible only when it has another source to switch
+ * to. This reserves a blank viewport row for keyboard hints but never
+ * changes menu->count or invents a selectable object. */
+static inline int angdroid_item_selection_viewport_count(
+    int actual_count, bool has_switch_target)
+{
+    if (actual_count > 0) return actual_count;
+    return has_switch_target ? 1 : 0;
+}
+
 static inline bool angdroid_item_selection_region(
     int terminal_width, int terminal_height, int prompt_columns,
     size_t name_columns, size_t header_columns, int extra_columns,
