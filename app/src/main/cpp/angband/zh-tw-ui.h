@@ -524,6 +524,8 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {" - for floor,", " - 地面，"},
         {"This item only", "只忽略這件物品"},
         {"Unignore this item", "不再忽略這件物品"},
+        {"Ignore items of this type", "忽略此類全部物品"},
+        {"Unignore items of this type", "取消忽略此類全部物品"},
         {"(Enter to select, ESC) Ignore:", "Enter 選取忽略方式／Esc 返回："},
         {"Ignore which item? ", "要忽略哪件物品？ "},
         {"You have nothing to ignore.", "沒有可以忽略的物品。"},
