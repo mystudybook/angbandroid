@@ -122,17 +122,19 @@ int target_dir_allow(struct keypress ch, bool allow_5)
 void target_display_help(bool monster, bool object, bool free)
 {
 	/* Determine help location */
-	int wid, hgt, help_loc;
-	Term_get_size(&wid, &hgt);
-	help_loc = hgt - HELP_HEIGHT;
-	
-	/* Clear */
-	clear_from(help_loc);
+    int wid, hgt, help_loc;
+    int saved_wrap = text_out_wrap;
+    Term_get_size(&wid, &hgt);
+    help_loc = MAX(0, hgt - HELP_HEIGHT);
 
-	/* Prepare help hooks */
-	text_out_hook = text_out_to_screen;
-	text_out_indent = 1;
-	Term_gotoxy(1, help_loc);
+    /* CJK glyphs use two terminal cells. Constrain wrapping to the
+     * actual phone window, and restore the previous setting on exit. */
+    text_out_wrap = MIN(MAX(1, saved_wrap), MAX(1, wid - 2));
+    clear_from(help_loc);
+
+    text_out_hook = text_out_to_screen;
+    text_out_indent = wid > 1 ? 1 : 0;
+    Term_gotoxy(wid > 1 ? 1 : 0, help_loc);
 
 	/* Display help */
 	text_out_c(COLOUR_L_GREEN, "<dir>");
@@ -185,8 +187,9 @@ void target_display_help(bool monster, bool object, bool free)
 		text_out(angdroid_zh_tw_enabled() ? "' 忽略選取的物品。" : "' ignores selection.");
 	}
 
-	/* Reset */
-	text_out_indent = 0;
+	/* Reset: the next screen may have a wider terminal. */
+    text_out_indent = 0;
+    text_out_wrap = saved_wrap;
 }
 
 
