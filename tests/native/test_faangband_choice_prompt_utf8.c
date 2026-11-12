@@ -13,7 +13,7 @@ static int test_all_term_widths_and_buffers(void)
 {
     static const char *questions[] = {
         "", "Learn a specialty now?", "繼續學習武器專精，確定嗎？",
-        "漢字與😀 emoji 混合顯示", "ABC\xff" "def"
+        "漢字與😀 emoji 混合顯示", "ABC\xff\x64\x65\x66"
     };
     static const char *choices[] = {"a", "yns", "abcde", "", NULL};
     size_t qi, ci, cap;
