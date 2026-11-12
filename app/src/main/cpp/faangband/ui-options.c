@@ -56,7 +56,9 @@ static bool get_pref_path(const char *what, int row, char *buf, size_t max)
 	if (row > 0) {
 		prt("", row - 1, 0);
 	}
-	prt(format("%s to a pref file", what), row, 0);
+	prt(angdroid_zh_tw_enabled() ?
+        format("將%s儲存到設定檔", angdroid_game_ui_text(what, true)) :
+        format("%s to a pref file", what), row, 0);
 	prt("", row + 1, 0);
 	prt(angdroid_game_ui_text("File: ",
             angdroid_zh_tw_enabled()), row + 2, 0);
@@ -72,7 +74,9 @@ static bool get_pref_path(const char *what, int row, char *buf, size_t max)
 		ok = askfor_aux(ftmp, sizeof ftmp, NULL);
 	
 	else
-		ok = get_check(format("Confirm writing to %s? ", ftmp));
+		ok = get_check(angdroid_zh_tw_enabled() ?
+            format("確認寫入 %s？ ", ftmp) :
+            format("Confirm writing to %s? ", ftmp));
 
 	screen_load();
 
@@ -87,16 +91,19 @@ static bool get_pref_path(const char *what, int row, char *buf, size_t max)
 static void dump_pref_file(void (*dump)(ang_file *), const char *title, int row)
 {
 	char buf[1024];
+    const char *space = strchr(title, ' ');
+    const char *item = space ? space + 1 : title;
 
-	/* Get filename from user */
-	if (!get_pref_path(title, row, buf, sizeof(buf)))
-		return;
+    /* The file header keeps a stable English identifier, even if the
+     * visible action label was translated in the menu. */
+    if (!get_pref_path(title, row, buf, sizeof(buf)))
+        return;
 
-	/* Try to save */
-	if (prefs_save(buf, dump, title))
-		msg("Saved %s.", strstr(title, " ") + 1);
-	else
-		msg("Failed to save %s.", strstr(title, " ") + 1);
+    if (prefs_save(buf, dump, title))
+        msg(angdroid_zh_tw_enabled() ? "已儲存%s。" : "Saved %s.", item);
+    else
+        msg(angdroid_zh_tw_enabled() ? "儲存%s失敗。" :
+            "Failed to save %s.", item);
 
 	event_signal(EVENT_MESSAGE_FLUSH);
 
@@ -837,22 +844,22 @@ static void visuals_pref_load(const char *title, int row)
 
 static void visuals_dump_monsters(const char *title, int row)
 {
-	dump_pref_file(dump_monsters, title, 15);
+	dump_pref_file(dump_monsters, "Save monster attr/chars", 15);
 }
 
 static void visuals_dump_objects(const char *title, int row)
 {
-	dump_pref_file(dump_objects, title, 15);
+	dump_pref_file(dump_objects, "Save object attr/chars", 15);
 }
 
 static void visuals_dump_features(const char *title, int row)
 {
-	dump_pref_file(dump_features, title, 15);
+	dump_pref_file(dump_features, "Save feature attr/chars", 15);
 }
 
 static void visuals_dump_flavors(const char *title, int row)
 {
-	dump_pref_file(dump_flavors, title, 15);
+	dump_pref_file(dump_flavors, "Save flavor attr/chars", 15);
 }
 
 static void visuals_reset(const char *title, int row)
@@ -954,7 +961,7 @@ static void colors_pref_load(const char *title, int row)
 
 static void colors_pref_dump(const char *title, int row)
 {
-	dump_pref_file(dump_colors, title, 15);
+	dump_pref_file(dump_colors, "Dump colors", 15);
 }
 
 static void colors_modify(const char *title, int row)
