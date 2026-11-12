@@ -22,7 +22,9 @@ for include in (
 
 assert "angdroid_knowledge_group_text(" in KNOW
 assert "angdroid_utf8_display_columns(g_names[i])" in KNOW
-assert 'prt(format("知識圖鑑：%s",' in KNOW
+assert '"知識圖鑑：%s"' in KNOW
+assert "angdroid_knowledge_clip_label(visible_title," in KNOW
+assert "prt(visible_title, 2, 0);" in KNOW
 assert 'angdroid_game_ui_text(title, true)' in KNOW
 assert '"分類" : "Group"' in KNOW
 assert '"名稱" : "Name"' in KNOW
