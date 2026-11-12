@@ -380,15 +380,24 @@ static void gain_spec_display(struct menu *menu, int oid, bool cursor, int row,
  */
 static bool gain_spec_action(struct menu *menu, const ui_event *e, int oid)
 {
-	struct spec_menu_data *d = menu_priv(menu);
+    struct spec_menu_data *d = menu_priv(menu);
 
+    if (!e || !d) return false;
     if (fa_ability_handle_page(menu, e, oid)) return true;
-	if (e->type == EVT_SELECT) {
-		d->selected_spec = d->specialties[oid];
-		return false;
-	}
+    if (e->type == EVT_SELECT) {
+        /* A list can change between drawing and double-tap. Do not
+         * open a confirmation for stale or unavailable abilities. */
+        if (oid < 0 || oid >= d->spec_known ||
+            !check_specialty_gain(d->specialties[oid]))
+            return true;
+        d->selected_spec = d->specialties[oid];
+        return false;
+    }
 
-	return true;
+    /* menu_select() dispatches outside-row mouse events here before
+     * calling context_hook. Claiming those events makes the page-footer
+     * left/right touch targets unreachable in the gain-specialty menu. */
+    return e->type != EVT_MOUSE;
 }
 
 
@@ -418,6 +427,7 @@ bool textui_gain_spec_menu(int *pick)
 	menu_iter menu_f = { gain_spec_tag, 0, gain_spec_display,
         gain_spec_action, fa_ability_resize_menu };
 	ui_event evt = { 0 };
+    bool accepted = false;
 	struct spec_menu_data *d = mem_alloc(sizeof *d);
 	size_t i;
 
@@ -482,36 +492,45 @@ bool textui_gain_spec_menu(int *pick)
     fa_ability_layout_menu(&menu);
 
 	while (1) {
+        const char *visible_name;
 		evt = menu_select(&menu, EVT_SELECT, true);
-		if (evt.type == EVT_ESCAPE) {
-			break;
-		}
-		if (d->selected_spec) {
-			int idx = d->selected_spec;
-			struct player_ability *ability = lookup_ability("player", idx, 0);
+        if (evt.type != EVT_SELECT) break;
+        if (!d->selected_spec) continue;
+
+        {
+            int idx = d->selected_spec;
+            struct player_ability *ability = lookup_ability("player", idx, 0);
             fa_ability_layout_menu(&menu);
             menu_refresh(&menu, false);
-            if (ability && check_specialty_gain(idx) && get_check(format(
-                    angdroid_zh_tw_enabled() ? "確定選擇%s？" :
-                        "Definitely choose %s? ",
-                    angdroid_fa_birth_ability_name(ability->name,
-                        ability->type, ability->index,
-                        angdroid_zh_tw_enabled())))) {
-				break;
-			}
-			d->selected_spec = 0;
-		}
+            if (ability && ability->name && check_specialty_gain(idx)) {
+                visible_name = angdroid_fa_birth_ability_name(ability->name,
+                    ability->type, ability->index, angdroid_zh_tw_enabled());
+                if (!visible_name) visible_name = ability->name;
+                if (get_check(format(
+                        angdroid_zh_tw_enabled() ? "確定選擇%s？" :
+                            "Definitely choose %s? ", visible_name))) {
+                    accepted = true;
+                    break;
+                }
+            }
+        }
+        /* Cancelled confirmation or an invalidated item: discard only
+         * the pending choice, not the whole specialty menu. Recalculate
+         * after get_check(), which may itself have consumed a resize. */
+        d->selected_spec = 0;
+        clear_from(0);
+        fa_ability_layout_menu(&menu);
 	}
 
-	if (evt.type != EVT_ESCAPE)
-		*pick = d->selected_spec;
+    if (accepted)
+        *pick = d->selected_spec;
 
 	/* Load screen */
 	screen_load();
     mem_free(d->specialties);
     mem_free(d);
 
-	return (evt.type != EVT_ESCAPE);
+	return accepted;
 }
 
 /**
