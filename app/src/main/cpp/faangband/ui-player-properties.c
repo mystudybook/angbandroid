@@ -201,6 +201,7 @@ static void view_ability_display(struct menu *menu, int oid, bool cursor,
     const struct player_ability *choices = menu->menu_data;
     const char *name = angdroid_fa_birth_ability_name(
         choices[oid].name, choices[oid].type, choices[oid].index, zh);
+    if (!name) name = zh ? "未知能力" : "Unknown ability";
 
     /* Race abilities may be element records, not PF or OF flags.
      * Translate using the native damage percentage, never the English
@@ -323,10 +324,12 @@ struct spec_menu_data {
  */
 static bool check_specialty_gain(int specialty)
 {
+    struct player_ability *ability;
     /* A malformed or absent player_property record must never become
      * a selectable row or reach the history/game-state mutation path. */
-    if (specialty <= PF_NONE || specialty >= PF_MAX ||
-        !lookup_ability("player", specialty, 0)) return false;
+    if (specialty <= PF_NONE || specialty >= PF_MAX) return false;
+    ability = lookup_ability("player", specialty, 0);
+    if (!ability || !ability->name) return false;
 	/* Can't learn it if we already know it */
 	if (pf_has(player->specialties, specialty)) {
 		return false;
