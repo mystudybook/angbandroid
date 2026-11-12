@@ -74,6 +74,8 @@
 #include "../angband/zh-tw-shape-lore.h"
 #include "../angband/zh-tw-symbol-query.h"
 #include "../angband/zh-tw-terrain-trap.h"
+#include "../angband/zh-tw-spell-names.h"
+#include "../angband/zh-tw-class-book-names.h"
 
 /**
  * The first part of this file contains the knowledge menus.  Generic display
@@ -3186,11 +3188,17 @@ static void shape_lore_append_misc_flags(textblock *tb,
 		if ((prop->subtype == OFT_MISC || prop->subtype == OFT_WEAPON ||
 			prop->subtype == OFT_BAD) &&
 			of_has(s->flags, prop->index)) {
-			textblock_append(tb, "%s%s", (n > 0) ? "  " : "",
-                angdroid_shape_misc_desc(prop->desc,
-                    angdroid_zh_tw_enabled()));
-            textblock_append(tb, "%s",
-                angdroid_zh_tw_enabled() ? "。" : ".");
+			{
+                const char *localized = angdroid_shape_misc_desc(
+                    prop->desc, angdroid_zh_tw_enabled());
+                size_t bytes = localized ? strlen(localized) : 0;
+                bool ends_zh = angdroid_zh_tw_enabled() &&
+                    bytes >= strlen("。") &&
+                    strcmp(localized + bytes - strlen("。"), "。") == 0;
+                textblock_append(tb, "%s%s%s",
+                    (n > 0) ? "  " : "", localized ? localized : "",
+                    ends_zh ? "" : (angdroid_zh_tw_enabled() ? "。" : "."));
+            }
 			++n;
 		}
 	}
@@ -3220,8 +3228,9 @@ static void shape_lore_append_change_effects(textblock *tb,
 	if (tbe) {
 		textblock_append_textblock(tb, tbe);
 		textblock_free(tbe);
-		textblock_append(tb, "%s",
-            angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+		/* The underlying effect_describe() is English. Preserve its
+         * English punctuation until a full localized effect is available. */
+        textblock_append(tb, ".\n");
     }
 }
 
@@ -3257,12 +3266,19 @@ static void shape_lore_append_triggering_spells(textblock *tb,
 						if (n == 0) {
 							textblock_append(tb, "\n");
 						}
-						textblock_append(tb,
-							"The %s spell, %s, from %s triggers the shapechange.",
-							c->name,
-							spell->name,
-							kind->name
-						);
+                        if (angdroid_zh_tw_enabled()) {
+                            const char *book = angdroid_zh_tw_class_book_name(
+                                kind->name, tval_find_name(kind->tval));
+                            textblock_append(tb,
+                                "%s的法術「%s」（出自 %s）會觸發變身。",
+                                angdroid_shape_class(c->name, true),
+                                angdroid_zh_tw_spell_name(spell->name, true),
+                                book ? book : kind->name);
+                        } else {
+                            textblock_append(tb,
+                                "The %s spell, %s, from %s triggers the shapechange.",
+                                c->name, spell->name, kind->name);
+                        }
 						++n;
 					}
 				}
@@ -3316,11 +3332,16 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 	struct player_shape *s;
 	int i;
 
-	if (!count) {
-		return;
-	}
+    if (!count) return;
 
-	m = menu_new(MN_SKIN_SCROLL, menu_find_iter(MN_ITER_STRINGS));
+    /* The shape list needs a header, a scroll region, and a footer. */
+    {
+        int first_w, first_h;
+        Term_get_size(&first_w, &first_h);
+        if (first_w < 12 || first_h < 9) return;
+    }
+
+    m = menu_new(MN_SKIN_SCROLL, menu_find_iter(MN_ITER_STRINGS));
 
 	/* Set up an easily indexable list of the interesting shapes. */
 	sarray = mem_alloc(count * sizeof(*sarray));
@@ -3361,24 +3382,37 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 		ui_event ke0 = EVENT_EMPTY;
 		ui_event ke;
 
-		Term_get_size(&wnew, &hnew);
-		if (h != hnew) {
+        Term_get_size(&wnew, &hnew);
+        if (wnew < 12 || hnew < 9) break;
+        if (h != hnew) {
 			h = hnew;
 			redraw = true;
 		}
 
 		if (redraw) {
 			region_erase(&header_region);
-            prt(angdroid_zh_tw_enabled() ?
-                "知識圖鑑：變身形態" : "Knowledge - shapes", 2, 0);
-            prt(angdroid_zh_tw_enabled() ? "名稱" : "Name", 4, 0);
+            {
+                const char *title = angdroid_zh_tw_enabled() ?
+                    "知識圖鑑：變身形態" : "Knowledge - shapes";
+                const char *footer = angdroid_zh_tw_enabled() ?
+                    "方向鍵移動／r 詳情／Esc 返回" :
+                    "<dir>, 'r' to recall, ESC";
+                char clipped[128];
+                angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+                    title, 0, wnew, wnew);
+                prt(clipped, 2, 0);
+                prt(angdroid_zh_tw_enabled() ? "名稱" : "Name", 4, 0);
+                if (angdroid_utf8_display_columns(footer) > (size_t)wnew)
+                    footer = angdroid_zh_tw_enabled() ?
+                        "r 詳情／Esc 返回" : "r recall / Esc";
+                angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+                    footer, 0, wnew, wnew);
+                prt(clipped, h - 2, 0);
+            }
 			for (i = 0; i < MIN(80, wnew); i++) {
 				Term_putch(i, 5, COLOUR_WHITE, L'=');
 			}
-            prt(angdroid_zh_tw_enabled() ?
-                "方向鍵移動／r 詳情／Esc 返回" :
-                "<dir>, 'r' to recall, ESC", h - 2, 0);
-			redraw = false;
+            redraw = false;
 		}
 
 		if (mark_old != mark) {
