@@ -64,8 +64,8 @@ static inline size_t angdroid_fa_choice_prompt_line(
     option_bytes = strlen(options);
     /* One byte per shortcut; require enough space for "[", "]", space
      * and the NUL before performing any addition or memcpy. */
-    if (option_bytes <= width - (width >= 3 ? 3 : width) &&
-        option_bytes <= capacity - 1 - (capacity >= 4 ? 3 : capacity - 1)) {
+    if (width >= 3 && capacity >= 4 &&
+        option_bytes <= width - 3 && option_bytes <= capacity - 4) {
         suffix_bytes = option_bytes + 3;
         cells = angdroid_menu_copy_columns(
             dest, capacity - suffix_bytes, question, width - suffix_bytes);
