@@ -110,6 +110,15 @@ require(PROPS,
     "list[count++].group = PLAYER_FLAG_RACE;",
     "view_ability_menu(list, count);",
     "mem_free(list);")
+for token in (
+    "if (!class || !ability || !ability->type || ability->index < 0)",
+    "if (!race || !ability || !ability->type || ability->index < 0)",
+    "ability->index < PF_MAX &&",
+    "ability->index < OF_MAX &&",
+    "ability->index < ELEM_MAX &&",
+    "race->el_info[ability->index].res_level == ability->value;",
+):
+    assert token in PROPS, token
 assert "ability_list[32]" not in PROPS
 assert "if (!ability || !ability->name) return;" in PROPS
 assert "if (pick <= PF_NONE || pick >= PF_MAX ||" in PROPS
