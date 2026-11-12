@@ -38,6 +38,24 @@
 #include "ui-target.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
+
+/* Only visible birth hints change: original character-generation
+ * commands and their letter shortcuts remain canonical. */
+static void fa_birth_prompt_centered(const char *message, int row)
+{
+    int columns, x;
+    char visible[256];
+    if (!Term || !message || Term->wid <= 0 ||
+        row < 0 || row >= Term->hgt) return;
+    columns = (int)angdroid_utf8_display_columns(message);
+    x = columns >= Term->wid ? 0 : (Term->wid - columns) / 2;
+    angdroid_menu_copy_columns(visible, sizeof(visible), message,
+        (size_t)(Term->wid - x));
+    prt("", row, 0);
+    if (visible[0]) put_str(visible, row, x);
+}
 
 /**
  * Overview
@@ -107,13 +125,16 @@ bool arg_force_name;
 static enum birth_stage textui_birth_quickstart(void)
 //phantom name change changes
 {
-	const char *prompt = "['Y': use as is; 'N': redo; 'C': change name/history; '=': set birth options]";
+	const char *prompt = angdroid_game_ui_text(
+        "['Y': use as is; 'N': redo; 'C': change name/history; '=': set birth options]",
+        angdroid_zh_tw_enabled());
 
 	enum birth_stage next = BIRTH_QUICKSTART;
 
 	/* Prompt for it */
-	prt("New character based on previous one:", 0, 0);
-	prt(prompt, Term->hgt - 1, Term->wid / 2 - strlen(prompt) / 2);
+	prt(angdroid_game_ui_text("New character based on previous one:",
+        angdroid_zh_tw_enabled()), 0, 0);
+	fa_birth_prompt_centered(prompt, Term->hgt - 1);
 
 	do {
 		soft_kbd_flash("YNC=\x18");
@@ -805,7 +826,8 @@ static void setup_menus(void)
 
 	for (i = 0, r = races; r; r = r->next, i++)
 		mdata->items[r->ridx] = r->name;
-	mdata->hint = "Race affects stats and skills, and may confer resistances and abilities.";
+	mdata->hint = angdroid_game_ui_text("Race affects stats and skills, and may confer resistances and abilities.",
+        angdroid_zh_tw_enabled());
 
 	/* Count the classes */
 	n = 0;
@@ -818,15 +840,18 @@ static void setup_menus(void)
 
 	for (i = 0, c = classes; c; c = c->next, i++)
 		mdata->items[c->cidx] = c->name;
-	mdata->hint = "Class affects stats, skills, and other character traits.";
+	mdata->hint = angdroid_game_ui_text("Class affects stats, skills, and other character traits.",
+        angdroid_zh_tw_enabled());
 		
 	/* Roller menu straightforward */
 	init_birth_menu(&roller_menu, MAX_BIRTH_ROLLERS, 0, &roller_region, false,
 					NULL);
 	mdata = roller_menu.menu_data;
 	for (i = 0; i < MAX_BIRTH_ROLLERS; i++)
-		mdata->items[i] = roller_choices[i];
-	mdata->hint = "Choose how to generate your intrinsic stats. Point-based is recommended.";
+		mdata->items[i] = angdroid_game_ui_text(
+            roller_choices[i], angdroid_zh_tw_enabled());
+	mdata->hint = angdroid_game_ui_text("Choose how to generate your intrinsic stats. Point-based is recommended.",
+        angdroid_zh_tw_enabled());
 }
 
 /**
@@ -1312,7 +1337,8 @@ static void point_based_points(game_event_type type, game_event_data *data,
 	int remaining = data->birthpoints.remaining;
 
 	/* Display the costs header */
-	put_str("Cost", COSTS_ROW - 1, COSTS_COL);
+	put_str(angdroid_game_ui_text("Cost", angdroid_zh_tw_enabled()),
+        COSTS_ROW - 1, COSTS_COL);
 	
 	for (i = 0; i < STAT_MAX; i++) {
 		/* Remember what's allowed. */
@@ -1328,13 +1354,16 @@ static void point_based_points(game_event_type type, game_event_data *data,
 		sum += spent[i];
 	}
 	
-	put_str(format("Total Cost: %2d/%2d", sum, remaining + sum),
+	put_str(format(angdroid_game_ui_text("Total Cost: %2d/%2d",
+        angdroid_zh_tw_enabled()), sum, remaining + sum),
 		COSTS_ROW + STAT_MAX, TOTAL_COL);
 }
 
 static void point_based_start(void)
 {
-	const char *prompt = "[up/down to move, left/right to modify, 'r' to reset, 'Enter' to accept]";
+	const char *prompt = angdroid_game_ui_text(
+        "[up/down to move, left/right to modify, 'r' to reset, 'Enter' to accept]",
+        angdroid_zh_tw_enabled());
 	int i;
 
 	/* Clear */
@@ -1344,7 +1373,7 @@ static void point_based_start(void)
 	display_player_xtra_info(0);
 	display_player_stat_info();
 
-	prt(prompt, Term->hgt - 1, Term->wid / 2 - strlen(prompt) / 2);
+	fa_birth_prompt_centered(prompt, Term->hgt - 1);
 
 	for (i = 0; i < STAT_MAX; ++i) {
 		buysell[i] = 0;
@@ -1567,7 +1596,9 @@ static enum birth_stage get_name_command(void)
 	} else if (get_character_name(name, sizeof(name))
 			&& (savefile[0]
 			|| !savefile_name_already_used(name, true, true)
-			|| get_check("A savefile for that name exists.  Overwrite it? "))) {
+			|| get_check(angdroid_game_ui_text(
+            "A savefile for that name exists.  Overwrite it? ",
+            angdroid_zh_tw_enabled())))) {
 		cmdq_push(CMD_NAME_CHOICE);
 		cmd_set_arg_string(cmdq_peek(), "name", name);
 		next = BIRTH_HISTORY_CHOICE;
@@ -1783,7 +1814,8 @@ static enum birth_stage get_history_command(void)
 	my_strcpy(old_history, player->history, sizeof(old_history));
 
 	/* Ask for some history */
-	prt("Accept character history? [y/n]", 0, 0);
+	prt(angdroid_game_ui_text("Accept character history? [y/n]",
+        angdroid_zh_tw_enabled()), 0, 0);
 
 	soft_kbd_flash("yn\x18");
 
@@ -1820,13 +1852,15 @@ static enum birth_stage get_history_command(void)
  * ------------------------------------------------------------------------ */
 static enum birth_stage get_confirm_command(void)
 {
-	const char *prompt = "['ESC' to step back, 'S' to start over, or any other key to continue]";
+	const char *prompt = angdroid_game_ui_text(
+        "['ESC' to step back, 'S' to start over, or any other key to continue]",
+        angdroid_zh_tw_enabled());
 	struct keypress ke;
 
 	enum birth_stage next = BIRTH_RESET;
 
 	/* Prompt for it */
-	prt(prompt, Term->hgt - 1, Term->wid / 2 - strlen(prompt) / 2);
+	fa_birth_prompt_centered(prompt, Term->hgt - 1);
 
 	soft_kbd_flash("S\x18");
 
