@@ -82,11 +82,46 @@ static void transitions_and_full_capacity(void)
     }
 }
 
+/* A menu can close through a tap, Escape or a source switch, with
+ * the next game prompt generating an entirely different shortcut strip.
+ * No item tag from the previous modal page may leak to that next prompt. */
+static void picker_exit_then_game_prompt(void)
+{
+    char keys[64] = "";
+    static const char *tabs[] = {
+        "abcdefgh/|-", "1234/-", "xyz|", ""
+    };
+    static const char *game_keys[] = {
+        "yN", "*", "789", ""
+    };
+    size_t i, j;
+
+    for (i = 0; i < sizeof(tabs) / sizeof(tabs[0]); ++i) {
+        for (j = 0; j < sizeof(game_keys) / sizeof(game_keys[0]); ++j) {
+            size_t k;
+            CHECK(angdroid_soft_kbd_replace_buffer(
+                keys, sizeof(keys), tabs[i]) == strlen(tabs[i]));
+            CHECK(angdroid_soft_kbd_replace_buffer(
+                keys, sizeof(keys), "") == 0);
+            CHECK(keys[0] == '\0');
+            CHECK(angdroid_soft_kbd_replace_buffer(
+                keys, sizeof(keys), game_keys[j]) == strlen(game_keys[j]));
+            CHECK(strcmp(keys, game_keys[j]) == 0);
+            for (k = 0; k < strlen(keys); ++k)
+                CHECK(strchr(game_keys[j], keys[k]) != NULL);
+        }
+    }
+    CHECK(angdroid_soft_kbd_replace_buffer(
+        keys, sizeof(keys), NULL) == 0);
+    CHECK(keys[0] == '\0');
+}
+
 int main(void)
 {
     replaces_previous_hints();
     bounded_and_deduplicated();
     transitions_and_full_capacity();
+    picker_exit_then_game_prompt();
     printf("PASS: native soft key replacement, empty-page clearing and rotation (%lu checks)\n",
         checks);
     return 0;
