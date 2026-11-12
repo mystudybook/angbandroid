@@ -119,27 +119,39 @@ static void do_cmd_pref_file_hack(long row);
  * Displays an option entry.
  */
 static void option_toggle_display(struct menu *m, int oid, bool cursor,
-		int row, int col, int width)
+        int row, int col, int width)
 {
-	uint8_t attr = curs_attrs[CURS_KNOWN][cursor != 0];
-	bool *options = menu_priv(m);
+    uint8_t attr = curs_attrs[CURS_KNOWN][cursor != 0];
+    bool *options = menu_priv(m);
     const char *desc = angdroid_game_ui_text(option_desc(oid),
         angdroid_zh_tw_enabled());
+    int available, desc_cols;
     char clipped[4 * 45 + 1];
-    size_t columns = angdroid_menu_copy_columns(clipped,
-        sizeof(clipped), desc, 45);
+    char status[160], status_visible[160];
+    size_t columns;
 
-    /* 45 is terminal cells, not bytes or code points. Never feed a
-     * half-character to the renderer or let the label reach the key. */
-    if (Term && col >= 0 && col < Term->wid) {
-        c_prt(attr, format("%s%*s", clipped, (int)(45 - columns),
-            ""), row, col);
-        if (col + 45 < Term->wid) {
-            c_prt(attr, format(": %s  (%s)",
-                angdroid_game_ui_text(options[oid] ? "yes" : "no",
-                    angdroid_zh_tw_enabled()), option_name(oid)),
-                row, col + 45);
-        }
+    if (!Term || col < 0 || col >= Term->wid || width <= 0)
+        return;
+
+    available = MIN(width, Term->wid - col);
+    /* On a phone keep at least 16 columns for the state and stable
+     * option_name() key; full-size terminals retain the legacy 45. */
+    desc_cols = MIN(45, MAX(0, available - 16));
+    if (desc_cols <= 0)
+        desc_cols = available;
+    columns = angdroid_menu_copy_columns(clipped, sizeof(clipped),
+        desc, (size_t)desc_cols);
+    c_prt(attr, format("%s%*s", clipped,
+        (int)(desc_cols - columns), ""), row, col);
+
+    if (available > desc_cols) {
+        strnfmt(status, sizeof(status), ": %s  (%s)",
+            angdroid_game_ui_text(options[oid] ? "yes" : "no",
+                angdroid_zh_tw_enabled()), option_name(oid));
+        angdroid_menu_copy_columns(status_visible, sizeof(status_visible),
+            status, (size_t)(available - desc_cols));
+        if (status_visible[0])
+            c_prt(attr, status_visible, row, col + desc_cols);
     }
 }
 
