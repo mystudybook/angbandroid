@@ -519,6 +519,35 @@ static region race_region = {RACE_COL, TABLE_ROW, 17, MENU_ROWS};
 static region class_region = {CLASS_COL, TABLE_ROW, 17, MENU_ROWS};
 static region roller_region = {ROLLER_COL, TABLE_ROW, 34, MENU_ROWS};
 
+/* Scroll the display-only race/class details. Never change the currently
+ * highlighted choice or any birth command when paging the explanation. */
+static int fa_birth_detail_page = 0;
+static int fa_birth_detail_page_count = 1;
+static int fa_birth_detail_last_oid = -1;
+static bool fa_birth_detail_last_class = false;
+static int fa_birth_layout_width = -1, fa_birth_layout_height = -1;
+
+static void fa_birth_detail_for_choice(int oid, bool class_choice)
+{
+    if (oid != fa_birth_detail_last_oid ||
+            class_choice != fa_birth_detail_last_class) {
+        fa_birth_detail_page = 0;
+        fa_birth_detail_page_count = 1;
+        fa_birth_detail_last_oid = oid;
+        fa_birth_detail_last_class = class_choice;
+    }
+}
+
+static bool fa_birth_detail_change_page(int direction)
+{
+    int next = fa_birth_detail_page + direction;
+    if (next < 0 || next >= fa_birth_detail_page_count)
+        return false;
+    fa_birth_detail_page = next;
+    return true;
+}
+
+
 /* Landscape terminals keep the traditional three-column birth sheet.
  * On portrait terminals each step gets a focused, selectable menu with
  * its detail pane to the right; prior steps are available via ESC. */
@@ -537,6 +566,14 @@ static int fa_birth_detail_col(int normal_col)
 static void fa_birth_configure_layout(void)
 {
     int menu_width, rows;
+    if (Term && (Term->wid != fa_birth_layout_width ||
+            Term->hgt != fa_birth_layout_height)) {
+        /* The number of visible detail rows changes with device rotation. */
+        fa_birth_detail_page = 0;
+        fa_birth_detail_page_count = 1;
+        fa_birth_layout_width = Term->wid;
+        fa_birth_layout_height = Term->hgt;
+    }
     if (!fa_birth_compact_layout()) {
         race_region = (region){RACE_COL, TABLE_ROW, 17, MENU_ROWS};
         class_region = (region){CLASS_COL, TABLE_ROW, 17, MENU_ROWS};
@@ -665,16 +702,25 @@ static void fa_birth_help_clear(void)
 
 static void fa_birth_help_line(int *row, const char *label)
 {
-    int col, width;
+    int col, width, first, per_page, offset, screen_row;
     char visible[384];
     if (!row) return;
+    first = fa_birth_help_start();
+    /* Reserve the penultimate row for the page indicator, and the final
+     * row for the game's existing keyboard shortcut instructions. */
+    per_page = Term ? MAX(0, Term->hgt - 2 - first) : 0;
+    offset = *row - first - fa_birth_detail_page * per_page;
+    screen_row = first + offset;
     col = fa_birth_help_col();
-    if (Term && label && col >= 0 && col < Term->wid &&
-            *row >= 0 && *row < Term->hgt - 1) {
+    if (Term && label && per_page > 0 &&
+            offset >= 0 && offset < per_page &&
+            col >= 0 && col < Term->wid &&
+            screen_row >= 0 && screen_row < Term->hgt - 2) {
         width = Term->wid - col;
         angdroid_menu_copy_columns(visible, sizeof(visible),
             label, (size_t)width);
-        if (visible[0]) c_put_str(COLOUR_L_BLUE, visible, *row, col);
+        if (visible[0])
+            c_put_str(COLOUR_L_BLUE, visible, screen_row, col);
     }
     ++*row;
 }
@@ -778,19 +824,32 @@ static void fa_birth_compact_details(const struct player_race *race,
                     ability->value)) continue;
         fa_birth_help_line(&line, angdroid_game_ui_text(ability->name, zh));
     }
-    if (Term && line > Term->hgt - 1 &&
-            Term->hgt - 2 >= fa_birth_help_start()) {
+    if (Term && Term->hgt - 2 >= fa_birth_help_start()) {
+        int per_page = MAX(1, Term->hgt - 2 - fa_birth_help_start());
+        int total = MAX(0, line - fa_birth_help_start());
         int col = fa_birth_help_col();
         char visible[192];
-        const char *hint = zh ? "…橫向可查看更多特性" :
-            "...rotate for more traits";
+        const char *hint;
+        fa_birth_detail_page_count = MAX(1,
+            (total + per_page - 1) / per_page);
+        if (fa_birth_detail_page >= fa_birth_detail_page_count)
+            fa_birth_detail_page = fa_birth_detail_page_count - 1;
+        if (fa_birth_detail_page_count > 1) {
+            hint = zh ?
+                format("特性 %d/%d：按 [ 上頁、] 下頁",
+                    fa_birth_detail_page + 1, fa_birth_detail_page_count) :
+                format("Traits %d/%d: [ prev, ] next",
+                    fa_birth_detail_page + 1, fa_birth_detail_page_count);
+        } else {
+            hint = zh ? "橫向畫面可檢視完整能力資料" :
+                "Landscape shows the full character details";
+        }
         if (col >= 0 && col < Term->wid) {
             Term_erase(col, Term->hgt - 2, Term->wid - col);
             angdroid_menu_copy_columns(visible, sizeof(visible),
                 hint, (size_t)(Term->wid - col));
             if (visible[0])
-                c_put_str(COLOUR_YELLOW, visible,
-                    Term->hgt - 2, col);
+                c_put_str(COLOUR_YELLOW, visible, Term->hgt - 2, col);
         }
     }
 }
@@ -809,6 +868,7 @@ static void race_help(int i, void *db, const region *l)
 
 	if (!r) return;
     if (fa_birth_compact_layout()) {
+        fa_birth_detail_for_choice(i, false);
         fa_birth_compact_details(r, NULL);
         return;
     }
@@ -900,6 +960,7 @@ static void class_help(int i, void *db, const region *l)
 
 	if (!c) return;
     if (fa_birth_compact_layout()) {
+        fa_birth_detail_for_choice(i, true);
         fa_birth_compact_details(r, c);
         return;
     }
