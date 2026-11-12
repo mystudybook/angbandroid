@@ -30,8 +30,10 @@ if "if (cursor >= n) cursor = n - 1;" in column:
 mouse = source.split("bool menu_handle_mouse(", 1)[1].split(
     "static bool menu_handle_action(", 1
 )[0]
-if "if (is_valid_row(menu, new_cursor))" not in mouse:
-    raise SystemExit("FAIL: invalid touch hit can select an action")
+if "if (menu_navigation_is_valid(menu, new_cursor))" not in mouse:
+    raise SystemExit("FAIL: blank or hidden menu row is touch-selectable")
+if "if (is_valid_row(menu, new_cursor))" in mouse:
+    raise SystemExit("FAIL: hidden source row still accepts a screen tap")
 
 # The current touch must resolve its new stock row BEFORE dispatching.
 # Header/outside actions must still run independently of the active list.
