@@ -3815,13 +3815,17 @@ void do_cmd_messages(void)
 	q = 0;
 
 	/* Get size */
-	Term_get_size(&wid, &hgt);
+    Term_get_size(&wid, &hgt);
+    if (wid < 3 || hgt < 5) return;
 
 	/* Save screen */
 	screen_save();
 
 	/* Process requests until done */
 	while (more) {
+        /* Rotation can change the terminal's dimensions mid-recall. */
+        Term_get_size(&wid, &hgt);
+        if (wid < 3 || hgt < 5) break;
 		/* Clear screen */
 		Term_clear();
 
@@ -3837,43 +3841,74 @@ void do_cmd_messages(void)
 			else
 				msg = format("%s <%dx>", str, count);
 
-			/* Apply horizontal scroll */
-			msg = ((int)strlen(msg) >= q) ? (msg + q) : "";
+            /* q is a number of display cells, never UTF-8 bytes.
+             * A column offset inside a Han glyph skips the whole glyph. */
+            msg = angdroid_utf8_skip_columns(msg, (size_t)q);
 
-			/* Dump the messages, bottom to top */
-			Term_putstr(0, hgt - 3 - j, -1, attr, msg);
+            /* Render whole scalars in visible terminal cells only. */
+            {
+                char visible[1024];
+                angdroid_knowledge_clip_label(visible, sizeof(visible),
+                    msg, 0, wid, wid);
+                Term_putstr(0, hgt - 3 - j, -1, attr, visible);
+            }
 
-			/* Highlight "shower" */
-			if (strlen(shower)) {
-				str = msg;
-
-				/* Display matches */
-				while ((str = my_stristr(str, shower)) != NULL) {
-					int len = strlen(shower);
-
-					/* Display the match */
-					Term_putstr(str-msg, hgt - 3 - j, len, COLOUR_YELLOW, str);
-
-					/* Advance */
-					str += len;
-				}
-			}
+            /* Highlight using terminal cell offsets, not UTF-8 byte
+             * positions. Never paint outside the right screen edge. */
+            if (shower[0]) {
+                str = msg;
+                while ((str = my_stristr(str, shower)) != NULL) {
+                    size_t match_bytes = strlen(shower);
+                    size_t column = angdroid_utf8_prefix_columns(msg, str);
+                    if (column < (size_t)wid) {
+                        char highlighted[sizeof(shower)];
+                        memcpy(highlighted, str, match_bytes);
+                        highlighted[match_bytes] = '\0';
+                        angdroid_utf8_clip_columns(highlighted,
+                            (size_t)wid - column);
+                        if (highlighted[0])
+                            Term_putstr((int)column, hgt - 3 - j, -1,
+                                COLOUR_YELLOW, highlighted);
+                    }
+                    str += match_bytes;
+                }
+            }
 		}
 
-		/* Display header */
-		prt(format("Message recall (%d-%d of %d), offset %d",
-				   i, i + j - 1, n, q), 0, 0);
+        /* Bound both message-range header and footer by visible cells. */
+        {
+            char header[192], visible[192];
+            if (angdroid_zh_tw_enabled())
+                strnfmt(header, sizeof(header),
+                    "歷史訊息（%d–%d／%d），捲動 %d 欄",
+                    i, i + j - 1, n, q);
+            else
+                strnfmt(header, sizeof(header),
+                    "Message recall (%d-%d of %d), offset %d",
+                    i, i + j - 1, n, q);
+            angdroid_knowledge_clip_label(visible, sizeof(visible),
+                header, 0, wid, wid);
+            prt(visible, 0, 0);
+        }
 
-		/* Display prompt (not very informative) */
-		if (strlen(shower))
-			prt("[Movement keys to navigate, '-' for next, '=' to find]",
-				hgt - 1, 0);
-		else
-			prt("[Movement keys to navigate, '=' to find, or ESCAPE to exit]",
-				hgt - 1, 0);
-			
-		/* Get a command */
-		ke = inkey_ex();
+        {
+            const char *prompt = angdroid_game_ui_text(shower[0] ?
+                "[Movement keys to navigate, '-' for next, '=' to find]" :
+                "[Movement keys to navigate, '=' to find, or ESCAPE to exit]",
+                angdroid_zh_tw_enabled());
+            char visible[160];
+            /* Preserve the exit key in the footer on portrait phones. */
+            if (angdroid_utf8_display_columns(prompt) > (size_t)wid)
+                prompt = angdroid_zh_tw_enabled() ?
+                    "= 搜尋／Esc 離開" : "= find / Esc";
+            angdroid_knowledge_clip_label(visible, sizeof(visible),
+                prompt, 0, wid, wid);
+            prt(visible, hgt - 1, 0);
+        }
+
+        soft_kbd_flash("=-pn");
+        ke = inkey_ex();
+        soft_kbd_clear(true);
 
 		/* Scroll forwards or backwards using mouse clicks */
 		if (ke.type == EVT_MOUSE) {
@@ -3900,7 +3935,8 @@ void do_cmd_messages(void)
 				case '=':
 				{
 					/* Get the string to find */
-					prt("Find: ", hgt - 1, 0);
+					prt(angdroid_game_ui_text("Find: ",
+                        angdroid_zh_tw_enabled()), hgt - 1, 0);
 					if (!askfor_aux(shower, sizeof shower, NULL)) continue;
 		
 					/* Set to find */
@@ -3911,13 +3947,15 @@ void do_cmd_messages(void)
 				case ARROW_LEFT:
 				case '4':
 				case 'h':
-					q = (q >= wid / 2) ? (q - wid / 2) : 0;
+					q = (q >= MAX(1, wid / 2)) ?
+                        (q - MAX(1, wid / 2)) : 0;
 					break;
 
 				case ARROW_RIGHT:
 				case '6':
 				case 'l':
-					q = q + wid / 2;
+					if (q <= INT_MAX - MAX(1, wid / 2))
+                        q += MAX(1, wid / 2);
 					break;
 
 				case ARROW_UP:
