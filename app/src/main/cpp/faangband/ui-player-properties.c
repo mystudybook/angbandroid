@@ -300,6 +300,11 @@ void textui_view_ability_menu(struct player_ability *ability_list,
 
 	menu_select(&menu, 0, false);
 
+    /* menu_select() refreshes Android's hint ribbon for non-object menus,
+     * but does not clear it on exit. No ability shortcuts may outlive the
+     * read-only viewer, including after Esc or an invalid resize. */
+    soft_kbd_replace("");
+
 	/* Load screen */
 	screen_load();
 
@@ -502,6 +507,11 @@ bool textui_gain_spec_menu(int *pick)
             struct player_ability *ability = lookup_ability("player", idx, 0);
             fa_ability_layout_menu(&menu);
             menu_refresh(&menu, false);
+            /* get_check() calls soft_kbd_flash("${yes_no}"), which
+             * appends to the previous menu hints. Clear the list tags
+             * before offering a Yes/No prompt, even if the original
+             * selected item has since become invalid. */
+            soft_kbd_replace("");
             if (ability && ability->name && check_specialty_gain(idx)) {
                 visible_name = angdroid_fa_birth_ability_name(ability->name,
                     ability->type, ability->index, angdroid_zh_tw_enabled());
@@ -518,12 +528,18 @@ bool textui_gain_spec_menu(int *pick)
          * the pending choice, not the whole specialty menu. Recalculate
          * after get_check(), which may itself have consumed a resize. */
         d->selected_spec = 0;
+        soft_kbd_replace("");
         clear_from(0);
         fa_ability_layout_menu(&menu);
 	}
 
     if (accepted)
         *pick = d->selected_spec;
+
+    /* Confirmed, cancelled, Esc and resize exits all release the
+     * specialty menu's temporary soft keyboard keys. The next game
+     * command or modal can install its own hints without inherited tags. */
+    soft_kbd_replace("");
 
 	/* Load screen */
 	screen_load();
@@ -570,4 +586,8 @@ void textui_interact_with_specialties(void)
 
 		soft_kbd_flash("lv");
 	}
+
+    /* The one-shot l/v prompt must not leave either shortcut visible
+     * when the player returns to the normal game command screen. */
+    soft_kbd_replace("");
 }
