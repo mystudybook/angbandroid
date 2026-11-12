@@ -69,6 +69,8 @@
 #include "../angband/zh-tw-knowledge-groups.h"
 #include "../angband/knowledge-column-text.h"
 #include "obj-desc-item-zh-tw.h"
+#include "../angband/knowledge-monster-label.h"
+#include "../angband/zh-tw-knowledge-kill-summary.h"
 
 /**
  * The first part of this file contains the knowledge menus.  Generic display
@@ -727,8 +729,21 @@ static void display_group_member(struct menu *menu, int oid,
 
 static const char *recall_prompt(int oid)
 {
-	(void)oid;
-	return ", 'r' to recall";
+    (void)oid;
+    soft_kbd_flash("r");
+    return ", 'r' to recall";
+}
+
+/* Column-aware headers; do not publish fixed-column metadata outside the
+ * terminal on a portrait phone or after a rotation. */
+static void fa_knowledge_header_field(const char *label, int col)
+{
+    char clipped[64];
+    if (!Term || col < 0 || col >= Term->wid) return;
+    angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+        label, col, Term->wid, Term->wid);
+    if (clipped[0])
+        Term_putstr(col, 4, -1, COLOUR_WHITE, clipped);
 }
 
 #define swap(a, b) (swapspace = (void*)(a)), ((a) = (b)), ((b) = swapspace)
@@ -840,8 +855,10 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
             g_name_len = columns > 20 ? 20 : (int)columns;
     }
 
-	/* Reasonable max group name len */
-	if (g_name_len >= 20) g_name_len = 20;
+	/* Leave room for the item column on narrow portrait terminals.
+     * The underlying canonical group IDs and sort order are unchanged. */
+    if (g_name_len >= 20) g_name_len = 20;
+    g_name_len = MIN(g_name_len, MAX(1, wid - 11));
 
 	object_region.col = g_name_len + 3;
 	group_region.width = g_name_len;
@@ -896,15 +913,38 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
             prt(angdroid_zh_tw_enabled() ? "名稱" : "Name",
                 4, g_name_len + 3);
 
-			if (otherfields)
-				prt(otherfields, 4, 46);
+            /* Localize only known visible headers. Menu IDs and layout
+             * definitions are deliberately not translated. */
+            if (otherfields) {
+                if (angdroid_zh_tw_enabled() &&
+                    streq(otherfields, "                   Sym  Kills")) {
+                    fa_knowledge_header_field("符號", 65);
+                    fa_knowledge_header_field("擊殺", 70);
+                } else if (angdroid_zh_tw_enabled() &&
+                    streq(otherfields, "Ignore  Inscribed          Sym")) {
+                    fa_knowledge_header_field("忽略", 46);
+                    fa_knowledge_header_field("刻字", 55);
+                    fa_knowledge_header_field("符號", 76);
+                } else if (angdroid_zh_tw_enabled() &&
+                    streq(otherfields, "                    Sym")) {
+                    fa_knowledge_header_field("符號", 66);
+                } else if (angdroid_zh_tw_enabled() &&
+                    streq(otherfields, "Inscribed")) {
+                    fa_knowledge_header_field("刻字", 46);
+                } else if (wid > 46) {
+                    char clipped[128];
+                    angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+                        otherfields, 46, wid, wid);
+                    if (clipped[0]) Term_putstr(46, 4, -1,
+                        COLOUR_WHITE, clipped);
+                }
+            }
 
+            /* Stop at the current terminal's edge, not historic 80 cols. */
+            for (i = 0; i < MIN(79, wid); i++)
+                Term_putch(i, 5, COLOUR_WHITE, L'=');
 
-			/* Print dividers: horizontal and vertical */
-			for (i = 0; i < 79; i++)
-				Term_putch(i, 5, COLOUR_WHITE, L'=');
-
-			for (i = 0; i < browser_rows; i++)
+			for (i = 0; i < browser_rows && g_name_len + 1 < wid; i++)
 				Term_putch(g_name_len + 1, 6 + i, COLOUR_WHITE, L'|');
 
 
@@ -941,6 +981,8 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 
 		/* Print prompt */
 		{
+            /* Each knowledge page owns only the buttons visible here. */
+            soft_kbd_clear(true);
 			const char *pedit = (!o_funcs.xattr) ? "" :
 					(!(attr_idx|char_idx) ?
 					 ", 'c' to copy" : ", 'c', 'p' to paste");
@@ -948,11 +990,36 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 				o_funcs.xtra_prompt(oid) : "";
 			const char *pvs = "";
 
-			if (tile_picker) pvs = ", ENTER to accept";
-			else if (glyph_picker) pvs = ", 'i' to insert, ENTER to accept";
-			else if (o_funcs.xattr) pvs = ", 'v' for visuals";
+            if (pedit[0]) {
+                soft_kbd_flash("c");
+                if (strstr(pedit, "paste")) soft_kbd_flash("p");
+            }
+            if (tile_picker) {
+                pvs = ", ENTER to accept";
+            } else if (glyph_picker) {
+                pvs = ", 'i' to insert, ENTER to accept";
+                soft_kbd_flash("i");
+            } else if (o_funcs.xattr) {
+                pvs = ", 'v' for visuals";
+                soft_kbd_flash("v");
+            }
 
-			prt(format("<dir>%s%s%s, ESC", pvs, pedit, xtra), hgt - 1, 0);
+            {
+                char full_prompt[512], visible_prompt[512];
+                if (angdroid_zh_tw_enabled()) {
+                    strnfmt(full_prompt, sizeof(full_prompt),
+                        "方向鍵移動%s%s%s，Esc 返回",
+                        angdroid_game_ui_text(pvs, true),
+                        angdroid_game_ui_text(pedit, true),
+                        angdroid_game_ui_text(xtra, true));
+                } else {
+                    strnfmt(full_prompt, sizeof(full_prompt),
+                        "<dir>%s%s%s, ESC", pvs, pedit, xtra);
+                }
+                angdroid_knowledge_clip_label(visible_prompt,
+                    sizeof(visible_prompt), full_prompt, 0, wid, wid);
+                prt(visible_prompt, hgt - 1, 0);
+            }
 		}
 
 		if (do_swap) {
@@ -1003,6 +1070,7 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 		}
 
 		ke = inkey_ex();
+        soft_kbd_clear(true);
 		if (!tile_picker && !glyph_picker) {
 			ui_event ke0 = EVENT_EMPTY;
 
@@ -1101,8 +1169,17 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 	}
 
 	/* Prompt */
-	if (!grp_cnt)
-		prt(format("No %s known.", title), 15, 0);
+	if (!grp_cnt) {
+        char message[256], clipped[256];
+        if (angdroid_zh_tw_enabled())
+            strnfmt(message, sizeof(message), "目前沒有已知%s。",
+                angdroid_game_ui_text(title, true));
+        else
+            strnfmt(message, sizeof(message), "No %s known.", title);
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            message, 0, wid, wid);
+        prt(clipped, MIN(15, MAX(0, hgt - 1)), 0);
+    }
 
 	mem_free(g_names);
 	mem_free(g_offset);
@@ -1166,26 +1243,37 @@ static void display_monster(int col, int row, bool cursor, int oid)
 			 rf_has(race->flags, RF_UNIQUE))
 		a = COLOUR_VIOLET;
 
-	/* Display the name */
-	if (rf_has(race->flags, RF_PLAYER_GHOST)) {
-		c_prt(attr, format("%s, the %s", cave->ghost->name, race->name),
-			  row, col);
-	} else {
-		c_prt(attr, race->name, row, col);
-	}
+    /* Render-only translations and UTF-8 clipping: leave race->name and
+     * ghost identity unchanged. Never paint over the symbol at column 66. */
+    if (Term && col >= 0 && col < Term->wid && col < 65) {
+        const char *name = rf_has(race->flags, RF_PLAYER_GHOST)
+            ? format("%s, the %s", cave->ghost->name, race->name)
+            : angdroid_knowledge_monster_label(race->name,
+                rf_has(race->flags, RF_UNIQUE), angdroid_zh_tw_enabled());
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            name, col, 65, Term->wid);
+        if (clipped[0]) c_prt(attr, clipped, row, col);
+    }
 
-	/* Display symbol */
-	big_pad(66, row, a, c);
-
-	/* Display kills */
-	if (!race->rarity) {
-		put_str(format("%s", "shape"), row, 70);
-	} else if (rf_has(race->flags, RF_UNIQUE)) {
-		put_str(format("%s", (race->max_num == 0)?  " dead" : "alive"),
-				row, 70);
-	} else {
-		put_str(format("%5d", lore->pkills), row, 70);
-	}
+    /* The legacy status columns are absent on narrow screens. */
+    if (Term && Term->wid > 66) big_pad(66, row, a, c);
+    if (Term && Term->wid > 70) {
+        const char *status;
+        char clipped[64];
+        if (!race->rarity)
+            status = angdroid_game_ui_text("shape",
+                angdroid_zh_tw_enabled());
+        else if (rf_has(race->flags, RF_UNIQUE))
+            status = angdroid_game_ui_text(
+                (race->max_num == 0) ? " dead" : "alive",
+                angdroid_zh_tw_enabled());
+        else
+            status = format("%5d", lore->pkills);
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            status, 70, Term->wid, Term->wid);
+        if (clipped[0]) put_str(clipped, row, 70);
+    }
 }
 
 static int m_cmp_race(const void *a, const void *b)
@@ -1287,19 +1375,27 @@ static void mon_summary(int gid, const int *item_list, int n, int top,
 		kills += l_list[oid].pkills;
 	}
 
-	/* Different display for the first item if we've got uniques to show */
-	if (gid == 0 &&
-		rf_has((&r_info[default_join[item_list[0]].oid])->flags, RF_UNIQUE)) {
-		c_prt(COLOUR_L_BLUE, format("%d known uniques, %d slain.", n, kills),
-					row, col);
-	} else {
-		int tkills = 0;
-
-		for (i = 0; i < z_info->r_max; i++)
-			tkills += l_list[i].pkills;
-
-		c_prt(COLOUR_L_BLUE, format("Creatures slain: %d/%d (in group/in total)", kills, tkills), row, col);
-	}
+    /* Keep kill counts unchanged; only format the visible caption.
+     * Guard the empty group before inspecting its first join entry. */
+    {
+        const bool uniques = gid == 0 && n > 0 &&
+            rf_has((&r_info[default_join[item_list[top]].oid])->flags,
+                RF_UNIQUE);
+        int tkills = 0;
+        char message[160], clipped[160];
+        if (!uniques) {
+            for (i = 0; i < z_info->r_max; i++)
+                tkills += l_list[i].pkills;
+        }
+        if (Term && col >= 0 && col < Term->wid &&
+            row >= 0 && row < Term->hgt &&
+            angdroid_knowledge_kill_summary(message, sizeof(message),
+                uniques, n, kills, tkills, angdroid_zh_tw_enabled())) {
+            angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+                message, col, Term->wid, Term->wid);
+            if (clipped[0]) c_prt(COLOUR_L_BLUE, clipped, row, col);
+        }
+    }
 }
 
 static int count_known_monsters(void)
