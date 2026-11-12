@@ -279,7 +279,7 @@ void textui_view_ability_menu(struct player_ability *ability_list,
 	menu_init(&menu, MN_SKIN_SCROLL, &menu_f);
 	menu.header = buf;
 	menu_setpriv(&menu, num_abilities, ability_list);
-	loc.page_rows = num_abilities + 1;
+
 	menu.flags = MN_DBL_TAP;
 	menu.browse_hook = view_ability_menu_browser;
     menu.cmd_keys = "[]";
@@ -457,7 +457,7 @@ bool textui_gain_spec_menu(int *pick)
 	menu_init(&menu, MN_SKIN_SCROLL, &menu_f);
 	menu.title = buf;
 	menu_setpriv(&menu, d->spec_known, d);
-	loc.page_rows = d->spec_known + 2;
+
 	menu.browse_hook = gain_spec_menu_browser;
 	menu.flags = MN_DBL_TAP;
     menu.cmd_keys = "[]";
