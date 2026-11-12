@@ -168,83 +168,152 @@ void textui_textblock_place(textblock *tb, region orig_area, const char *header)
 /**
  * Show a textblock interactively
  */
-struct keypress textui_textblock_show(textblock *tb, region orig_area, const char *header)
+/* Use the same key normalization as inkey(), but allow the modal
+ * textblock pager to receive EVT_RESIZE instead of swallowing it. */
+static struct keypress fa_textblock_key_from_event(ui_event event)
 {
-	/* xxx on resize this should be recalculated */
-	region area = region_calculate(orig_area);
+    struct keypress key = KEYPRESS_NULL;
 
-	size_t *line_starts = NULL, *line_lengths = NULL;
-	size_t n_lines;
-
-	struct keypress ch = KEYPRESS_NULL;
-
-	n_lines = textblock_calculate_lines(tb,
-			&line_starts, &line_lengths, area.width);
-
-	screen_save();
-
-	/* make room for the footer */
-	area.page_rows -= 2;
-
-	if (header != NULL) {
-		area.page_rows--;
-		Term_erase(area.col, area.row, area.width);
-		c_put_str(COLOUR_L_BLUE, header, area.row, area.col);
-		area.row++;
-	}
-
-	if (n_lines > (size_t) area.page_rows) {
-		int start_line = 0;
-
-		Term_erase(area.col, area.row + area.page_rows, area.width);
-		Term_erase(area.col, area.row + area.page_rows + 1, area.width);
-		c_put_str(COLOUR_L_BLUE, "(Up/down or ESCAPE to exit.)",
-				area.row + area.page_rows + 1, area.col);
-
-		/* Pager mode */
-		while (1) {			
-
-			display_area(textblock_text(tb), textblock_attrs(tb), line_starts,
-					line_lengths, n_lines, area, start_line);
-
-			ch = inkey();
-			if (ch.code == ARROW_UP)
-				start_line--;
-			else if (ch.code == ESCAPE || ch.code == 'q' || ch.code == 'x')
-				break;
-			else if (ch.code == ']' || ch.code == '[')
-				/* Special case to deal with monster and object lists -
-				 * see bug #2120 */
-				break;
-			else if (ch.code == ARROW_DOWN)
-				start_line++;
-			else if (ch.code == ' ')
-				start_line += area.page_rows;
-
-			if (start_line < 0)
-				start_line = 0;
-			if (start_line + (size_t) area.page_rows > n_lines)
-				start_line = n_lines - area.page_rows;
-		}
-	} else {
-		display_area(textblock_text(tb), textblock_attrs(tb), line_starts,
-				line_lengths, n_lines, area, 0);
-
-		Term_erase(area.col, area.row + n_lines, area.width);
-		Term_erase(area.col, area.row + n_lines + 1, area.width);
-		c_put_str(COLOUR_L_BLUE, "(Press any key to continue.)",
-				area.row + n_lines + 1, area.col);
-		ch = inkey();
-	}
-
-	mem_free(line_starts);
-	mem_free(line_lengths);
-
-	screen_load();
-
-	return (ch);
+    if (event.type == EVT_KBRD || event.type == EVT_BUTTON) {
+        key = event.key;
+        key.type = EVT_KBRD;
+    } else if (event.type == EVT_ESCAPE || event.type == EVT_MOUSE) {
+        key.type = EVT_KBRD;
+        key.code = (event.type == EVT_MOUSE && event.mouse.button == 1) ?
+            '\n' : ESCAPE;
+        key.mods = 0;
+    }
+    return key;
 }
 
+static void fa_textblock_print_bounded(
+    const char *label, int row, int col, int columns)
+{
+    char visible[256];
+
+    if (columns <= 0 || !Term || row < 0 || col < 0 ||
+            row >= Term->hgt || col >= Term->wid)
+        return;
+    angdroid_menu_copy_columns(visible, sizeof(visible), label,
+        (size_t)columns);
+    c_put_str(COLOUR_L_BLUE, visible, row, col);
+}
+
+/* Show a long textblock with layout recalculated after window rotations.
+ * At small heights, reserve body content before optional header/footer. */
+struct keypress textui_textblock_show(textblock *tb, region orig_area, const char *header)
+{
+    size_t *line_starts = NULL, *line_lengths = NULL;
+    size_t n_lines = 0, start_line = 0;
+    struct keypress ch = KEYPRESS_NULL;
+    int layout_width = -1;
+
+    screen_save();
+    for (;;) {
+        int term_width, term_height, body_rows;
+        region full, area;
+        bool show_header, show_footer, pager;
+        ui_event input;
+        const char *footer;
+
+        Term_get_size(&term_width, &term_height);
+        /* A phone can briefly report an empty terminal during rotation.
+         * Do not calculate zero-width lines or negative page sizes. */
+        if (term_width <= 1 || term_height <= 0) {
+            input = inkey_ex();
+            if (input.type == EVT_RESIZE || input.type == EVT_NONE) continue;
+            ch = fa_textblock_key_from_event(input);
+            if (ch.type == EVT_KBRD) break;
+            continue;
+        }
+
+        full = region_calculate(orig_area);
+        if (full.col < 0) full.col = 0;
+        if (full.row < 0) full.row = 0;
+        if (full.col >= term_width - 1 || full.row >= term_height) {
+            input = inkey_ex();
+            if (input.type == EVT_RESIZE || input.type == EVT_NONE) continue;
+            ch = fa_textblock_key_from_event(input);
+            if (ch.type == EVT_KBRD) break;
+            continue;
+        }
+        full.width = MAX(0, MIN(full.width, term_width - full.col - 1));
+        full.page_rows = MAX(0, MIN(full.page_rows, term_height - full.row));
+        if (full.width <= 0 || full.page_rows <= 0) {
+            input = inkey_ex();
+            if (input.type == EVT_RESIZE || input.type == EVT_NONE) continue;
+            ch = fa_textblock_key_from_event(input);
+            if (ch.type == EVT_KBRD) break;
+            continue;
+        }
+
+        show_header = header && full.page_rows >= 3;
+        show_footer = full.page_rows >= (show_header ? 3 : 2);
+        body_rows = full.page_rows - (show_header ? 1 : 0) -
+            (show_footer ? 1 : 0);
+        area = full;
+        if (show_header) {
+            Term_erase(full.col, full.row, full.width);
+            fa_textblock_print_bounded(header, full.row, full.col, full.width);
+            ++area.row;
+        }
+        area.page_rows = body_rows;
+
+        if (layout_width != area.width) {
+            mem_free(line_starts);
+            mem_free(line_lengths);
+            line_starts = NULL;
+            line_lengths = NULL;
+            n_lines = textblock_calculate_lines(
+                tb, &line_starts, &line_lengths, (size_t)area.width);
+            layout_width = area.width;
+        }
+        /* Subtract only when the result is known to be nonnegative.
+         * Old code mixed signed and size_t and could underflow after
+         * a resize or with an empty textblock. */
+        if (n_lines <= (size_t)body_rows) {
+            start_line = 0;
+        } else if (start_line > n_lines - (size_t)body_rows) {
+            start_line = n_lines - (size_t)body_rows;
+        }
+        pager = n_lines > (size_t)body_rows;
+        display_area(textblock_text(tb), textblock_attrs(tb),
+            line_starts, line_lengths, n_lines, area, start_line);
+
+        if (show_footer) {
+            int row = area.row + body_rows;
+            Term_erase(full.col, row, full.width);
+            footer = pager ?
+                (angdroid_zh_tw_enabled() ?
+                    "上下鍵捲動，Esc 離開" : "Up/down or Esc to exit") :
+                (angdroid_zh_tw_enabled() ?
+                    "按任意鍵繼續" : "Press any key to continue");
+            fa_textblock_print_bounded(footer, row, full.col, full.width);
+        }
+
+        input = inkey_ex();
+        if (input.type == EVT_RESIZE || input.type == EVT_NONE) continue;
+        ch = fa_textblock_key_from_event(input);
+        if (ch.type != EVT_KBRD) continue;
+        if (!pager || ch.code == ESCAPE || ch.code == 'q' ||
+                ch.code == 'x' || ch.code == ']' || ch.code == '[')
+            break;
+        if (ch.code == ARROW_UP) {
+            if (start_line) --start_line;
+        } else if (ch.code == ARROW_DOWN) {
+            if (start_line < n_lines - (size_t)body_rows) ++start_line;
+        } else if (ch.code == ' ') {
+            size_t remaining = n_lines - (size_t)body_rows - start_line;
+            size_t step = (size_t)body_rows;
+            start_line += remaining < step ? remaining : step;
+        }
+    }
+
+    mem_free(line_starts);
+    mem_free(line_lengths);
+    screen_load();
+    return ch;
+}
 
 /**
  * ------------------------------------------------------------------------
