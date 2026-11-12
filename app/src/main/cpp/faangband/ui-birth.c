@@ -897,6 +897,15 @@ static void clear_question(void)
 	"'{light green}={/}' for the birth options, '{light green}?{/}' " \
 	"for help, or '{light green}Ctrl-X{/}' to quit."
 
+/* Keep tagged colors and the exact real shortcut characters in both
+ * languages; only the on-screen explanation changes. */
+#define BIRTH_MENU_HELPTEXT_ZH \
+    "{light blue}請從下方選單設定角色特性：{/}\n\n" \
+    "使用{light green}方向鍵{/}瀏覽，{light green}Enter{/}確認目前選項，" \
+    "{light green}*{/}隨機選擇、{light green}@{/}完成剩餘隨機設定。 " \
+    "{light green}Esc{/}返回、{light green}={/}角色建立選項、" \
+    "{light green}?{/}說明、{light green}Ctrl-X{/}離開。"
+
 /**
  * Show the birth instructions on an otherwise blank screen
  */	
@@ -913,7 +922,8 @@ static void print_menu_instructions(void)
 	Term_gotoxy(QUESTION_COL, HEADER_ROW);
 	
 	/* Display some helpful information */
-	text_out_e(BIRTH_MENU_HELPTEXT);
+	text_out_e(angdroid_zh_tw_enabled() ?
+        BIRTH_MENU_HELPTEXT_ZH : BIRTH_MENU_HELPTEXT);
 	
 	/* Reset text_out() indentation */
 	text_out_indent = 0;
@@ -1162,18 +1172,24 @@ static enum birth_stage roller_command(bool first_call)
 		prev_roll = false;
 
 	/* Prepare a prompt (must squeeze everything in) */
-	strnfcat(prompt, sizeof (prompt), &promptlen, "['r' to reroll");
+	strnfcat(prompt, sizeof(prompt), &promptlen, "%s",
+        angdroid_game_ui_text("['r' to reroll",
+            angdroid_zh_tw_enabled()));
 	if (prev_roll) {
 		soft_kbd_flash("rp?\x18");
-		strnfcat(prompt, sizeof(prompt), &promptlen, ", 'p' for previous roll");
+		strnfcat(prompt, sizeof(prompt), &promptlen, "%s",
+            angdroid_game_ui_text(", 'p' for previous roll",
+                angdroid_zh_tw_enabled()));
 	}
 	else {
 		soft_kbd_flash("r?\x18");
 	}
-	strnfcat(prompt, sizeof (prompt), &promptlen, " or 'Enter' to accept]");
+	strnfcat(prompt, sizeof(prompt), &promptlen, "%s",
+        angdroid_game_ui_text(" or 'Enter' to accept]",
+            angdroid_zh_tw_enabled()));
 
 	/* Prompt for it */
-	prt(prompt, Term->hgt - 1, Term->wid / 2 - promptlen / 2);
+	fa_birth_prompt_centered(prompt, Term->hgt - 1);
 	
 	/*
 	 * Get the response.  Emulate what inkey_does() without coercing mouse
