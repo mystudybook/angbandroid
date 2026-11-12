@@ -1018,6 +1018,8 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 		Term->wid, Term->hgt,
 		menu->active.col, menu->active.row,
 		menu->active.width, menu->active.page_rows)) {
+		if (menu->skin == &menu_skin_object)
+			soft_kbd_replace("");
 		in.type = EVT_ESCAPE;
 		return in;
 	}
@@ -1101,6 +1103,8 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 				menu->active.col, menu->active.row,
 				menu->active.width, menu->active.page_rows)) {
 				if (popup) screen_load();
+				if (menu->skin == &menu_skin_object)
+					soft_kbd_replace("");
 				in.type = EVT_ESCAPE;
 				return in;
 			}
