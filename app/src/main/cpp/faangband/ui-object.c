@@ -1153,6 +1153,8 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	int inscrip;
 	struct object *obj = NULL;
 	char switch_keys[4];
+	int row;
+	int selectable_objects = 0;
 
 	/* Set up the menu */
 	menu_setpriv(m, num_obj, items);
@@ -1176,11 +1178,19 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	/* NULL also prevents a zero-valued key event from matching the
 	 * terminator of an otherwise empty switch-key string. */
 	m->switch_keys = switch_keys[0] ? switch_keys : NULL;
-	/* A blank tab has no selectable item, but its switch keys still
-	 * need to reach get_item_action() to rebuild the next source.
-	 * EVT_SELECT is guarded by menu_handle_action(), so no item[-1]. */
+	/* SHOW_EMPTY can display several equipment slot placeholders
+	 * while none has a real object. In that case count > 0 but the
+	 * cursor is -1, so ordinary action dispatch would drop / | - and
+	 * incorrectly cancel the picker instead of switching sources.
+	 * Let keyboard switches pass through with oid=-1, just as with a
+	 * truly zero-row picker. Invalid slots cannot emit EVT_SELECT. */
+	for (row = 0; row < num_obj; ++row) {
+		if (items[row].object)
+			++selectable_objects;
+	}
 	m->flags = (MN_PVT_TAGS | MN_INSCRIP_TAGS);
-	if (num_obj <= 0 && m->switch_keys)
+	if (angdroid_item_picker_allow_blank_switch(
+			selectable_objects, m->switch_keys))
 		m->flags |= MN_ALLOW_EMPTY_INPUT;
 	m->browse_hook = item_menu_browser;
 
