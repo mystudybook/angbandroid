@@ -309,5 +309,44 @@ assert "test_faangband_confirm_prompt_utf8.c" in CONFIRM_RUNNER
 assert "-std=c99 -Wall -Wextra -Werror -pedantic" in CONFIRM_RUNNER
 assert "test-fa-confirm-check.sh" in RUNNER
 
+# get_char() was independently byte-truncating %.70s and treating the
+# terminating NUL of options as a valid key via strchr(options, 0).
+choice_section = section(INPUT, "char get_char(const char *prompt,",
+                         "/* Text-native way of getting a filename. */")
+require(choice_section,
+        "angdroid_fa_choice_prompt_line(buf, sizeof(buf), prompt,",
+        "if (ke.type == EVT_RESIZE || ke.type == EVT_NONE)",
+        "soft_kbd_replace(allowed);",
+        "if (width < 3)",
+        "ke = inkey_ex();",
+        "if (code == 0 || code > 0x7fu) return fallback;",
+        "allowed_count < len",
+        "ke.mouse.button == 1",
+        "return fallback;")
+assert 'strnfmt(buf, 78, "%.70s[%s] "' not in choice_section
+assert "strchr(options, (char)key.code)" not in choice_section
+assert "key = inkey();" not in choice_section
+
+require(PROMPT,
+        "angdroid_fa_choice_prompt_line(",
+        "angdroid_menu_copy_columns(",
+        "option_bytes = strlen(options);",
+        "dest[shown + 1] = '+';",
+        "dest[shown + 2] = ']';")
+CHOICE_TEST = (ROOT / "tests/native/test_faangband_choice_prompt_utf8.c").read_text(
+    encoding="utf-8")
+assert "test_all_term_widths_and_buffers(void)" in CHOICE_TEST
+assert "test_chinese_and_compact_option_label(void)" in CHOICE_TEST
+CHOICE_GEN = (ROOT / "tests/native/generate_fa_choice_input_host.py").read_text(
+    encoding="utf-8")
+assert "match.group(0)" in CHOICE_GEN
+assert "get_char" in CHOICE_GEN and "0x161u" in CHOICE_GEN
+CHOICE_RUN = (ROOT / "scripts/test-fa-choice-input.sh").read_text(
+    encoding="utf-8")
+assert "test_faangband_choice_prompt_utf8.c" in CHOICE_RUN
+assert "generate_fa_choice_input_host.py" in CHOICE_RUN
+assert "-std=c99 -Wall -Wextra -Werror -pedantic" in CHOICE_RUN
+assert "test-fa-choice-input.sh" in RUNNER
+
 assert "test_faangband_ability_browser_locale_source.py" in RUNNER
 print("PASS: FA specialty browsers, typed labels and shape knowledge source guard")
