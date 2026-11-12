@@ -74,7 +74,7 @@ require(floor_index,
         "press.mouse.button != 1",
         "y < 1 || y >= height || y - 1 >= floor_count",
         "x < 0 || x >= width - 1",
-        "press.key.code >= 'a' && press.key.code <= 'z'",
+        "press.key.code >= 33 && press.key.code <= 126",
         "return y - 1;")
 assert "press.key.code - 'a'" not in floor_index
 # show_floor() uses exactly this label map; h/j/k/l are intentionally skipped.
@@ -109,7 +109,7 @@ floor_fixture = (ROOT / "tests/native/generate_fa_floor_list_input_host.py").rea
 runner = (ROOT / "scripts/test-fa-textblock-floor.sh").read_text(
     encoding="utf-8")
 require(pager_fixture, "textui_textblock_show", "display_area",
-        "match" if "match" in pager_fixture else "extract(",
+        "extract(",
         "EVT_RESIZE", "layout_calls >= 2",
         "lines_allocated == lines_freed", "bad_coordinates == 0")
 require(floor_fixture, "fa_target_floor_list_index",
