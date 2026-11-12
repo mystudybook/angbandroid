@@ -181,6 +181,16 @@ int main(void)
                 CHECK(first_row == 21 && last_row == 23);
                 CHECK(invalid_row == 0 && overflow == 0);
                 CHECK(angdroid_utf8_display_columns(last_text) <= 79);
+                if (mode & 2) {
+                    /* Item-ignore is read from the actual keymap; a
+                     * control-key shortcut must keep ^c notation. */
+                    CHECK(strstr(last_text,
+                        (mode & 1) ? "^c" : "i") != NULL);
+                }
+                if (!(mode & 2) && (mode & 1 || mode & 4)) {
+                    CHECK(strstr(last_text, zh ? "t 設目標" :
+                        "t: target") != NULL);
+                }
             }
         }
     }
