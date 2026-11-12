@@ -968,6 +968,10 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 	if (popup)
 		screen_save();
 
+	/* A stale cursor from an earlier filtered view is not a valid initial
+	 * choice. A disabled-only view must keep its cursor at -1. */
+	menu_ensure_cursor_valid(menu);
+
 	/* Stop on first unhandled event */
 	while (!(in.type & notify)) {
 		ui_event out = EVENT_EMPTY;
@@ -1040,6 +1044,15 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 			}
 			if (!resized_before_calc && menu->row_funcs->resize)
 				menu->row_funcs->resize(menu);
+			/* The resize callback may re-layout an item menu onto a
+			 * smaller or temporarily inactive Android terminal surface. */
+			if (menu->active.width <= 0 || menu->active.page_rows <= 0) {
+				if (popup)
+					screen_load();
+				in.type = EVT_ESCAPE;
+				return in;
+			}
+			menu_ensure_cursor_valid(menu);
 		}
 
 		/* Redraw menu here if cursor has moved */
