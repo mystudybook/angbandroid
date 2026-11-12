@@ -347,7 +347,10 @@ static void build_obj_list(int last, struct object **list, item_tester tester,
 				sizeof(items[num_obj].equip_label),
 				equip_mention(player, i));
 		} else if ((in_term || dead) && quiver) {
-			strnfmt(buf, sizeof(buf), "Slot %-9d: ", i);
+			if (angdroid_zh_tw_enabled())
+                strnfmt(buf, sizeof(buf), "箭袋位置 %d：", i);
+            else
+                strnfmt(buf, sizeof(buf), "Slot %-9d: ", i);
 			my_strcpy(items[num_obj].equip_label, buf,
 					  sizeof(items[num_obj].equip_label));
 		} else {
@@ -380,7 +383,9 @@ static void set_obj_names(bool terse, const struct player *p)
 			if ((i < num_head) || streq(items[i].label, "In quiver"))
 				strnfmt(items[i].o_name, sizeof(items[i].o_name), "%s", "");
 			else
-				strnfmt(items[i].o_name, sizeof(items[i].o_name), "(nothing)");
+				strnfmt(items[i].o_name, sizeof(items[i].o_name), "%s",
+                    angdroid_game_ui_text("(nothing)",
+                        angdroid_zh_tw_enabled()));
 		} else {
 			/* ODESC_TERSE deliberately bypasses translations in
 			 * obj-desc.c. Do not silently revert to English only because a
@@ -394,7 +399,7 @@ static void set_obj_names(bool terse, const struct player *p)
 			} else {
 				object_desc(items[i].o_name,
 					sizeof(items[i].o_name), obj,
-					ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, p);
+					ODESC_PREFIX | ODESC_FULL | (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), p);
 			}
 		}
 
@@ -472,7 +477,8 @@ static void show_obj_list(olist_detail_t mode)
 
 		/* Quiver may take multiple lines */
 		for (j = 0; j < quiver_slots; j++, i++) {
-			const char *fmt = "in Quiver: %d missile%s";
+			const char *fmt = angdroid_zh_tw_enabled() ?
+                "箭袋：%d 支彈藥%s" : "in Quiver: %d missile%s";
 			char letter = all_letters_nohjkl[in_term ? i - 1 : i];
 
 			/* Number of missiles in this "slot" */
@@ -490,8 +496,15 @@ static void show_obj_list(olist_detail_t mode)
 
 			/* Print the count */
 			strnfmt(tmp_val, sizeof(tmp_val), fmt, count,
-					count == 1 ? "" : "s");
-			c_put_str(COLOUR_L_UMBER, tmp_val, row + i, col + 3);
+                    angdroid_zh_tw_enabled() ? "" :
+                    (count == 1 ? "" : "s"));
+			if (Term && col + 3 < Term->wid) {
+                char visible[128];
+                angdroid_menu_copy_columns(visible, sizeof(visible),
+                    tmp_val, (size_t)(Term->wid - col - 3));
+                if (visible[0])
+                    c_put_str(COLOUR_L_UMBER, visible, row + i, col + 3);
+            }
 		}
 	}
 
@@ -1677,7 +1690,7 @@ void display_object_recall(struct object *obj)
 
 	textblock *tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
+		ODESC_PREFIX | ODESC_FULL | (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	clear_from(0);
 	textui_textblock_place(tb, SCREEN_REGION, header_buf);
@@ -1714,7 +1727,7 @@ void display_object_recall_interactive(struct object *obj)
 
 	tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL | ODESC_ZH_TW, player);
+		ODESC_PREFIX | ODESC_FULL | (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 	textui_textblock_show(tb, SCREEN_REGION, header_buf);
 	textblock_free(tb);
 }
@@ -1744,7 +1757,7 @@ void textui_obj_examine(void)
 	/* Display info */
 	tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL | ODESC_ZH_TW, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL | (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	textui_textblock_show(tb, local_area, header_buf);
 	textblock_free(tb);
@@ -1800,7 +1813,7 @@ void textui_cmd_ignore_menu(struct object *obj)
 
 		char tmp[192];
         object_desc(tmp, sizeof(tmp), obj,
-            ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL | ODESC_ZH_TW, player);
+            ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL | (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 		/* Keep the same kinds/IDs and display only known appearance.
          * The entire localized label must fit or use a generic fallback. */
         if (!angdroid_ignore_named_action_text(out_val,
