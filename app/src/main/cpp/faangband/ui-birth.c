@@ -911,6 +911,7 @@ static void clear_question(void)
  */	
 static void print_menu_instructions(void)
 {
+    int old_wrap = text_out_wrap;
 	/* Clear screen */
 	Term_clear();
 	
@@ -921,11 +922,14 @@ static void print_menu_instructions(void)
 	text_out_indent = QUESTION_COL;
 	Term_gotoxy(QUESTION_COL, HEADER_ROW);
 	
-	/* Display some helpful information */
-	text_out_e(angdroid_zh_tw_enabled() ?
+	/* Keep the multi-line translated help within the actual phone
+     * terminal and restore the text renderer state afterward. */
+    text_out_wrap = Term && Term->wid > QUESTION_COL + 1 ?
+        Term->wid - 1 : 0;
+    text_out_e(angdroid_zh_tw_enabled() ?
         BIRTH_MENU_HELPTEXT_ZH : BIRTH_MENU_HELPTEXT);
-	
-	/* Reset text_out() indentation */
+
+    text_out_wrap = old_wrap;
 	text_out_indent = 0;
 }
 
