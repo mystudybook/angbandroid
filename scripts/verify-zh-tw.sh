@@ -84,6 +84,7 @@ run_check "FAangband native specialty mouse and selection dispatch" sh "$ROOT/sc
 run_check "FAangband native Android ability modal hint lifecycle" sh "$ROOT/scripts/test-fa-ability-hints.sh"
 run_check "FAangband native UTF-8 Yes/No prompt and resize handling" sh "$ROOT/scripts/test-fa-confirm-check.sh"
 run_check "FAangband generic get_char UTF-8 choices and resize handling" sh "$ROOT/scripts/test-fa-choice-input.sh"
+run_check "FAangband UTF-8 command prompt redraw and resize cancellation" sh "$ROOT/scripts/test-fa-command-prompt.sh"
 run_check "FAangband typed ability PF/OF labels with C99" sh "$ROOT/scripts/test-fa-birth-ability-labels.sh"
 run_check "FAangband elemental resistance/vulnerability source contract" python3 "$ROOT/tests/test_faangband_birth_elements_source.py"
 run_check "FAangband elemental resistance/weakness native C99" sh "$ROOT/scripts/test-fa-birth-elements.sh"
