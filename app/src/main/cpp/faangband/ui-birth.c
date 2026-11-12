@@ -181,26 +181,40 @@ static enum birth_stage textui_birth_quickstart(void)
     "There are different ways of structuring the world\n" \
     "of FAangband; '{light green}?{/}' gives more details."
 
+#define MAP_TEXT_ZH \
+    "    *    \n" \
+    "  #{light yellow}#{/} {light yellow}#{/}#  \n" \
+    " #{light green}#{/}{light yellow}#{/} {light yellow}#{/}{light green}#{/}# \n" \
+    "/{light yellow}##{/}{deep light blue}/{/}{yellow}@{/}{deep light blue}\\{/}{light yellow}##{/}\\\n" \
+    "*  {yellow}@{/}{orange}@{/}{yellow}@{/}  *  歡迎來到第一紀元 Angband！\n" \
+    "\\{light yellow}##{/}{deep light blue}\\{/}{yellow}@{/}{deep light blue}/{/}{light yellow}##{/}/\n" \
+    " #{light green}#{/}{light yellow}#{/} {light yellow}#{/}{light green}#{/}# \n" \
+    "  #{light yellow}#{/} {light yellow}#{/}#  \n" \
+    "    *    \n\n"				     \
+    "FAangband 有多種世界地圖配置\n" \
+    "可選擇；按 '{light green}?{/}' 查看說明。"
+
 /**
  * Show the map instructions
  */
 static void print_map_instructions(void)
 {
-	/* Clear screen */
-	Term_clear();
+    int saved_wrap = text_out_wrap;
+    int saved_indent = text_out_indent;
+    int indent;
+    if (!Term || Term->wid <= 0 || Term->hgt <= 1) return;
 
-	/* Output to the screen */
-	text_out_hook = text_out_to_screen;
+    Term_clear();
+    text_out_hook = text_out_to_screen;
+    indent = MIN(5, MAX(0, Term->wid - 2));
+    text_out_indent = indent;
+    text_out_wrap = Term->wid > 1 ? Term->wid - 1 : 0;
+    Term_gotoxy(indent, 1);
 
-	/* Indent output */
-	text_out_indent = 5;
-	Term_gotoxy(5, 1);
+    text_out_e(angdroid_zh_tw_enabled() ? MAP_TEXT_ZH : MAP_TEXT);
 
-	/* Display some helpful information */
-	text_out_e(MAP_TEXT);
-
-	/* Reset text_out() indentation */
-	text_out_indent = 0;
+    text_out_wrap = saved_wrap;
+    text_out_indent = saved_indent;
 }
 
 /**
@@ -228,8 +242,15 @@ static void map_menu_display(struct menu *m, int oid, bool cursor,
 	struct map_menu_data *d = menu_priv(m);
 	int attr_name = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
 
-	/* Dump the name */
-	c_put_str(attr_name, d[oid].name, row, col);
+    /* Display-only map title; preserve the map->name value and oid. */
+    if (Term && col >= 0 && col < Term->wid && wid > 0) {
+        char visible[256];
+        const char *name = angdroid_game_ui_text(d[oid].name,
+            angdroid_zh_tw_enabled());
+        angdroid_menu_copy_columns(visible, sizeof(visible), name,
+            (size_t)MIN(wid, Term->wid - col));
+        if (visible[0]) c_put_str(attr_name, visible, row, col);
+    }
 }
 
 /**
@@ -263,20 +284,29 @@ static void map_menu_browser(int oid, void *data, const region *loc)
 {
 	struct map_menu_data *d = data;
 
-	/* Redirect output to the screen */
-	text_out_hook = text_out_to_screen;
-	text_out_wrap = 60;
-	text_out_indent = loc->col - 1;
-	text_out_pad = 1;
+    int saved_wrap = text_out_wrap;
+    int saved_indent = text_out_indent;
+    int saved_pad = text_out_pad;
+    int col, row;
+    if (!Term || Term->wid <= 0 || Term->hgt <= 0) return;
 
-	/* Write the description */
-	Term_gotoxy(loc->col, loc->row + loc->page_rows);
-	text_out_c(COLOUR_DEEP_L_BLUE, "\n%s\n", d[oid].description);
+    col = MIN(MAX(0, loc->col), Term->wid - 1);
+    row = loc->row + loc->page_rows;
+    if (row >= Term->hgt) row = Term->hgt - 1;
+    if (row < 0) row = 0;
 
-	/* Reset parameters */
-	text_out_pad = 0;
-	text_out_indent = 0;
-	text_out_wrap = 0;
+    text_out_hook = text_out_to_screen;
+    text_out_wrap = MIN(60, MAX(col + 1, Term->wid - 1));
+    text_out_indent = MAX(0, col - 1);
+    text_out_pad = 1;
+    Term_gotoxy(col, row);
+    text_out_c(COLOUR_DEEP_L_BLUE, "\n%s\n",
+        angdroid_game_ui_text(d[oid].description,
+            angdroid_zh_tw_enabled()));
+
+    text_out_pad = saved_pad;
+    text_out_indent = saved_indent;
+    text_out_wrap = saved_wrap;
 }
 
 static const menu_iter map_menu_iter = {
@@ -297,7 +327,7 @@ static struct menu *map_menu_new(void)
 	struct map_menu_data *d;
 	int i;
 
-	region loc = { 5, 14, 70, -99 };
+    region loc = { 5, 14, 70, -99 };
 
 	current_map_index = -1;
 	num_maps = 0;
@@ -320,7 +350,8 @@ static struct menu *map_menu_new(void)
 			map = map->next;
 		} else {
 			d[i].name = "Quit";
-			d[i].description = "Quit FAangband.";
+			d[i].description = angdroid_zh_tw_enabled() ?
+                "離開 FAangband。" : "Quit FAangband.";
 		}
 	}
 	menu_setpriv(m, num_maps, d);
@@ -331,9 +362,18 @@ static struct menu *map_menu_new(void)
 	m->selections = lower_case;
 	m->browse_hook = map_menu_browser;
 
-	/* Set size */
-	loc.page_rows = num_maps + 1;
-	menu_layout(m, &loc);
+    /* Leave room for a selectable map list and the description on
+     * narrow Android terminals; keep the selected map index unchanged. */
+    if (Term && Term->wid > 0 && Term->hgt > 0) {
+        loc.col = MIN(5, MAX(0, Term->wid / 8));
+        loc.row = MIN(14, MAX(0, Term->hgt / 3));
+        loc.width = MAX(1, MIN(70, Term->wid - loc.col - 1));
+        loc.page_rows = MIN(num_maps + 1,
+            MAX(1, Term->hgt - loc.row - 3));
+    } else {
+        loc.page_rows = num_maps + 1;
+    }
+    menu_layout(m, &loc);
 
 	return m;
 }
