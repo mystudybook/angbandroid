@@ -245,6 +245,62 @@ static int check_whitespace_lines(void)
     return 0;
 }
 
+/* Deterministic stress test for the REAL extracted layout routine. A
+ * visual wrap may omit isolated word separators, but never source letters,
+ * CJK glyphs or explicit text. No rows may exceed terminal columns. */
+static int check_mixed_text_property(void)
+{
+    textblock tb = {{0}, {0}, 0};
+    static const wchar_t chars[] = {
+        L'甲', L'乙', L'A', L'B', L' ', L'\\n', L'C'
+    };
+    unsigned int state = 0xC0FFEEu;
+    size_t width, sample;
+
+    for (width = 1; width <= 40; ++width) {
+        for (sample = 0; sample < 80; ++sample) {
+            size_t *starts = NULL, *lengths = NULL;
+            size_t n, i, j, k, letters_before = 0, letters_after = 0;
+            tb.strlen = (sample * 37 + width * 13) % 140;
+            for (i = 0; i < tb.strlen; ++i) {
+                state = state * 1664525u + 1013904223u;
+                tb.text[i] = chars[state % 7];
+                if (tb.text[i] != L' ' && tb.text[i] != L'\\n')
+                    ++letters_before;
+            }
+            tb.text[tb.strlen] = L'\\0';
+            n = textblock_calculate_display_lines(
+                &tb, &starts, &lengths, width);
+            k = 0;
+            CHECK(n <= tb.strlen + 1);
+            for (i = 0; i < n; ++i) {
+                size_t cells = 0;
+                CHECK(starts[i] + lengths[i] <= tb.strlen);
+                for (j = 0; j < lengths[i]; ++j) {
+                    wchar_t ch = tb.text[starts[i] + j];
+                    CHECK(ch != L'\\n');
+                    cells += (size_t)angdroid_terminal_columns((uint32_t)ch);
+                    if (ch != L' ') {
+                        while (k < tb.strlen &&
+                                (tb.text[k] == L' ' || tb.text[k] == L'\\n'))
+                            ++k;
+                        CHECK(k < tb.strlen);
+                        CHECK(tb.text[k] == ch);
+                        ++k;
+                        ++letters_after;
+                    }
+                }
+                CHECK(cells <= width ||
+                    (width == 1 && lengths[i] == 1 && cells == 2));
+            }
+            CHECK(letters_before == letters_after);
+            mem_free(starts);
+            mem_free(lengths);
+        }
+    }
+    return 0;
+}
+
 /* Verify exact source-character slices for mixed Han/English content.
  * The UTF-8 terminal-cell layout is extracted from the real engine. */
 static int check_column_lines(void)
@@ -299,6 +355,7 @@ int main(void)
 
     if (check_column_lines()) return 1;
     if (check_whitespace_lines()) return 1;
+    if (check_mixed_text_property()) return 1;
 
     for (i = 0; i < 280; ++i) {
         tb.text[i] = L'a';
