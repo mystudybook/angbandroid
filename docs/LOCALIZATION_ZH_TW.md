@@ -625,3 +625,14 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - **雙語與色彩隔離**：同一個 `angdroid_fa_lore_term()` 僅在繁中模式讀取 FAangband 專用對照，英文模式回傳原指標；未知來源不會被錯誤套用別處的中文翻譯。原數值及語句的 `COLOUR_L_GREEN`、`COLOUR_L_RED`、`COLOUR_L_BLUE` 與 `blow_color()` 色彩運算保留。
 - **回歸測試**：新增 `tests/native/test_faangband_lore_spells_attacks_locale.c`（156 條正式 C99 翻譯字典、英文原字串回退、中文句型）、`scripts/test-fa-lore-spells-attacks-locale.sh`、`tests/test_faangband_lore_spells_attacks_locale_source.py`（三份正式 gamedata 完整來源集合、未知攻擊保護、傷害／施法頻率公式、英文文字回退）。已接入 `scripts/verify-zh-tw.sh`。
 - **驗證界線**：Github 重新讀取程式碼後的靜態一致性核對與資料來源交叉對照，**不是**完整 checkout 實際執行的 C99／Python 回歸、NDK／Gradle 或模擬器／實機驗證。PR #146 維持 Draft，不觸發 Actions，不合併 `master`。
+
+## 第 249 批 — FAangband 怪物實際施法通知中文化（2026-11-13）
+
+- **精確核對正式來源**：`variant_lib/faangband/gamedata/monster_spell.txt` 目前有 **116 條 message-vis**、**116 筆 message-invis（80 條唯一）**、**11 條 message-miss** 與 **15 筆 message-save（14 條唯一）**，總計 **221 條唯一訊息模板**。四種通知分別建立完整繁體中文顯示對照，所有 `{name}`、`{pronoun}`、`{target}`、`{type}`、`{oftype}` 佔位符完整保留。未變更 `monster_spell.txt`、`mon-init.c` 或怪物法術數值與效果。
+- **局部詞表避免汙染其他 UI**：`faangband/mon-spell-messages-visible-zh-tw.h` 包含 116 條可見施法模板；`faangband/mon-spell-messages-other-zh-tw.h` 包含 80 條視野外、11 條未命中、14 條抵抗成功模板；`faangband/mon-spell-message-locale.h` 將兩份字典合成僅供 FAangband 施法通知使用的 `angdroid_fa_spell_message_locale()`，無對照或語言模式為英文時直接回傳原始字串，種族自訂的未知 `MON_ALTMSG` 也不會被猜測翻譯。
+- **正確的時序**：`mon-spell.c::spell_message()` 仍先依 `seen`、`hits` 及 `MON_ALTMSG_UNSEEN`／`MON_ALTMSG_MISS`／`MON_ALTMSG_SEEN` 選擇正式訊息；原始空字串／無法顯示的訊息仍直接返回。**選擇完成後、展開動態佔位符前**才對整條模板做精確翻譯；只有成功命中翻譯的訊息，才使用中文「這隻」、目標「你」、所有格「牠的」及 `{oftype}` 的中文括號，未翻譯的自訂英文仍走原語法。
+- **不洩漏視野外資訊**：保留 `if (!seen && t_mon) return;` 的「視野外對其他怪物施法不顯示」分支；其餘視野外訊息仍以「某個東西」「你聽見……」等未指明施法者的句子呈現。可見施法者和攻擊目標仍由原本的 `monster_desc()` 及 `MDESC` 旗標提供，僅一般非唯一、非幽靈名稱可在已翻譯的句型下去除英文 `the` 冠詞。唯一怪物、玩家幽靈名字與來源識別資訊不改。
+- **命中、傷害、抵抗不變**：`spell_tag_lookup()`、`msgt(spell->msgt, ...)`、`check_hit()`／`test_hit()`、`randint0(100) < player->state.skills[SKILL_SAVE]`、`spell_check_for_fail_rune()`、`effect_do()` 全部保留。成功抵抗的 `save_message` 只在既有擲骰成功分支內經翻譯後顯示；未命中仍採用原本的 `message-miss` 優先順序和傷害規則。鞭擊的 `{type}`／`{oftype}` 維持原 `projections[type].lash_desc` 來源，只在已翻譯的訊息做 FAangband 專屬顯示對照。
+- **防止未來資料拼接失效**：`mon-init.c` 的 `message-*` parser 使用字串追加，若同個怪物法術 power-cutoff 出現多次相同欄位，實際執行期模板可能和單行來源不一致。新增 Python 來源檢查要求每個 `name`／`power-cutoff` 之間，每個 `message-*` 類別最多一筆，來源更新後不能默默失去翻譯。
+- **回歸測試**：新增 `tests/native/test_faangband_spell_messages_locale.c`（221 條正式中英精確對照、未知字串指標回退、一般怪物主詞、可見／未命中／抵抗範例）、`scripts/test-fa-spell-messages-locale.sh`（host C99 `-std=c99 -Wall -Wextra -Werror -pedantic`）、`tests/test_faangband_spell_messages_locale_source.py`（四種資料的完整來源比對、佔位符一致性、視野與空字串遮蔽、特殊覆寫、抵抗與法術效果先後順序），已接進 `scripts/verify-zh-tw.sh`。
+- **驗證範圍**：GitHub 原始碼／資料的靜態核對不能取代完整本機 checkout 執行 C99／Python、Android NDK／Gradle 建置或實機驗收。沿用 Draft PR #146，所有本批 commit 帶 `[skip ci]`，未執行 GitHub Actions，未合併 `master`。
