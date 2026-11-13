@@ -71,6 +71,8 @@ run_check "FAangband daily commands, store, input and options bilingual UI" pyth
 run_check "FAangband item commands bilingual dictionary C99" sh "$ROOT/scripts/test-fa-item-command-translation.sh"
 run_check "FAangband item commands prompts and formatted message locale contracts" python3 "$ROOT/tests/test_faangband_item_command_messages_locale_source.py"
 run_check "FAangband town, wilderness, stairs and trap event translations" python3 "$ROOT/tests/test_faangband_exploration_command_locale_source.py"
+run_check "FAangband dungeon treasure and monster danger C99 zh-TW" sh "$ROOT/scripts/test-fa-dungeon-feelings-locale.sh"
+run_check "FAangband dungeon feeling message and fallback source guard" python3 "$ROOT/tests/test_faangband_dungeon_feelings_locale_source.py"
 run_check "FAangband option colours, visual menus and quality-ignore zh-TW" python3 "$ROOT/tests/test_faangband_options_visual_locale_source.py"
 run_check "FAangband context menus, target help, maps and common commands zh-TW" python3 "$ROOT/tests/test_faangband_context_target_map_locale_source.py"
 run_check "FAangband character sheet, spell browser and savefile picker zh-TW" python3 "$ROOT/tests/test_faangband_player_spell_save_locale_source.py"
