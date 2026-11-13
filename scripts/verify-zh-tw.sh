@@ -93,6 +93,8 @@ run_check "FAangband 221 monster spell notifications C99" sh "$ROOT/scripts/test
 run_check "FAangband monster spell notification source, visibility and tag guards" python3 "$ROOT/tests/test_faangband_spell_messages_locale_source.py"
 run_check "FAangband 17 race-specific spell overrides and UTF-8 C99" sh "$ROOT/scripts/test-fa-spell-alternates-utf8.sh"
 run_check "FAangband alternate messages, selection and UTF-8 source guard" python3 "$ROOT/tests/test_faangband_spell_alternates_utf8_source.py"
+run_check "FAangband 25 projection lash and named ghost C99" sh "$ROOT/scripts/test-fa-spell-lash-ghost-locale.sh"
+run_check "FAangband projection lash and ghost-name source guard" python3 "$ROOT/tests/test_faangband_spell_lash_ghost_locale_source.py"
 run_check "FAangband option colours, visual menus and quality-ignore zh-TW" python3 "$ROOT/tests/test_faangband_options_visual_locale_source.py"
 run_check "FAangband context menus, target help, maps and common commands zh-TW" python3 "$ROOT/tests/test_faangband_context_target_map_locale_source.py"
 run_check "FAangband character sheet, spell browser and savefile picker zh-TW" python3 "$ROOT/tests/test_faangband_player_spell_save_locale_source.py"
