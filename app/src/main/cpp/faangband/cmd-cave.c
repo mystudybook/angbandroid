@@ -2121,6 +2121,7 @@ void display_feeling(bool obj_only)
 	uint16_t obj_feeling = cave->feeling / 10;
 	uint16_t mon_feeling = cave->feeling - (10 * obj_feeling);
 	const char *join;
+    const char *join_zh;
 
 	/* Don't show feelings for cold-hearted characters */
 	if (!OPT(player, birth_feelings)) return;
@@ -2139,36 +2140,57 @@ void display_feeling(bool obj_only)
 		return;
 	}
 
-	/* Display only the object feeling when it's first discovered. */
-	if (obj_only) {
-		disturb(player);
-		msg("You feel that %s", obj_feeling_text[obj_feeling]);
-		return;
-	}
+    /* Clamp before either early-return message reads the arrays. An
+     * unusual feeling code must never index past the translation keys. */
+    if (obj_feeling >= N_ELEMENTS(obj_feeling_text))
+        obj_feeling = N_ELEMENTS(obj_feeling_text) - 1;
+    if (mon_feeling >= N_ELEMENTS(mon_feeling_text))
+        mon_feeling = N_ELEMENTS(mon_feeling_text) - 1;
 
-	/* Players automatically get a monster feeling. */
-	if (cave->feeling_squares < z_info->feeling_need) {
-		msg("%s.", mon_feeling_text[mon_feeling]);
-		return;
-	}
+    /* The delayed treasure feeling is a screen message, not saved data. */
+    if (obj_only) {
+        disturb(player);
+        if (angdroid_zh_tw_enabled()) {
+            msg("你感覺到：%s。", angdroid_game_ui_text(
+                obj_feeling_text[obj_feeling], true));
+        } else {
+            msg("You feel that %s", obj_feeling_text[obj_feeling]);
+        }
+        return;
+    }
 
-	/* Verify the feelings */
-	if (obj_feeling >= N_ELEMENTS(obj_feeling_text))
-		obj_feeling = N_ELEMENTS(obj_feeling_text) - 1;
-
-	if (mon_feeling >= N_ELEMENTS(mon_feeling_text))
-		mon_feeling = N_ELEMENTS(mon_feeling_text) - 1;
+    /* Monster danger appears before sufficient exploration is complete. */
+    if (cave->feeling_squares < z_info->feeling_need) {
+        if (angdroid_zh_tw_enabled()) {
+            msg("%s。", angdroid_game_ui_text(
+                mon_feeling_text[mon_feeling], true));
+        } else {
+            msg("%s.", mon_feeling_text[mon_feeling]);
+        }
+        return;
+    }
 
 	/* Decide the conjunction */
-	if ((mon_feeling <= 5 && obj_feeling > 6) ||
-			(mon_feeling > 5 && obj_feeling <= 6))
-		join = ", yet";
-	else
-		join = ", and";
+    if ((mon_feeling <= 5 && obj_feeling > 6) ||
+            (mon_feeling > 5 && obj_feeling <= 6)) {
+        join = ", yet";
+        join_zh = "，但";
+    } else {
+        join = ", and";
+        join_zh = "，而且";
+    }
 
-	/* Display the feeling */
-	msg("%s%s %s", mon_feeling_text[mon_feeling], join,
-		obj_feeling_text[obj_feeling]);
+    /* Keep the exact English combination; Chinese clauses are joined
+     * without English punctuation or the English leading 'You feel'. */
+    if (angdroid_zh_tw_enabled()) {
+        msg("%s%s%s。",
+            angdroid_game_ui_text(mon_feeling_text[mon_feeling], true),
+            join_zh,
+            angdroid_game_ui_text(obj_feeling_text[obj_feeling], true));
+    } else {
+        msg("%s%s %s", mon_feeling_text[mon_feeling], join,
+            obj_feeling_text[obj_feeling]);
+    }
 }
 
 
