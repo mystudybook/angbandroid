@@ -212,6 +212,7 @@ static void spell_message(struct monster *mon,
 
 					{
 						char cn_name[320];
+						char cn_offscreen[320];
 						const char *display_name = m_name;
 						if (localized && rf_has(mon->race->flags, RF_PLAYER_GHOST)) {
 							display_name = angdroid_fa_spell_ghost_subject(
@@ -221,6 +222,10 @@ static void spell_message(struct monster *mon,
 							display_name = angdroid_fa_spell_subject(m_name,
 								true, cn_name, sizeof(cn_name));
 						}
+						if (localized)
+							display_name = angdroid_fa_spell_offscreen_subject(
+								display_name, true, cn_offscreen,
+								sizeof(cn_offscreen));
 						strnfcat(buf, sizeof(buf), &end, "%s", display_name);
 					}
 					break;
@@ -250,6 +255,7 @@ static void spell_message(struct monster *mon,
 							mdesc_mode);
 						if (localized && t_mon) {
 							char cn_name[320];
+							char cn_offscreen[320];
 							const char *display_name = m_name;
 							if (rf_has(t_mon->race->flags, RF_PLAYER_GHOST)) {
 								display_name = angdroid_fa_spell_ghost_subject(
@@ -259,6 +265,10 @@ static void spell_message(struct monster *mon,
 								display_name = angdroid_fa_spell_subject(m_name,
 									true, cn_name, sizeof(cn_name));
 							}
+							/* Keep a known monster's panel position visible. */
+							display_name = angdroid_fa_spell_offscreen_subject(
+								display_name, true, cn_offscreen,
+								sizeof(cn_offscreen));
 							strnfcat(buf, sizeof(buf), &end,
 								"%s", display_name);
 						} else {
@@ -276,8 +286,11 @@ static void spell_message(struct monster *mon,
 					int type = mon->race->blow[0].effect->lash_type;
 					char *type_name = projections[type].lash_desc;
 
-					strnfcat(buf, sizeof(buf), &end, "%s",
-						angdroid_mon_spell_lash(type_name, localized));
+					/* Some projection records omit an optional lash descriptor;
+					 * do not pass NULL to the variadic string formatter. */
+					if (type_name)
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							angdroid_mon_spell_lash(type_name, localized));
 					break;
 				}
 
