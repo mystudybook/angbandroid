@@ -45,7 +45,7 @@ int main(void)
 {
     size_t i;
     char out[200];
-    char small[16];
+    char small[32];
     const char *unknown = "unspecified lash magic";
     const char *ghost = "艾莉絲";
     const char *race = "幽靈戰士";
