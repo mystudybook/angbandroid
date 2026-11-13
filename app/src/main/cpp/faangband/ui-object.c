@@ -58,6 +58,7 @@
 #include "../angband/item-picker-start-source.h"
 #include "../angband/item-picker-tag-guard.h"
 #include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
 #include "../angband/zh-tw-inscription-confirm.h"
 #include "../angband/zh-tw-ignore-quality-action.h"
 #include "../angband/ignore-named-action-locale.h"
@@ -1883,19 +1884,35 @@ void textui_cmd_ignore_menu(struct object *obj)
 		menu_dynamic_add(m, out_val, IGNORE_THIS_QUALITY);
 	}
 
-	/* Work out display region */
+	/* A rotated phone can temporarily have fewer rows than the popup.
+     * Do not build a menu that writes outside the terminal. The menu
+     * scrolls when its count exceeds the visible page rows. */
+    if (!Term || Term->wid < 3 || Term->hgt < 4 || m->count <= 0) {
+        menu_dynamic_free(m);
+        return;
+    }
+
 	/* Fit translated labels within the actual terminal columns. */
 	r.width = (int)MIN(menu_dynamic_longest_entry(m) + 3 + 2,
         (size_t)MAX(1, Term->wid - 2));
 	r.col = MAX(0, Term->wid - r.width - 1);
 	r.row = 1;
-	r.page_rows = m->count;
+    r.page_rows = MIN(m->count, MAX(1, Term->hgt - 3));
 
 	screen_save();
 	menu_layout(m, &r);
 	region_erase_bordered(&r);
 
-	prt(angdroid_game_ui_text("(Enter to select, ESC) Ignore:", angdroid_zh_tw_enabled()), 0, 0);
+    /* This prompt shares the row with a phone-sized popup. Clip whole
+     * UTF-8 glyphs instead of letting prt() spill onto the next row. */
+    {
+        char prompt_visible[128];
+        const char *prompt = angdroid_game_ui_text(
+            "(Enter to select, ESC) Ignore:", angdroid_zh_tw_enabled());
+        angdroid_menu_copy_columns(prompt_visible, sizeof(prompt_visible),
+            prompt, (size_t)(Term->wid - 1));
+        prt(prompt_visible, 0, 0);
+    }
     /* The popup temporarily owns the Android hint strip, not its caller.
      * Restore a lingering parent only on Escape, never after an action. */
     soft_kbd_save_linger(&parent_keys);
