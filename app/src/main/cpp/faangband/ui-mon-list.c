@@ -67,7 +67,9 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 	int index;
 	int total;
 	char line_buffer[200];
-	const char *punctuation = (lines_to_display == 0) ? "." : ":";
+	const bool zh_tw = angdroid_zh_tw_enabled();
+	const char *punctuation = (lines_to_display == 0) ?
+		(zh_tw ? "。" : ".") : (zh_tw ? "：" : ":");
 	const char *others = (show_others) ? "other " : "";
 	size_t max_line_length = 0;
 
@@ -77,8 +79,9 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 	total = list->distinct_entries;
 
 	if (list->total_monsters[section] == 0) {
-		max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
-								  "%s no monsters.\n", prefix);
+		strnfmt(line_buffer, sizeof(line_buffer),
+			zh_tw ? "%s沒有怪物。\n" : "%s no monsters.\n", prefix);
+		max_line_length = angdroid_utf8_display_columns(line_buffer);
 
 		if (tb != NULL)
 			textblock_append(tb, "%s", line_buffer);
@@ -90,13 +93,18 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 		return;
 	}
 
-	max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
-							  "%s %d %smonster%s%s\n",
-							  prefix,
-							  list->total_monsters[section],
-							  others,
-							  PLURAL(list->total_monsters[section]),
-							  punctuation);
+	if (zh_tw) {
+		strnfmt(line_buffer, sizeof(line_buffer),
+			"%s有 %d 隻%s怪物%s\n", prefix,
+			list->total_monsters[section], show_others ? "其他" : "",
+			punctuation);
+	} else {
+		strnfmt(line_buffer, sizeof(line_buffer),
+			"%s %d %smonster%s%s\n", prefix,
+			list->total_monsters[section], others,
+			PLURAL(list->total_monsters[section]), punctuation);
+	}
+	max_line_length = angdroid_utf8_display_columns(line_buffer);
 
 	if (tb != NULL)
 		textblock_append(tb, "%s", line_buffer);
@@ -136,28 +144,29 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 		count_in_section = list->entries[index].count[section];
 
 		if (count_in_section > 1) {
-			if (asleep_in_section > 0) {
-				if (neutral_in_section > 0) {
-					strnfmt(asleep, sizeof(asleep), " (%d asleep, %d neutral)",
-							asleep_in_section, neutral_in_section);
-				} else {
-					strnfmt(asleep, sizeof(asleep), " (%d asleep)",
-							asleep_in_section);
-				}
+			if (asleep_in_section > 0 && neutral_in_section > 0) {
+				strnfmt(asleep, sizeof(asleep),
+					zh_tw ? "（%d 隻睡眠、%d 隻中立）" :
+					" (%d asleep, %d neutral)",
+					asleep_in_section, neutral_in_section);
+			} else if (asleep_in_section > 0) {
+				strnfmt(asleep, sizeof(asleep),
+					zh_tw ? "（%d 隻睡眠中）" : " (%d asleep)",
+					asleep_in_section);
 			} else if (neutral_in_section > 0) {
-					strnfmt(asleep, sizeof(asleep), " (%d neutral)",
-							neutral_in_section);
+				strnfmt(asleep, sizeof(asleep),
+					zh_tw ? "（%d 隻中立）" : " (%d neutral)",
+					neutral_in_section);
 			}
-		} else {
-			if (asleep_in_section == 1) {
-				if (neutral_in_section == 1) {
-					strnfmt(asleep, sizeof(asleep), " (asleep, neutral)");
-				} else {
-					strnfmt(asleep, sizeof(asleep), " (asleep)");
-				}
-			} else if (neutral_in_section == 1) {
-				strnfmt(asleep, sizeof(asleep), " (neutral)");
-			}
+		} else if (asleep_in_section == 1 && neutral_in_section == 1) {
+			strnfmt(asleep, sizeof(asleep), "%s",
+				zh_tw ? "（睡眠中、中立）" : " (asleep, neutral)");
+		} else if (asleep_in_section == 1) {
+			strnfmt(asleep, sizeof(asleep), "%s",
+				zh_tw ? "（睡眠中）" : " (asleep)");
+		} else if (neutral_in_section == 1) {
+			strnfmt(asleep, sizeof(asleep), "%s",
+				zh_tw ? "（中立）" : " (neutral)");
 		}
 
 		/* Leave room for the name. Tags are dropped, not partially printed,
@@ -223,8 +232,8 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 	}
 
 	if (tb != NULL)
-		textblock_append(tb, "%6s...and %d others.\n", " ",
-						 remaining_monster_total);
+		textblock_append(tb, zh_tw ? "%6s……另有 %d 隻怪物。\n" :
+			"%6s...and %d others.\n", " ", remaining_monster_total);
 }
 
 /**
@@ -332,7 +341,8 @@ static void monster_list_format_textblock(const monster_list_t *list, textblock 
 
 	monster_list_format_section(list, tb, MONSTER_LIST_SECTION_LOS,
 								los_lines_to_display, max_width,
-								"You can see", false, &max_los_line);
+								angdroid_zh_tw_enabled() ? "視野內" : "You can see",
+								false, &max_los_line);
 
 	if (list->total_entries[MONSTER_LIST_SECTION_ESP] > 0) {
 		bool show_others = list->total_monsters[MONSTER_LIST_SECTION_LOS] > 0;
@@ -342,6 +352,7 @@ static void monster_list_format_textblock(const monster_list_t *list, textblock 
 
 		monster_list_format_section(list, tb, MONSTER_LIST_SECTION_ESP,
 									esp_lines_to_display, max_width,
+									angdroid_zh_tw_enabled() ? "感知範圍內" :
 									"You are aware of", show_others,
 									&max_esp_line);
 	}
