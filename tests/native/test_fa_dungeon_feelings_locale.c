@@ -37,6 +37,19 @@ static const struct feeling_pair monster_feelings[] = {
     {"This seems a quiet, peaceful place", "這裡看起來安靜又祥和"}
 };
 static unsigned long checks;
+/* Canonical themed.txt message values must be translated only at display. */
+static const struct feeling_pair themed_messages[] = {
+    {"You find yourself in a battlefield of the Elements!", "你發現自己置身於元素交戰的戰場！"},
+    {"Beware, for there be dragons here!", "小心，此地有巨龍出沒！"},
+    {"Dire wolves guard crumbling ruins in this wild land; find shelter quick!", "兇狼守衛著荒野中的殘破遺跡；快找地方躲藏！"},
+    {"The Fires of Udun rage here, and demons laugh to see new sport!", "烏頓的烈焰在此肆虐，惡魔正為新的獵物而狂笑！"},
+    {"Goblin-drums sound: Doom... Doom...", "哥布林的戰鼓響起：咚……咚……"},
+    {"Proud warlords struggle in this land; here, there are no neutrals.", "驕傲的軍閥在此爭戰；在這片土地上，沒有人能置身事外。"},
+    {"Here Barahir and his outlaws were murdered.", "巴拉希爾與他的亡命之徒在此遭到殺害。"},
+    {"Here the Edain camped when they first came to Beleriand.", "伊甸人初抵貝烈瑞安德時，曾在此紮營。"},
+    {"\"Haudh-en-Ndengin the Elves named it, the Hill of Slain...\"", "「精靈稱它為 Haudh-en-Ndengin，意為『陣亡者之丘』……」"},
+};
+
 #define CHECK(expr) do { if (!(expr)) { \
     fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #expr); \
     return 1; } ++checks; } while (0)
@@ -63,6 +76,9 @@ int main(void)
         return 1;
     if (check_set(monster_feelings,
             sizeof(monster_feelings) / sizeof(monster_feelings[0])))
+        return 1;
+    if (check_set(themed_messages,
+            sizeof(themed_messages) / sizeof(themed_messages[0])))
         return 1;
 
     monster = angdroid_game_ui_text("This place seems murderous", 1);
