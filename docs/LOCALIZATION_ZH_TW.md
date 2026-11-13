@@ -615,3 +615,13 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - `start` 緩衝區由 40 增至 96 bytes，容納中文句子片語而不因 UTF-8 編碼長度超出；只有訊息顯示發生變化，不影響戰鬥、怪物學識、AI、存檔與能力運作。
 - 新增 `tests/native/test_faangband_lore_abilities_locale.c`（正式字典全部 33 組中英回退及「、／與／或」邊界）、`scripts/test-fa-lore-abilities-locale.sh`（主機嚴格 C99）、`tests/test_faangband_lore_abilities_locale_source.py`（35 筆原始旗標、33 組翻譯對照、知識旗標過濾、亡靈例外、回歸測試接線），並更新 `scripts/verify-zh-tw.sh`。
 - **驗證限制**：本批 GitHub 靜態原始碼一致性核對不等於已在完整 checkout 執行 C99／Python 回歸、NDK／Gradle 或 Android 實機測試。維持原 Draft PR #146，不執行 GitHub Actions、不合併 `master`。
+
+## 第 248 批 — FAangband 法術與近戰回憶中文化（2026-11-13）
+
+- **實際資料覆蓋**：依 `variant_lib/faangband/gamedata/monster_spell.txt` 的 **116 條不重複 `lore:` 法術回憶文字**、`blow_methods.txt` 的 **19 條 `desc:` 動作文字**及 `blow_effects.txt` 的 **26 條 `desc:` 攻擊效果**核對，三份資料合計 **156 個不重複英文字串**（交叉重複 5 組）。由於同名 `attack`、`fire` 等詞可能出現在其他遊戲畫面，這批新建 **`faangband/mon-lore-terms.h` 的專用顯示詞表**，而不是把通用詞放進共用 `angband/zh-tw-ui.h`；遊戲原始資料檔維持英文，供解析器與遊戲規則使用。
+- **法術與吐息**：`mon-lore.c::lore_append_spell_clause()` 在原有 `rsf_next()`、`spell_color()`、`mon_spell_lore_damage(..., know_hp)` 之後翻譯已選定的回憶描述；中文「或／、」連接多個招式，傷害顯示為中文括號，英文模式保留原空格與 `(%d)`。
+- **施法頻率與知識限制**：`lore_append_spells()` 的先天攻擊、吐息、其他法術三組仍依 `lore->spell_flags`、`RST_INNATE`、`RST_BREATH` 與 `rf_has(known_flags, RF_SMART)` 篩選。對 `lore->innate_freq_known`、`lore->spell_freq_known` 仍顯示確定頻率，對只觀測到施法的 `lore->cast_innate`、`lore->cast_spell` 仍顯示估計頻率，計算 `100 / race->freq_*` 與 `100 / approx_frequency` 不變。新增顯示層 `lore_append_spell_frequency()`，中文說「每 N 次施放 1 次」或「約每 N 次施放 1 次」，英文原 `1 time in N` 格式不動。缺少先天施法頻率但已有招式資料時，繁中補句尾，避免與下一句黏接；`ref_race` 仍在退出前還原。
+- **近戰回憶**：`lore_append_attack()` 的 `RF_NEVER_BLOW`、`lore->blow_known[i]`、招式定義檢查、已知／總攻擊數量完全保留。顯示「牠能擊打／咬……，效果為……（2d6，75%）」等文字；`dice.base`、`dice.dice`、`dice.sides`、`dice.m_bonus`、`hit_chance()`、`random_chance_scaled(..., 100)`、`randcalc(..., AVERAGE)` 與 `total_centidamage / 100` 不變。當仍有未知招式時，平均傷害的「至少」標記保留，避免將局部已知資訊誤說成完整資訊。
+- **雙語與色彩隔離**：同一個 `angdroid_fa_lore_term()` 僅在繁中模式讀取 FAangband 專用對照，英文模式回傳原指標；未知來源不會被錯誤套用別處的中文翻譯。原數值及語句的 `COLOUR_L_GREEN`、`COLOUR_L_RED`、`COLOUR_L_BLUE` 與 `blow_color()` 色彩運算保留。
+- **回歸測試**：新增 `tests/native/test_faangband_lore_spells_attacks_locale.c`（156 條正式 C99 翻譯字典、英文原字串回退、中文句型）、`scripts/test-fa-lore-spells-attacks-locale.sh`、`tests/test_faangband_lore_spells_attacks_locale_source.py`（三份正式 gamedata 完整來源集合、未知攻擊保護、傷害／施法頻率公式、英文文字回退）。已接入 `scripts/verify-zh-tw.sh`。
+- **驗證界線**：Github 重新讀取程式碼後的靜態一致性核對與資料來源交叉對照，**不是**完整 checkout 實際執行的 C99／Python 回歸、NDK／Gradle 或模擬器／實機驗證。PR #146 維持 Draft，不觸發 Actions，不合併 `master`。
