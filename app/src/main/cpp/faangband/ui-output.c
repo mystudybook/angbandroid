@@ -361,11 +361,11 @@ void text_out_to_screen(uint8_t a, const char *str)
 	const wchar_t *s;
 	wchar_t buf[1024];
 
-	/* Obtain the size */
-	(void)Term_get_size(&wid, &h);
-
-	/* Obtain the cursor */
-	(void)Term_locate(&x, &y);
+    /* Android rotation may briefly invalidate the terminal. */
+    if (!Term || !str) return;
+    (void)Term_get_size(&wid, &h);
+    if (wid < 2 || h < 1) return;
+    if (Term_locate(&x, &y) != 0) return;
 
 	/* Copy to a rewriteable string */
 	text_mbstowcs(buf, str, 1024);
@@ -376,6 +376,10 @@ void text_out_to_screen(uint8_t a, const char *str)
 	else
 		wrap = wid;
 
+    /* The legacy wrap scratch arrays have only 256 entries. */
+    if (wrap > 256) wrap = 256;
+    if (wrap < 2) return;
+
 	/* Process the string */
 	for (s = buf; *s; s++) {
 		wchar_t ch;
@@ -383,13 +387,13 @@ void text_out_to_screen(uint8_t a, const char *str)
 		/* Force wrap */
 		if (*s == L'\n') {
 			/* Wrap */
-			x = text_out_indent;
-			y++;
+            x = MAX(0, MIN(text_out_indent, wrap - 1));
+            if (++y >= h) return;
 
 			/* Clear line, move cursor */
 			Term_erase(x, y, 255);
 
-			x += text_out_pad;
+            x = MAX(0, MIN(x + text_out_pad, wrap - 1));
 			Term_gotoxy(x, y);
 
 			continue;
@@ -427,13 +431,13 @@ void text_out_to_screen(uint8_t a, const char *str)
 			Term_erase(n, y, 255);
 
 			/* Wrap */
-			x = text_out_indent;
-			y++;
+            x = MAX(0, MIN(text_out_indent, wrap - 1));
+            if (++y >= h) return;
 
 			/* Clear line, move cursor */
 			Term_erase(x, y, 255);
 
-			x += text_out_pad;
+            x = MAX(0, MIN(x + text_out_pad, wrap - 1));
 			Term_gotoxy(x, y);
 
 			/* Wrap the word (if any) */
