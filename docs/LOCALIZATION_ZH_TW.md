@@ -656,3 +656,12 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - **UTF-8 小容量與標點**：幽靈名稱透過 `angdroid_utf8_copy_complete()` 與 `angdroid_utf8_append_complete()` 組句，不在漢字位元組中截斷。若容量無法容納完整 `（種族）` 及選配的 `（畫面外）`，寧可顯示可容納的原玩家名稱，而不輸出不完整的括號。英文模式及未匹配的特殊格式不變。
 - **離線回歸**：新增 `tests/native/test_faangband_spell_lash_ghost_locale.c`（來源 25 組中文鞭擊屬性、英文原指標回退、幽靈原名與含逗號專名、畫面外尾註、極窄 UTF-8 buffer）、`scripts/test-fa-spell-lash-ghost-locale.sh`（host C99 嚴格參數）、`tests/test_faangband_spell_lash_ghost_locale_source.py`（依正式 projection 的來源值比對現有詞表、`monster_desc()` 與 `monster_is_shape_unique()`、替換佔位符與緩衝安全）。更新前兩批的來源守護斷言，並納入 `scripts/verify-zh-tw.sh`。
 - **驗證限制**：GitHub 來源靜態核對不等於完整 checkout 的 C99／Python 直接執行、Android Gradle／NDK 建置、模擬器或實機測試。本批沿用 Draft PR #146，Commit 均標註 `[skip ci]`，不執行 GitHub Actions，不合併 `master`。
+
+## 第 252 批 — FAangband 畫面外施法通知與空鞭擊屬性防護（2026-11-13）
+
+- **已確認的顯示問題**：`faangband/mon-desc.c::monster_desc()` 在怪物不位於玩家畫面面板時，會附加英文 ` (offscreen)`。第 251 批只處理玩家幽靈的 `<幽靈玩家名>, the <種族> (offscreen)`，一般怪物及變形唯一怪物在成功翻譯的施法句子中仍可能殘留英文字尾。本批新加純顯示函式 `angdroid_fa_spell_offscreen_subject()`，僅在字串精確以 ` (offscreen)` 結尾且繁中顯示開啟時，轉為「（畫面外）」。只改顯示字串，不更動 `panel_contains()`、`monster_is_visible()`、`seen` 與 `MON_ALTMSG` 分支。
+- **已保留真實怪物身分**：`mon-spell.c` 的施法者和怪物目標兩處先經原 `monster_desc()`，如有需要分別套用正常怪物 `angdroid_fa_spell_subject()` 或玩家幽靈的 `angdroid_fa_spell_ghost_subject()`，最後才以獨立 `cn_offscreen[320]` 處理尾端註記。變形唯一怪物仍依 `monster_is_shape_unique()` 保留專有名稱、一般怪物仍使用原已知名稱、幽靈名字與種族不變。不在視野內的施法者對其他怪物施法時仍直接不顯示。
+- **狹窄空間完整 UTF-8 輸出**：若顯示暫存容量不足以放入整個名稱及「（畫面外）」，改使用 `angdroid_utf8_copy_complete()` 只複製可容納的完整名稱前綴，後接完整中文註記。不允許半個漢字、孤立的中文括號或不完整 `(offscreen)`。容量極小、無法完整容納尾註時則回傳原來源，避免憑空改寫部分文字；英文模式及沒有畫面外尾註的字串回傳原指標。
+- **可選鞭擊屬性安全性**：此前 `SPELL_TAG_TYPE` 直接把 `projections[type].lash_desc` 送給 `strnfcat("%s")`，未先排除 `NULL`；`SPELL_TAG_OF_TYPE` 已有空值保護。現在補齊 `SPELL_TAG_TYPE` 的 `if (type_name)`，屬性不存在時不會傳入空指標。原 `angdroid_mon_spell_lash()` 25 種正式屬性翻譯與英文回退不受影響。此修正僅處理可選顯示屬性，沒有改 `projection.txt`、`lash_type`、招式命中或傷害。
+- **回歸測試**：延伸現有 `tests/native/test_faangband_spell_lash_ghost_locale.c` 的 C99 測試，加入一般怪物、專有名稱、既已完整中文化的幽靈、不含尾註、英文模式、NULL、0／16-byte 小空間、20／25-byte 中文名稱前綴等例子。同步更新 `tests/test_faangband_spell_lash_ghost_locale_source.py` 的正式原始碼守護，要求 `SPELL_TAG_TYPE` 空值檢查、兩處畫面外轉換及正式安全拷貝；仍由 `scripts/verify-zh-tw.sh` 接入離線流程。
+- **驗證限制**：GitHub 來源靜態核對不等於實際執行 C99／Python、NDK／Gradle 或手機不同面板寬度的互動驗證；這一批僅保證設計上不切割 UTF-8 字元，並未宣稱測過所有終端換行模式。維持 Draft PR #146，Commit 加 `[skip ci]`，不執行 GitHub Actions、不合併 `master`。
