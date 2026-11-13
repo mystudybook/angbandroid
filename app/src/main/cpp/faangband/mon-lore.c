@@ -1919,6 +1919,7 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 {
 	int i, known_attacks, total_attacks, described_count, total_centidamage;
 	monster_sex_t msex = MON_SEX_NEUTER;
+	const bool zh_tw = angdroid_zh_tw_enabled();
 
 	assert(tb && race && lore);
 
@@ -1927,8 +1928,11 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 
 	/* Notice lack of attacks */
 	if (rf_has(known_flags, RF_NEVER_BLOW)) {
-		textblock_append(tb, "%s has no physical attacks.  ",
-						 lore_pronoun_nominative(msex, true));
+		if (zh_tw)
+			textblock_append(tb, "牠沒有物理攻擊。  ");
+		else
+			textblock_append(tb, "%s has no physical attacks.  ",
+				lore_pronoun_nominative(msex, true));
 		return;
 	}
 
@@ -1947,8 +1951,13 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 
 	/* Describe the lack of knowledge */
 	if (known_attacks == 0) {
-		textblock_append_c(tb, COLOUR_ORANGE, "Nothing is known about %s attack.  ",
-						 lore_pronoun_possessive(msex, false));
+		if (zh_tw)
+			textblock_append_c(tb, COLOUR_ORANGE,
+				"目前對牠的攻擊方式一無所知。  ");
+		else
+			textblock_append_c(tb, COLOUR_ORANGE,
+					"Nothing is known about %s attack.  ",
+					lore_pronoun_possessive(msex, false));
 		return;
 	}
 
@@ -1967,26 +1976,29 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 		dice = race->blow[i].dice;
 		effect_str = race->blow[i].effect->desc;
 
-		/* Introduce the attack description */
-		if (described_count == 0)
-			textblock_append(tb, "%s can ",
-							 lore_pronoun_nominative(msex, true));
-		else if (described_count < known_attacks - 1)
-			textblock_append(tb, ", ");
-		else
-			textblock_append(tb, ", and ");
-
-		/* Describe the method */
-		textblock_append(tb, "%s", race->blow[i].method->desc);
+		/* Only already-known attacks are shown. */
+		if (described_count == 0) {
+			if (zh_tw)
+				textblock_append(tb, "牠能");
+			else
+				textblock_append(tb, "%s can ",
+					lore_pronoun_nominative(msex, true));
+		} else if (described_count < known_attacks - 1) {
+			textblock_append(tb, zh_tw ? "、" : ", ");
+		} else {
+			textblock_append(tb, zh_tw ? "與" : ", and ");
+		}
+		textblock_append(tb, "%s", angdroid_fa_lore_term(
+			race->blow[i].method->desc, zh_tw));
 
 		/* Describe the effect (if any) */
 		if (effect_str && strlen(effect_str) > 0) {
 			int index = blow_index(race->blow[i].effect->name);
 			/* Describe the attack type */
-			textblock_append(tb, " to ");
-			textblock_append_c(tb, blow_color(player, index), "%s", effect_str);
-
-			textblock_append(tb, " (");
+			textblock_append(tb, zh_tw ? "，效果為" : " to ");
+			textblock_append_c(tb, blow_color(player, index), "%s",
+				angdroid_fa_lore_term(effect_str, zh_tw));
+			textblock_append(tb, zh_tw ? "（" : " (");
 			/* Describe damage (if known) */
 			if (dice.base || (dice.dice && dice.sides) || dice.m_bonus) {
 				if (dice.base)
@@ -2007,7 +2019,7 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 				player->state.ac + player->state.to_a);
 			int percent = random_chance_scaled(c, 100);
 			textblock_append_c(tb, COLOUR_L_BLUE, "%d", percent);
-			textblock_append(tb, "%%)");
+			textblock_append(tb, zh_tw ? "%%）" : "%%)");
 
 			total_centidamage += (percent * randcalc(dice, 0, AVERAGE));
 		}
@@ -2015,13 +2027,20 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 		described_count++;
 	}
 
-	textblock_append(tb, ", averaging");
+	textblock_append(tb, zh_tw ? "；每回合平均" : ", averaging");
 	if (known_attacks < total_attacks) {
-		textblock_append_c(tb, COLOUR_ORANGE, " at least");
+		textblock_append_c(tb, COLOUR_ORANGE,
+			zh_tw ? "至少造成" : " at least");
+	} else if (zh_tw) {
+		textblock_append(tb, "造成");
 	}
-	textblock_append_c(tb, COLOUR_L_GREEN, " %d", total_centidamage/100);
-	textblock_append(tb, " damage on each of %s turns.  ",
-					 lore_pronoun_possessive(msex, false));
+	textblock_append_c(tb, COLOUR_L_GREEN,
+		zh_tw ? "%d" : " %d", total_centidamage / 100);
+	if (zh_tw)
+		textblock_append(tb, " 點傷害。  ");
+	else
+		textblock_append(tb, " damage on each of %s turns.  ",
+			lore_pronoun_possessive(msex, false));
 }
 
 /**
