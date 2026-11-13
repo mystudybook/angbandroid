@@ -85,6 +85,14 @@ int main(void)
     CHECK(angdroid_utf8_copy_complete(tiny, 4, "冰霜") == 3);
     CHECK(strcmp(tiny, "冰") == 0);
 
+    /* Simulate strnfcat truncating immediately after a Han lead byte.
+     * The sanitized message must never pass that broken UTF-8 to msgt(). */
+    {
+        const char torn[] = "\xE7\x81\xAB\xE9";
+        CHECK(angdroid_utf8_copy_complete(tiny, sizeof tiny, torn) == 4);
+        CHECK(strcmp(tiny, "火?") == 0);
+    }
+
     printf("PASS: %d FA race-specific spell and UTF-8 checks\n", checked);
     return 0;
 }
