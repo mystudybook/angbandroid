@@ -116,7 +116,7 @@ assert "angdroid_utf8_copy_complete(safe_buf, sizeof(safe_buf), buf);" in messag
 assert "if (localized) {" in message
 assert "char m_name[256];" in message
 assert "char m_poss[256];" in message
-assert "rf_has(mon->race->flags, RF_UNIQUE)" in message
+assert "monster_is_shape_unique(mon)" in message
 assert "rf_has(mon->race->flags, RF_PLAYER_GHOST)" in message
 assert '#include "../curses/unicode_display.h"' in LOCALE
 assert 'angdroid_utf8_copy_complete(output, capacity, "這隻")' in LOCALE
