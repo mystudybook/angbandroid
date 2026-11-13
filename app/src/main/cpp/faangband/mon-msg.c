@@ -23,6 +23,7 @@
 #include "mon-util.h"
 #include "game-input.h"
 #include "player-calcs.h"
+#include "../angband/zh-tw-ui.h"
 
 /**
  * Maxinum number of stacked monster messages
@@ -325,8 +326,37 @@ static void get_subject(char *buf, size_t buflen,
 		struct player_race *p_race,
 		int count,
 		bool invisible,
-		bool offscreen)
+		bool offscreen,
+		bool localized)
 {
+	if (localized) {
+		/* Names and visibility stay as selected by the message pipeline.
+		 * Chinese subjects have no trailing English word separator. */
+		if (invisible) {
+			if (count == 1) {
+				my_strcpy(buf, "牠", buflen);
+			} else {
+				strnfmt(buf, buflen, "%d 隻怪物", count);
+			}
+		} else {
+			const char *p_name = p_race ? format("%s ", p_race->name) : "";
+			if (rf_has(race->flags, RF_PLAYER_GHOST)) {
+				strnfmt(buf, buflen, "%s（%s）",
+					cave->ghost->name, race->name);
+			} else if (rf_has(race->flags, RF_UNIQUE)) {
+				my_strcpy(buf, race->name, buflen);
+			} else if (count == 1) {
+				strnfmt(buf, buflen, "這隻%s%s", p_name, race->name);
+			} else {
+				strnfmt(buf, buflen, "%d 隻%s%s", count, p_name,
+					race->plural ? race->plural : race->name);
+			}
+			if (rf_has(race->flags, RF_NAME_COMMA))
+				my_strcat(buf, "，", buflen);
+		}
+		if (offscreen) my_strcat(buf, "（畫面外）", buflen);
+		return;
+	}
 	if (invisible) {
 		if (count == 1) {
 			my_strcpy(buf, "It", buflen);
@@ -376,7 +406,7 @@ static void get_subject(char *buf, size_t buflen,
  *
  * \param	pos		the position in buf to start writing the message into
  */
-static void get_message_text(char *buf, size_t buflen,
+static bool get_message_text(char *buf, size_t buflen,
 		int msg_code,
 		const struct monster_race *race,
 		bool do_plural)
@@ -397,6 +427,13 @@ static void get_message_text(char *buf, size_t buflen,
 		case MON_MSG_10: source = race->base->pain->messages[5]; break;
 		case MON_MSG_0:  source = race->base->pain->messages[6]; break;
 	}
+
+	/* Look up the unexpanded source template: both regular monster events
+	 * and the 7 pain grades retain their original game-data identifiers. */
+	const char *localized = angdroid_game_ui_text(source,
+		angdroid_zh_tw_enabled());
+	bool translated = (localized != source);
+	source = localized;
 
 	int state = MSG_PARSE_NORMAL;
 	size_t maxlen = strlen(source);
@@ -430,6 +467,7 @@ static void get_message_text(char *buf, size_t buflen,
 
 	/* Terminate the buffer */
 	buf[pos] = 0;
+	return translated;
 }
 
 #undef MSG_PARSE_NORMAL
@@ -473,33 +511,35 @@ static int get_message_type(int msg_code, const struct monster_race *race)
  */
 static void show_message(struct monster_race_message *msg)
 {
-	char subject[60] = "";
-	char body[60];
+	char subject[256] = "";
+	char body[256];
 	int msg_type = get_message_type(msg->msg_code, msg->race);
+
+	/* Translate the source before expanding singular/plural markers.
+	 * Unknown templates keep the original English subject and spacing. */
+	bool localized = get_message_text(body, sizeof(body),
+			msg->msg_code,
+			msg->race,
+			msg->count > 1);
 
 	/* Some messages don't require a monster name */
 	if (!skip_subject(msg->msg_code)) {
-		/* Get 'it ' or '3 monsters (offscreen) ' or '15000 snakes ' etc */
 		get_subject(subject, sizeof(subject),
 				msg->race,
 				msg->p_race,
 				msg->count,
 				msg->flags & MON_MSG_FLAG_INVISIBLE,
-				msg->flags & MON_MSG_FLAG_OFFSCREEN);
+				msg->flags & MON_MSG_FLAG_OFFSCREEN,
+				localized);
 	}
-
-	/* Get the message proper, corrected for singular/plural etc. */
-	get_message_text(body, sizeof(body),
-			msg->msg_code,
-			msg->race,
-			msg->count > 1);
 
 	/* Show the message */
 	if (msg->flags & MON_MSG_FLAG_DAMAGE) {
 		if (msg->count <= 1) {
 			msgt(msg_type, "%s%s (%d)", subject, body, msg->damage);
 		} else {
-			msgt(msg_type, "%s%s (average %d)", subject, body,
+			msgt(msg_type, localized ? "%s%s（平均 %d）" :
+				"%s%s (average %d)", subject, body,
 				msg->damage / msg->count
 				+ (msg->damage % msg->count
 				>= (msg->count + 1) / 2 ? 1 : 0));
