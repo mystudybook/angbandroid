@@ -44,7 +44,7 @@ int main(void)
     angdroid_list_relative_location(distance, sizeof(distance),
         -3, 8, 1);
     CHECK(strcmp(distance, " 3北 8東") == 0);
-    CHECK(angdroid_utf8_display_columns(distance) == 6);
+    CHECK(angdroid_utf8_display_columns(distance) == 8);
     angdroid_list_relative_location(distance, sizeof(distance),
         -3, 8, 0);
     CHECK(strcmp(distance, " 3 N 8 E") == 0);
