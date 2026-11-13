@@ -95,17 +95,30 @@ static void Term_queue_char(struct fake_term *term,
     tiles[y][x] = ch;
     if (ch == ANGDROID_TEXT_CONTINUATION) ++continuation_writes;
 }
+/* The real FAangband stream API now allocates CJK continuation
+ * cells. Model only its visible cursor/column contract here; the
+ * production functions themselves are compiled by the terminal host
+ * runner, independently of this text-out fixture. */
 static int Term_addch(int color, wchar_t ch)
 {
-    (void)color;
+    int span;
     if (!Term || xcur < 0 || xcur >= Term->wid ||
         ycur < 0 || ycur >= Term->hgt) {
         ++invalid; return -1;
     }
+    ch = angdroid_stream_glyph(ch);
+    span = angdroid_is_wide_text(ch, color) ? 2 : 1;
+    if (xcur + span > Term->wid) {
+        ch = L'?';
+        span = 1;
+    }
+    if (span == 2)
+        Term_queue_char(Term, xcur + 1, ycur, color,
+            ANGDROID_TEXT_CONTINUATION, 0, 0);
+    Term_queue_char(Term, xcur, ycur, color, ch, 0, 0);
     ++writes;
-    tiles[ycur][xcur] = ch;
-    ++xcur;
-    return 0;
+    xcur += span;
+    return xcur >= Term->wid ? 1 : 0;
 }
 static int text_iswprint(wchar_t ch)
 {
@@ -190,8 +203,8 @@ int main(void)
     text_out_to_screen(1, NULL);
     CHECK(invalid == 0 && writes == 0);
 
-    /* FAangband's Term_addch() moves by one code point. The prose
-     * painter must reserve the second display cell itself. */
+    /* FAangband's stream API owns CJK continuation positions. The
+     * text-out wrapper must not insert a second marker or over-advance. */
     reset(12, 5);
     text_out_to_screen(1, "A中B文C");
     CHECK(invalid == 0 && writes == 5);
