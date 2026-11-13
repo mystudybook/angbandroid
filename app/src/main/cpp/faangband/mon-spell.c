@@ -179,6 +179,20 @@ static void spell_message(struct monster *mon,
 			angdroid_zh_tw_enabled());
 		localized = (in_cursor != selected);
 	}
+
+	/*
+	 * A template can contain multiple dynamic names. The old strnfcat()
+	 * path silently truncated later tags and final punctuation once the
+	 * 1024-byte buffer was full.  With known Chinese templates, reserve
+	 * the largest 320-byte subject/target expansion for *each* tag before
+	 * rendering any part of the message. Never output a half-rendered
+	 * localized template. The English formatter is intentionally unchanged.
+	 */
+	if (localized && !angdroid_fa_spell_template_fits(
+			in_cursor, sizeof(buf), 320)) {
+		msgt(spell->msgt, "%s", "施法訊息過長，已省略詳細內容。");
+		return;
+	}
 	next = strchr(in_cursor, '{');
 	is_leading = (next == in_cursor);
 	while (next) {
