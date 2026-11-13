@@ -83,6 +83,8 @@ run_check "FAangband monster event and pain dictionary C99" sh "$ROOT/scripts/te
 run_check "FAangband monster event and pain source guard" python3 "$ROOT/tests/test_faangband_monster_messages_locale_source.py"
 run_check "FAangband compact monster list and CJK width C99" sh "$ROOT/scripts/test-fa-monster-list-locale.sh"
 run_check "FAangband monster list and recall source guard" python3 "$ROOT/tests/test_faangband_monster_list_locale_source.py"
+run_check "FAangband lore vocabulary and examples C99" sh "$ROOT/scripts/test-fa-lore-display-locale.sh"
+run_check "FAangband dynamic lore source and knowledge gates" python3 "$ROOT/tests/test_faangband_lore_display_locale_source.py"
 run_check "FAangband option colours, visual menus and quality-ignore zh-TW" python3 "$ROOT/tests/test_faangband_options_visual_locale_source.py"
 run_check "FAangband context menus, target help, maps and common commands zh-TW" python3 "$ROOT/tests/test_faangband_context_target_map_locale_source.py"
 run_check "FAangband character sheet, spell browser and savefile picker zh-TW" python3 "$ROOT/tests/test_faangband_player_spell_save_locale_source.py"
