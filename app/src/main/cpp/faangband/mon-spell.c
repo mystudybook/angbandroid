@@ -211,13 +211,16 @@ static void spell_message(struct monster *mon,
 						mon, mdesc_mode);
 
 					{
-						char cn_name[160];
+						char cn_name[320];
 						const char *display_name = m_name;
-						if (localized &&
-							!monster_is_shape_unique(mon) &&
-							!rf_has(mon->race->flags, RF_PLAYER_GHOST))
+						if (localized && rf_has(mon->race->flags, RF_PLAYER_GHOST)) {
+							display_name = angdroid_fa_spell_ghost_subject(
+								m_name, cave->ghost->name, mon->race->name,
+								true, cn_name, sizeof(cn_name));
+						} else if (localized && !monster_is_shape_unique(mon)) {
 							display_name = angdroid_fa_spell_subject(m_name,
 								true, cn_name, sizeof(cn_name));
+						}
 						strnfcat(buf, sizeof(buf), &end, "%s", display_name);
 					}
 					break;
@@ -245,13 +248,17 @@ static void spell_message(struct monster *mon,
 						monster_desc(m_name,
 							sizeof(m_name), t_mon,
 							mdesc_mode);
-						if (localized && t_mon &&
-							!monster_is_shape_unique(t_mon) &&
-							!rf_has(t_mon->race->flags, RF_PLAYER_GHOST)) {
-							char cn_name[160];
-							const char *display_name =
-								angdroid_fa_spell_subject(m_name,
+						if (localized && t_mon) {
+							char cn_name[320];
+							const char *display_name = m_name;
+							if (rf_has(t_mon->race->flags, RF_PLAYER_GHOST)) {
+								display_name = angdroid_fa_spell_ghost_subject(
+									m_name, cave->ghost->name, t_mon->race->name,
 									true, cn_name, sizeof(cn_name));
+							} else if (!monster_is_shape_unique(t_mon)) {
+								display_name = angdroid_fa_spell_subject(m_name,
+									true, cn_name, sizeof(cn_name));
+							}
 							strnfcat(buf, sizeof(buf), &end,
 								"%s", display_name);
 						} else {
