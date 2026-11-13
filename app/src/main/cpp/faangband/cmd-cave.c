@@ -737,6 +737,7 @@ static bool do_cmd_tunnel_aux(struct loc grid)
 	struct player_state *used_state = &player->state;
 	int oldn = 1;
 	const char *with_clause = current_weapon == NULL ? "with your hands" : "with your weapon";
+    const char *with_zh;
 
 	/* Verify legality */
 	if (!do_cmd_tunnel_test(player, grid)) return (false);
@@ -758,6 +759,7 @@ static bool do_cmd_tunnel_aux(struct loc grid)
 		used_state = &local_state;
 	}
 	calc_digging_chances(used_state, digging_chances);
+    with_zh = angdroid_game_ui_text(with_clause, angdroid_zh_tw_enabled());
 
 	/* Do we succeed? */
 	chance = digging_chances[square_digging(cave, grid) - 1];
@@ -777,7 +779,11 @@ static bool do_cmd_tunnel_aux(struct loc grid)
 		/* Rubble is a special case - could be handled more generally NRM */
 		if (rubble) {
 			/* Message */
-			msg("You have removed the rubble %s.", with_clause);
+			if (angdroid_zh_tw_enabled()) {
+                msg("你%s清除了碎石。", with_zh);
+            } else {
+                msg("You have removed the rubble %s.", with_clause);
+            }
 
 			/* Place an object (except in town) */
 			if ((randint0(100) < 10) && player->depth) {
@@ -797,9 +803,17 @@ static bool do_cmd_tunnel_aux(struct loc grid)
 		} else if (gold) {
 			/* Found treasure */
 			place_gold(cave, grid, player->depth, ORIGIN_FLOOR);
-			msg("You have found something digging %s!", with_clause);
+			if (angdroid_zh_tw_enabled()) {
+                msg("你%s挖掘時發現了東西！", with_zh);
+            } else {
+                msg("You have found something digging %s!", with_clause);
+            }
 		} else {
-			msg("You have finished the tunnel %s.", with_clause);
+			if (angdroid_zh_tw_enabled()) {
+                msg("你%s挖通了通道。", with_zh);
+            } else {
+                msg("You have finished the tunnel %s.", with_clause);
+            }
 		}
 		/* On the surface, new terrain may be exposed to the sun. */
 		if (cave->depth == 0) expose_to_sun(cave, grid, is_daytime());
@@ -809,19 +823,38 @@ static bool do_cmd_tunnel_aux(struct loc grid)
 		player->upkeep->update |= (PU_UPDATE_VIEW | PU_MONSTERS);
 	} else if (chance > 0) {
 		/* Failure, continue digging */
-		if (rubble)
-			msg("You dig in the rubble %s.", with_clause);
-		else
-			msg("You tunnel into the %s %s.",
-				square_apparent_name(player->cave, grid), with_clause);
+        if (rubble) {
+            if (angdroid_zh_tw_enabled()) {
+                msg("你%s在碎石中挖掘。", with_zh);
+            } else {
+                msg("You dig in the rubble %s.", with_clause);
+            }
+        } else {
+            if (angdroid_zh_tw_enabled()) {
+                msg("你%s向%s挖掘。", with_zh,
+                    square_apparent_name(player->cave, grid));
+            } else {
+                msg("You tunnel into the %s %s.",
+                    square_apparent_name(player->cave, grid), with_clause);
+            }
+        }
 		more = true;
 	} else {
 		/* Don't automatically repeat if there's no hope. */
 		if (rubble) {
-			msg("You dig in the rubble %s with little effect.", with_clause);
+			if (angdroid_zh_tw_enabled()) {
+                msg("你%s在碎石中挖掘，但幾乎沒有進展。", with_zh);
+            } else {
+                msg("You dig in the rubble %s with little effect.", with_clause);
+            }
 		} else {
-			msg("You chip away futilely %s at the %s.", with_clause,
-				square_apparent_name(player->cave, grid));
+			if (angdroid_zh_tw_enabled()) {
+                msg("你%s敲打%s，但毫無進展。", with_zh,
+                    square_apparent_name(player->cave, grid));
+            } else {
+                msg("You chip away futilely %s at the %s.", with_clause,
+                    square_apparent_name(player->cave, grid));
+            }
 		}
 	}
 
