@@ -27,7 +27,8 @@ def extract(name):
 # write, fast string write, direct draw, stream char, partial erase, inspect.
 NAMES = (
     "Term_queue_char_raw", "Term_clear_wide_neighbor", "Term_queue_char",
-    "Term_queue_chars", "Term_draw", "Term_addch", "Term_erase", "Term_what",
+    "Term_queue_chars", "Term_draw", "Term_addch", "Term_addstr",
+    "Term_erase", "Term_what",
 )
 ACTUAL = [extract(name) for name in NAMES]
 
@@ -39,6 +40,7 @@ HEADER = r"""
 #include <string.h>
 #include <wchar.h>
 #include "app/src/main/cpp/curses/unicode_layout.h"
+#include "app/src/main/cpp/curses/unicode_display.h"
 
 #define COLOUR_WHITE 1
 typedef int errr;
@@ -62,6 +64,20 @@ static int old_terrains[4][20];
 static wchar_t chars[4][20], tile_chars[4][20];
 static wchar_t old_chars[4][20], old_tile_chars[4][20];
 static int tile_height = 1;
+
+static void text_mbstowcs(wchar_t *dst, const char *src, int capacity)
+{
+    size_t offset = 0;
+    int n = 0;
+    while (src[offset] && n < capacity - 1) {
+        uint32_t cp = 0;
+        size_t bytes = angdroid_utf8_next_scalar(src + offset, &cp);
+        if (!bytes) break;
+        dst[n++] = (wchar_t)cp;
+        offset += bytes;
+    }
+    dst[n] = 0;
+}
 
 static errr Term_gotoxy(int x, int y)
 {
@@ -181,6 +197,67 @@ int main(void)
     CHECK(Term_addch(1, ANGDROID_TEXT_CONTINUATION) == 0);
     CHECK(chars[0][0] == L'?');
     CHECK(active.cx == 1);
+
+    /* Text streams advance by physical cells, not wchar_t count.
+     * Map writes through Term_draw()/Term_queue_chars() do not widen. */
+    reset(12);
+    CHECK(Term_addch(1, L'甲') == 0);
+    CHECK(chars[0][0] == L'甲');
+    CHECK(chars[0][1] == ANGDROID_TEXT_CONTINUATION);
+    CHECK(active.cx == 2 && active.cu == 0);
+
+    reset(12);
+    CHECK(Term_addstr(-1, 1, "A中B") == 0);
+    CHECK(chars[0][0] == L'A');
+    CHECK(chars[0][1] == L'中');
+    CHECK(chars[0][2] == ANGDROID_TEXT_CONTINUATION);
+    CHECK(chars[0][3] == L'B');
+    CHECK(active.cx == 4 && active.cu == 0);
+
+    reset(4);
+    CHECK(Term_addstr(-1, 1, "甲乙") == 2);
+    CHECK(chars[0][0] == L'甲');
+    CHECK(chars[0][1] == ANGDROID_TEXT_CONTINUATION);
+    CHECK(chars[0][2] == L'乙');
+    CHECK(chars[0][3] == ANGDROID_TEXT_CONTINUATION);
+    CHECK(active.cx == 4 && active.cu == 1);
+
+    reset(3);
+    CHECK(Term_addstr(-1, 1, "甲乙") == 1);
+    CHECK(chars[0][0] == L'甲');
+    CHECK(chars[0][1] == ANGDROID_TEXT_CONTINUATION);
+    CHECK(chars[0][2] == L' ' && active.cx == 2 && active.cu == 1);
+
+    reset(12);
+    CHECK(Term_addstr(2, 1, "A中B") == 0);
+    CHECK(active.cx == 3 && chars[0][3] == L' ');
+    CHECK(chars[0][1] == L'中' && chars[0][2] == ANGDROID_TEXT_CONTINUATION);
+
+    reset(1);
+    CHECK(Term_addch(1, L'中') == 1);
+    CHECK(chars[0][0] == L'?' && active.cx == 1 && active.cu == 1);
+
+    reset(3);
+    CHECK(Term_gotoxy(2, 0) == 0);
+    CHECK(Term_addch(1, L'中') == 1);
+    CHECK(chars[0][2] == L'?' && active.cx == 3);
+
+    reset(12);
+    CHECK(Term_addch(0x80, L'中') == 0);
+    CHECK(chars[0][0] == L'中' && chars[0][1] == L' ');
+    CHECK(active.cx == 1);
+
+    reset(12);
+    CHECK(Term_addstr(-1, 1, "ABC") == 0);
+    CHECK(chars[0][0] == L'A' && chars[0][1] == L'B');
+    CHECK(chars[0][2] == L'C' && active.cx == 3);
+
+    reset(12);
+    {
+        wchar_t w[] = {L'中', L'\0'};
+        Term_queue_chars(3, 0, 1, 1, w);
+        CHECK(chars[0][3] == L'?' && chars[0][4] == L' ');
+    }
 
     reset(12);
     set_wide(3);
