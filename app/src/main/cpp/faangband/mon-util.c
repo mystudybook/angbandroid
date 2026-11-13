@@ -1516,6 +1516,28 @@ struct object *get_random_monster_object(struct monster *mon)
     return pick;
 }
 
+/*
+ * Localize an already resolved monster_desc() result for theft notices.
+ * The engine must keep ownership of identity and visibility: unseen
+ * monsters remain anonymous, shape-unique monsters retain their names.
+ */
+static const char *monster_theft_display_name(const struct monster *mon,
+		const char *source, char translated[320], char offscreen[320])
+{
+	const char *shown = source;
+
+	if (!angdroid_zh_tw_enabled()) return source;
+	if (rf_has(mon->race->flags, RF_PLAYER_GHOST) && cave->ghost) {
+		shown = angdroid_fa_spell_ghost_subject(source,
+			cave->ghost->name, mon->race->name, true,
+			translated, 320);
+	} else if (!monster_is_shape_unique(mon)) {
+		shown = angdroid_fa_spell_subject(source, true, translated, 320);
+	}
+
+	return angdroid_fa_spell_offscreen_subject(shown, true, offscreen, 320);
+}
+
 /**
  * Player or monster midx steals an item from a monster
  *
@@ -1527,10 +1549,15 @@ void steal_monster_item(struct monster *mon, int midx)
 	struct object *obj = get_random_monster_object(mon);
 	struct monster_lore *lore = get_lore(mon->race);
 	struct monster *thief = NULL;
-	char m_name[80];
+	char m_name[256];
+	char zh_m_name[320];
+	char offscreen_m_name[320];
+	const char *target_name;
 
-	/* Get the target monster name (or "it") */
+	/* The selected monster name already respects the player's visibility. */
 	monster_desc(m_name, sizeof(m_name), mon, MDESC_TARG);
+	target_name = monster_theft_display_name(mon, m_name,
+		zh_m_name, offscreen_m_name);
 
 	if (midx < 0) {
 		/* Base monster protection and player stealing skill */
@@ -1543,7 +1570,10 @@ void steal_monster_item(struct monster *mon, int midx)
 
 		/* No object */
 		if (!obj) {
-			msg("You can find nothing to steal from %s.", m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("你無法從%s身上找到可偷的東西。", target_name);
+			else
+				msg("You can find nothing to steal from %s.", m_name);
 			if (one_in_(3)) {
 				/* Monster notices */
 				monster_wake(mon, false, 100);
@@ -1572,7 +1602,10 @@ void steal_monster_item(struct monster *mon, int midx)
 			obj->held_m_idx = 0;
 			pile_excise(&mon->held_obj, obj);
 			if (tval_is_money(obj)) {
-				msg("You steal %d gold pieces worth of treasure.", obj->pval);
+				if (angdroid_zh_tw_enabled())
+					msg("你偷到了價值 %d 枚金幣的財寶。", obj->pval);
+				else
+					msg("You steal %d gold pieces worth of treasure.", obj->pval);
 				player->au += obj->pval;
 				player->upkeep->redraw |= (PR_GOLD);
 				delist_object(cave, obj);
@@ -1589,7 +1622,10 @@ void steal_monster_item(struct monster *mon, int midx)
 						ODESC_PREFIX | ODESC_FULL,
 						player);
 					drop_near(cave, &obj, 0, player->grid, true, true);
-					msg("You drop %s.", o_name);
+					if (angdroid_zh_tw_enabled())
+						msg("你丟下了%s。", o_name);
+					else
+						msg("You drop %s.", o_name);
 				} else {
 					inven_carry(player, obj, true, true);
 				}
@@ -1606,19 +1642,30 @@ void steal_monster_item(struct monster *mon, int midx)
 
 			object_see(player, obj);
 			if (tval_is_money(obj)) {
-				(void)strnfmt(o_name, sizeof(o_name), "treasure");
+				(void)strnfmt(o_name, sizeof(o_name), "%s",
+					angdroid_zh_tw_enabled() ? "財寶" : "treasure");
 			} else {
 				object_desc(o_name, sizeof(o_name), obj,
 					ODESC_PREFIX | ODESC_FULL, player);
 			}
-			msg("You fail to steal %s from %s.", o_name, m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("你沒能從%s身上偷到%s。", target_name, o_name);
+			else
+				msg("You fail to steal %s from %s.", o_name, m_name);
 			/* Monster wakes, may notice */
 			monster_wake(mon, true, 50);
 		} else {
 			/* Bungled it */
 			monster_wake(mon, true, 100);
-			monster_desc(m_name, sizeof(m_name), mon, MDESC_STANDARD);
-			msg("%s cries out in anger!", m_name);
+			monster_desc(m_name, sizeof(m_name), mon,
+				angdroid_zh_tw_enabled()
+					? (MDESC_STANDARD & ~MDESC_COMMA) : MDESC_STANDARD);
+			target_name = monster_theft_display_name(mon, m_name,
+				zh_m_name, offscreen_m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("%s憤怒地叫喊！", target_name);
+			else
+				msg("%s cries out in anger!", m_name);
 			effect_simple(EF_WAKE, source_monster(mon->midx), "", 0, 0, 0, 0, 0,
 						  NULL);
 
@@ -1629,7 +1676,10 @@ void steal_monster_item(struct monster *mon, int midx)
 		/* Player hit and run */
 		if (player->timed[TMD_ATT_RUN]) {
 			const char *near = "20";
-			msg("You vanish into the shadows!");
+			if (angdroid_zh_tw_enabled())
+				msg("你消失在陰影中！");
+			else
+				msg("You vanish into the shadows!");
 			effect_simple(EF_TELEPORT, source_player(), near, 0, 0, 0, 0, 0,
 						  NULL);
 			(void) player_clear_timed(player, TMD_ATT_RUN, false,
@@ -1637,18 +1687,32 @@ void steal_monster_item(struct monster *mon, int midx)
 		}
 	} else {
 		/* Get the thief details */
-		char t_name[80];
+		char t_name[256];
+		char zh_t_name[320];
+		char offscreen_t_name[320];
+		const char *thief_name;
 		thief = cave_monster(cave, midx);
 		assert(thief);
-		monster_desc(t_name, sizeof(t_name), thief, MDESC_STANDARD);
+		monster_desc(t_name, sizeof(t_name), thief,
+			angdroid_zh_tw_enabled()
+				? (MDESC_STANDARD & ~MDESC_COMMA) : MDESC_STANDARD);
+		thief_name = monster_theft_display_name(thief, t_name,
+			zh_t_name, offscreen_t_name);
 
 		/* Try to steal */
 		if (!obj || react_to_slay(obj, thief)) {
 			/* Fail to steal */
-			msg("%s tries to steal something from %s, but fails.", t_name,
-				m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("%s試圖從%s身上偷東西，但失敗了。", thief_name,
+					target_name);
+			else
+				msg("%s tries to steal something from %s, but fails.", t_name,
+					m_name);
 		} else {
-			msg("%s steals something from %s!", t_name, m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("%s從%s身上偷走了東西！", thief_name, target_name);
+			else
+				msg("%s steals something from %s!", t_name, m_name);
 
 			/* Steal and carry */
 			obj->held_m_idx = 0;
