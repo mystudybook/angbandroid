@@ -996,7 +996,11 @@ static bool do_cmd_disarm_aux(struct loc grid)
 		if (trf_has(trap->flags, TRF_TRAP)) {
 			break;
 		} else if (trf_has(trap->flags, TRF_M_TRAP)) {
-			msgt(MSG_DISARM, "You have disarmed your %s.", trap->kind->name);
+			if (angdroid_zh_tw_enabled()) {
+                msgt(MSG_DISARM, "你拆除了自己設置的%s。", trap->kind->name);
+            } else {
+                msgt(MSG_DISARM, "You have disarmed your %s.", trap->kind->name);
+            }
 
 			/* Trap is gone */
 			player->num_traps--;
@@ -1004,7 +1008,11 @@ static bool do_cmd_disarm_aux(struct loc grid)
 			square_destroy_trap(cave, grid);
 			return false;
 		} else if (trf_has(trap->flags, TRF_GLYPH)) {
-			msgt(MSG_DISARM, "You have removed the %s.", trap->kind->name);
+			if (angdroid_zh_tw_enabled()) {
+                msgt(MSG_DISARM, "你移除了%s。", trap->kind->name);
+            } else {
+                msgt(MSG_DISARM, "You have removed the %s.", trap->kind->name);
+            }
 
 			/* Glyph is gone */
 			square_forget(cave, grid);
@@ -1041,7 +1049,11 @@ static bool do_cmd_disarm_aux(struct loc grid)
 
 	/* Two chances - one to disarm, one not to set the trap off */
 	if (randint0(100) < chance) {
-		msgt(MSG_DISARM, "You have disarmed the %s.", trap->kind->name);
+		if (angdroid_zh_tw_enabled()) {
+            msgt(MSG_DISARM, "你拆除了%s。", trap->kind->name);
+        } else {
+            msgt(MSG_DISARM, "You have disarmed the %s.", trap->kind->name);
+        }
 		player_exp_gain(player, 1 + power);
 
 		/* Trap is gone */
@@ -1050,12 +1062,20 @@ static bool do_cmd_disarm_aux(struct loc grid)
 		}
 	} else if (randint0(100) < chance) {
 		event_signal(EVENT_INPUT_FLUSH);
-		msg("You failed to disarm the %s.", trap->kind->name);
+		if (angdroid_zh_tw_enabled()) {
+            msg("你沒能拆除%s。", trap->kind->name);
+        } else {
+            msg("You failed to disarm the %s.", trap->kind->name);
+        }
 
 		/* Player can try again */
 		more = true;
 	} else {
-		msg("You set off the %s!", trap->kind->name);
+		if (angdroid_zh_tw_enabled()) {
+            msg("你觸發了%s！", trap->kind->name);
+        } else {
+            msg("You set off the %s!", trap->kind->name);
+        }
 		hit_trap(grid, -1);
 	}
 
@@ -1484,7 +1504,11 @@ static bool do_cmd_walk_test(struct player *p, struct loc grid)
 			monster_desc(m_name, sizeof(m_name), mon, MDESC_DEFAULT);
 
 			/* Message */
-			msgt(MSG_AFRAID, "You are too afraid to attack %s!", m_name);
+			if (angdroid_zh_tw_enabled()) {
+                msgt(MSG_AFRAID, "你太害怕，不敢攻擊%s！", m_name);
+            } else {
+                msgt(MSG_AFRAID, "You are too afraid to attack %s!", m_name);
+            }
 			equip_learn_flag(p, OF_AFRAID);
 
 			/* Nope */
@@ -2205,7 +2229,11 @@ void do_cmd_mon_command(struct command *cmd)
 			object_desc(o_name, sizeof(o_name), obj,
 				ODESC_PREFIX | ODESC_FULL, player);
 			if (!ignore_item_ok(player, obj)) {
-				msg("%s drops %s.", m_name, o_name);
+				if (angdroid_zh_tw_enabled()) {
+            msg("%s 掉落了 %s。", m_name, o_name);
+        } else {
+            msg("%s drops %s.", m_name, o_name);
+        }
 			}
 
 			break;
@@ -2287,9 +2315,17 @@ void do_cmd_mon_command(struct command *cmd)
 							int k = square_door_power(cave, grid);
 							if (randint0(mon->hp / 10) > k) {
 								if (can_bash) {
-									msg("%s slams against the door.", m_name);
+									if (angdroid_zh_tw_enabled()) {
+            msg("%s 猛撞門扉。", m_name);
+        } else {
+            msg("%s slams against the door.", m_name);
+        }
 								} else {
-									msg("%s fiddles with the lock.", m_name);
+									if (angdroid_zh_tw_enabled()) {
+            msg("%s 試圖撬開門鎖。", m_name);
+        } else {
+            msg("%s fiddles with the lock.", m_name);
+        }
 								}
 
 								/* Reduce the power of the door by one */
