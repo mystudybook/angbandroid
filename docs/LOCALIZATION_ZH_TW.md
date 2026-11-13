@@ -604,3 +604,14 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - **離線測試**：新增 `tests/native/test_faangband_lore_display_locale.c`／`scripts/test-fa-lore-display-locale.sh` 的嚴格 C99 正式字典測試，以及 `tests/test_faangband_lore_display_locale_source.py` 的原始資料對照／公式／可見性／英文分支檢查，已接入 `scripts/verify-zh-tw.sh`。
 - **後續未涵蓋**：`lore_append_abilities()` 的旗標能力串列、`lore_append_spells()`、`lore_append_attack()` 的法術與近戰詳細文法仍須逐個來源核對；本批不宣稱所有怪物知識全文已翻譯。
 - **驗證界線**：可從 GitHub 執行定向原始碼一致性核對；這不同於完整 C99／Python 回歸、Android NDK／Gradle 或實機／模擬器建置驗證。維持同一 Draft PR #146，不觸發 GitHub Actions，不合併 `master`。
+
+## 第 247 批 — FAangband 怪物能力、弱點、抗性與免疫（2026-11-13）
+
+- 直接核對 `app/src/main/cpp/faangband/list-mon-race-flags.h`：`RFT_ALTER`、`RFT_DET`、`RFT_VULN`、`RFT_VULN_I`、`RFT_RES`、`RFT_PROT` 共有 **35 筆英文描述，33 條唯一詞彙**（`fire`、`cold` 同時作為弱點及抗性，須共用字典鍵），全部加入正式 `app/src/main/cpp/angband/zh-tw-ui.h` 顯示對照。原始遊戲旗標、數值與資料檔完全不改。
+- `lore_append_clause()` 保留 `rf_count()`、`rf_next()` 與原始色彩顯示，僅在繁中模式透過 `angdroid_game_ui_text(describe_race_flag(flag), zh_tw)` 對已選取的旗標翻譯，按中文句法選擇「、」「與」「或」，將句尾 `.  ` 轉為「。  」；英文模式的逗號、and/or、空格與原英文描述保留。
+- 新增純顯示 `faangband/mon-lore-display.h`：`angdroid_fa_lore_separator()` 與 `angdroid_fa_lore_sentence_end()`，可由不依賴遊戲引擎的 C99 測試直接檢驗中文字串串接及後備分支。
+- `lore_append_abilities()` 沿用全部 `known_flags` 和 `lore->flags` 資料過濾：開門／穿牆／拾取物品、隱形／冷血／心靈感應、快速繁殖／再生／飛行／領地性、發光／散播黑暗、火／寒冷／毒與其他元素的弱點、抗性、不抗性，以及恐懼／暈眩／混亂／睡眠等防護均以中文句型顯示。
+- **保護原始推理與資訊揭露**：保留 `RFT_VULN`、`RFT_VULN_I`、`RFT_RES`、`RFT_PROT` 與 `rf_inter(..., known_flags)` 的完整順序，對原始 `describe_race_flag()` 的字串相等比較、非弱點視作抗性、已知不抗性、`RF_UNDEAD` 移除 `RF_IM_NETHER` 等特殊規則不變。不會因繁中顯示提前揭露未知抗性。
+- `start` 緩衝區由 40 增至 96 bytes，容納中文句子片語而不因 UTF-8 編碼長度超出；只有訊息顯示發生變化，不影響戰鬥、怪物學識、AI、存檔與能力運作。
+- 新增 `tests/native/test_faangband_lore_abilities_locale.c`（正式字典全部 33 組中英回退及「、／與／或」邊界）、`scripts/test-fa-lore-abilities-locale.sh`（主機嚴格 C99）、`tests/test_faangband_lore_abilities_locale_source.py`（35 筆原始旗標、33 組翻譯對照、知識旗標過濾、亡靈例外、回歸測試接線），並更新 `scripts/verify-zh-tw.sh`。
+- **驗證限制**：本批 GitHub 靜態原始碼一致性核對不等於已在完整 checkout 執行 C99／Python 回歸、NDK／Gradle 或 Android 實機測試。維持原 Draft PR #146，不執行 GitHub Actions、不合併 `master`。
