@@ -123,8 +123,8 @@ assert "spell_learn(spell_index)" in SOURCE
 assert "angdroid_game_ui_text(\"Refuel with which fuel source? \"" in SOURCE
 assert "Refuel with with fuel source" not in SOURCE
 
-for source in (""Wear or wield which item?"", ""Inscription removed."",
-               ""Attempt it anyway? "", ""You fuel your lamp.""):
+for source in ('"Wear or wield which item?"', '"Inscription removed."',
+               '"Attempt it anyway? "', '"You fuel your lamp."'):
     assert source in NATIVE, source
 assert "-std=c99 -Wall -Wextra -Werror -pedantic" in RUNNER
 assert "test-fa-item-command-translation.sh" in VERIFY
