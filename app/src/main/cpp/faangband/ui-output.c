@@ -482,23 +482,13 @@ void text_out_to_screen(uint8_t a, const char *str)
 			}
 		}
 
-		/* The FAangband terminal cursor advances one wchar at a time,
-         * unlike the native Angband renderer. Mark the second physical
-         * cell and move the cursor explicitly after a wide glyph.
-         * The shared Android text hook skips this private continuation
-         * while preserving the actual x coordinate of later glyphs. */
-        if (span == 2) {
-            if (x + 1 >= wrap || x + 1 >= wid) return;
-            Term_queue_char(Term, x + 1, y, a,
-                ANGDROID_TEXT_CONTINUATION, 0, 0);
-            if (Term_gotoxy(x, y) != 0) return;
-            if (Term_addch(a, ch) < 0) return;
-            x += 2;
-            if (x < wid && Term_gotoxy(x, y) != 0) return;
-        } else {
-            if (Term_addch(a, ch) < 0) return;
-            if (++x > wrap) x = wrap;
-        }
+		/* Term_addch() now owns both physical cells of a wide
+         * character and advances its cursor by that display width.
+         * Keep this local x aligned with the terminal cursor, without
+         * inserting a second continuation marker. */
+        if (Term_addch(a, ch) < 0) return;
+        x += span;
+        if (x > wrap) x = wrap;
 	}
 }
 
