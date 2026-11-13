@@ -37,6 +37,7 @@
 #include "player-util.h"
 #include "project.h"
 #include "z-textblock.h"
+#include "../angband/zh-tw-ui.h"
 
 /**
  * Monster genders
@@ -880,6 +881,47 @@ void lore_append_kills(textblock *tb, const struct monster_race *race,
 	/* Extract a gender (if applicable) */
 	msex = lore_monster_sex(race);
 
+	/* The records and unique-death conditions are unchanged. Chinese is
+	 * composed as a complete sentence rather than English word fragments. */
+	if (angdroid_zh_tw_enabled()) {
+		if (rf_has(known_flags, RF_UNIQUE)) {
+			bool dead = (race->max_num == 0);
+			if (lore->deaths) {
+				textblock_append(tb, "牠曾殺害你的 %d 位祖先", lore->deaths);
+				if (dead)
+					textblock_append(tb, "，但你已經報仇！  ");
+				else
+					textblock_append(tb, "，至今仍未討回公道。  ");
+			} else if (dead) {
+				textblock_append(tb, "你已經擊敗這名強敵。  ");
+			} else {
+				out = false;
+			}
+		} else if (lore->deaths) {
+			textblock_append(tb, "你的 %d 位祖先曾被這種怪物殺害，",
+				lore->deaths);
+			if (lore->pkills)
+				textblock_append(tb, "而你已至少擊敗 %d 隻。  ",
+					lore->pkills);
+			else if (lore->tkills)
+				textblock_append(tb, "而你的祖先已至少擊敗 %d 隻。  ",
+					lore->tkills);
+			else
+				textblock_append_c(tb, COLOUR_RED,
+					"至今沒有擊敗這種怪物的紀錄。  ");
+		} else if (lore->pkills) {
+			textblock_append(tb, "你已至少擊敗 %d 隻這種怪物。  ",
+				lore->pkills);
+		} else if (lore->tkills) {
+			textblock_append(tb, "你的祖先已至少擊敗 %d 隻這種怪物。  ",
+				lore->tkills);
+		} else {
+			textblock_append(tb, "沒有與這種怪物決一死戰的紀錄。  ");
+		}
+		if (out) textblock_append(tb, "\n");
+		return;
+	}
+
 	/* Treat by whether unique, then by whether they have any player kills */
 	if (rf_has(known_flags, RF_UNIQUE)) {
 		/* Hack -- Determine if the unique is "dead" */
@@ -1067,6 +1109,25 @@ void lore_append_toughness(textblock *tb, const struct monster_race *race,
 	/* Extract a gender (if applicable) */
 	msex = lore_monster_sex(race);
 
+	/* Known HP/AC and hit-chance gating are identical to the English
+	 * path; keep the original hit_chance() calculation and colour. */
+	if (lore->armour_known && angdroid_zh_tw_enabled()) {
+		random_chance c;
+		int percent;
+		textblock_append(tb, rf_has(known_flags, RF_UNIQUE) ?
+			"牠的生命值為 " : "牠的平均生命值為 ");
+		textblock_append_c(tb, COLOUR_L_BLUE, "%d", race->avg_hp);
+		textblock_append(tb, "，護甲值為 ");
+		textblock_append_c(tb, COLOUR_L_BLUE, "%d", race->ac);
+		textblock_append(tb, "。  ");
+		hit_chance(&c, chance_of_melee_hit_base(player, weapon), race->ac);
+		percent = random_chance_scaled(c, 100);
+		textblock_append(tb, "在看得見牠的情況下，你的近戰命中率為 ");
+		textblock_append_c(tb, COLOUR_L_BLUE, "%d", percent);
+		textblock_append(tb, "%%。  ");
+		return;
+	}
+
 	/* Describe monster "toughness" */
 	if (lore->armour_known) {
 		/* Hitpoints */
@@ -1120,13 +1181,17 @@ void lore_append_exp(textblock *tb, const struct monster_race *race,
 	assert(tb && race && lore);
 	if (!race->rarity) return;
 
-	/* Introduction */
-	if (rf_has(known_flags, RF_UNIQUE))
-		textblock_append(tb, "Killing");
-	else
-		textblock_append(tb, "A kill of");
-
-	textblock_append(tb, " this creature");
+	const bool zh_tw = angdroid_zh_tw_enabled();
+	/* English article and unique grammar only apply in English mode. */
+	if (zh_tw) {
+		textblock_append(tb, "擊敗這隻怪物");
+	} else {
+		if (rf_has(known_flags, RF_UNIQUE))
+			textblock_append(tb, "Killing");
+		else
+			textblock_append(tb, "A kill of");
+		textblock_append(tb, " this creature");
+	}
 
 	/* calculate the integer exp part */
 	exp_integer = (long)race->mexp * race->level / player->lev;
@@ -1141,7 +1206,14 @@ void lore_append_exp(textblock *tb, const struct monster_race *race,
 	if (exp_fraction)
 		my_strcat(buf, format(".%02ld", exp_fraction), sizeof(buf));
 
-	/* Mention the experience */
+	/* The original integer/fractional experience calculations are shared. */
+	if (zh_tw) {
+		textblock_append(tb, "可獲得 ");
+		textblock_append_c(tb, COLOUR_BLUE, "%s 點經驗值", buf);
+		textblock_append(tb, "（以 %u 級角色計算）。  ",
+			(unsigned int)player->lev);
+		return;
+	}
 	textblock_append(tb, " is worth ");
 	textblock_append_c(tb, COLOUR_BLUE, "%s point%s", buf,
 		PLURAL((exp_integer == 1) && (exp_fraction == 0)));
@@ -1190,6 +1262,52 @@ void lore_append_drop(textblock *tb, const struct monster_race *race,
 
 	/* Count maximum drop */
 	n = mon_create_drop_count(race, true, false, &nspec);
+
+	/* Translate only the displayed drop quantity/quality grammar.
+	 * No extra information is exposed without drop_known. */
+	if (angdroid_zh_tw_enabled()) {
+		if (n > 0 || nspec > 0) {
+			textblock_append(tb, "牠可能攜帶");
+			if (n > 0) {
+				bool only_item = rf_has(known_flags, RF_ONLY_ITEM);
+				bool only_gold = rf_has(known_flags, RF_ONLY_GOLD);
+				if (n == 1) {
+					textblock_append_c(tb, COLOUR_BLUE, " 1 件");
+				} else if (n == 2) {
+					textblock_append_c(tb, COLOUR_BLUE, " 1 至 2 件");
+				} else {
+					textblock_append(tb, "最多 ");
+					textblock_append_c(tb, COLOUR_BLUE, "%d 件", n);
+				}
+				if (rf_has(known_flags, RF_DROP_GREAT))
+					textblock_append_c(tb, COLOUR_BLUE, "極品");
+				else if (rf_has(known_flags, RF_DROP_GOOD))
+					textblock_append_c(tb, COLOUR_BLUE, "優質");
+				if (only_item && only_gold)
+					textblock_append_c(tb, COLOUR_BLUE, "（掉落類型有誤）");
+				else if (only_item)
+					textblock_append_c(tb, COLOUR_BLUE, "物品");
+				else if (only_gold)
+					textblock_append_c(tb, COLOUR_BLUE, "財寶");
+				else
+					textblock_append_c(tb, COLOUR_BLUE, "物品或財寶");
+			}
+			if (nspec > 0) {
+				if (n > 0) textblock_append(tb, "，以及");
+				if (nspec == 1)
+					textblock_append(tb, " 1 件特定物品");
+				else if (nspec == 2)
+					textblock_append(tb, " 1 至 2 件特定物品");
+				else {
+					textblock_append(tb, "最多 ");
+					textblock_append_c(tb, COLOUR_BLUE, "%d", nspec);
+					textblock_append(tb, " 件特定物品");
+				}
+			}
+			textblock_append(tb, "。  ");
+		}
+		return;
+	}
 
 	/* Drops gold and/or items */
 	if (n > 0 || nspec > 0) {
@@ -1446,6 +1564,14 @@ void lore_append_awareness(textblock *tb, const struct monster_race *race,
 	if (lore->sleep_known)
 	{
 		const char *aware = lore_describe_awareness(race->sleep);
+		if (angdroid_zh_tw_enabled()) {
+			textblock_append(tb, "牠%s入侵者，可能在 ",
+				angdroid_game_ui_text(aware, true));
+			textblock_append_c(tb, COLOUR_L_BLUE, "%d",
+				10 * race->hearing);
+			textblock_append(tb, " 英尺外察覺動靜。  ");
+			return;
+		}
 		textblock_append(tb, "%s %s intruders, which %s may notice from ",
 						 lore_pronoun_nominative(msex, true), aware,
 						 lore_pronoun_nominative(msex, false));
@@ -1475,8 +1601,15 @@ void lore_append_friends(textblock *tb, const struct monster_race *race,
 	/* Extract a gender (if applicable) */
 	msex = lore_monster_sex(race);
 
-	/* Describe friends */
+	/* Describe friends. The same existing group condition applies. */
 	if (race->friends || race->friends_base) {
+		if (angdroid_zh_tw_enabled()) {
+			textblock_append(tb, "牠可能與其他怪物一同出現");
+			if (rf_has(known_flags, RF_GROUP_AI))
+				textblock_append(tb, "，並且成群狩獵");
+			textblock_append(tb, "。  ");
+			return;
+		}
 		textblock_append(tb, "%s may appear with other monsters",
 						 lore_pronoun_nominative(msex, true));
 		if (rf_has(known_flags, RF_GROUP_AI))
