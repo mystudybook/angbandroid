@@ -21,6 +21,7 @@
 #include "z-color.h"
 #include "z-util.h"
 #include "z-virt.h"
+#include "../curses/unicode_layout.h"
 
 /**
  * This file provides a generic, efficient, terminal window package,
@@ -546,7 +547,7 @@ static errr Term_pict_hack(int x, int y, int n, const int *ap,
  *
  * Assumes given location and values are valid.
  */
-void Term_queue_char(term *t, int x, int y, int a, wchar_t c, int ta,
+static void Term_queue_char_raw(term *t, int x, int y, int a, wchar_t c, int ta,
 					 wchar_t tc)
 {
 	int *scr_aa = t->scr->a[y];
@@ -623,6 +624,41 @@ void Term_queue_char(term *t, int x, int y, int a, wchar_t c, int ta,
 	}
 }
 
+/* FAangband's stream drawing reserves its CJK continuation cell in
+ * ui-output.c, while map drawing still uses fixed one-cell positions.
+ * Do not auto-expand every queued character as native Angband does.
+ *
+ * When a write REPLACES either half of an existing two-cell text glyph,
+ * remove the other half using the shared grid helper. The raw path keeps
+ * its existing terrain layers, double-height handling and dirty bounds.
+ */
+static void Term_clear_wide_neighbor(term *t, int x, int y, wchar_t incoming,
+        int attr)
+{
+    int partner = angdroid_wide_partner_column(t->wid, x,
+        t->scr->c[y], t->scr->a[y]);
+
+    if (partner < 0) return;
+
+    /* ui-output writes the right marker first, then its new wide lead.
+     * When repainting an existing lead, the marker must not be erased
+     * by the second write. Overwriting a continuation always clears
+     * its old leading glyph before placing new content. */
+    if (t->scr->c[y][x] == ANGDROID_TEXT_CONTINUATION ||
+            !angdroid_is_wide_text(incoming, attr))
+        Term_queue_char_raw(t, partner, y, COLOUR_WHITE, L' ', 0, 0);
+}
+
+void Term_queue_char(term *t, int x, int y, int a, wchar_t c, int ta,
+                     wchar_t tc)
+{
+    if (!t || !t->scr || x < 0 || y < 0 ||
+            x >= t->wid || y >= t->hgt) return;
+
+    Term_clear_wide_neighbor(t, x, y, c, a);
+    Term_queue_char_raw(t, x, y, a, c, ta, tc);
+}
+
 /**
  * Queue a large-sized tile.
  * \param x Is the column for the upper left corner of the tile.
@@ -697,8 +733,11 @@ void Term_queue_chars(int x, int y, int n, int a, const wchar_t *s)
 	int *scr_taa = Term->scr->ta[y];
 	wchar_t *scr_tcc = Term->scr->tc[y];
 
-	/* Queue the attr/chars */
+	/* Queue fixed-position columns. An overwrite must invalidate
+     * the other half of any pre-existing wide text glyph. */
 	for ( ; n; x++, s++, n--) {
+        wchar_t glyph = angdroid_stream_glyph(*s);
+        Term_clear_wide_neighbor(Term, x, y, glyph, a);
 		int oa = scr_aa[x];
 		wchar_t oc = scr_cc[x];
 
@@ -706,11 +745,11 @@ void Term_queue_chars(int x, int y, int n, int a, const wchar_t *s)
 		wchar_t otc = scr_tcc[x];
 
 		/* Hack -- Ignore non-changes */
-		if ((oa == a) && (oc == *s) && (ota == 0) && (otc == 0)) continue;
+		if ((oa == a) && (oc == glyph) && (ota == 0) && (otc == 0)) continue;
 
 		/* Save the "literal" information */
 		scr_aa[x] = a;
-		scr_cc[x] = *s;
+		scr_cc[x] = glyph;
 
 		scr_taa[x] = 0;
 		scr_tcc[x] = 0;
@@ -2048,8 +2087,9 @@ errr Term_draw(int x, int y, int a, wchar_t c)
 	/* Paranoia -- illegal char */
 	if (!c) return (-2);
 
-	/* Queue it for later */
-	Term_queue_char(Term, x, y, a, c, 0, 0);
+	/* Fixed-position map cells cannot occupy adjacent CJK columns. */
+    Term_queue_char(Term, x, y,
+        a, angdroid_fixed_cell_glyph(c, a), 0, 0);
 
 	/* Success */
 	return (0);
@@ -2082,8 +2122,9 @@ errr Term_addch(int a, wchar_t c)
 	/* Paranoia -- no illegal chars */
 	if (!c) return (-2);
 
-	/* Queue the given character for display */
-	Term_queue_char(Term, Term->scr->cx, Term->scr->cy, a, c, 0, 0);
+	/* Never accept a literal private continuation marker as text. */
+    c = angdroid_stream_glyph(c);
+    Term_queue_char(Term, Term->scr->cx, Term->scr->cy, a, c, 0, 0);
 
 	/* Advance the cursor */
 	Term->scr->cx++;
@@ -2272,6 +2313,16 @@ errr Term_erase(int x, int y, int n)
 
 	scr_taa = Term->scr->ta[y];
 	scr_tcc = Term->scr->tc[y];
+
+    /* If a partial erase touches either half of a two-column glyph,
+     * also invalidate the other half, even outside the requested range. */
+    for (i = 0; i < n; ++i) {
+        int column = x + i;
+        if (scr_cc[column] == ANGDROID_TEXT_CONTINUATION ||
+                angdroid_is_wide_text(scr_cc[column], scr_aa[column])) {
+            Term_clear_wide_neighbor(Term, column, y, L' ', COLOUR_WHITE);
+        }
+    }
 
 	/* Scan every column */
 	for (i = 0; i < n; i++, x++) {
@@ -2492,7 +2543,7 @@ errr Term_what(int x, int y, int *a, wchar_t *c)
 
 	/* Direct access */
 	(*a) = Term->scr->a[y][x];
-	(*c) = Term->scr->c[y][x];
+	(*c) = angdroid_public_grid_glyph(Term->scr->c[y][x]);
 
 	/* Success */
 	return (0);
