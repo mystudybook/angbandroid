@@ -10,7 +10,7 @@ def read(rel):
 UTIL = read("app/src/main/cpp/faangband/mon-util.c")
 SUBJECT = read("app/src/main/cpp/faangband/mon-spell-message-locale.h")
 PROJECTION = read("app/src/main/cpp/faangband/project-mon.c")
-DESC = read("app/src/main/cpp/faangband/mon-desc.c")
+DESC_H = read("app/src/main/cpp/faangband/mon-desc.h")
 NATIVE = read("tests/native/test_faangband_spell_alternates_utf8.c")
 VERIFY = read("scripts/verify-zh-tw.sh")
 
@@ -118,7 +118,8 @@ assert 'notice_stuff(p);' in kill
 assert 'monster_desc(m_name, sizeof(m_name), mon, MDESC_DEFAULT);' in kill
 assert 'mon_take_hit(mon, player, dam, &fear, "");' in PROJECTION
 assert 'add_monster_message(mon, die_msg, false);' in PROJECTION
-assert "MDESC_TARG" in DESC or True  # MDESC_TARG is defined in mon-desc.h.
+assert "#define MDESC_TARG" in DESC_H
+assert "#define MDESC_STANDARD" in DESC_H
 
 assert "test_faangband_theft_locale_source.py" in VERIFY
 print("PASS: theft text, hidden names, unchanged stealing gates, arena-only note")
