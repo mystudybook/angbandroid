@@ -13,6 +13,8 @@
 
 #include "mon-spell-messages-visible-zh-tw.h"
 #include "mon-spell-messages-other-zh-tw.h"
+#include "mon-spell-messages-alternate-zh-tw.h"
+#include "../curses/unicode_display.h"
 
 static inline const char *angdroid_fa_spell_message_locale(
     const char *english, bool zh_tw)
@@ -21,7 +23,9 @@ static inline const char *angdroid_fa_spell_message_locale(
     if (!english || !zh_tw) return english;
     translated = angdroid_fa_spell_message_visible(english, true);
     if (translated != english) return translated;
-    return angdroid_fa_spell_message_other(english, true);
+    translated = angdroid_fa_spell_message_other(english, true);
+    if (translated != english) return translated;
+    return angdroid_fa_spell_message_alternate(english, true);
 }
 
 /*
@@ -41,16 +45,17 @@ static inline const char *angdroid_fa_spell_subject(
     if (strncmp(english, "the ", 4) == 0 ||
         strncmp(english, "The ", 4) == 0) {
         noun = english + 4;
-        (void)snprintf(output, capacity, "這隻%s", noun);
+        size_t used = angdroid_utf8_copy_complete(output, capacity, "這隻");
+        (void)angdroid_utf8_append_complete(output, capacity, used, noun);
         return output;
     }
     if (strcmp(english, "it") == 0 || strcmp(english, "It") == 0) {
-        (void)snprintf(output, capacity, "牠");
+        (void)angdroid_utf8_copy_complete(output, capacity, "牠");
         return output;
     }
     if (strcmp(english, "something") == 0 ||
         strcmp(english, "Something") == 0) {
-        (void)snprintf(output, capacity, "某個東西");
+        (void)angdroid_utf8_copy_complete(output, capacity, "某個東西");
         return output;
     }
     return english;
