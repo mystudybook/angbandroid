@@ -427,8 +427,10 @@ void text_out_to_screen(uint8_t a, const char *str)
 			/* Special case */
 			if (n == 0) n = wrap;
 
-			/* Clear line */
-			Term_erase(n, y, 255);
+            /* A whole word can reach the wrap boundary. In that case
+             * n == wrap and there is no on-screen tail to erase. */
+            if (n >= 0 && n < wid)
+                Term_erase(n, y, 255);
 
 			/* Wrap */
             x = MAX(0, MIN(text_out_indent, wrap - 1));
