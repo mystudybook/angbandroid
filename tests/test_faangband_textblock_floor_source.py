@@ -32,7 +32,7 @@ require(area,
         "if (!text || !attrs || !line_starts || !line_lengths) available = 0;",
         "Term_erase(area.col, area.row + (int)i, area.width);",
         "angdroid_terminal_columns(cp)",
-        "if (width > (size_t)area.width - cells) break;")
+        "if (width > (size_t)area.width - cells) {")
 assert "line_lengths[line_from + i]" in area
 assert "if (cells == 0 && width > (size_t)area.width)" in area
 
@@ -79,6 +79,9 @@ require(TEXTCORE,
         "angdroid_terminal_columns(",
         "if (columns > width - cells) break;",
         "if (cursor == begin) ++cursor;",
+        "text[space - 1] != L' ' && text[space + 1] != L' '",
+        "text[begin - 1] != L' '",
+        "text[begin + 1] != L' '",
         "if (begin < length && text[begin] == L'\\n') ++begin;")
 require(TEXTHEAD, "size_t textblock_calculate_display_lines(")
 assert "size_t textblock_calculate_lines(" in TEXTCORE
