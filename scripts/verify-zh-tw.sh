@@ -94,6 +94,8 @@ run_check "FAangband monster and object recall modal returns without double inpu
 run_check "FAangband long textblock and rotated floor list host C99" sh "$ROOT/scripts/test-fa-textblock-floor.sh"
 run_check "FAangband pager and floor-list text/shortcut source guard" python3 "$ROOT/tests/test_faangband_textblock_floor_source.py"
 run_check "FAangband ignored-item popup fits rotated Android terminal" python3 "$ROOT/tests/test_faangband_ignore_popup_geometry_source.py"
+run_check "FAangband legacy C99 screen text wrap terminal bounds" sh "$ROOT/scripts/test-fa-text-out-screen-bounds.sh"
+run_check "FAangband legacy text output geometry source contract" python3 "$ROOT/tests/test_faangband_text_out_screen_bounds_source.py"
 run_check "FAangband typed ability PF/OF labels with C99" sh "$ROOT/scripts/test-fa-birth-ability-labels.sh"
 run_check "FAangband elemental resistance/vulnerability source contract" python3 "$ROOT/tests/test_faangband_birth_elements_source.py"
 run_check "FAangband elemental resistance/weakness native C99" sh "$ROOT/scripts/test-fa-birth-elements.sh"
