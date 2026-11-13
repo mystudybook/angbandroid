@@ -874,7 +874,8 @@ static void lore_append_spell_clause(textblock *tb, bitflag *f, bool know_hp,
 				angdroid_fa_lore_term(
 					mon_spell_lore_description(spell, race), zh_tw));
 			if (damage > 0)
-				textblock_append_c(tb, color, " (%d)", damage);
+				textblock_append_c(tb, color,
+					zh_tw ? "（%d）" : " (%d)", damage);
 			emitted++;
 		}
 		textblock_append(tb, "%s",
@@ -2014,7 +2015,7 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 				if (dice.m_bonus)
 					textblock_append_c(tb, COLOUR_L_GREEN, "M%d", dice.m_bonus);
 
-				textblock_append(tb, ", ");
+				textblock_append(tb, zh_tw ? "，" : ", ");
 			}
 
 			/* Describe hit chances */
