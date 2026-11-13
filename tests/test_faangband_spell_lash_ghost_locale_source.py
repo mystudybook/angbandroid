@@ -99,7 +99,7 @@ for token in [
     assert token in LOCALE, token
 assert '#include "../curses/unicode_display.h"' in LOCALE
 assert 'snprintf(' not in LOCALE
-assert '"test_faangband_spell_lash_ghost_locale.c"' in RUNNER
+assert "test_faangband_spell_lash_ghost_locale.c" in RUNNER
 assert "-std=c99 -Wall -Wextra -Werror -pedantic" in RUNNER
 assert "test-fa-spell-lash-ghost-locale.sh" in VERIFY
 assert "test_faangband_spell_lash_ghost_locale_source.py" in VERIFY
