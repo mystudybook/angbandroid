@@ -28,6 +28,8 @@
 #include "mon-msg.h"
 #include "mon-predicate.h"
 #include "mon-spell.h"
+#include "mon-spell-message-locale.h"
+#include "../angband/zh-tw-ui.h"
 #include "mon-summon.h"
 #include "mon-timed.h"
 #include "mon-util.h"
@@ -1651,6 +1653,39 @@ static bool monster_base_shape_okay(struct monster_race *race)
 	return true;
 }
 
+/*
+ * Translate only the visible monster shapechange notice; keep identity,
+ * shape selection and the original MSG_GENERIC sound category unchanged.
+ */
+static void message_monster_changes_shape(const struct monster *mon)
+{
+	char original_name[256];
+	char translated_name[320];
+	char offscreen_name[320];
+	const char *display_name;
+	bool zh_tw = angdroid_zh_tw_enabled();
+	int mode = zh_tw ? (MDESC_STANDARD & ~MDESC_COMMA) : MDESC_STANDARD;
+
+	monster_desc(original_name, sizeof(original_name), mon, mode);
+	if (!zh_tw) {
+		msgt(MSG_GENERIC, "%s %s", original_name, "shimmers and changes!");
+		return;
+	}
+
+	display_name = original_name;
+	if (rf_has(mon->race->flags, RF_PLAYER_GHOST)) {
+		display_name = angdroid_fa_spell_ghost_subject(original_name,
+			cave->ghost->name, mon->race->name, true,
+			translated_name, sizeof(translated_name));
+	} else if (!monster_is_shape_unique(mon)) {
+		display_name = angdroid_fa_spell_subject(original_name,
+			true, translated_name, sizeof(translated_name));
+	}
+	display_name = angdroid_fa_spell_offscreen_subject(display_name,
+		true, offscreen_name, sizeof(offscreen_name));
+	msgt(MSG_GENERIC, "%s的外形閃爍並改變了！", display_name);
+}
+
 /**
  * Monster shapechange
  */
@@ -1722,9 +1757,7 @@ bool monster_change_shape(struct monster *mon)
 
 	/* Print a message immediately, update visuals */
 	if (monster_is_obvious(mon)) {
-		char m_name[80];
-		monster_desc(m_name, sizeof(m_name), mon, MDESC_STANDARD);
-		msgt(MSG_GENERIC, "%s %s", m_name, "shimmers and changes!");
+		message_monster_changes_shape(mon);
 		if (player->upkeep->health_who == mon)
 			player->upkeep->redraw |= (PR_HEALTH);
 
@@ -1762,9 +1795,7 @@ bool monster_revert_shape(struct monster *mon)
 {
 	if (mon->original_race) {
 		if (monster_is_obvious(mon)) {
-			char m_name[80];
-			monster_desc(m_name, sizeof(m_name), mon, MDESC_STANDARD);
-			msgt(MSG_GENERIC, "%s %s", m_name, "shimmers and changes!");
+			message_monster_changes_shape(mon);
 			if (player->upkeep->health_who == mon)
 				player->upkeep->redraw |= (PR_HEALTH);
 
