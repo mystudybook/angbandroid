@@ -130,11 +130,17 @@ static void spell_message(struct monster *mon,
 			if (in_cursor == NULL) {
 				in_cursor = level->blind_message;
 				if (in_cursor == NULL) {
-					msg("No message-invis for monster "
-						"spell %d cast by %s.  "
-						"Please report this bug.",
-						(int)spell->index,
-						mon->race->name);
+					/* Do not disclose an unseen caster's race in the
+					 * translated missing-message diagnostic. */
+					if (angdroid_zh_tw_enabled()) {
+						msg("怪物法術 %d 缺少視野外施法訊息，請回報此問題。",
+							(int)spell->index);
+					} else {
+						msg("No message-invis for monster "
+							"spell %d cast by %s.  "
+							"Please report this bug.",
+							(int)spell->index, mon->race->name);
+					}
 					return;
 				}
 			} else if (in_cursor[0] == '\0') {
@@ -147,9 +153,14 @@ static void spell_message(struct monster *mon,
 		if (in_cursor == NULL) {
 			in_cursor = level->miss_message;
 			if (in_cursor == NULL) {
-				msg("No message-miss for monster spell %d "
-					"cast by %s.  Please report this bug.",
-					(int)spell->index, mon->race->name);
+				if (angdroid_zh_tw_enabled()) {
+					msg("怪物 %s 的法術 %d 缺少未命中訊息，請回報此問題。",
+						mon->race->name, (int)spell->index);
+				} else {
+					msg("No message-miss for monster spell %d "
+						"cast by %s.  Please report this bug.",
+						(int)spell->index, mon->race->name);
+				}
 				return;
 			}
 		} else if (in_cursor[0] == '\0') {
@@ -161,9 +172,14 @@ static void spell_message(struct monster *mon,
 		if (in_cursor == NULL) {
 			in_cursor = level->message;
 			if (in_cursor == NULL) {
-				msg("No message-vis for monster spell %d "
-					"cast by %s.  Please report this bug.",
-					(int)spell->index, mon->race->name);
+				if (angdroid_zh_tw_enabled()) {
+					msg("怪物 %s 的法術 %d 缺少可見施法訊息，請回報此問題。",
+						mon->race->name, (int)spell->index);
+				} else {
+					msg("No message-vis for monster spell %d "
+						"cast by %s.  Please report this bug.",
+						(int)spell->index, mon->race->name);
+				}
 				return;
 			}
 		} else if (in_cursor[0] == '\0') {
