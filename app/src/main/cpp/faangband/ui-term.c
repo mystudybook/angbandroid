@@ -2448,45 +2448,50 @@ errr Term_redraw(void)
  */
 errr Term_redraw_section(int x1, int y1, int x2, int y2)
 {
-	int i, j;
+    int i, j;
 
-	wchar_t *c_ptr;
+    /* Ignore invalid or completely off-screen rectangles. Negative
+     * coordinates must be clipped only after excluding disjoint ranges,
+     * otherwise an inverted rectangle can touch invalid screen rows. */
+    if (!Term || !Term->scr || !Term->old ||
+            x1 > x2 || y1 > y2 ||
+            x1 >= Term->wid || x2 < 0 ||
+            y1 >= Term->hgt || y2 < 0)
+        return (-1);
 
-	/* Bounds checking */
-	if (y2 >= Term->hgt) y2 = Term->hgt - 1;
-	if (x2 >= Term->wid) x2 = Term->wid - 1;
-	if (y1 < 0) y1 = 0;
-	if (x1 < 0) x1 = 0;
+    if (x2 >= Term->wid) x2 = Term->wid - 1;
+    if (y2 >= Term->hgt) y2 = Term->hgt - 1;
+    if (x1 < 0) x1 = 0;
+    if (y1 < 0) y1 = 0;
 
+    /* Do not overwrite other dirty rows pending before this request. */
+    angdroid_union_dirty_range(y1, y2, &Term->y1, &Term->y2);
 
-	/* Set y limits */
-	Term->y1 = y1;
-	Term->y2 = y2;
+    for (i = y1; i <= y2; ++i) {
+        int first = x1, last = x2;
+        wchar_t *previous = Term->old->c[i];
 
-	/* Set the x limits */
-	for (i = Term->y1; i <= Term->y2; i++) {
-		if ((x1 > 0) && (Term->old->a[i][x1] == 255))
-			x1--;
+        /* Full-width glyphs occupy both the leading cell and their
+         * private continuation marker. Include both when either half
+         * is redrawn; retain the legacy big-tile attr 255 adjustment.
+         * The adjusted rectangle MUST be recalculated for each row. */
+        angdroid_expand_redraw_columns(Term->wid, &first, &last,
+            Term->scr->c[i], Term->scr->a[i],
+            Term->old->c[i], Term->old->a[i]);
 
-		Term->x1[i] = x1;
-		Term->x2[i] = x2;
+        /* Preserve other pending updates in this row, instead of
+         * replacing the dirty limits with the new rectangle. */
+        angdroid_union_dirty_range(first, last,
+            &Term->x1[i], &Term->x2[i]);
 
-		c_ptr = Term->old->c[i];
+        for (j = first; j <= last; ++j) {
+            previous[j] = 0;
+        }
+    }
 
-		/* Clear the section so it is redrawn */
-		for (j = x1; j <= x2; j++) {
-			/* Hack - set the old character to "none" */
-			c_ptr[j] = 0;
-		}
-	}
-
-	/* Hack -- Refresh */
-	Term_fresh();
-
-	/* Success */
-	return (0);
+    Term_fresh();
+    return (0);
 }
-
 
 
 
