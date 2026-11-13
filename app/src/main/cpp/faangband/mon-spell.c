@@ -197,14 +197,14 @@ static void spell_message(struct monster *mon,
 
 			switch (spell_tag_lookup(tag)) {
 				case SPELL_TAG_NAME: {
-					char m_name[80];
+					char m_name[256];
 					int mdesc_mode = (MDESC_IND_HID |
 						MDESC_PRO_HID);
 
 					if (is_leading) {
 						mdesc_mode |= MDESC_CAPITAL;
 					}
-					if (!strchr(punct, *in_cursor)) {
+					if (!localized && !strchr(punct, *in_cursor)) {
 						mdesc_mode |= MDESC_COMMA;
 					}
 					monster_desc(m_name, sizeof(m_name),
@@ -224,7 +224,7 @@ static void spell_message(struct monster *mon,
 				}
 
 				case SPELL_TAG_PRONOUN: {
-					char m_poss[80];
+					char m_poss[256];
 
 					/* Get the monster possessive ("his"/"her"/"its") */
 					monster_desc(m_poss, sizeof(m_poss), mon, MDESC_PRO_VIS | MDESC_POSS);
@@ -235,11 +235,11 @@ static void spell_message(struct monster *mon,
 				}
 
 				case SPELL_TAG_TARGET: {
-					char m_name[80];
+					char m_name[256];
 					if (mon->target.midx > 0) {
 						int mdesc_mode = MDESC_TARG;
 
-						if (!strchr(punct, *in_cursor)) {
+						if (!localized && !strchr(punct, *in_cursor)) {
 							mdesc_mode |= MDESC_COMMA;
 						}
 						monster_desc(m_name,
@@ -304,7 +304,17 @@ static void spell_message(struct monster *mon,
 	}
 	strnfcat(buf, 1024, &end, "%s", in_cursor);
 
-	msgt(spell->msgt, "%s", buf);
+	/* strnfcat() uses byte capacity. A long Han message can reach that
+	 * boundary partway through a UTF-8 scalar. Preserve complete glyphs
+	 * before handing localized text to the terminal; leave English data
+	 * and the original message category unchanged. */
+	if (localized) {
+		char safe_buf[sizeof(buf)];
+		angdroid_utf8_copy_complete(safe_buf, sizeof(safe_buf), buf);
+		msgt(spell->msgt, "%s", safe_buf);
+	} else {
+		msgt(spell->msgt, "%s", buf);
+	}
 }
 
 const struct monster_spell *monster_spell_by_index(int index)
