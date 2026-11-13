@@ -52,7 +52,24 @@ static const struct label_test cases[] = {
     {"That book has no spells that you can cast.", "這本書沒有可施放的法術。"},
     {"You cannot learn any new spells from the books you have.", "目前的書本沒有可以學習的新法術。"},
     {"That book has no spells that you can learn.", "這本書沒有可以學習的法術。"},
-    {"Study which book? ", "要研讀哪本書？ "}
+    {"Study which book? ", "要研讀哪本書？ "},
+    /* FAangband town/wilderness and trap placement prompts. */
+    {"You already live here!", "你已經住在這裡了！"},
+    {"Your home will be here when you return.", "你回來時，家仍會在這裡。"},
+    {"You can only move to another town!", "只能搬到另一座城鎮！"},
+    {"This is a path to greater danger.", "這條路通往更危險的地方。"},
+    {"This staircase leads down.", "這道樓梯通往下層。"},
+    {"This level will never appear again.  Really leave?", "離開後就無法回到這一層。確定要離開嗎？"},
+    {"This level will never appear again.  Really leave? ", "離開後就無法回到這一層。確定要離開嗎？ "},
+    {"You trigger a magic portal.", "你啟動了一座魔法傳送門。"},
+    {"You enter a winding path to less danger.", "你踏上了通往較安全地方的蜿蜒小徑。"},
+    {"This is a path to less danger.", "這條路通往較安全的地方。"},
+    {"This staircase leads up.", "這道樓梯通往上層。"},
+    {"You enter a winding path to greater danger.", "你踏上了通往更危險地方的蜿蜒小徑。"},
+    {"You can not see to set a trap.", "你看不清楚，無法設置陷阱。"},
+    {"You are too confused.", "你過於混亂，無法設置陷阱。"},
+    {"You must disarm an existing trap to free up your equipment.", "必須先拆除一個已設置的陷阱，才能騰出器材。"},
+    {"You set a monster trap.", "你設置了一個怪物陷阱。"}
 };
 
 int main(void)
@@ -80,6 +97,6 @@ int main(void)
         }
         checks += 3;
     }
-    printf("PASS: %u FA item UI bilingual dictionary/fallback checks\n", checks);
+    printf("PASS: %u FA item/exploration UI bilingual dictionary/fallback checks\n", checks);
     return 0;
 }
