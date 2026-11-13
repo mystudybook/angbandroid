@@ -52,6 +52,23 @@ assert function.index("if (n >= 0 && n < wrap)") < function.index(
 assert function.index("if (!Term || !str) return;") < function.index(
     "Term_get_size(&wid, &h);")
 assert '#include "../curses/unicode_layout.h"' in SOURCE
+
+# FAangband's terminal advances one wchar_t, unlike native Angband's
+# width-aware stream API. CJK prose reserves a second cell only here.
+terminal = (ROOT / "app/src/main/cpp/faangband/ui-term.c").read_text(
+    encoding="utf-8")
+bridge = (ROOT / "app/src/main/cpp/common/angdroid.c").read_text(
+    encoding="utf-8")
+layout = (ROOT / "app/src/main/cpp/curses/unicode_layout.h").read_text(
+    encoding="utf-8")
+assert "Term->scr->cx++;" in terminal
+assert "angdroid_next_visible_text_run(" in bridge
+assert "if (cp[i] == ANGDROID_TEXT_CONTINUATION) continue;" in bridge
+assert "ANGDROID_TEXT_CONTINUATION ((wchar_t)0xFDD0u)" in layout
+assert function.index("Term_queue_char(Term, x + 1, y, a,") < function.index(
+    "if (Term_addch(a, ch) < 0) return;")
+assert function.index("x += 2;") < function.index(
+    "if (x < wid && Term_gotoxy(x, y) != 0) return;")
 assert "text_out_to_file(" in (ROOT / "app/src/main/cpp/faangband/z-textblock.c").read_text(
     encoding="utf-8")
 
