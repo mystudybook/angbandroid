@@ -359,23 +359,32 @@ size_t textblock_calculate_display_lines(textblock *tb, size_t **line_starts,
             new_line(line_starts, line_lengths, &allocated, &count,
                 begin, cursor - begin);
             begin = cursor < length ? cursor + 1 : cursor;
-        } else if (space != (size_t)-1 && space > begin) {
-            /* Wrap at the last visible word boundary. Do not lose the
-             * next word or re-display the separator as an empty row. */
+        } else if (space != (size_t)-1 && space > begin &&
+                   text[space - 1] != L' ' && text[space + 1] != L' ') {
+            /* Drop exactly one separator when wrapping between words.
+             * A run of spaces may be intentional indentation or table
+             * alignment: never collapse it at a display-only wrap. */
             new_line(line_starts, line_lengths, &allocated, &count,
                 begin, space - begin);
             begin = space + 1;
-            while (begin < length && text[begin] == L' ') ++begin;
         } else {
-            /* One wide character cannot fit a 1-column window. Keep
-             * the index and let screen drawing substitute a '?' glyph. */
+            /* Hard-wrap a word or a run of spaces without discarding
+             * any source characters. An over-wide glyph gets its own
+             * row and the screen painter substitutes '?' if needed. */
             if (cursor == begin) ++cursor;
             new_line(line_starts, line_lengths, &allocated, &count,
                 begin, cursor - begin);
             begin = cursor;
-            /* If the single over-wide glyph immediately precedes a
-             * newline, it already consumed this visual row. */
-            if (begin < length && text[begin] == L'\n') ++begin;
+            if (begin < length && text[begin] == L'\n') {
+                ++begin;
+            } else if (begin > 0 && begin < length &&
+                    text[begin] == L' ' &&
+                    text[begin - 1] != L' ' &&
+                    text[begin - 1] != L'\n' &&
+                    (begin + 1 == length || text[begin + 1] != L' ')) {
+                /* Single separator after a word exactly fills the row. */
+                ++begin;
+            }
         }
     }
 
