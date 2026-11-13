@@ -471,6 +471,10 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"You are too confused.", "你太混亂了。"},
         {"You must disarm an existing trap to free up your equipment.", "必須先拆除一個已設置的陷阱，才能騰出器材。"},
         {"You set a monster trap.", "你設置了一個怪物陷阱。"},
+        /* FAangband digging technique fragments, for screen messages only. */
+        {"with your hands", "徒手"},
+        {"with your weapon", "用武器"},
+        {"with your swap digger", "用替換的挖掘工具"},
         {"You can't go up from here!", "你無法從這裡往上走！"},
         {"You enter a maze of up staircases.", "你走進一片向上的階梯迷宮。"},
         {"The dungeon does not appear to extend deeper", "地城似乎沒有更深的樓層。"},
