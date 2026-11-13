@@ -44,7 +44,7 @@ for key in object_keys + monster_keys:
 
 body = SOURCE.split("void display_feeling(bool obj_only)", 1)[1].split(
     "void do_cmd_feeling(void)", 1)[0]
-assert body.count("angdroid_zh_tw_enabled()") == 3
+assert body.count("angdroid_zh_tw_enabled()") == 4
 assert body.count("angdroid_game_ui_text(") >= 3
 assert "if (!OPT(player, birth_feelings)) return;" in body
 assert "if (!player->depth)" in body
