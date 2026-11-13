@@ -213,9 +213,9 @@ static int check_whitespace_lines(void)
         {L"ABCDE F", 5, L"ABCDE|F"},
         {L" A", 1, L" |A"},
         {L"A  B", 1, L"A| | |B"},
-        {L"\\n  甲\\nZ", 4, L"|  甲|Z"},
-        {L"A\\n\\nB", 3, L"A||B"},
-        {L"甲\\n乙", 1, L"甲|乙"},
+        {L"\n  甲\nZ", 4, L"|  甲|Z"},
+        {L"A\n\nB", 3, L"A||B"},
+        {L"甲\n乙", 1, L"甲|乙"},
         {L"甲 乙", 3, L"甲|乙"}
     };
     textblock tb = {{0}, {0}, 0};
@@ -237,7 +237,7 @@ static int check_whitespace_lines(void)
                 rendered[output_len++] = tb.text[starts[i] + j];
         }
         CHECK(output_len < sizeof(rendered) / sizeof(rendered[0]));
-        rendered[output_len] = L'\\0';
+        rendered[output_len] = L'\0';
         CHECK(wcscmp(rendered, cases[k].expected) == 0);
         mem_free(starts);
         mem_free(lengths);
