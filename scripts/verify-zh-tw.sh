@@ -89,6 +89,8 @@ run_check "FAangband abilities, resistance and immunity dictionary C99" sh "$ROO
 run_check "FAangband abilities and known-flag source guard" python3 "$ROOT/tests/test_faangband_lore_abilities_locale_source.py"
 run_check "FAangband 116 spell and 45 melee data translations C99" sh "$ROOT/scripts/test-fa-lore-spells-attacks-locale.sh"
 run_check "FAangband spell and attack lore known-data regressions" python3 "$ROOT/tests/test_faangband_lore_spells_attacks_locale_source.py"
+run_check "FAangband 221 monster spell notifications C99" sh "$ROOT/scripts/test-fa-spell-messages-locale.sh"
+run_check "FAangband monster spell notification source, visibility and tag guards" python3 "$ROOT/tests/test_faangband_spell_messages_locale_source.py"
 run_check "FAangband option colours, visual menus and quality-ignore zh-TW" python3 "$ROOT/tests/test_faangband_options_visual_locale_source.py"
 run_check "FAangband context menus, target help, maps and common commands zh-TW" python3 "$ROOT/tests/test_faangband_context_target_map_locale_source.py"
 run_check "FAangband character sheet, spell browser and savefile picker zh-TW" python3 "$ROOT/tests/test_faangband_player_spell_save_locale_source.py"
