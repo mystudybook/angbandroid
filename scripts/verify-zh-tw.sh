@@ -99,6 +99,7 @@ run_check "FAangband repeated spell template capacity C99" sh "$ROOT/scripts/tes
 run_check "FAangband 238 template UTF-8 byte budgets and no partial tags" python3 "$ROOT/tests/test_faangband_spell_template_budget_source.py"
 run_check "FAangband dynamic combat diagnostics and shapeshift Chinese messages" python3 "$ROOT/tests/test_faangband_combat_messages_locale_source.py"
 run_check "FAangband player/monster theft and exact arena note source guards" python3 "$ROOT/tests/test_faangband_theft_locale_source.py"
+run_check "FAangband real spell failure and melee attack locale branches" python3 "$ROOT/tests/test_faangband_mon_attack_locale_source.py"
 run_check "FAangband option colours, visual menus and quality-ignore zh-TW" python3 "$ROOT/tests/test_faangband_options_visual_locale_source.py"
 run_check "FAangband context menus, target help, maps and common commands zh-TW" python3 "$ROOT/tests/test_faangband_context_target_map_locale_source.py"
 run_check "FAangband character sheet, spell browser and savefile picker zh-TW" python3 "$ROOT/tests/test_faangband_player_spell_save_locale_source.py"
