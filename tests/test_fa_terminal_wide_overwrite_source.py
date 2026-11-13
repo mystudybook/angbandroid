@@ -45,10 +45,22 @@ assert queued.index("Term_clear_wide_neighbor(") < (
 assert "t->dblh_hook" in raw
 assert "if (!ta) ta = ota;" in raw and "if (!tc) tc = otc;" in raw
 assert "Term_clear_wide_neighbor(Term, x, y, glyph, a);" in fast
-assert "wchar_t glyph = angdroid_stream_glyph(*s);" in fast
+assert "wchar_t glyph = angdroid_fixed_cell_glyph(*s, a);" in fast
 assert "angdroid_fixed_cell_glyph(c, a)" in draw
 assert "c = angdroid_stream_glyph(c);" in stream
-assert "Term->scr->cx++;" in stream  # FA terminal retains one-cell cursor
+assert "span = angdroid_is_wide_text(c, a) ? 2 : 1;" in stream
+assert "if (x + span > w)" in stream
+assert "Term_queue_char(Term, x + 1, y, a," in stream
+assert "ANGDROID_TEXT_CONTINUATION, 0, 0);" in stream
+assert "Term->scr->cx += span;" in stream
+assert "Term->scr->cx++;" not in stream
+block = section("errr Term_addstr(", "errr Term_putch(")
+assert "angdroid_fit_terminal_text(s, (size_t)count," in block
+assert "fit = angdroid_fit_terminal_text(s, (size_t)count," in block
+assert "res = Term_addch(a, s[i]);" in block
+assert "Term_queue_chars(" not in block
+assert "text_mbstowcs(s, buf, 1023);" in block
+assert "s[1023] = L'\\0';" in block
 assert "If a partial erase touches either half" in erase
 assert "Term_clear_wide_neighbor(Term, column, y, L' ', COLOUR_WHITE);" in erase
 assert erase.index("Term_clear_wide_neighbor(Term, column") < (
@@ -57,7 +69,7 @@ assert "angdroid_public_grid_glyph(Term->scr->c[y][x])" in what
 
 for item in ("Term_queue_char_raw", "Term_clear_wide_neighbor",
              "Term_queue_char", "Term_queue_chars", "Term_draw",
-             "Term_addch", "Term_erase", "Term_what"):
+             "Term_addch", "Term_addstr", "Term_erase", "Term_what"):
     assert f'"{item}"' in HOST, item
 for expected in (
     "set_wide(3);",
@@ -68,6 +80,13 @@ for expected in (
     "Term_what(4, 0, &attr, &ch)",
     "Term_draw(3, 0, 1, L'中')",
     "screen.x1[0] <= 3 && screen.x2[0] >= 4",
+    'Term_addstr(-1, 1, "A中B")',
+    'Term_addstr(-1, 1, "甲乙")',
+    "Term_addstr(2, 1,",
+    "Term_addch(1, L'甲')",
+    "active.cx == 4 && active.cu == 0",
+    "angdroid_utf8_next_scalar(",
+
 ):
     assert expected in HOST, expected
 assert "void Term_queue_char(NULL" not in HOST
