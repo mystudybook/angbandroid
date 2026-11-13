@@ -97,6 +97,7 @@ run_check "FAangband 25 projection lash and named ghost C99" sh "$ROOT/scripts/t
 run_check "FAangband projection lash and ghost-name source guard" python3 "$ROOT/tests/test_faangband_spell_lash_ghost_locale_source.py"
 run_check "FAangband repeated spell template capacity C99" sh "$ROOT/scripts/test-fa-spell-template-budget.sh"
 run_check "FAangband 238 template UTF-8 byte budgets and no partial tags" python3 "$ROOT/tests/test_faangband_spell_template_budget_source.py"
+run_check "FAangband dynamic combat diagnostics and shapeshift Chinese messages" python3 "$ROOT/tests/test_faangband_combat_messages_locale_source.py"
 run_check "FAangband option colours, visual menus and quality-ignore zh-TW" python3 "$ROOT/tests/test_faangband_options_visual_locale_source.py"
 run_check "FAangband context menus, target help, maps and common commands zh-TW" python3 "$ROOT/tests/test_faangband_context_target_map_locale_source.py"
 run_check "FAangband character sheet, spell browser and savefile picker zh-TW" python3 "$ROOT/tests/test_faangband_player_spell_save_locale_source.py"
