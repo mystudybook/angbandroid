@@ -28,7 +28,7 @@ def extract(name):
 NAMES = (
     "Term_queue_char_raw", "Term_clear_wide_neighbor", "Term_queue_char",
     "Term_queue_chars", "Term_draw", "Term_addch", "Term_addstr",
-    "Term_erase", "Term_what",
+    "Term_putch", "Term_putstr", "Term_erase", "Term_what",
 )
 ACTUAL = [extract(name) for name in NAMES]
 
@@ -258,6 +258,39 @@ int main(void)
         Term_queue_chars(3, 0, 1, 1, w);
         CHECK(chars[0][3] == L'?' && chars[0][4] == L' ');
     }
+
+    /* Absolute-position text calls reuse the same width-aware stream
+     * routine, while their input (x,y) is a physical terminal column. */
+    reset(12);
+    CHECK(Term_putstr(2, 0, -1, 1, "A中B") == 0);
+    CHECK(chars[0][2] == L'A' && chars[0][3] == L'中');
+    CHECK(chars[0][4] == ANGDROID_TEXT_CONTINUATION);
+    CHECK(chars[0][5] == L'B' && active.cx == 6);
+    CHECK(active.cy == 0 && active.cu == 0);
+
+    reset(12);
+    CHECK(Term_putch(4, 0, 1, L'甲') == 0);
+    CHECK(chars[0][4] == L'甲');
+    CHECK(chars[0][5] == ANGDROID_TEXT_CONTINUATION);
+    CHECK(active.cx == 6);
+
+    reset(12);
+    CHECK(Term_putch(11, 0, 1, L'甲') == 1);
+    CHECK(chars[0][11] == L'?' && active.cx == 12);
+    CHECK(active.cu == 1);
+
+    reset(12);
+    CHECK(Term_putch(4, 0, 0x80, L'甲') == 0);
+    CHECK(chars[0][4] == L'甲' && chars[0][5] == L' ');
+
+    reset(12);
+    CHECK(Term_putstr(10, 0, -1, 1, "A中") == 1);
+    CHECK(chars[0][10] == L'A' && chars[0][11] == L' ');
+    CHECK(active.cx == 11 && active.cu == 1);
+
+    reset(12);
+    CHECK(Term_putstr(-1, 0, -1, 1, "abc") == -1);
+    CHECK(active.cx == 0 && chars[0][0] == L' ');
 
     reset(12);
     set_wide(3);
