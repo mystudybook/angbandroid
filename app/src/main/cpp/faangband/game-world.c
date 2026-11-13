@@ -483,8 +483,14 @@ static void ghost_challenge(void)
 {
 	struct monster_race *race = &r_info[cave->ghost->race];
 
-	msg("%s, the %s %s", cave->ghost->name, race->name,
-		challenge_text[randint0(14)]);
+	/* Keep exactly one RNG draw and preserve the original English challenge. */
+	const char *challenge = challenge_text[randint0(14)];
+	if (angdroid_zh_tw_enabled()) {
+		msg("%s（%s）%s", cave->ghost->name, race->name,
+			angdroid_game_ui_text(challenge, true));
+	} else {
+		msg("%s, the %s %s", cave->ghost->name, race->name, challenge);
+	}
 }
 
 /**
