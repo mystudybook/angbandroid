@@ -78,14 +78,31 @@ static int check_devices(struct object *obj)
 	/* Roll for usage */
 	if (randint1(1000) < fail) {
 		event_signal(EVENT_INPUT_FLUSH);
-		msg("You failed to %s properly.", action);
+		if (angdroid_zh_tw_enabled()) {
+            if (tval_is_rod(obj)) {
+                msg("你沒能正確使用魔棒。");
+            } else if (tval_is_wand(obj)) {
+                msg("你沒能正確使用魔杖。");
+            } else if (tval_is_staff(obj)) {
+                msg("你沒能正確使用法杖。");
+            } else {
+                msg("你沒能成功啟動這件物品。");
+            }
+        } else {
+            msg("You failed to %s properly.", action);
+        }
 		return false;
 	}
 
 	/* Notice empty staffs */
 	if (what && obj->pval <= 0) {
 		event_signal(EVENT_INPUT_FLUSH);
-		msg("The %s has no charges left.", what);
+		if (angdroid_zh_tw_enabled()) {
+            msg("這根%s已沒有使用次數。", tval_is_wand(obj) ?
+                "魔杖" : "法杖");
+        } else {
+            msg("The %s has no charges left.", what);
+        }
 		return false;
 	}
 
@@ -195,7 +212,11 @@ void do_cmd_inscribe(struct command *cmd)
 	/* Form prompt */
 	object_desc(o_name, sizeof(o_name), obj, ODESC_PREFIX | ODESC_FULL,
 		player);
-	strnfmt(prompt, sizeof prompt, "Inscribing %s.", o_name);
+	if (angdroid_zh_tw_enabled()) {
+        strnfmt(prompt, sizeof prompt, "正在為 %s 刻字。", o_name);
+    } else {
+        strnfmt(prompt, sizeof prompt, "Inscribing %s.", o_name);
+    }
 
 	if (cmd_get_string(cmd, "inscription", &str,
 			quark_str(obj->note) /* Default */,
@@ -310,8 +331,12 @@ void do_cmd_wield(struct command *cmd)
 	if (!obj_can_takeoff(equip_obj)) {
 		object_desc(o_name, sizeof(o_name), equip_obj, ODESC_BASE,
 			player);
-		msg("You cannot remove the %s you are %s.", o_name,
-			equip_describe(player, slot));
+		if (angdroid_zh_tw_enabled()) {
+            msg("你無法卸下已裝備的 %s。", o_name);
+        } else {
+            msg("You cannot remove the %s you are %s.", o_name,
+                equip_describe(player, slot));
+        }
 		return;
 	}
 
@@ -323,7 +348,9 @@ void do_cmd_wield(struct command *cmd)
 			ODESC_PREFIX | ODESC_FULL, player);
 		
 		/* Forget it */
-		if (!get_check(format("Really take off %s? ", o_name))) return;
+		if (!get_check(angdroid_zh_tw_enabled() ?
+                format("確定卸下 %s 嗎？ ", o_name) :
+                format("Really take off %s? ", o_name))) return;
 	}
 
 	/* Describe the object */
@@ -346,8 +373,13 @@ void do_cmd_wield(struct command *cmd)
 	inven_wield(obj, slot);
 
 	/* Message */
-	msgt(MSG_WIELD, "%s %s (%c).", act, o_name,
-		gear_to_label(player, equip_obj));
+	if (angdroid_zh_tw_enabled()) {
+        msgt(MSG_WIELD, "你卸下了 %s（%c）。", o_name,
+            gear_to_label(player, equip_obj));
+    } else {
+        msgt(MSG_WIELD, "%s %s (%c).", act, o_name,
+            gear_to_label(player, equip_obj));
+    }
 }
 
 /**
@@ -684,12 +716,24 @@ static void use_aux(struct command *cmd, struct object *obj, enum use use,
 				-1 : 0)) << 16), player);
 			if (from_floor) {
 				/* Print a message */
-				msg("You see %s.", name);
+				if (angdroid_zh_tw_enabled()) {
+                    msg("你看到 %s。", name);
+                } else {
+                    msg("You see %s.", name);
+                }
 			} else if (first_remainder) {
 				label = gear_to_label(player, first_remainder);
-				msg("You have %s (1st %c).", name, label);
+				if (angdroid_zh_tw_enabled()) {
+                    msg("你有 %s（第一組：%c）。", name, label);
+                } else {
+                    msg("You have %s (1st %c).", name, label);
+                }
 			} else {
-				msg("You have %s (%c).", name, label);
+				if (angdroid_zh_tw_enabled()) {
+                    msg("你有 %s（%c）。", name, label);
+                } else {
+                    msg("You have %s (%c).", name, label);
+                }
 			}
 		} else if (used && use == USE_CHARGE) {
 			/* Describe charges */
@@ -1031,7 +1075,8 @@ void do_cmd_refill(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Refuel with with fuel source? ",
+			angdroid_game_ui_text("Refuel with which fuel source? ",
+                angdroid_zh_tw_enabled()),
 			angdroid_game_ui_text("You have nothing you can refuel with.", angdroid_zh_tw_enabled()),
 			obj_can_refill,
 			USE_INVEN | USE_FLOOR | USE_QUIVER) != CMD_OK) return;
@@ -1084,7 +1129,11 @@ void do_cmd_cast(struct command *cmd)
 		const char *noun = spell->realm->spell_noun;
 
 		/* Warning */
-		msg("You do not have enough mana to %s this %s.", verb, noun);
+		if (angdroid_zh_tw_enabled()) {
+            msg("你的法力不足，無法施放這個法術。");
+        } else {
+            msg("You do not have enough mana to %s this %s.", verb, noun);
+        }
 
 		/* Flush input */
 		event_signal(EVENT_INPUT_FLUSH);
@@ -1181,7 +1230,12 @@ void do_cmd_study_book(struct command *cmd)
 	}
 
 	if (spell_index < 0) {
-		msg("You cannot learn any %ss in that book.", book->realm->spell_noun);
+		if (angdroid_zh_tw_enabled()) {
+            msg("這本書沒有可以學習的法術。");
+        } else {
+            msg("You cannot learn any %ss in that book.",
+                book->realm->spell_noun);
+        }
 	} else {
 		spell_learn(spell_index);
 		player->upkeep->energy_use = z_info->move_energy;
