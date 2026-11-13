@@ -156,4 +156,44 @@ static inline const char *angdroid_fa_spell_offscreen_subject(
     return output;
 }
 
+
+/*
+ * Check that an entire selected Chinese message, including every dynamic
+ * substitution, fits the existing byte-limited battle message buffer.
+ * The expansion sites use at most 320 bytes per tag (256-byte monster_desc
+ * values or 320-byte UTF-8-safe display buffers).  Calculate by subtracting
+ * from the remaining budget, never multiplying untrusted tag counts.
+ *
+ * This is deliberately conservative: when an enlarged future template
+ * cannot fit, the caller prints a complete neutral summary rather than
+ * losing the final target, damage attribute, or Chinese punctuation.
+ */
+static inline bool angdroid_fa_spell_template_fits(
+    const char *message, size_t capacity, size_t max_expansion_bytes)
+{
+    size_t remaining;
+    const char *cursor;
+
+    if (!message || capacity == 0 || max_expansion_bytes == 0)
+        return false;
+
+    remaining = capacity - 1; /* Keep the final NUL. */
+    cursor = message;
+    while (*cursor) {
+        if (*cursor == '{') {
+            const char *close = strchr(cursor + 1, '}');
+            if (close) {
+                if (max_expansion_bytes > remaining) return false;
+                remaining -= max_expansion_bytes;
+                cursor = close + 1;
+                continue;
+            }
+        }
+        if (remaining == 0) return false;
+        --remaining;
+        ++cursor;
+    }
+    return true;
+}
+
 #endif /* ANGDROID_FA_SPELL_MESSAGE_LOCALE_H */
