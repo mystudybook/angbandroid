@@ -72,6 +72,13 @@ NEW = (
     ("You set a monster trap.", "你設置了一個怪物陷阱。"),
 )
 
+# Three source-exact English tool phrases used by the tunneling command.
+DIGGING_TOOLS = (
+    ("with your hands", "徒手"),
+    ("with your weapon", "用武器"),
+    ("with your swap digger", "用替換的挖掘工具"),
+)
+
 def literal(text):
     return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
@@ -87,6 +94,14 @@ for english, chinese in NEW:
     pair = "{" + literal(english) + ", " + literal(chinese) + "}"
     assert pair in UI, "Incorrect wilderness mapping: " + english
     assert pair in NATIVE, "No bilingual regression: " + english
+
+for english, chinese in DIGGING_TOOLS:
+    pair = "{" + literal(english) + ", " + literal(chinese) + "}"
+    assert pair in UI, "Missing localized digging tool: " + english
+    assert pair in NATIVE, "No bilingual tool regression: " + english
+    assert literal(english) in SOURCE, "Changed tool identity: " + english
+assert "with_zh = angdroid_game_ui_text(with_clause," in SOURCE
+assert "angdroid_zh_tw_enabled());" in SOURCE
 
 # Both themed-level confirmation variants include distinct trailing spaces.
 assert SOURCE.count("get_check(angdroid_game_ui_text(") >= 2
@@ -106,6 +121,13 @@ for english, chinese in (
     ("%s drops %s.", "%s 掉落了 %s。"),
     ("%s slams against the door.", "%s 猛撞門扉。"),
     ("%s fiddles with the lock.", "%s 試圖撬開門鎖。"),
+    ("You have removed the rubble %s.", "你%s清除了碎石。"),
+    ("You have found something digging %s!", "你%s挖掘時發現了東西！"),
+    ("You have finished the tunnel %s.", "你%s挖通了通道。"),
+    ("You dig in the rubble %s.", "你%s在碎石中挖掘。"),
+    ("You tunnel into the %s %s.", "你%s向%s挖掘。"),
+    ("You dig in the rubble %s with little effect.", "你%s在碎石中挖掘，但幾乎沒有進展。"),
+    ("You chip away futilely %s at the %s.", "你%s敲打%s，但毫無進展。"),
 ):
     assert literal(english) in SOURCE, english
     assert literal(chinese) in SOURCE, chinese
