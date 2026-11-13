@@ -79,6 +79,8 @@ run_check "FAangband melee and player ghost dictionary C99" sh "$ROOT/scripts/te
 run_check "FAangband melee and player ghost source regression" python3 "$ROOT/tests/test_faangband_melee_ghost_locale_source.py"
 run_check "FAangband 57 melee action templates and 2 save notices C99" sh "$ROOT/scripts/test-fa-melee-actions-locale.sh"
 run_check "FAangband melee action templates/source guard" python3 "$ROOT/tests/test_faangband_melee_actions_locale_source.py"
+run_check "FAangband monster event and pain dictionary C99" sh "$ROOT/scripts/test-fa-monster-messages-locale.sh"
+run_check "FAangband monster event and pain source guard" python3 "$ROOT/tests/test_faangband_monster_messages_locale_source.py"
 run_check "FAangband option colours, visual menus and quality-ignore zh-TW" python3 "$ROOT/tests/test_faangband_options_visual_locale_source.py"
 run_check "FAangband context menus, target help, maps and common commands zh-TW" python3 "$ROOT/tests/test_faangband_context_target_map_locale_source.py"
 run_check "FAangband character sheet, spell browser and savefile picker zh-TW" python3 "$ROOT/tests/test_faangband_player_spell_save_locale_source.py"
