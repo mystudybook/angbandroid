@@ -121,7 +121,9 @@ assert "if (!english || !zh_tw) return english;" in WRAPPER
 assert "if (translated != english) return translated;" in WRAPPER
 assert "return angdroid_fa_spell_message_other(english, true);" in WRAPPER
 assert "if (!english || !localized || !output || !capacity)" in WRAPPER
-assert 'snprintf(output, capacity, "這隻%s", noun)' in WRAPPER
+assert 'angdroid_utf8_copy_complete(output, capacity, "這隻")' in WRAPPER
+assert "angdroid_utf8_append_complete(output, capacity, used, noun)" in WRAPPER
+assert "angdroid_fa_spell_message_alternate(english, true)" in WRAPPER
 assert "return english;" in WRAPPER
 
 # No change in saving throw, rune or effect processing.
