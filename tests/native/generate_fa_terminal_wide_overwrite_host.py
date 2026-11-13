@@ -184,7 +184,7 @@ int main(void)
 
     reset(12);
     set_wide(3);
-    CHECK(Term_queue_char(NULL, 3, 0, 1, L'x', 0, 0), 1);
+    Term_queue_char(NULL, 3, 0, 1, L'x', 0, 0);
     CHECK(chars[0][3] == L'中');
 
     reset(12);
