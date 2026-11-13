@@ -640,12 +640,21 @@ static const char *lore_describe_speed(uint8_t speed)
  */
 static void lore_adjective_speed(textblock *tb, const struct monster_race *race)
 {
-	/* "at" is separate from the normal speed description in order to use the
-	 * normal text colour */
+	/* The English adverb table and speed thresholds stay unchanged. */
+	if (angdroid_zh_tw_enabled()) {
+		if (race->speed == 110) {
+			textblock_append(tb, "以一般速度移動");
+		} else {
+			textblock_append(tb, "移動得");
+			textblock_append_c(tb, COLOUR_GREEN, "%s",
+				angdroid_game_ui_text(lore_describe_speed(race->speed), true));
+		}
+		return;
+	}
 	if (race->speed == 110)
 		textblock_append(tb, "at ");
-
-	textblock_append_c(tb, COLOUR_GREEN, "%s", lore_describe_speed(race->speed));
+	textblock_append_c(tb, COLOUR_GREEN, "%s",
+		lore_describe_speed(race->speed));
 }
 
 /**
@@ -657,7 +666,8 @@ static void lore_adjective_speed(textblock *tb, const struct monster_race *race)
 static void lore_multiplier_speed(textblock *tb, const struct monster_race *race)
 {
 	// moves at 2.3x normal speed (0.9x your current speed)
-	textblock_append(tb, "at ");
+	const bool zh_tw = angdroid_zh_tw_enabled();
+	textblock_append(tb, zh_tw ? "以正常速度的 " : "at ");
 
 	char buf[8] = "";
 	int multiplier = 10 * extract_energy[race->speed] / extract_energy[110];
@@ -668,7 +678,8 @@ static void lore_multiplier_speed(textblock *tb, const struct monster_race *race
 	strnfmt(buf, sizeof(buf), "%d.%dx", int_mul, dec_mul);
 	textblock_append_c(tb, COLOUR_L_BLUE, "%s", buf);
 
-	textblock_append(tb, " normal speed, which is ");
+	textblock_append(tb, zh_tw ? " 移動，相當於" :
+		" normal speed, which is ");
 	multiplier = 100 * extract_energy[race->speed]
 		/ extract_energy[player->state.speed];
 	int_mul = multiplier / 100;
@@ -687,10 +698,11 @@ static void lore_multiplier_speed(textblock *tb, const struct monster_race *race
 		attr = COLOUR_RED;
 	}
 	if (player->state.speed == race->speed) {
-		textblock_append(tb, "the same as you");
+		textblock_append(tb, zh_tw ? "你的速度" : "the same as you");
 	} else {
+		if (zh_tw) textblock_append(tb, "你速度的 ");
 		textblock_append_c(tb, attr, "%s", buf);
-		textblock_append(tb, " your speed");
+		if (!zh_tw) textblock_append(tb, " your speed");
 	}
 }
 
@@ -1012,6 +1024,56 @@ void lore_append_movement(textblock *tb, const struct monster_race *race,
 	bitflag flags[RF_SIZE];
 
 	assert(tb && race && lore);
+
+	/* Display-only Chinese sentence composition. The same source flags
+	 * and known-flags gates as the English path remain authoritative. */
+	if (angdroid_zh_tw_enabled()) {
+		textblock_append(tb, "這隻");
+		create_mon_flag_mask(flags, RFT_RACE_A, RFT_MAX);
+		rf_inter(flags, race->flags);
+		for (f = rf_next(flags, FLAG_START); f; f = rf_next(flags, f + 1)) {
+			textblock_append_c(tb, COLOUR_L_BLUE, "%s",
+				angdroid_game_ui_text(describe_race_flag(f), true));
+		}
+		create_mon_flag_mask(flags, RFT_RACE_N, RFT_MAX);
+		rf_inter(flags, race->flags);
+		f = rf_next(flags, FLAG_START);
+		if (f) {
+			textblock_append_c(tb, COLOUR_L_BLUE, "%s",
+				angdroid_game_ui_text(describe_race_flag(f), true));
+		} else {
+			textblock_append_c(tb, COLOUR_L_BLUE, "生物");
+		}
+		if (race->level == 0) {
+			textblock_append(tb, "居住在城鎮中");
+		} else {
+			uint8_t colour = (race->level > player->max_depth) ?
+				COLOUR_RED : COLOUR_L_BLUE;
+			textblock_append(tb, rf_has(known_flags, RF_FORCE_DEPTH) ?
+				"固定出沒於危險等級 " : "通常出沒於危險等級 ");
+			textblock_append_c(tb, colour, "%d", race->level);
+		}
+		textblock_append(tb, "，");
+		if (flags_test(known_flags, RF_SIZE, RF_RAND_50, RF_RAND_25,
+				FLAG_END)) {
+			if (rf_has(known_flags, RF_RAND_50) &&
+				rf_has(known_flags, RF_RAND_25))
+				textblock_append(tb, "行動極度不規則，");
+			else if (rf_has(known_flags, RF_RAND_50))
+				textblock_append(tb, "行動有些不規則，");
+			else if (rf_has(known_flags, RF_RAND_25))
+				textblock_append(tb, "行動稍微不規則，");
+		}
+		if (OPT(player, effective_speed))
+			lore_multiplier_speed(tb, race);
+		else
+			lore_adjective_speed(tb, race);
+		if (rf_has(known_flags, RF_NEVER_MOVE))
+			textblock_append_c(tb, COLOUR_L_GREEN,
+				"，但不會追趕入侵者");
+		textblock_append(tb, "。  ");
+		return;
+	}
 
 	textblock_append(tb, "This");
 
