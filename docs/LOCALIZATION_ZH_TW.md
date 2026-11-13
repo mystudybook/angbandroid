@@ -565,3 +565,11 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - **動態傷害／偷竊／吃掉食物**：修正 `%d` 傷害與被偷錢幣顯示，以及分堆或整件物品被偷、怪物偷竊失敗、食物被吃掉等帶 `%s`／`%c` 的訊息。遊戲中原本的 `context->obvious`、`gear_object_for_use()`、`monster_carry()`、`player_exp_lose()`、效果與傷害計算、損失金額及背包標籤都不動。帶有 `monster_blow_method_action()` 的動態戰鬥動詞仍需另行依遊戲資料來源審查，未擅自改寫。
 - **離線檢查**：新增 `test_faangband_melee_ghost_locale.c`、`test-fa-melee-ghost-locale.sh` 與 `test_faangband_melee_ghost_locale_source.py`，驗證正式字典 27 組英文來源、原英文模式、未知值回退、14 組幽靈來源、動態格式與 RNG 呼叫位置；接入 `verify-zh-tw.sh`。
 - **限制**：純原始碼比對與來源回歸檔案不等於完整 C99／Python 套件已在 checkout 執行，也不是 Android NDK／Gradle／實機驗收；仍維持 Draft PR #146，未合併 master、未執行 GitHub Actions。
+
+## 第 243 批 — FAangband 怪物近戰動態動詞與抵抗訊息（2026-11-13）
+
+- 已核對 `variant_lib/faangband/gamedata/blow_methods.txt`，確認 `act:` 共 **57** 條且沒有重複。涵蓋 17 種基本近戰、8 種羞辱與 32 種怪物牢騷；把這 **57** 組模板逐一納入共用顯示字典，保留每條 `{target}`、`{oftarget}` 標記，**不修改遊戲原始資料**。此外翻譯恐懼／麻痺抵抗成功的 **2** 條 `save_msg`。
+- 將 `monster_blow_method_action()` 的實作抽成內部顯示格式函式，正式公開 API 仍回傳原英文動詞；只有繁中 UI 顯示時翻譯抽出的模板，再替換目標怪物名、玩家的「你／你的」代碼。未命中的字典保留原英文動作與原英文空白／句點。
+- 繁中句子移除英文動詞前的空白，使用中文句號；已包含句尾「！」「？」「。」的模板不額外加句號。傷害顯示 `(%d)`、怪物訊息種類、`string_free(act)` 釋放路徑保留。
+- `randint0(method->num_messages)` 仍只在所選動作函式呼叫一次；怪物招式候選數目、選擇順序、傷害／效果／AI／存檔資料均維持。
+- 加入來源覆蓋與實際翻譯表 C99 測試，接入 `scripts/verify-zh-tw.sh`。離線靜態來源核對不等於完整 C99/Android APK 測試已執行；維持原 Draft PR #146，不執行 Actions、也不合併 `master`。
