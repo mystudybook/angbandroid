@@ -540,3 +540,10 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - **順序安全修正**：把寶物／危險索引範圍檢查移到 `obj_only`、探索不足分支**之前**，避免異常感覺代碼在檢查前被索引。沒有改變探索門檻 `cave->feeling_squares < z_info->feeling_need`、`disturb(player)`、角色狀態或遊戲規則。
 - **離線驗證檔案**：`tests/native/test_fa_dungeon_feelings_locale.c` 以 C99 直接包含正式 `zh-tw-ui.h`，對照 21 組中英字典、未知字串回退、獨立與組合範例；`scripts/test-fa-dungeon-feelings-locale.sh` 使用 `-std=c99 -Wall -Wextra -Werror -pedantic`；`tests/test_faangband_dungeon_feelings_locale_source.py` 對照正式感覺陣列與字典／C99 資料，檢查英文保留、中文輸出、合併條件、索引檢查順序，已接入 `scripts/verify-zh-tw.sh`。
 - **目前驗證限制**：程式碼及測試已提交到原 Draft PR #146，但尚未在完整 checkout 上執行本批 Python／C99 腳本、完整 Android NDK／Gradle 建置與手機實測。未取得實機畫面確認前，不視為已完成發行驗收。
+
+## 第 240 批 — FAangband 九種主題樓層提示繁體中文（2026-11-13）
+
+- **確認來源**：`variant_lib/faangband/gamedata/themed.txt` 共 9 組 `name:`／`message:`。原始 `message:` 經 `generate.c::parse_themed_message()` 存入 `struct vault::typ`，並由 `cmd-cave.c::display_feeling()` 顯示。一般 vault 的 `typ` 另有用途，因此只改此顯示點。
+- **九組繁中譯文**：元素戰場、巨龍、凶狼荒野、烏頓烈焰與惡魔、哥布林戰鼓、軍閥爭戰、巴拉希爾、伊甸人、Haudh-en-Ndengin。特定地名與人名保留可辨識的專名；展示文字透過 `angdroid_game_ui_text(level->typ, angdroid_zh_tw_enabled())` 查表，**沒有更改 themed.txt、樓層識別、房間模板、生成機率、存檔格式或英文顯示**。未命中的訊息原樣回退英文。
+- **回歸守護**：擴充 `test_fa_dungeon_feelings_locale.c`，以正式翻譯 header 對照 9 組並檢查英文回退；`test_faangband_dungeon_feelings_locale_source.py` 會從 `themed.txt` 自動擷取全部 `message:`，確認字典和 C99 測試一一對應，並檢查 `generate.c` 的解析器及真正顯示端。沿用既有 `scripts/test-fa-dungeon-feelings-locale.sh` 和 `scripts/verify-zh-tw.sh`。
+- **驗證界線**：本批需區分 GitHub 來源比對與實際測試執行；尚未進行完整 Android NDK／Gradle 建置或手機實測。PR #146 維持 Draft，不合併 master，不主動執行 GitHub Actions。
