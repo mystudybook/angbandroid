@@ -99,8 +99,9 @@ for en, zh in [
     assert json.dumps(zh, ensure_ascii=False) in WORLD
 assert "if (obj->number > 1)" in WORLD
 assert "if (all)" in WORLD
-assert "else if" not in WORLD.split("/* Notification formatting only;")[1].split(
-    "static void recharge_objects", 1)[0] or "obj->artifact" in WORLD
+assert "} else if (obj->artifact) {" in WORLD
+assert "recharged_notice(obj, true);" in WORLD
+assert "recharged_notice(obj, false);" in WORLD
 assert "player_change_place(player, player->home);" in WORLD
 assert "player_change_place(player, target_place);" in WORLD
 assert "effect_simple(EF_DESTRUCTION" in WORLD
