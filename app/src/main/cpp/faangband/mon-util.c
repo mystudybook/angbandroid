@@ -767,8 +767,12 @@ void become_aware(struct chunk *c, struct monster *mon)
 			object_desc(o_name, sizeof(o_name), obj, ODESC_BASE, player);
 
 			/* Print a message */
-			if (square_isseen(c, obj->grid))
-				msg("The %s was really a monster!", o_name);
+			if (square_isseen(c, obj->grid)) {
+				if (angdroid_zh_tw_enabled())
+					msg("原來%s是一隻怪物！", o_name);
+				else
+					msg("The %s was really a monster!", o_name);
+			}
 
 			/* Clear the mimicry */
 			obj->mimicking_m_idx = 0;
@@ -1054,8 +1058,10 @@ static void player_kill_monster(struct monster *mon, struct player *p,
 {
 	int32_t div, new_exp, new_exp_frac;
 	struct monster_lore *lore = get_lore(mon->race);
-	char m_name[80];
+	char m_name[256];
 	char buf[80];
+	char zh_name[320];
+	const char *display_name;
 	int desc_mode = MDESC_DEFAULT | ((note) ? MDESC_COMMA : 0);
 
 	/* Assume normal death sound */
@@ -1084,11 +1090,17 @@ static void player_kill_monster(struct monster *mon, struct player *p,
 		monster_is_living(mon) && !monster_is_stupid(mon) &&
 		!rf_has(mon->race->flags, RF_DEMON)) {
 		int gain = 2 + (mon->maxhp / 30);
-		msg("You gain mana.");
+		if (angdroid_zh_tw_enabled())
+			msg("你獲得了法力。");
+		else
+			msg("You gain mana.");
 
 		/* If there is a lot of excess mana, it can do damage */
 		if (player->csp + gain - player->msp > player->lev) {
-			msg("You absorb too much mana!");
+			if (angdroid_zh_tw_enabled())
+				msg("你吸收了過多法力！");
+			else
+				msg("You absorb too much mana!");
 			take_hit(player, damroll(2, 8), "mana burn");
 		}
 		player->csp = MIN(player->csp + gain, player->msp);
@@ -1111,15 +1123,35 @@ static void player_kill_monster(struct monster *mon, struct player *p,
 		/* Make sure to flush any monster messages first */
 		notice_stuff(p);
 
-		if (!monster_is_visible(mon))
+		/* monster_desc already controls what the player can identify.
+		 * Only translate its generic grammar, not a true unique name. */
+		display_name = m_name;
+		if (angdroid_zh_tw_enabled() &&
+			(!monster_is_shape_unique(mon) ||
+			streq(m_name, "it") || streq(m_name, "something"))) {
+			display_name = angdroid_fa_spell_subject(m_name,
+				true, zh_name, sizeof(zh_name));
+		}
+
+		if (!monster_is_visible(mon)) {
 			/* Death by physical attack -- invisible monster */
-			msgt(soundfx, "You have killed %s.", m_name);
-		else if (monster_is_destroyed(mon))
+			if (angdroid_zh_tw_enabled())
+				msgt(soundfx, "你擊殺了%s。", display_name);
+			else
+				msgt(soundfx, "You have killed %s.", m_name);
+		} else if (monster_is_destroyed(mon)) {
 			/* Death by Physical attack -- non-living monster */
-			msgt(soundfx, "You have destroyed %s.", m_name);
-		else
+			if (angdroid_zh_tw_enabled())
+				msgt(soundfx, "你摧毀了%s。", display_name);
+			else
+				msgt(soundfx, "You have destroyed %s.", m_name);
+		} else {
 			/* Death by Physical attack -- living monster */
-			msgt(soundfx, "You have slain %s.", m_name);
+			if (angdroid_zh_tw_enabled())
+				msgt(soundfx, "你擊敗了%s。", display_name);
+			else
+				msgt(soundfx, "You have slain %s.", m_name);
+		}
 	}
 
 	/* Player level */
