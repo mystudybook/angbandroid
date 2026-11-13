@@ -25,7 +25,7 @@
 #include "mon-predicate.h"
 #include "mon-spell.h"
 #include "mon-spell-message-locale.h"
-#include "mon-lore-terms.h"
+#include "../angband/zh-tw-mon-spell-lash.h"
 #include "../angband/zh-tw-ui.h"
 #include "mon-timed.h"
 #include "mon-util.h"
@@ -214,7 +214,7 @@ static void spell_message(struct monster *mon,
 						char cn_name[160];
 						const char *display_name = m_name;
 						if (localized &&
-							!rf_has(mon->race->flags, RF_UNIQUE) &&
+							!monster_is_shape_unique(mon) &&
 							!rf_has(mon->race->flags, RF_PLAYER_GHOST))
 							display_name = angdroid_fa_spell_subject(m_name,
 								true, cn_name, sizeof(cn_name));
@@ -246,7 +246,7 @@ static void spell_message(struct monster *mon,
 							sizeof(m_name), t_mon,
 							mdesc_mode);
 						if (localized && t_mon &&
-							!rf_has(t_mon->race->flags, RF_UNIQUE) &&
+							!monster_is_shape_unique(t_mon) &&
 							!rf_has(t_mon->race->flags, RF_PLAYER_GHOST)) {
 							char cn_name[160];
 							const char *display_name =
@@ -270,7 +270,7 @@ static void spell_message(struct monster *mon,
 					char *type_name = projections[type].lash_desc;
 
 					strnfcat(buf, sizeof(buf), &end, "%s",
-						angdroid_fa_lore_term(type_name, localized));
+						angdroid_mon_spell_lash(type_name, localized));
 					break;
 				}
 
@@ -283,7 +283,7 @@ static void spell_message(struct monster *mon,
 						strnfcat(buf, sizeof(buf), &end,
 							localized ? "（" : " of ");
 						strnfcat(buf, sizeof(buf), &end, "%s",
-							angdroid_fa_lore_term(type_name, localized));
+							angdroid_mon_spell_lash(type_name, localized));
 						if (localized)
 							strnfcat(buf, sizeof(buf), &end, "）");
 					}
