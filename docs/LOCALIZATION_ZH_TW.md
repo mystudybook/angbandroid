@@ -556,3 +556,12 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - **相容性**：未修改 `terrain.txt`、怪物 ID、RNG 呼叫、時間推移、效果數值、存檔資料、模式或遊戲判定；英文模式仍保留既有格式字串。
 - **測試**：`test_fa_monster_world_locale.c` 使用正式共用翻譯 header 檢查全部 19 組、英文原樣回退及動態格式範例；`test_faangband_monster_world_messages_locale_source.py` 核對資料檔、顯示端、關鍵英文格式、分支守護及測試接線。已接入 `scripts/verify-zh-tw.sh`。
 - **驗證界線**：GitHub 來源比對不等同完整 C99／Python 或 Android APK／模擬器測試。維持原 Draft PR #146、不執行 GitHub Actions、不合併 master。
+
+
+## 第 242 批 — FAangband 近戰後果、偷竊與幽靈挑戰繁體中文（2026-11-13）
+
+- **13 組玩家受擊／偷竊固定字串**：`mon-blows.c` 的酸、電、火、冰傷害提示；生命力維持與流失；背包能量吸收；錢袋、偷竊未成功與所有錢幣被偷；背包成功防護等，透過 `angdroid_game_ui_text()` 顯示中英文字。保留英文來源與狀態邏輯。
+- **14 組幽靈挑戰**：`game-world.c` 的 `challenge_text[14]` 保持英文原有順序，僅顯示時翻譯；仍呼叫 `randint0(14)` **恰好一次**，沒有更動隨機序列，幽靈名稱與種族名稱保留原始值。英文格式 `"%s, the %s %s"` 不變。
+- **動態傷害／偷竊／吃掉食物**：修正 `%d` 傷害與被偷錢幣顯示，以及分堆或整件物品被偷、怪物偷竊失敗、食物被吃掉等帶 `%s`／`%c` 的訊息。遊戲中原本的 `context->obvious`、`gear_object_for_use()`、`monster_carry()`、`player_exp_lose()`、效果與傷害計算、損失金額及背包標籤都不動。帶有 `monster_blow_method_action()` 的動態戰鬥動詞仍需另行依遊戲資料來源審查，未擅自改寫。
+- **離線檢查**：新增 `test_faangband_melee_ghost_locale.c`、`test-fa-melee-ghost-locale.sh` 與 `test_faangband_melee_ghost_locale_source.py`，驗證正式字典 27 組英文來源、原英文模式、未知值回退、14 組幽靈來源、動態格式與 RNG 呼叫位置；接入 `verify-zh-tw.sh`。
+- **限制**：純原始碼比對與來源回歸檔案不等於完整 C99／Python 套件已在 checkout 執行，也不是 Android NDK／Gradle／實機驗收；仍維持 Draft PR #146，未合併 master、未執行 GitHub Actions。
