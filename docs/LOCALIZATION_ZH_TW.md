@@ -573,3 +573,11 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - 繁中句子移除英文動詞前的空白，使用中文句號；已包含句尾「！」「？」「。」的模板不額外加句號。傷害顯示 `(%d)`、怪物訊息種類、`string_free(act)` 釋放路徑保留。
 - `randint0(method->num_messages)` 仍只在所選動作函式呼叫一次；怪物招式候選數目、選擇順序、傷害／效果／AI／存檔資料均維持。
 - 加入來源覆蓋與實際翻譯表 C99 測試，接入 `scripts/verify-zh-tw.sh`。離線靜態來源核對不等於完整 C99/Android APK 測試已執行；維持原 Draft PR #146，不執行 Actions、也不合併 `master`。
+
+## 第 244 批 — FAangband 怪物訊息與受傷叫聲（2026-11-13）
+
+- 已直接比對 `list-mon-message.h` 的 **58 條非空訊息**與 `pain.txt` 的 **84 筆痛苦訊息（其中 65 條唯一）**，完整新增 **123 個**中文顯示對照；`list-mon-message.h`、`pain.txt` 的怪物 ID、訊息編號與英文原文一律保留。
+- `mon-msg.c` 在 `get_message_text()` 中查找原始英文模板，接著使用既有的單複數 `[singular|plural]` 展開器；摩瑞亞特殊死亡訊息保留「一聲／數聲」數量區分。資料未命中翻譯時回退原英文句型，避免將英文動作與中文主詞硬湊在一起。
+- `get_subject()` 僅在該筆訊息成功翻譯時使用中文主詞、怪物數量及「（畫面外）」標記；原英文路徑仍保留 `The`、複數拼法、空格及 `(offscreen)`。不更動已決定的可見性、訊息堆疊、傷害與聲音種類。中文群體傷害數字改顯示「（平均 %d）」；原英文依舊是 `(average %d)`。
+- 顯示文字緩衝區由 60 bytes 增至 256 bytes，以容納已核對的 UTF-8 翻譯，避免中文在一般句子中被截成半個字；怪物名稱、種族名稱、回合處理與狀態不變。
+- 新增 C99 正式翻譯表雙語回歸測試，以及 Python 對照原始資料完整覆蓋的來源檢查，並接入 `scripts/verify-zh-tw.sh`。此回合的 GitHub 靜態核對不等於已完整執行 C99、Python 或 Android 實機驗證。
