@@ -36,6 +36,18 @@ combined = list(dict.fromkeys(spell_terms + method_terms + effect_terms))
 assert len(combined) == 156
 assert len(spell_terms + method_terms + effect_terms) - len(combined) == 5
 
+# mon-init.c uses string_append() for repeated lore: lines at one power
+# cutoff. In that case a single source-line lookup would not match the
+# assembled runtime description; reject such future data changes here.
+lore_at_cutoff = 0
+for line in SPELLS.splitlines():
+    if line.startswith("name:") or line.startswith("power-cutoff:"):
+        assert lore_at_cutoff <= 1, "Concatenated lore needs a new term: " + line
+        lore_at_cutoff = 0
+    elif line.startswith("lore:"):
+        lore_at_cutoff += 1
+assert lore_at_cutoff <= 1
+
 pair_re = re.compile(
     r'^\s*\{("(?:\\.|[^"\\])*"),\s*("(?:\\.|[^"\\])*")\},',
     re.MULTILINE)
