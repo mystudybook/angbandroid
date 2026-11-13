@@ -591,3 +591,16 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - **名稱與回憶**：`mon-desc.c::get_mon_name()` 在繁中模式產生「%d 隻」與玩家幽靈 `[U] 姓名（種族）` 字串，利用 `angdroid_utf8_copy_complete()` 確保狹小輸出緩衝區不截斷中文字；英文模式維持原格式。`ui-mon-lore.c` 的一般怪物／幽靈回憶標題改用適當繁中格式，並新增 2 組「完全了解怪物」及任務怪物提示翻譯。遊戲資料、怪物唯一性標記、知識判定、紫色獨特怪物設定均保留。
 - **測試**：新增 `tests/native/test_faangband_monster_list_locale.c` 與 `scripts/test-fa-monster-list-locale.sh`，以正式共用 layout、方向、顯示欄函式測試短寬度、狹窄視窗、中文字元及英文回退；新增 `tests/test_faangband_monster_list_locale_source.py` 保護分支接線與回憶顯示邏輯，並接入 `scripts/verify-zh-tw.sh`。
 - **驗證界線**：GitHub 來源檢查不是已在完整 checkout 執行 C99／Python 套件、Android SDK/NDK APK 或實機驗證。維持原 Draft PR #146，不執行 Actions，也不合併 `master`。
+
+## 第 246 批 — FAangband 怪物回憶動態資訊中文化（2026-11-13）
+
+- **不修改遊戲資料和知識判定**：在 `app/src/main/cpp/faangband/mon-lore.c` 對繁體中文畫面新增顯示分支，原有英文組句保留；不改 `lore->flags`、`lore->armour_known`、`lore->drop_known`、`lore->sleep_known`、`lore->pkills`／`deaths`、怪物種族、AI、掉落設定、回合與存檔。英文模式仍走原來的分支。
+- **擊殺紀錄**：唯一怪物生死、祖先死亡、玩家本次或歷代擊殺、從未交戰等分支以完整中文句子表示；維持 `RF_UNIQUE`、`race->max_num` 與 `lore` 紀錄的判斷與紅色警示。
+- **血量、護甲與命中率**：僅在 `lore->armour_known` 時顯示；保留 `race->avg_hp`／`race->ac`、`hit_chance()`、`random_chance_scaled(..., 100)` 及原本的藍色數值。唯一怪物與普通怪物區分「生命值／平均生命值」。
+- **經驗值**：繼續在 `race->rarity` 合法時描述，沿用原本的整數與百分位小數公式；繁中版不強行組合英文的 `a/an`、`st/nd/rd/th`，而顯示「擊敗這隻怪物可獲得 X 點經驗值（以 N 級角色計算）」。`player->lev` 和經驗值公式不變。
+- **掉落物品**：僅在 `lore->drop_known` 時輸出，沿用原本 `mon_create_drop_count(..., &nspec)`、`RF_ONLY_ITEM`／`RF_ONLY_GOLD`、`RF_DROP_GOOD`／`RF_DROP_GREAT`。1 件、1 至 2 件、最多 N 件、特定物品數量分開顯示；維持原數量、品級及來源資訊。
+- **警戒、朋友與移動**：只有已知 `sleep_known` 時顯示警戒／聽力距離（原 `10 * race->hearing` 不變）；成群狩獵仍由 `RF_GROUP_AI` 決定。移動描述依既有 `RFT_RACE_A`／`RFT_RACE_N`、`RF_FORCE_DEPTH`、`RF_RAND_25/50`、`RF_NEVER_MOVE`、`OPT(player, effective_speed)` 決定，新增完整中文句子並保留速度倍數與玩家速度比較。
+- **30 個顯示詞彙**：共 **11** 條警戒程度、**9** 條速度描述與 **10** 條怪物類型或形容詞加入 `angband/zh-tw-ui.h`。仍使用 `angdroid_game_ui_text()` 做顯示替換，沒有變更 `list-mon-race-flags.h` 原始資料與數值門檻。
+- **離線測試**：新增 `tests/native/test_faangband_lore_display_locale.c`／`scripts/test-fa-lore-display-locale.sh` 的嚴格 C99 正式字典測試，以及 `tests/test_faangband_lore_display_locale_source.py` 的原始資料對照／公式／可見性／英文分支檢查，已接入 `scripts/verify-zh-tw.sh`。
+- **後續未涵蓋**：`lore_append_abilities()` 的旗標能力串列、`lore_append_spells()`、`lore_append_attack()` 的法術與近戰詳細文法仍須逐個來源核對；本批不宣稱所有怪物知識全文已翻譯。
+- **驗證界線**：可從 GitHub 執行定向原始碼一致性核對；這不同於完整 C99／Python 回歸、Android NDK／Gradle 或實機／模擬器建置驗證。維持同一 Draft PR #146，不觸發 GitHub Actions，不合併 `master`。
