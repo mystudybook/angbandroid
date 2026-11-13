@@ -235,6 +235,28 @@ int main(void)
         }
     }
 
+    /* Run every narrow terminal width through mixed CJK, ASCII,
+     * whitespace and an explicit newline. No continuation may be
+     * orphaned, and no screen write may cross the bottom/right edge. */
+    {
+        int width, x, y;
+        for (width = 2; width <= 32; ++width) {
+            reset(width, 8);
+            text_out_to_screen(1,
+                "A中 B文 C甲 D乙 E人 F文\n終A 家B");
+            CHECK(invalid == 0);
+            for (y = 0; y < 8; ++y) {
+                for (x = 0; x < width; ++x) {
+                    if (tiles[y][x] == ANGDROID_TEXT_CONTINUATION) {
+                        CHECK(x > 0 && x < width - 1);
+                        CHECK(angdroid_terminal_columns(
+                            (uint32_t)tiles[y][x - 1]) == 2);
+                    }
+                }
+            }
+        }
+    }
+
     printf("PASS: %lu production FA text_out_to_screen bounds checks\n",
            checks);
     return 0;
