@@ -133,8 +133,7 @@ static void spell_message(struct monster *mon,
 					/* Do not disclose an unseen caster's race in the
 					 * translated missing-message diagnostic. */
 					if (angdroid_zh_tw_enabled()) {
-						msg("怪物法術 %d 缺少視野外施法訊息，請回報此問題。",
-							(int)spell->index);
+						msg("缺少視野外施法訊息，請回報此問題。");
 					} else {
 						msg("No message-invis for monster "
 							"spell %d cast by %s.  "
