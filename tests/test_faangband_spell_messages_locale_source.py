@@ -119,7 +119,8 @@ assert spell_message.index("next = strchr(in_cursor, '{');") < (
     spell_message.index("switch (spell_tag_lookup(tag))"))
 assert "if (!english || !zh_tw) return english;" in WRAPPER
 assert "if (translated != english) return translated;" in WRAPPER
-assert "return angdroid_fa_spell_message_other(english, true);" in WRAPPER
+assert "translated = angdroid_fa_spell_message_other(english, true);" in WRAPPER
+assert "return angdroid_fa_spell_message_alternate(english, true);" in WRAPPER
 assert "if (!english || !localized || !output || !capacity)" in WRAPPER
 assert 'angdroid_utf8_copy_complete(output, capacity, "這隻")' in WRAPPER
 assert "angdroid_utf8_append_complete(output, capacity, used, noun)" in WRAPPER
