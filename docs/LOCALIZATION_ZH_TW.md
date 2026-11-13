@@ -547,3 +547,12 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - **九組繁中譯文**：元素戰場、巨龍、凶狼荒野、烏頓烈焰與惡魔、哥布林戰鼓、軍閥爭戰、巴拉希爾、伊甸人、Haudh-en-Ndengin。特定地名與人名保留可辨識的專名；展示文字透過 `angdroid_game_ui_text(level->typ, angdroid_zh_tw_enabled())` 查表，**沒有更改 themed.txt、樓層識別、房間模板、生成機率、存檔格式或英文顯示**。未命中的訊息原樣回退英文。
 - **回歸守護**：擴充 `test_fa_dungeon_feelings_locale.c`，以正式翻譯 header 對照 9 組並檢查英文回退；`test_faangband_dungeon_feelings_locale_source.py` 會從 `themed.txt` 自動擷取全部 `message:`，確認字典和 C99 測試一一對應，並檢查 `generate.c` 的解析器及真正顯示端。沿用既有 `scripts/test-fa-dungeon-feelings-locale.sh` 和 `scripts/verify-zh-tw.sh`。
 - **驗證界線**：本批需區分 GitHub 來源比對與實際測試執行；尚未進行完整 Android NDK／Gradle 建置或手機實測。PR #146 維持 Draft，不合併 master，不主動執行 GitHub Actions。
+
+## 第 241 批 — FAangband 怪物行動與世界環境提示繁體中文（2026-11-13）
+
+- **來源與範圍**：只修改 `faangband/mon-move.c`（怪物混亂撞地形、撞門、推擠、撿拾／壓碎物品、幽靈發言、驚醒）、`game-world.c`（物品充能通知、日夜、黑息、飢餓、回城／傳送／深層下降）、`cave-square.c`（符文、樓梯建立失敗、誘餌消失）的玩家可見訊息。
+- **字典**：共新增 **19 組** `angdroid_game_ui_text()` 英文來源對照；包含 `terrain.txt` 中的 3 組 `confused-msg:` 與原本預設的 `stumbles`。資料檔中的英文 `confused-msg:` 不改動，僅顯示端轉成中文。未知地形描述保持英文句型，不會硬套中文標點。
+- **含變數訊息**：保留原本怪物／物品名稱、拾取判斷、門鎖處理、更新旗標、聲音類別、掉落與消除操作；僅以繁中條件格式翻譯動作和詞序。原本玩家幽靈自訂說話內容保留原文。
+- **相容性**：未修改 `terrain.txt`、怪物 ID、RNG 呼叫、時間推移、效果數值、存檔資料、模式或遊戲判定；英文模式仍保留既有格式字串。
+- **測試**：`test_fa_monster_world_locale.c` 使用正式共用翻譯 header 檢查全部 19 組、英文原樣回退及動態格式範例；`test_faangband_monster_world_messages_locale_source.py` 核對資料檔、顯示端、關鍵英文格式、分支守護及測試接線。已接入 `scripts/verify-zh-tw.sh`。
+- **驗證界線**：GitHub 來源比對不等同完整 C99／Python 或 Android APK／模擬器測試。維持原 Draft PR #146、不執行 GitHub Actions、不合併 master。
