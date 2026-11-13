@@ -114,4 +114,46 @@ static inline const char *angdroid_fa_spell_ghost_subject(
     return output;
 }
 
+
+/*
+ * monster_desc() appends " (offscreen)" to an otherwise visible monster
+ * name when it is outside the panel.  On an already-localized battle
+ * sentence, preserve that fact with a Chinese suffix for ordinary and
+ * shape-unique monsters alike. The ghost helper already handles its own
+ * offscreen suffix.
+ *
+ * Even under a tiny byte budget, only complete UTF-8 scalars are copied.
+ * Prefer a shortened name plus a complete location indicator over a
+ * clipped "(offscreen)" or a dangling Chinese bracket.
+ */
+static inline const char *angdroid_fa_spell_offscreen_subject(
+    const char *display_name, bool zh_tw, char *output, size_t capacity)
+{
+    static const char suffix[] = " (offscreen)";
+    static const char localized_suffix[] = "（畫面外）";
+    size_t full_len, base_len, prefix_capacity, used;
+
+    if (!display_name || !zh_tw || !output || !capacity)
+        return display_name;
+
+    full_len = strlen(display_name);
+    if (full_len < sizeof(suffix) - 1 ||
+        strcmp(display_name + full_len - (sizeof(suffix) - 1), suffix) != 0)
+        return display_name;
+
+    /* A whole suffix and NUL must fit, or keep the source unchanged. */
+    if (capacity <= sizeof(localized_suffix))
+        return display_name;
+
+    base_len = full_len - (sizeof(suffix) - 1);
+    prefix_capacity = capacity - (sizeof(localized_suffix) - 1);
+    if (base_len < prefix_capacity)
+        prefix_capacity = base_len + 1;
+
+    used = angdroid_utf8_copy_complete(output, prefix_capacity, display_name);
+    (void)angdroid_utf8_append_complete(
+        output, capacity, used, localized_suffix);
+    return output;
+}
+
 #endif /* ANGDROID_FA_SPELL_MESSAGE_LOCALE_H */
