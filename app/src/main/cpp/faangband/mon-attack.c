@@ -31,6 +31,8 @@
 #include "mon-lore.h"
 #include "mon-predicate.h"
 #include "mon-spell.h"
+#include "mon-spell-message-locale.h"
+#include "../angband/zh-tw-ui.h"
 #include "mon-timed.h"
 #include "mon-util.h"
 #include "obj-knowledge.h"
@@ -39,6 +41,33 @@
 #include "player-timed.h"
 #include "player-util.h"
 #include "project.h"
+
+/*
+ * Display-only monster descriptions for Chinese attack notifications.
+ * Always re-read the exact description gates rather than translating
+ * race->name: an unseen monster must stay "someone"/"something".
+ * The caller owns all buffers, so the returned view never dangles.
+ */
+static const char *monster_attack_display_name(const struct monster *mon,
+		int mode, char name[256], char translated[320],
+		char offscreen[320])
+{
+	const char *shown;
+
+	monster_desc(name, 256, mon, mode & ~MDESC_COMMA);
+	shown = name;
+	if (rf_has(mon->race->flags, RF_PLAYER_GHOST) && cave->ghost) {
+		shown = angdroid_fa_spell_ghost_subject(name,
+			cave->ghost->name, mon->race->name, true,
+			translated, 320);
+	}
+	if (shown == name &&
+		(!monster_is_shape_unique(mon) || !monster_is_visible(mon))) {
+		shown = angdroid_fa_spell_subject(name, true, translated, 320);
+	}
+	return angdroid_fa_spell_offscreen_subject(shown, true,
+		offscreen, 320);
+}
 
 /**
  * This file deals with monster attacks (including spells) as follows:
@@ -473,7 +502,14 @@ bool make_ranged_attack(struct monster *mon)
 	/* Check for spell failure (innate attacks never fail) */
 	failrate = monster_spell_failrate(mon);
 	if (!mon_spell_is_innate(thrown_spell) && (randint0(100) < failrate)) {
-		msg("%s tries to cast a spell, but fails.", m_name);
+		if (angdroid_zh_tw_enabled()) {
+			char name[256], zh_name[320], offscreen[320];
+			const char *shown = monster_attack_display_name(mon,
+				MDESC_STANDARD, name, zh_name, offscreen);
+			msg("%s試圖施法，但失敗了。", shown);
+		} else {
+			msg("%s tries to cast a spell, but fails.", m_name);
+		}
 		return true;
 	}
 
@@ -485,7 +521,10 @@ bool make_ranged_attack(struct monster *mon)
 	if (player_has(player, PF_POWER_SIPHON) && monster_is_visible(mon) &&
 		(player->csp < player->msp)) {
 		int gain = mon->race->spell_power / 5;
-		msg("You gain mana.");
+		if (angdroid_zh_tw_enabled())
+			msg("你獲得了法力。");
+		else
+			msg("You gain mana.");
 		player->csp = MIN(player->csp + gain, player->msp);
 		player->upkeep->redraw |= PR_MANA;
 	}
@@ -601,7 +640,14 @@ static bool player_avoid_blow(struct monster *mon, char *m_name, struct player *
 
 		if ((p->lev >= rlev) && (randint0(100) + p->lev > 50)) {
 			/* Message */
-			msg("%s is repelled.", m_name);
+			if (angdroid_zh_tw_enabled()) {
+				char name[256], zh_name[320], offscreen[320];
+				const char *shown = monster_attack_display_name(mon,
+					MDESC_STANDARD, name, zh_name, offscreen);
+				msg("%s被防護力量擊退了。", shown);
+			} else {
+				msg("%s is repelled.", m_name);
+			}
 			return true;
 		}
 	}
@@ -609,7 +655,10 @@ static bool player_avoid_blow(struct monster *mon, char *m_name, struct player *
 	/* Try for Evasion */
 	if (randint1(100) <= p->state.evasion_chance && !p->timed[TMD_PARALYZED]) {
 		/* Message */
-		msg("You evade the attack!");
+		if (angdroid_zh_tw_enabled())
+			msg("你閃避了攻擊！");
+		else
+			msg("You evade the attack!");
 	}
 
 	return false;
@@ -714,7 +763,10 @@ bool make_attack_normal(struct monster *mon, struct player *p)
 				blinked = context.blinked;
 				damage = context.damage;
 			} else {
-				msg("ERROR: Effect handler not found for %s.", effect->name);
+				if (angdroid_zh_tw_enabled())
+					msg("錯誤：找不到%s的攻擊效果處理器。", effect->name);
+				else
+					msg("ERROR: Effect handler not found for %s.", effect->name);
 			}
 
 			/* Don't cut or stun if player is dead */
@@ -786,7 +838,14 @@ bool make_attack_normal(struct monster *mon, struct player *p)
 			if (monster_is_visible(mon) &&	method->miss) {
 				/* Disturbing */
 				disturb(p);
-				msg("%s misses you.", m_name);
+				if (angdroid_zh_tw_enabled()) {
+					char name[256], zh_name[320], offscreen[320];
+					const char *shown = monster_attack_display_name(mon,
+						MDESC_STANDARD, name, zh_name, offscreen);
+					msg("%s沒有擊中你。", shown);
+				} else {
+					msg("%s misses you.", m_name);
+				}
 			}
 		}
 
@@ -905,7 +964,10 @@ bool monster_attack_monster(struct monster *mon, struct monster *t_mon)
 				blinked = context.blinked;
 				damage = context.damage;
 			} else {
-				msg("ERROR: Effect handler not found for %s.", effect->name);
+				if (angdroid_zh_tw_enabled())
+					msg("錯誤：找不到%s的攻擊效果處理器。", effect->name);
+				else
+					msg("ERROR: Effect handler not found for %s.", effect->name);
 			}
 
 			/* Handle stun */
@@ -932,7 +994,17 @@ bool monster_attack_monster(struct monster *mon, struct monster *t_mon)
 		} else {
 			/* Visible monster missed monster, so notify if appropriate. */
 			if (monster_is_visible(mon) && method->miss) {
-				msg("%s misses %s.", m_name, t_name);
+				if (angdroid_zh_tw_enabled()) {
+					char name[256], zh_name[320], offscreen[320];
+					char target[256], zh_target[320], offscreen_target[320];
+					const char *shown = monster_attack_display_name(mon,
+						MDESC_STANDARD, name, zh_name, offscreen);
+					const char *target_shown = monster_attack_display_name(t_mon,
+						MDESC_TARG, target, zh_target, offscreen_target);
+					msg("%s沒有擊中%s。", shown, target_shown);
+				} else {
+					msg("%s misses %s.", m_name, t_name);
+				}
 			}
 		}
 
