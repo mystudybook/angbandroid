@@ -736,7 +736,7 @@ void Term_queue_chars(int x, int y, int n, int a, const wchar_t *s)
 	/* Queue fixed-position columns. An overwrite must invalidate
      * the other half of any pre-existing wide text glyph. */
 	for ( ; n; x++, s++, n--) {
-        wchar_t glyph = angdroid_stream_glyph(*s);
+        wchar_t glyph = angdroid_fixed_cell_glyph(*s, a);
         Term_clear_wide_neighbor(Term, x, y, glyph, a);
 		int oa = scr_aa[x];
 		wchar_t oc = scr_cc[x];
