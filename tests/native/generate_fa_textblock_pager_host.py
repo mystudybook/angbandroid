@@ -252,7 +252,7 @@ static int check_mixed_text_property(void)
 {
     textblock tb = {{0}, {0}, 0};
     static const wchar_t chars[] = {
-        L'甲', L'乙', L'A', L'B', L' ', L'\\n', L'C'
+        L'甲', L'乙', L'A', L'B', L' ', L'\n', L'C'
     };
     unsigned int state = 0xC0FFEEu;
     size_t width, sample;
@@ -265,10 +265,10 @@ static int check_mixed_text_property(void)
             for (i = 0; i < tb.strlen; ++i) {
                 state = state * 1664525u + 1013904223u;
                 tb.text[i] = chars[state % 7];
-                if (tb.text[i] != L' ' && tb.text[i] != L'\\n')
+                if (tb.text[i] != L' ' && tb.text[i] != L'\n')
                     ++letters_before;
             }
-            tb.text[tb.strlen] = L'\\0';
+            tb.text[tb.strlen] = L'\0';
             n = textblock_calculate_display_lines(
                 &tb, &starts, &lengths, width);
             k = 0;
@@ -278,11 +278,11 @@ static int check_mixed_text_property(void)
                 CHECK(starts[i] + lengths[i] <= tb.strlen);
                 for (j = 0; j < lengths[i]; ++j) {
                     wchar_t ch = tb.text[starts[i] + j];
-                    CHECK(ch != L'\\n');
+                    CHECK(ch != L'\n');
                     cells += (size_t)angdroid_terminal_columns((uint32_t)ch);
                     if (ch != L' ') {
                         while (k < tb.strlen &&
-                                (tb.text[k] == L' ' || tb.text[k] == L'\\n'))
+                                (tb.text[k] == L' ' || tb.text[k] == L'\n'))
                             ++k;
                         CHECK(k < tb.strlen);
                         CHECK(tb.text[k] == ch);
