@@ -139,13 +139,9 @@ for token in [
     "total_centidamage / 100",
     'zh_tw ? "%%）" : "%%)"',
     'zh_tw ? "，" : ", "',
-    'zh_tw ? " 點傷害。  " : '
+    " 點傷害。  "
 ]:
-    # The last Chinese sentence is rendered in a conditional statement.
-    if token.endswith(': '):
-        assert " 點傷害。  " in attack
-    else:
-        assert token in attack, token
+    assert token in attack, token
 
 assert "-std=c99 -Wall -Wextra -Werror -pedantic" in RUNNER
 assert "test_faangband_lore_spells_attacks_locale.c" in RUNNER
