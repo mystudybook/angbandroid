@@ -2114,29 +2114,38 @@ errr Term_draw(int x, int y, int a, wchar_t c)
  */
 errr Term_addch(int a, wchar_t c)
 {
-	int w = Term->wid;
+    int x, y, w, span;
 
-	/* Handle "unusable" cursor */
-	if (Term->scr->cu) return (-1);
+    if (!Term || !Term->scr) return (-1);
+    w = Term->wid;
+    if (Term->scr->cu) return (-1);
+    if (!c) return (-2);
 
-	/* Paranoia -- no illegal chars */
-	if (!c) return (-2);
+    x = Term->scr->cx;
+    y = Term->scr->cy;
+    if (x < 0 || x >= w || y < 0 || y >= Term->hgt) return (-1);
 
-	/* Never accept a literal private continuation marker as text. */
+    /* Text-stream writes use display columns. Map-cell writes through
+     * Term_draw()/Term_queue_chars() keep their fixed-grid semantics. */
     c = angdroid_stream_glyph(c);
-    Term_queue_char(Term, Term->scr->cx, Term->scr->cy, a, c, 0, 0);
+    span = angdroid_is_wide_text(c, a) ? 2 : 1;
+    if (x + span > w) {
+        /* A double-column glyph cannot fit in the final column. */
+        c = L'?';
+        span = 1;
+    }
+    if (span == 2) {
+        /* Write the trailing marker first. An overwrite of the old
+         * marker clears its previous lead; the new lead is then drawn. */
+        Term_queue_char(Term, x + 1, y, a,
+            ANGDROID_TEXT_CONTINUATION, 0, 0);
+    }
+    Term_queue_char(Term, x, y, a, c, 0, 0);
+    Term->scr->cx += span;
+    if (Term->scr->cx < w) return (0);
 
-	/* Advance the cursor */
-	Term->scr->cx++;
-
-	/* Success */
-	if (Term->scr->cx < w) return (0);
-
-	/* Note "Useless" cursor */
-	Term->scr->cu = 1;
-
-	/* Note "Useless" cursor */
-	return (1);
+    Term->scr->cu = 1;
+    return (1);
 }
 
 
@@ -2161,40 +2170,42 @@ errr Term_addch(int a, wchar_t c)
  */
 errr Term_addstr(int n, int a, const char *buf)
 {
-	int k;
+    int k, count, i, width;
+    int available;
+    errr res = 0;
+    angdroid_text_fit fit;
+    wchar_t s[1024] = {0};
 
-	int w = Term->wid;
+    if (!Term || !Term->scr || !buf || Term->scr->cu) return (-1);
+    width = Term->wid;
+    if (width <= 0 || Term->scr->cx < 0 ||
+            Term->scr->cx >= width) return (-1);
 
-	errr res = 0;
+    /* An explicit n is a maximum number of wchar_t glyphs, not a
+     * number of terminal columns. Leave space for the terminator. */
+    text_mbstowcs(s, buf, 1023);
+    s[1023] = L'\0';
+    k = (n < 0) ? width + 1 : n;
+    if (k > 1023) k = 1023;
+    for (count = 0; count < k && s[count]; ++count) { /* loop */ }
 
-	wchar_t s[1024];
+    available = width - Term->scr->cx;
+    fit = angdroid_fit_terminal_text(s, (size_t)count,
+        (size_t)available, a);
 
-	/* Copy to a rewriteable string */
- 	text_mbstowcs(s, buf, 1024);
+    /* Term_addch() owns wide continuation cells and cursor movement;
+     * never send a display-cell text stream to the fixed-grid bulk
+     * Term_queue_chars() API. */
+    for (i = 0; i < (int)fit.codepoints; ++i) {
+        res = Term_addch(a, s[i]);
+        if (res < 0) return (res);
+    }
 
-	/* Handle "unusable" cursor */
-	if (Term->scr->cu) return (-1);
-
-	/* Obtain maximal length */
-	k = (n < 0) ? (w + 1) : n;
-
-	/* Obtain the usable string length */
-	for (n = 0; (n < k) && s[n]; n++) /* loop */;
-
-	/* React to reaching the edge of the screen */
-	if (Term->scr->cx + n >= w) res = n = w - Term->scr->cx;
-
-	/* Queue the first "n" characters for display */
-	Term_queue_chars(Term->scr->cx, Term->scr->cy, n, a, s);
-
-	/* Advance the cursor */
-	Term->scr->cx += n;
-
-	/* Hack -- Notice "Useless" cursor */
-	if (res) Term->scr->cu = 1;
-
-	/* Success (usually) */
-	return (res);
+    if (fit.clipped || Term->scr->cx >= width) {
+        Term->scr->cu = 1;
+        return fit.codepoints ? (errr)fit.codepoints : 1;
+    }
+    return 0;
 }
 
 
