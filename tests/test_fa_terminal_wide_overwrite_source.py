@@ -55,6 +55,12 @@ assert "ANGDROID_TEXT_CONTINUATION, 0, 0);" in stream
 assert "Term->scr->cx += span;" in stream
 assert "Term->scr->cx++;" not in stream
 block = section("errr Term_addstr(", "errr Term_putch(")
+putch = section("errr Term_putch(", "void Term_big_putch(")
+putstr = section("errr Term_putstr(", "errr Term_erase(")
+assert "Term_gotoxy(x, y)" in putch and "Term_addch(a, c)" in putch
+assert "Term_gotoxy(x, y)" in putstr and "Term_addstr(n, a, s)" in putstr
+assert putch.index("Term_gotoxy(x, y)") < putch.index("Term_addch(a, c)")
+assert putstr.index("Term_gotoxy(x, y)") < putstr.index("Term_addstr(n, a, s)")
 assert "angdroid_fit_terminal_text(s, (size_t)count," in block
 assert "fit = angdroid_fit_terminal_text(s, (size_t)count," in block
 assert "res = Term_addch(a, s[i]);" in block
@@ -69,7 +75,8 @@ assert "angdroid_public_grid_glyph(Term->scr->c[y][x])" in what
 
 for item in ("Term_queue_char_raw", "Term_clear_wide_neighbor",
              "Term_queue_char", "Term_queue_chars", "Term_draw",
-             "Term_addch", "Term_addstr", "Term_erase", "Term_what"):
+             "Term_addch", "Term_addstr", "Term_putch", "Term_putstr",
+             "Term_erase", "Term_what"):
     assert f'"{item}"' in HOST, item
 for expected in (
     "set_wide(3);",
@@ -86,6 +93,11 @@ for expected in (
     "Term_addch(1, L'甲')",
     "active.cx == 4 && active.cu == 0",
     "angdroid_utf8_next_scalar(",
+    'Term_putstr(2, 0, -1, 1, "A中B")',
+    "Term_putch(4, 0, 1, L'甲')",
+    "Term_putch(11, 0, 1, L'甲')",
+    "Term_putstr(10, 0, -1, 1,",
+
 
 ):
     assert expected in HOST, expected
