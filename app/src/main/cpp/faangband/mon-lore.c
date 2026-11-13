@@ -39,6 +39,7 @@
 #include "z-textblock.h"
 #include "../angband/zh-tw-ui.h"
 #include "mon-lore-display.h"
+#include "mon-lore-terms.h"
 
 /**
  * Monster genders
@@ -846,6 +847,8 @@ static void lore_append_spell_clause(textblock *tb, bitflag *f, bool know_hp,
 {
 	int count = rsf_count(f);
 	bool comma = count > 2;
+	bool zh_tw = angdroid_zh_tw_enabled();
+	int emitted = 0;
 
 	if (count) {
 		int spell;
@@ -854,12 +857,13 @@ static void lore_append_spell_clause(textblock *tb, bitflag *f, bool know_hp,
 			int color = spell_color(player, race, spell);
 			int damage = mon_spell_lore_damage(spell, race, know_hp);
 
-			/* First entry starts immediately */
-			if (spell != rsf_next(f, FLAG_START)) {
-				if (comma) {
-					textblock_append(tb, ",");
-				}
-				/* Last entry */
+			/* Localize only descriptions already admitted by lore->spell_flags.
+			 * Damage still depends on know_hp and uses the original formula. */
+			if (zh_tw) {
+				textblock_append(tb, "%s", angdroid_fa_lore_separator(
+					emitted, count, streq(conjunction, "or")));
+			} else if (spell != rsf_next(f, FLAG_START)) {
+				if (comma) textblock_append(tb, ",");
 				if (rsf_next(f, spell + 1) == FLAG_END) {
 					textblock_append(tb, " ");
 					textblock_append(tb, "%s", conjunction);
@@ -867,12 +871,14 @@ static void lore_append_spell_clause(textblock *tb, bitflag *f, bool know_hp,
 				textblock_append(tb, " ");
 			}
 			textblock_append_c(tb, color, "%s",
-							   mon_spell_lore_description(spell, race));
-			if (damage > 0) {
+				angdroid_fa_lore_term(
+					mon_spell_lore_description(spell, race), zh_tw));
+			if (damage > 0)
 				textblock_append_c(tb, color, " (%d)", damage);
-			}
+			emitted++;
 		}
-		textblock_append(tb, "%s", end);
+		textblock_append(tb, "%s",
+			angdroid_fa_lore_sentence_end(end, zh_tw));
 	}
 }
 
@@ -1754,6 +1760,27 @@ void lore_append_friends(textblock *tb, const struct monster_race *race,
  * \param known_flags is the preprocessed bitfield of race flags known to the
  *        player.
  */
+/*
+ * Keep the exact known/estimated spell-frequency denominators and source
+ * colors; only the order of the displayed fraction changes in Chinese.
+ */
+static void lore_append_spell_frequency(textblock *tb, int interval,
+		bool approximate)
+{
+	if (angdroid_zh_tw_enabled()) {
+		textblock_append(tb, approximate ? "；約每 " : "；每 ");
+		textblock_append_c(tb, COLOUR_L_GREEN, "%d", interval);
+		textblock_append(tb, " 次施放 ");
+		textblock_append_c(tb, COLOUR_L_GREEN, "1");
+		textblock_append(tb, " 次");
+	} else {
+		textblock_append(tb, approximate ? "; about " : "; ");
+		textblock_append_c(tb, COLOUR_L_GREEN, "1");
+		textblock_append(tb, " time in ");
+		textblock_append_c(tb, COLOUR_L_GREEN, "%d", interval);
+	}
+}
+
 void lore_append_spells(textblock *tb, const struct monster_race *race,
 						const struct monster_lore *lore,
 						bitflag known_flags[RF_SIZE])
@@ -1765,6 +1792,7 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 	bool know_hp;
 	bitflag current_flags[RSF_SIZE], test_flags[RSF_SIZE];
 	const struct monster_race *old_ref;
+	const bool zh_tw = angdroid_zh_tw_enabled();
 
 	assert(tb && race && lore);
 
@@ -1785,7 +1813,10 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 	create_mon_spell_mask(test_flags, RST_BREATH, RST_NONE);
 	rsf_diff(current_flags, test_flags);
 	if (!rsf_is_empty(current_flags)) {
-		textblock_append(tb, "%s may ", initial_pronoun);
+		if (zh_tw)
+			textblock_append(tb, "牠可能");
+		else
+			textblock_append(tb, "%s may ", initial_pronoun);
 		lore_append_spell_clause(tb, current_flags, know_hp, race, "or", "");
 		innate = true;
 	}
@@ -1795,11 +1826,15 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 	rsf_inter(current_flags, lore->spell_flags);
 	if (!rsf_is_empty(current_flags)) {
 		if (innate) {
-			textblock_append(tb, ", and may ");
+			textblock_append(tb, zh_tw ? "，也可能" : ", and may ");
 		} else {
+			if (zh_tw)
+			textblock_append(tb, "牠可能");
+		else
 			textblock_append(tb, "%s may ", initial_pronoun);
 		}
-		textblock_append_c(tb, COLOUR_L_RED, "breathe ");
+		textblock_append_c(tb, COLOUR_L_RED, "%s",
+			zh_tw ? "吐出" : "breathe ");
 		lore_append_spell_clause(tb, current_flags, know_hp, race, "or", "");
 		breath = true;
 	}
@@ -1807,23 +1842,17 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 	/* End the sentence about innate spells and breaths */
 	if ((innate || breath) && race->freq_innate) {
 		if (lore->innate_freq_known) {
-			/* Describe the spell frequency */
-			textblock_append(tb, "; ");
-			textblock_append_c(tb, COLOUR_L_GREEN, "1");
-			textblock_append(tb, " time in ");
-			textblock_append_c(tb, COLOUR_L_GREEN, "%d",
-							   100 / race->freq_innate);
+			/* Same exact frequency, displayed with Chinese word order. */
+			lore_append_spell_frequency(tb, 100 / race->freq_innate,
+				false);
 		} else if (lore->cast_innate) {
 			/* Guess at the frequency */
 			int approx_frequency = MAX(((race->freq_innate + 9) / 10) * 10, 1);
-			textblock_append(tb, "; about ");
-			textblock_append_c(tb, COLOUR_L_GREEN, "1");
-			textblock_append(tb, " time in ");
-			textblock_append_c(tb, COLOUR_L_GREEN, "%d",
-							   100 / approx_frequency);
+			lore_append_spell_frequency(tb, 100 / approx_frequency,
+				true);
 		}
 
-		textblock_append(tb, ".  ");
+		textblock_append(tb, zh_tw ? "。  " : ".  ");
 	}
 
 	/* Collect spell information */
@@ -1832,41 +1861,39 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 	rsf_diff(current_flags, test_flags);
 	if (!rsf_is_empty(current_flags)) {
 		/* Intro */
-		textblock_append(tb, "%s may ", initial_pronoun);
+		if (zh_tw)
+			textblock_append(tb, "牠可能");
+		else
+			textblock_append(tb, "%s may ", initial_pronoun);
 
 		/* Verb Phrase */
-		textblock_append_c(tb, COLOUR_L_RED, "cast spells");
+		textblock_append_c(tb, COLOUR_L_RED, "%s",
+			zh_tw ? "施放法術" : "cast spells");
 
 		/* Adverb */
 		if (rf_has(known_flags, RF_SMART))
-			textblock_append(tb, " intelligently");
+			textblock_append(tb, zh_tw ? "（會運用策略）" : " intelligently");
 
 		/* List */
-		textblock_append(tb, " which ");
+		textblock_append(tb, zh_tw ? "，包括" : " which ");
 		lore_append_spell_clause(tb, current_flags, know_hp, race, "or", "");
 
 		/* End the sentence about innate/other spells */
 		if (race->freq_spell) {
 			if (lore->spell_freq_known) {
 				/* Describe the spell frequency */
-				textblock_append(tb, "; ");
-				textblock_append_c(tb, COLOUR_L_GREEN, "1");
-				textblock_append(tb, " time in ");
-				textblock_append_c(tb, COLOUR_L_GREEN, "%d",
-								   100 / race->freq_spell);
+				lore_append_spell_frequency(tb, 100 / race->freq_spell,
+					false);
 			} else if (lore->cast_spell) {
 				/* Guess at the frequency */
 				int approx_frequency = MAX(((race->freq_spell + 9) / 10) * 10,
 										   1);
-				textblock_append(tb, "; about ");
-				textblock_append_c(tb, COLOUR_L_GREEN, "1");
-				textblock_append(tb, " time in ");
-				textblock_append_c(tb, COLOUR_L_GREEN, "%d",
-								   100 / approx_frequency);
+				lore_append_spell_frequency(tb, 100 / approx_frequency,
+					true);
 			}
 		}
 
-		textblock_append(tb, ".  ");
+		textblock_append(tb, zh_tw ? "。  " : ".  ");
 	}
 
 	/* Restore the previous reference. */
