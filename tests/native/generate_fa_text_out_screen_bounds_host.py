@@ -24,6 +24,8 @@ header = r"""
 #include <stdio.h>
 #include <string.h>
 #include <wchar.h>
+#include "app/src/main/cpp/curses/unicode_layout.h"
+#include "app/src/main/cpp/curses/unicode_display.h"
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -32,6 +34,7 @@ static struct fake_term device = {80, 24};
 static struct fake_term *Term = &device;
 static int text_out_wrap, text_out_indent, text_out_pad;
 static int xcur, ycur, invalid, erases, writes, width_override;
+static int continuation_writes;
 static wchar_t tiles[300][512];
 
 static void Term_get_size(int *w, int *h)
@@ -79,6 +82,19 @@ static int Term_what(int x, int y, int *color, wchar_t *ch)
     *ch = tiles[y][x];
     return 0;
 }
+static void Term_queue_char(struct fake_term *term,
+    int x, int y, int color, wchar_t ch, int ta, wchar_t tc)
+{
+    (void)color;
+    (void)ta;
+    (void)tc;
+    if (!term || x < 0 || y < 0 || x >= term->wid || y >= term->hgt) {
+        ++invalid;
+        return;
+    }
+    tiles[y][x] = ch;
+    if (ch == ANGDROID_TEXT_CONTINUATION) ++continuation_writes;
+}
 static int Term_addch(int color, wchar_t ch)
 {
     (void)color;
@@ -97,10 +113,14 @@ static int text_iswprint(wchar_t ch)
 }
 static int text_mbstowcs(wchar_t *to, const char *from, int cap)
 {
+    size_t offset = 0;
     int i = 0;
-    while (from[i] && i < cap - 1) {
-        to[i] = (unsigned char)from[i];
-        ++i;
+    while (from[offset] && i < cap - 1) {
+        uint32_t scalar = 0;
+        size_t bytes = angdroid_utf8_next_scalar(from + offset, &scalar);
+        if (!bytes) break;
+        to[i++] = (wchar_t)scalar;
+        offset += bytes;
     }
     to[i] = L'\0';
     return i;
@@ -113,6 +133,7 @@ static void reset(int width, int height)
     device.hgt = height;
     text_out_wrap = text_out_indent = text_out_pad = 0;
     xcur = ycur = invalid = erases = writes = width_override = 0;
+    continuation_writes = 0;
     for (i = 0; i < 300; ++i)
         for (j = 0; j < 512; ++j)
             tiles[i][j] = L' ';
@@ -168,6 +189,51 @@ int main(void)
     reset(12, 4);
     text_out_to_screen(1, NULL);
     CHECK(invalid == 0 && writes == 0);
+
+    /* FAangband's Term_addch() moves by one code point. The prose
+     * painter must reserve the second display cell itself. */
+    reset(12, 5);
+    text_out_to_screen(1, "A中B文C");
+    CHECK(invalid == 0 && writes == 5);
+    CHECK(continuation_writes == 2 && xcur == 7);
+    CHECK(tiles[0][0] == L'A' && tiles[0][1] == L'中');
+    CHECK(tiles[0][2] == ANGDROID_TEXT_CONTINUATION);
+    CHECK(tiles[0][3] == L'B' && tiles[0][4] == L'文');
+    CHECK(tiles[0][5] == ANGDROID_TEXT_CONTINUATION);
+    CHECK(tiles[0][6] == L'C');
+
+    reset(6, 4);
+    text_out_to_screen(1, "ABC中D");
+    CHECK(invalid == 0 && continuation_writes == 1);
+    CHECK(tiles[0][3] == L'中' &&
+        tiles[0][4] == ANGDROID_TEXT_CONTINUATION);
+    CHECK(tiles[1][0] == L'D');
+
+    reset(2, 3);
+    text_out_to_screen(1, "中");
+    CHECK(invalid == 0 && continuation_writes == 0);
+    CHECK(tiles[0][0] == L'?');
+
+    reset(8, 4);
+    text_out_to_screen(0x80, "中");
+    CHECK(invalid == 0 && continuation_writes == 0);
+    CHECK(tiles[0][0] == L'中' && tiles[0][1] == L' ');
+
+    reset(8, 6);
+    text_out_to_screen(1, "A中BC DE");
+    CHECK(invalid == 0);
+    {
+        int x, y;
+        for (y = 0; y < 6; ++y) {
+            for (x = 0; x < 8; ++x) {
+                if (tiles[y][x] == ANGDROID_TEXT_CONTINUATION) {
+                    CHECK(x > 0);
+                    CHECK(angdroid_terminal_columns(
+                        (uint32_t)tiles[y][x-1]) == 2);
+                }
+            }
+        }
+    }
 
     printf("PASS: %lu production FA text_out_to_screen bounds checks\n",
            checks);
