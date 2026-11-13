@@ -58,12 +58,15 @@ void do_cmd_move_house(struct command *cmd)
 {
 	int i;
 	const char *town = locality_name(world->levels[player->place].locality);
-	char *prompt = format("Do you really want to move to %s?", town);
+	char *prompt = angdroid_zh_tw_enabled() ?
+        format("你真的要搬到 %s 嗎？", town) :
+        format("Do you really want to move to %s?", town);
 
 	if (!player->depth) {
 		/* Already home */
 		if (player->place == player->home) {
-			msg("You already live here!");
+			msg("%s", angdroid_game_ui_text("You already live here!",
+			    angdroid_zh_tw_enabled()));
 			return;
 		}
 
@@ -106,13 +109,15 @@ void do_cmd_move_house(struct command *cmd)
 
 		/* Set the new town */
 		player->home = player->place;
-		msg("Your home will be here when you return.");
+		msg("%s", angdroid_game_ui_text("Your home will be here when you return.",
+		    angdroid_zh_tw_enabled()));
 
 		/* Write message */
 		history_add(player, format("Moved house to %s.", town),
 					HIST_PLAYER_MOVE);
 	} else {
-		msg("You can only move to another town!");
+		msg("%s", angdroid_game_ui_text("You can only move to another town!",
+		    angdroid_zh_tw_enabled()));
 	}
 
 	return;
@@ -169,17 +174,20 @@ void do_cmd_go_up(struct command *cmd)
 		return;
 	} else if (square_isdownstairs(cave, player->grid)) {
 		if (square_ispath(cave, player->grid)) {
-			msg("This is a path to greater danger.");
+			msg("%s", angdroid_game_ui_text("This is a path to greater danger.",
+			    angdroid_zh_tw_enabled()));
 			return;
 		} else {
-			msg("This staircase leads down.");
+			msg("%s", angdroid_game_ui_text("This staircase leads down.",
+			    angdroid_zh_tw_enabled()));
 			return;
 		}
 	}
 
 	/* Make certain the player really wants to leave a themed level. -LM- */
 	if (player->themed_level) {
-		if (!get_check("This level will never appear again.  Really leave?")) {
+		if (!get_check(angdroid_game_ui_text("This level will never appear again.  Really leave?",
+                angdroid_zh_tw_enabled()))) {
 			return;
 		}
 	}
@@ -204,7 +212,8 @@ void do_cmd_go_up(struct command *cmd)
 				struct level *up = level_by_name(world, lev->up);
 				if (lev->locality != up->locality) {
 					/* Portal */
-					msgt(MSG_STAIRS_UP, "You trigger a magic portal.");
+					msgt(MSG_STAIRS_UP, "%s", angdroid_game_ui_text("You trigger a magic portal.",
+					    angdroid_zh_tw_enabled()));
 
 					/* Change level */
 					player_change_place(player, new_place);
@@ -219,7 +228,8 @@ void do_cmd_go_up(struct command *cmd)
 		msgt(MSG_STAIRS_UP, "%s", angdroid_game_ui_text("You enter a maze of up staircases.",
 		    angdroid_zh_tw_enabled()));
 	} else {
-		msgt(MSG_STAIRS_UP, "You enter a winding path to less danger.");
+		msgt(MSG_STAIRS_UP, "%s", angdroid_game_ui_text("You enter a winding path to less danger.",
+		    angdroid_zh_tw_enabled()));
 	}
 
 	/* Create a way back */
@@ -254,10 +264,12 @@ void do_cmd_go_down(struct command *cmd)
 		return;
 	} else if (square_isupstairs(cave, player->grid)) {
 		if (square_ispath(cave, player->grid)) {
-			msg("This is a path to less danger.");
+			msg("%s", angdroid_game_ui_text("This is a path to less danger.",
+			    angdroid_zh_tw_enabled()));
 			return;
 		} else {
-			msg("This staircase leads up.");
+			msg("%s", angdroid_game_ui_text("This staircase leads up.",
+			    angdroid_zh_tw_enabled()));
 			return;
 		}
 	}
@@ -271,7 +283,8 @@ void do_cmd_go_down(struct command *cmd)
 
 	/* Make certain the player really wants to leave a themed level. -LM- */
 	if (player->themed_level) {
-		if (!get_check("This level will never appear again.  Really leave? ")) {
+		if (!get_check(angdroid_game_ui_text("This level will never appear again.  Really leave? ",
+                angdroid_zh_tw_enabled()))) {
 			return;
 		}
 	}
@@ -293,7 +306,8 @@ void do_cmd_go_down(struct command *cmd)
 		msgt(MSG_STAIRS_DOWN, "%s", angdroid_game_ui_text("You enter a maze of down staircases.",
 		    angdroid_zh_tw_enabled()));
 	} else {
-		msgt(MSG_STAIRS_DOWN, "You enter a winding path to greater danger.");
+		msgt(MSG_STAIRS_DOWN, "%s", angdroid_game_ui_text("You enter a winding path to greater danger.",
+		    angdroid_zh_tw_enabled()));
 	}
 
 	/* Create a way back */
@@ -1150,18 +1164,21 @@ static void do_cmd_set_trap(struct loc grid)
 	if (player_has(player, PF_EXTRA_TRAP)) max_traps++;
 
 	if (player->timed[TMD_BLIND] || no_light(player)) {
-		msg("You can not see to set a trap.");
+		msg("%s", angdroid_game_ui_text("You can not see to set a trap.",
+		    angdroid_zh_tw_enabled()));
 		return;
 	}
 
 	if (player->timed[TMD_CONFUSED] || player->timed[TMD_IMAGE]) {
-		msg("You are too confused.");
+		msg("%s", angdroid_game_ui_text("You are too confused.",
+		    angdroid_zh_tw_enabled()));
 		return;
 	}
 
 	/* Forbid more than max_traps being set. */
 	if (player->num_traps >= max_traps) {
-		msg("You must disarm an existing trap to free up your equipment.");
+		msg("%s", angdroid_game_ui_text("You must disarm an existing trap to free up your equipment.",
+		    angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -1169,7 +1186,8 @@ static void do_cmd_set_trap(struct loc grid)
 	place_trap(cave, grid, lookup_trap("basic trap")->tidx, 0);
 
 	/* Notify the player. */
-	msg("You set a monster trap.");
+	msg("%s", angdroid_game_ui_text("You set a monster trap.",
+	    angdroid_zh_tw_enabled()));
 }
 
 /**
