@@ -2136,7 +2136,8 @@ void display_feeling(bool obj_only)
 	/* Special message for themed levels */
 	if (player->themed_level) {
 		struct vault *level = themed_level(player->themed_level);
-		msg("%s", level->typ);
+		msg("%s", angdroid_game_ui_text(level->typ,
+		    angdroid_zh_tw_enabled()));
 		return;
 	}
 
