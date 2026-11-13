@@ -523,3 +523,12 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 ```
 
 驗收場景：開啟施法選單 → 點一次 A（未施法）→ **2 秒內切到背景又返回** → 再點 A，必須只當新的第一次觸控、不能立即施法；然後合法再點 A 才確認。相同場景需測試通知欄失焦、旋轉畫面、瀏覽模式、Enter／法術字母及其他虛擬按鈕。
+
+## 第 238 批 — FAangband 物品操作與野外探索繁體中文（2026-11-13）
+
+- `faangband/cmd-obj.c`：將既有字典實際接入 36 處背包／裝備／使用道具／學習法術的提示與錯誤訊息，並接通 12 種一般回饋及一項啟動回饋。新增對物品使用失敗、未能卸下裝備、燃料與刻字、法力不足、施法學習失敗、物品使用後敘述等動態句子的繁中分支；英文語系仍採原有字串及格式。補正原本英文的燃料來源提示拼字重複。
+- `faangband/cmd-cave.c`：把 39 組既有翻譯接入 56 處可見探索訊息，包括門鎖、蜘蛛網、路線提示、障礙、怪物與地城階梯；另新增 16 組城鎮搬家、野外路徑、上下樓梯、離開特殊樓層確認及設陷阱的繁中字典。九種帶參數的怪物／陷阱事件保留原始英文格式，並有獨立繁中格式字串。
+- 挖掘指令：針對原版 `with your hands`、`with your weapon`、`with your swap digger` 三種工具提示加上繁中語序，讓清除碎石、挖掘、發現物品、挖通通道與失敗時的七種敘述不必混入英文介系詞。挖掘成功率、工具切換、地形變更及物品生成邏輯沒有改動。
+- 所有中文只在 `angdroid_zh_tw_enabled()` 開啟時顯示；英文模式、`cmd_get_item` 選擇條件、快捷鍵、裝備與陷阱 ID、角色歷史紀錄及存檔格式保持不變。尚未翻譯的動態效果描述仍保留英文回退。
+- 新增 `tests/test_faangband_item_command_messages_locale_source.py`、`tests/test_faangband_exploration_command_locale_source.py` 和純 C99 雙語字典測試 `tests/native/test_fa_item_command_translation.c`，由 `scripts/test-fa-item-command-translation.sh` 和 `scripts/verify-zh-tw.sh` 串接。
+- **驗證限制**：已在 GitHub Draft PR #146 提交並進行來源與接線核對；尚未在完整 repository checkout 執行這些新測試，也尚未確認最新 Android NDK／Gradle 編譯、模擬器或實機遊戲畫面。這些修改不能當作正式版驗收完成。
