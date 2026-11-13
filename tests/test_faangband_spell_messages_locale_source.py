@@ -98,13 +98,13 @@ for token in [
     "monster_desc(m_name, sizeof(m_name),",
     "monster_desc(m_poss, sizeof(m_poss), mon, MDESC_PRO_VIS | MDESC_POSS)",
     "angdroid_fa_spell_subject(m_name,",
-    "rf_has(mon->race->flags, RF_UNIQUE)",
+    "monster_is_shape_unique(mon)",
     "rf_has(mon->race->flags, RF_PLAYER_GHOST)",
-    "rf_has(t_mon->race->flags, RF_UNIQUE)",
+    "monster_is_shape_unique(t_mon)",
     "rf_has(t_mon->race->flags, RF_PLAYER_GHOST)",
     'localized ? "牠的" : m_poss',
     'localized ? "你" : "you"',
-    "angdroid_fa_lore_term(type_name, localized)",
+    "angdroid_mon_spell_lash(type_name, localized)",
     "msgt(spell->msgt, \"%s\", buf);"
 ]:
     assert token in spell_message, token
