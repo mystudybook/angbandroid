@@ -581,3 +581,13 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - `get_subject()` 僅在該筆訊息成功翻譯時使用中文主詞、怪物數量及「（畫面外）」標記；原英文路徑仍保留 `The`、複數拼法、空格及 `(offscreen)`。不更動已決定的可見性、訊息堆疊、傷害與聲音種類。中文群體傷害數字改顯示「（平均 %d）」；原英文依舊是 `(average %d)`。
 - 顯示文字緩衝區由 60 bytes 增至 256 bytes，以容納已核對的 UTF-8 翻譯，避免中文在一般句子中被截成半個字；怪物名稱、種族名稱、回合處理與狀態不變。
 - 新增 C99 正式翻譯表雙語回歸測試，以及 Python 對照原始資料完整覆蓋的來源檢查，並接入 `scripts/verify-zh-tw.sh`。此回合的 GitHub 靜態核對不等於已完整執行 C99、Python 或 Android 實機驗證。
+
+## 第 245 批 — FAangband 怪物清單窄螢幕及回憶顯示（2026-11-13）
+
+- **確認原有問題**：`faangband/ui-mon-list.c` 原先直接使用 `max_width - 2 - utf8_strlen(location) - 1` 及 `full_width - utf8_strlen(asleep)`；在窄視窗時，負欄數轉為 `size_t` 會造成無號下溢，導致名稱截斷與 `printf` 欄寬異常。現在採用專案已實作的 `angdroid_monster_row_fit()` 和 `angdroid_monster_sleep_fits()`：位置與睡眠／中立標記都是可省略的，優先保留怪物名稱。
+- **互動視窗**：原本的 `safe_width = MIN(width - 40, ...)` 在手機少於 40 欄時可能為負；改採 `angdroid_monster_list_popup_fit()`，在小於 12 欄或 7 行時安全不開啟；靜態怪物子窗小於 7 欄時不繪製，避免不完整符號欄位。
+- **UTF-8 與欄寬**：距離以 `angdroid_list_relative_location()` 完整輸出「北／南／東／西」；`angdroid_utf8_display_columns()` 計算真正終端欄位、`angdroid_utf8_clip_columns()` 不切斷漢字、`angdroid_utf8_printf_field_bytes()` 把顯示欄寬轉為 C `printf` field bytes。英文位置格式不變，無法放下完整距離時只省略距離而非截半。
+- **繁中清單資訊**：可見／感知區段標題、怪物數量、睡眠或中立狀態、幻覺訊息、隱藏其他怪物數量與按 `x` 切換經驗排序提示改為繁中；未變動怪物是否可見、排序計算、數量統計、顏色或圖示。
+- **名稱與回憶**：`mon-desc.c::get_mon_name()` 在繁中模式產生「%d 隻」與玩家幽靈 `[U] 姓名（種族）` 字串，利用 `angdroid_utf8_copy_complete()` 確保狹小輸出緩衝區不截斷中文字；英文模式維持原格式。`ui-mon-lore.c` 的一般怪物／幽靈回憶標題改用適當繁中格式，並新增 2 組「完全了解怪物」及任務怪物提示翻譯。遊戲資料、怪物唯一性標記、知識判定、紫色獨特怪物設定均保留。
+- **測試**：新增 `tests/native/test_faangband_monster_list_locale.c` 與 `scripts/test-fa-monster-list-locale.sh`，以正式共用 layout、方向、顯示欄函式測試短寬度、狹窄視窗、中文字元及英文回退；新增 `tests/test_faangband_monster_list_locale_source.py` 保護分支接線與回憶顯示邏輯，並接入 `scripts/verify-zh-tw.sh`。
+- **驗證界線**：GitHub 來源檢查不是已在完整 checkout 執行 C99／Python 套件、Android SDK/NDK APK 或實機驗證。維持原 Draft PR #146，不執行 Actions，也不合併 `master`。
