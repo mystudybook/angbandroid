@@ -38,6 +38,7 @@
 #include "project.h"
 #include "z-textblock.h"
 #include "../angband/zh-tw-ui.h"
+#include "mon-lore-display.h"
 
 /**
  * Monster genders
@@ -797,26 +798,31 @@ static void lore_append_clause(textblock *tb, bitflag *f, uint8_t attr,
 {
 	int count = rf_count(f);
 	bool comma = count > 2;
+	bool zh_tw = angdroid_zh_tw_enabled();
+	int emitted = 0;
 
 	if (count) {
 		int flag;
 		textblock_append(tb, "%s", start);
 		for (flag = rf_next(f, FLAG_START); flag; flag = rf_next(f, flag + 1)) {
-			/* First entry starts immediately */
-			if (flag != rf_next(f, FLAG_START)) {
-				if (comma) {
-					textblock_append(tb, ",");
-				}
-				/* Last entry */
+			if (zh_tw) {
+				/* Chinese list separators have no intervening English spaces. */
+				textblock_append(tb, "%s", angdroid_fa_lore_separator(
+					emitted, count, streq(conjunction, "or")));
+			} else if (flag != rf_next(f, FLAG_START)) {
+				if (comma) textblock_append(tb, ",");
 				if (rf_next(f, flag + 1) == FLAG_END) {
 					textblock_append(tb, " ");
 					textblock_append(tb, "%s", conjunction);
 				}
 				textblock_append(tb, " ");
 			}
-			textblock_append_c(tb, attr, "%s", describe_race_flag(flag));
+			textblock_append_c(tb, attr, "%s",
+				angdroid_game_ui_text(describe_race_flag(flag), zh_tw));
+			emitted++;
 		}
-		textblock_append(tb, "%s", end);
+		textblock_append(tb, "%s",
+			angdroid_fa_lore_sentence_end(end, zh_tw));
 	}
 }
 
@@ -1462,9 +1468,10 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 						   bitflag known_flags[RF_SIZE])
 {
 	int flag;
-	char start[40];
+	char start[96];
 	const char *initial_pronoun;
 	bool prev = false;
+	const bool zh_tw = angdroid_zh_tw_enabled();
 	bitflag current_flags[RF_SIZE], test_flags[RF_SIZE];
 	monster_sex_t msex = MON_SEX_NEUTER;
 
@@ -1478,47 +1485,88 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 	/* Describe environment-shaping abilities. */
 	create_mon_flag_mask(current_flags, RFT_ALTER, RFT_MAX);
 	rf_inter(current_flags, known_flags);
-	strnfmt(start, sizeof(start), "%s can ", initial_pronoun);
+	if (zh_tw)
+		my_strcpy(start, "牠能", sizeof(start));
+	else
+		strnfmt(start, sizeof(start), "%s can ", initial_pronoun);
 	lore_append_clause(tb, current_flags, COLOUR_WHITE, start, "and", ".  ");
 
 	/* Describe detection traits */
 	create_mon_flag_mask(current_flags, RFT_DET, RFT_MAX);
 	rf_inter(current_flags, known_flags);
-	strnfmt(start, sizeof(start), "%s is ", initial_pronoun);
+	if (zh_tw)
+		my_strcpy(start, "牠具有以下特徵：", sizeof(start));
+	else
+		strnfmt(start, sizeof(start), "%s is ", initial_pronoun);
 	lore_append_clause(tb, current_flags, COLOUR_WHITE, start, "and", ".  ");
 
 	/* Describe special things */
-	if (rf_has(known_flags, RF_UNAWARE))
-		textblock_append(tb, "%s disguises itself as something else.  ",
+	if (rf_has(known_flags, RF_UNAWARE)) {
+		if (zh_tw)
+			textblock_append(tb, "牠能偽裝成其他事物。  ");
+		else
+			textblock_append(tb, "%s disguises itself as something else.  ",
 						 initial_pronoun);
-	if (rf_has(known_flags, RF_MULTIPLY))
-		textblock_append_c(tb, COLOUR_ORANGE, "%s breeds explosively.  ",
+	}
+	if (rf_has(known_flags, RF_MULTIPLY)) {
+		if (zh_tw)
+			textblock_append_c(tb, COLOUR_ORANGE, "牠能快速繁殖。  ");
+		else
+			textblock_append_c(tb, COLOUR_ORANGE, "%s breeds explosively.  ",
 						   initial_pronoun);
-	if (rf_has(known_flags, RF_REGENERATE))
-		textblock_append(tb, "%s regenerates quickly.  ", initial_pronoun);
-	if (rf_has(known_flags, RF_FLYING))
-		textblock_append(tb, "%s can fly.  ", initial_pronoun);
-	if (rf_has(known_flags, RF_TERRITORIAL))
-		textblock_append(tb, "%s is more aggressive in %s own territory.  ",
+	}
+	if (rf_has(known_flags, RF_REGENERATE)) {
+		if (zh_tw)
+			textblock_append(tb, "牠能快速恢復生命。  ");
+		else
+			textblock_append(tb, "%s regenerates quickly.  ", initial_pronoun);
+	}
+	if (rf_has(known_flags, RF_FLYING)) {
+		if (zh_tw)
+			textblock_append(tb, "牠能飛行。  ");
+		else
+			textblock_append(tb, "%s can fly.  ", initial_pronoun);
+	}
+	if (rf_has(known_flags, RF_TERRITORIAL)) {
+		if (zh_tw)
+			textblock_append(tb, "牠在自己的領地上更具攻擊性。  ");
+		else
+			textblock_append(tb, "%s is more aggressive in %s own territory.  ",
 						 initial_pronoun, lore_pronoun_possessive(msex, false));
+	}
 
 	/* Describe light */
 	if (race->light > 1) {
-		textblock_append(tb, "%s illuminates %s surroundings.  ",
-						 initial_pronoun, lore_pronoun_possessive(msex, false));
+		if (zh_tw)
+			textblock_append(tb, "牠能照亮四周。  ");
+		else
+			textblock_append(tb, "%s illuminates %s surroundings.  ",
+				initial_pronoun, lore_pronoun_possessive(msex, false));
 	} else if (race->light == 1) {
-		textblock_append(tb, "%s is illuminated.  ", initial_pronoun);
+		if (zh_tw)
+			textblock_append(tb, "牠全身散發光芒。  ");
+		else
+			textblock_append(tb, "%s is illuminated.  ", initial_pronoun);
 	} else if (race->light == -1) {
-		textblock_append(tb, "%s is darkened.  ", initial_pronoun);
+		if (zh_tw)
+			textblock_append(tb, "牠的身影籠罩在黑暗中。  ");
+		else
+			textblock_append(tb, "%s is darkened.  ", initial_pronoun);
 	} else if (race->light < -1) {
-		textblock_append(tb, "%s shrouds %s surroundings in darkness.  ",
-						 initial_pronoun, lore_pronoun_possessive(msex, false));
+		if (zh_tw)
+			textblock_append(tb, "牠使四周籠罩在黑暗中。  ");
+		else
+			textblock_append(tb, "%s shrouds %s surroundings in darkness.  ",
+				initial_pronoun, lore_pronoun_possessive(msex, false));
 	}
 
 	/* Collect susceptibilities */
 	create_mon_flag_mask(current_flags, RFT_VULN, RFT_VULN_I, RFT_MAX);
 	rf_inter(current_flags, known_flags);
-	strnfmt(start, sizeof(start), "%s is hurt by ", initial_pronoun);
+	if (zh_tw)
+		my_strcpy(start, "牠容易受到", sizeof(start));
+	else
+		strnfmt(start, sizeof(start), "%s is hurt by ", initial_pronoun);
 	lore_append_clause(tb, current_flags, COLOUR_VIOLET, start, "and", "");
 	if (!rf_is_empty(current_flags)) {
 		prev = true;
@@ -1537,9 +1585,14 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 		}
 	}
 	if (prev) {
-		my_strcpy(start, ", but resists ", sizeof(start));
+		my_strcpy(start, zh_tw ? "，但能抵抗" : ", but resists ",
+			sizeof(start));
 	} else {
-		strnfmt(start, sizeof(start), "%s resists ", initial_pronoun);
+		if (zh_tw)
+			my_strcpy(start, "牠能抵抗", sizeof(start));
+		else
+			strnfmt(start, sizeof(start), "%s resists ",
+				initial_pronoun);
 	}
 	lore_append_clause(tb, current_flags, COLOUR_L_UMBER, start, "and", "");
 	if (!rf_is_empty(current_flags)) {
@@ -1569,10 +1622,14 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 		}
 	}
 	if (prev) {
-		my_strcpy(start, ", and does not resist ", sizeof(start));
+		my_strcpy(start, zh_tw ? "，但無法抵抗" :
+			", and does not resist ", sizeof(start));
 	} else {
-		strnfmt(start, sizeof(start), "%s does not resist ",
-			initial_pronoun);
+		if (zh_tw)
+			my_strcpy(start, "牠無法抵抗", sizeof(start));
+		else
+			strnfmt(start, sizeof(start), "%s does not resist ",
+				initial_pronoun);
 	}
 
 	/* Special case for undead */
@@ -1589,9 +1646,14 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 	create_mon_flag_mask(current_flags, RFT_PROT, RFT_MAX);
 	rf_inter(current_flags, known_flags);
 	if (prev) {
-		my_strcpy(start, ", and cannot be ", sizeof(start));
+		my_strcpy(start, zh_tw ? "，且不會陷入" : ", and cannot be ",
+			sizeof(start));
 	} else {
-		strnfmt(start, sizeof(start), "%s cannot be ", initial_pronoun);
+		if (zh_tw)
+			my_strcpy(start, "牠不會陷入", sizeof(start));
+		else
+			strnfmt(start, sizeof(start), "%s cannot be ",
+				initial_pronoun);
 	}
 	lore_append_clause(tb, current_flags, COLOUR_L_UMBER, start, "or", "");
 	if (!rf_is_empty(current_flags)) {
@@ -1599,7 +1661,7 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 	}
 
 	if (prev)
-		textblock_append(tb, ".  ");
+		textblock_append(tb, zh_tw ? "。  " : ".  ");
 }
 
 /**
