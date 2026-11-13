@@ -532,3 +532,11 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - 所有中文只在 `angdroid_zh_tw_enabled()` 開啟時顯示；英文模式、`cmd_get_item` 選擇條件、快捷鍵、裝備與陷阱 ID、角色歷史紀錄及存檔格式保持不變。尚未翻譯的動態效果描述仍保留英文回退。
 - 新增 `tests/test_faangband_item_command_messages_locale_source.py`、`tests/test_faangband_exploration_command_locale_source.py` 和純 C99 雙語字典測試 `tests/native/test_fa_item_command_translation.c`，由 `scripts/test-fa-item-command-translation.sh` 和 `scripts/verify-zh-tw.sh` 串接。
 - **驗證限制**：已在 GitHub Draft PR #146 提交並進行來源與接線核對；尚未在完整 repository checkout 執行這些新測試，也尚未確認最新 Android NDK／Gradle 編譯、模擬器或實機遊戲畫面。這些修改不能當作正式版驗收完成。
+
+## 第 239 批 — FAangband 地城寶物／危險感覺繁體中文（2026-11-13）
+
+- **遊戲內原有資料維持英文**：`faangband/cmd-cave.c` 中 `obj_feeling_text[11]`（寶物）與 `mon_feeling_text[10]`（怪物危險）陣列的 21 個英文來源字串和感覺代碼、顯示時機均保留；僅在 UI 輸出時使用共用 `angdroid_game_ui_text()` 對照，避免影響存檔、判斷、其他遊戲變體或英文模式。
+- **新增 21 組繁體中文句子**：涵蓋強大物品、上等寶物、幾乎沒有寶物、怪物極危險與安全寧靜等地城感覺。單獨發現寶物時顯示「你感覺到：…。」；探索不足時的怪物危險訊息直接顯示「…。」；兩類已知時按照原本的 `yet/and` 條件，以中文「，但／，而且」連接兩個詞句，避免顯示英文介系詞或英式標點。城鎮提示及主題樓層的 `level->typ` 來源內容保持既有行為。
+- **順序安全修正**：把寶物／危險索引範圍檢查移到 `obj_only`、探索不足分支**之前**，避免異常感覺代碼在檢查前被索引。沒有改變探索門檻 `cave->feeling_squares < z_info->feeling_need`、`disturb(player)`、角色狀態或遊戲規則。
+- **離線驗證檔案**：`tests/native/test_fa_dungeon_feelings_locale.c` 以 C99 直接包含正式 `zh-tw-ui.h`，對照 21 組中英字典、未知字串回退、獨立與組合範例；`scripts/test-fa-dungeon-feelings-locale.sh` 使用 `-std=c99 -Wall -Wextra -Werror -pedantic`；`tests/test_faangband_dungeon_feelings_locale_source.py` 對照正式感覺陣列與字典／C99 資料，檢查英文保留、中文輸出、合併條件、索引檢查順序，已接入 `scripts/verify-zh-tw.sh`。
+- **目前驗證限制**：程式碼及測試已提交到原 Draft PR #146，但尚未在完整 checkout 上執行本批 Python／C99 腳本、完整 Android NDK／Gradle 建置與手機實測。未取得實機畫面確認前，不視為已完成發行驗收。
