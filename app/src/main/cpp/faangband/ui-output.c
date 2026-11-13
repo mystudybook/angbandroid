@@ -429,7 +429,7 @@ void text_out_to_screen(uint8_t a, const char *str)
 
             /* A whole word can reach the wrap boundary. In that case
              * n == wrap and there is no on-screen tail to erase. */
-            if (n >= 0 && n < wid)
+            if (n >= 0 && n < wrap)
                 Term_erase(n, y, 255);
 
 			/* Wrap */
