@@ -96,6 +96,8 @@ run_check "FAangband pager and floor-list text/shortcut source guard" python3 "$
 run_check "FAangband ignored-item popup fits rotated Android terminal" python3 "$ROOT/tests/test_faangband_ignore_popup_geometry_source.py"
 run_check "FAangband legacy C99 screen text wrap terminal bounds" sh "$ROOT/scripts/test-fa-text-out-screen-bounds.sh"
 run_check "FAangband legacy text output geometry source contract" python3 "$ROOT/tests/test_faangband_text_out_screen_bounds_source.py"
+run_check "FAangband native wide-cell overwrite and erase C99" sh "$ROOT/scripts/test-fa-terminal-wide-overwrite.sh"
+run_check "FAangband native CJK partner-cell and map-safety source guard" python3 "$ROOT/tests/test_fa_terminal_wide_overwrite_source.py"
 run_check "FAangband typed ability PF/OF labels with C99" sh "$ROOT/scripts/test-fa-birth-ability-labels.sh"
 run_check "FAangband elemental resistance/vulnerability source contract" python3 "$ROOT/tests/test_faangband_birth_elements_source.py"
 run_check "FAangband elemental resistance/weakness native C99" sh "$ROOT/scripts/test-fa-birth-elements.sh"
