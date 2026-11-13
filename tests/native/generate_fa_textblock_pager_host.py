@@ -198,6 +198,53 @@ static unsigned long checks;
     fprintf(stderr, "FAIL line %d: %s\n", __LINE__, #x); \
     return 1; } ++checks; } while (0)
 
+/* Word-wrap must not silently discard repeated ASCII spaces used for
+ * alignment. Check the exact displayed content, not merely row counts. */
+static int check_whitespace_lines(void)
+{
+    static const struct {
+        const wchar_t *input;
+        size_t width;
+        const wchar_t *expected;
+    } cases[] = {
+        {L"A  B", 2, L"A | B"},
+        {L"     ", 2, L"  |  | "},
+        {L"A B", 2, L"A|B"},
+        {L"ABCDE F", 5, L"ABCDE|F"},
+        {L" A", 1, L" |A"},
+        {L"A  B", 1, L"A| | |B"},
+        {L"\\n  甲\\nZ", 4, L"|  甲|Z"},
+        {L"A\\n\\nB", 3, L"A||B"},
+        {L"甲\\n乙", 1, L"甲|乙"},
+        {L"甲 乙", 3, L"甲|乙"}
+    };
+    textblock tb = {{0}, {0}, 0};
+    size_t k;
+
+    for (k = 0; k < sizeof(cases) / sizeof(cases[0]); ++k) {
+        size_t *starts = NULL, *lengths = NULL;
+        wchar_t rendered[512];
+        size_t n, i, j, output_len = 0;
+
+        tb.strlen = wcslen(cases[k].input);
+        CHECK(tb.strlen + 1 < sizeof(tb.text) / sizeof(tb.text[0]));
+        wmemcpy(tb.text, cases[k].input, tb.strlen + 1);
+        n = textblock_calculate_display_lines(&tb, &starts, &lengths,
+            cases[k].width);
+        for (i = 0; i < n; ++i) {
+            if (i) rendered[output_len++] = L'|';
+            for (j = 0; j < lengths[i]; ++j)
+                rendered[output_len++] = tb.text[starts[i] + j];
+        }
+        CHECK(output_len < sizeof(rendered) / sizeof(rendered[0]));
+        rendered[output_len] = L'\\0';
+        CHECK(wcscmp(rendered, cases[k].expected) == 0);
+        mem_free(starts);
+        mem_free(lengths);
+    }
+    return 0;
+}
+
 /* Verify exact source-character slices for mixed Han/English content.
  * The UTF-8 terminal-cell layout is extracted from the real engine. */
 static int check_column_lines(void)
@@ -251,6 +298,7 @@ int main(void)
     int i;
 
     if (check_column_lines()) return 1;
+    if (check_whitespace_lines()) return 1;
 
     for (i = 0; i < 280; ++i) {
         tb.text[i] = L'a';
