@@ -32,6 +32,14 @@ must = (
     "Term_erase(n, y, 255);",
     "Term_gotoxy(x, y);",
     "Term_addch(a, ch);",
+    "span = angdroid_is_wide_text(ch, a) ? 2 : 1;",
+    "angdroid_screen_text_needs_wrap(x, wrap, ch, a)",
+    "Term_queue_char(Term, x + 1, y, a,",
+    "ANGDROID_TEXT_CONTINUATION, 0, 0);",
+    "if (x < wid && Term_gotoxy(x, y) != 0) return;",
+    "if (cv[i] == ANGDROID_TEXT_CONTINUATION ||",
+    "if (span > wrap - 1)",
+    "buf[1023] = L'\\0';",
 )
 for frag in must:
     assert frag in function, frag
@@ -39,18 +47,23 @@ assert function.count("if (++y >= h) return;") == 2
 assert function.count("x = MAX(0, MIN(x + text_out_pad, wrap - 1));") == 2
 assert function.index("if (wrap > 256) wrap = 256;") < function.index(
     "int av[256];")
-assert function.index("if (n >= 0 && n < wid)") < function.index(
+assert function.index("if (n >= 0 && n < wrap)") < function.index(
     "Term_erase(n, y, 255);")
 assert function.index("if (!Term || !str) return;") < function.index(
     "Term_get_size(&wid, &h);")
+assert '#include "../curses/unicode_layout.h"' in SOURCE
 assert "text_out_to_file(" in (ROOT / "app/src/main/cpp/faangband/z-textblock.c").read_text(
     encoding="utf-8")
 
 for frag in ("match.group(0)", "reset(400, 3)", "reset(1, 2)",
              "Term = NULL;", "Term_locate", "Term_what",
-             "invalid == 0 && writes == 4"):
+             "invalid == 0 && writes == 4",
+             "continuation_writes == 2 && xcur == 7",
+             "tiles[0][2] == ANGDROID_TEXT_CONTINUATION",
+             "angdroid_utf8_next_scalar",
+             "angdroid_terminal_columns"):
     assert frag in HOST, frag
-assert "-std=c99 -Wall -Wextra -Werror -pedantic" in RUNNER
+assert '-std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT"' in RUNNER
 assert "generate_fa_text_out_screen_bounds_host.py" in RUNNER
 assert "test-fa-text-out-screen-bounds.sh" in VERIFY
 assert "test_faangband_text_out_screen_bounds_source.py" in VERIFY
