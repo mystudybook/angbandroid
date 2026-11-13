@@ -103,7 +103,7 @@ int main(void)
         small, 10), "艾莉絲") == 0);
     CHECK(strcmp(angdroid_fa_spell_ghost_subject(
         "艾莉絲, the 幽靈戰士", ghost, race, true,
-        small, 13), "艾莉絲（") == 0);
+        small, 13), "艾莉絲") == 0);
 
     CHECK(strcmp(angdroid_fa_spell_subject(
         "the orc", true, out, sizeof out), "這隻orc") == 0);
