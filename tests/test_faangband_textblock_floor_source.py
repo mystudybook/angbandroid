@@ -82,7 +82,7 @@ require(TEXTCORE,
         "text[space - 1] != L' ' && text[space + 1] != L' '",
         "text[begin - 1] != L' '",
         "text[begin + 1] != L' '",
-        "if (begin < length && text[begin] == L'\\n') ++begin;")
+        "if (begin < length && text[begin] == L'\\n') {")
 require(TEXTHEAD, "size_t textblock_calculate_display_lines(")
 assert "size_t textblock_calculate_lines(" in TEXTCORE
 assert "n_lines = textblock_calculate_lines(" in TEXTCORE
