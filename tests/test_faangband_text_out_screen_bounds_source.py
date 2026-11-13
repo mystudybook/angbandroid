@@ -28,7 +28,7 @@ must = (
     "x = MAX(0, MIN(text_out_indent, wrap - 1));",
     "if (++y >= h) return;",
     "x = MAX(0, MIN(x + text_out_pad, wrap - 1));",
-    "if (n >= 0 && n < wid)",
+    "if (n >= 0 && n < wrap)",
     "Term_erase(n, y, 255);",
     "Term_gotoxy(x, y);",
     "Term_addch(a, ch);",
