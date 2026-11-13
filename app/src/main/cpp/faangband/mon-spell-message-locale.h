@@ -58,6 +58,20 @@ static inline const char *angdroid_fa_spell_subject(
         (void)angdroid_utf8_copy_complete(output, capacity, "某個東西");
         return output;
     }
+    /* Preserve the anonymity of a hidden monster in MDESC_TARG. */
+    if (strcmp(english, "someone") == 0 ||
+        strcmp(english, "Someone") == 0) {
+        (void)angdroid_utf8_copy_complete(output, capacity, "某個身影");
+        return output;
+    }
+    if (strcmp(english, "him") == 0 || strcmp(english, "Him") == 0) {
+        (void)angdroid_utf8_copy_complete(output, capacity, "他");
+        return output;
+    }
+    if (strcmp(english, "her") == 0 || strcmp(english, "Her") == 0) {
+        (void)angdroid_utf8_copy_complete(output, capacity, "她");
+        return output;
+    }
     return english;
 }
 
