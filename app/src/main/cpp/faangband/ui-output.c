@@ -23,6 +23,7 @@
 #include "z-textblock.h"
 #include "../angband/menu-text-fit.h"
 #include "../angband/zh-tw-ui.h"
+#include "../curses/unicode_layout.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -368,7 +369,8 @@ void text_out_to_screen(uint8_t a, const char *str)
     if (Term_locate(&x, &y) != 0) return;
 
 	/* Copy to a rewriteable string */
-	text_mbstowcs(buf, str, 1024);
+	text_mbstowcs(buf, str, 1023);
+    buf[1023] = L'\0';
 	
 	/* Use special wrapping boundary? */
 	if ((text_out_wrap > 0) && (text_out_wrap < wid))
@@ -383,6 +385,7 @@ void text_out_to_screen(uint8_t a, const char *str)
 	/* Process the string */
 	for (s = buf; *s; s++) {
 		wchar_t ch;
+        int span;
 
 		/* Force wrap */
 		if (*s == L'\n') {
@@ -401,20 +404,47 @@ void text_out_to_screen(uint8_t a, const char *str)
 
 		/* Clean up the char */
 		ch = (text_iswprint(*s) ? *s : L' ');
+        span = angdroid_is_wide_text(ch, a) ? 2 : 1;
+        if (span > wrap - 1) {
+            /* An extremely narrow region cannot contain this glyph. */
+            ch = L'?';
+            span = 1;
+        }
 
-		/* Wrap words as needed */
-		if ((x >= wrap - 1) && (ch != L' ')) {
+        /* Width is measured in physical screen cells. Keep one cell
+         * available at the edge as the original English wrapper did. */
+		if (angdroid_screen_text_needs_wrap(x, wrap, ch, a)) {
+            if (ch == L' ') {
+                /* A separator at the margin should not trigger an
+                 * extra blank or consume an invalid terminal cell. */
+                continue;
+            }
 			int i, n = 0;
 
 			int av[256];
 			wchar_t cv[256];
 
 			/* Wrap word */
-			if (x < wrap) {
-				/* Scan existing text */
+			if (span == 1 && x < wrap) {
+				/* ASCII words may move intact. An already-painted CJK
+                 * glyph and its continuation must remain together. */
 				for (i = wrap - 2; i >= 0; i--) {
 					/* Grab existing attr/char */
 					Term_what(i, y, &av[i], &cv[i]);
+                    if (cv[i] == ANGDROID_TEXT_CONTINUATION ||
+                            angdroid_is_wide_text(cv[i], av[i])) {
+                        n = wrap;
+                        break;
+                    }
+                    if (i > 0) {
+                        int previous_attr = 0;
+                        wchar_t previous_char = L' ';
+                        Term_what(i - 1, y, &previous_attr, &previous_char);
+                        if (angdroid_is_wide_text(previous_char, previous_attr)) {
+                            n = wrap;
+                            break;
+                        }
+                    }
 
 					/* Break on space */
 					if (cv[i] == L' ') break;
@@ -452,11 +482,23 @@ void text_out_to_screen(uint8_t a, const char *str)
 			}
 		}
 
-		/* Dump */
-		Term_addch(a, ch);
-
-		/* Advance */
-		if (++x > wrap) x = wrap;
+		/* The FAangband terminal cursor advances one wchar at a time,
+         * unlike the native Angband renderer. Mark the second physical
+         * cell and move the cursor explicitly after a wide glyph.
+         * The shared Android text hook skips this private continuation
+         * while preserving the actual x coordinate of later glyphs. */
+        if (span == 2) {
+            if (x + 1 >= wrap || x + 1 >= wid) return;
+            Term_queue_char(Term, x + 1, y, a,
+                ANGDROID_TEXT_CONTINUATION, 0, 0);
+            if (Term_gotoxy(x, y) != 0) return;
+            if (Term_addch(a, ch) < 0) return;
+            x += 2;
+            if (x < wid && Term_gotoxy(x, y) != 0) return;
+        } else {
+            if (Term_addch(a, ch) < 0) return;
+            if (++x > wrap) x = wrap;
+        }
 	}
 }
 
