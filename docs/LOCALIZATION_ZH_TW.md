@@ -646,3 +646,13 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - **長訊息完整字元輸出**：原施法通知以 `strnfcat()` 寫入 1024-byte buffer，若最終長字串在漢字中間達到限制，可能把不完整 UTF-8 送入 `msgt()`。現在只對**已成功翻譯**的中文訊息在輸出前使用另一份 `safe_buf[sizeof(buf)]` 並以 `angdroid_utf8_copy_complete()` 整理；未翻譯的英文（包括未知種族專屬通知）維持原輸出分支。此保護針對 byte 邊界；終端換行與可見欄寬仍由原文字介面負責。
 - **測試接線**：新增 `tests/native/test_faangband_spell_alternates_utf8.c`（正式來源的 17 條中文對照、英文與未知字串回退、狹窄 3／4／9／10-byte 主詞與完整 UTF-8 複製）、`scripts/test-fa-spell-alternates-utf8.sh`（host 嚴格 C99）及 `tests/test_faangband_spell_alternates_utf8_source.py`（49 筆原資料、17 條來源鍵及相同佔位符、`MON_ALTMSG` 選擇／隱藏分支、名稱／UTF-8、訊息順序、原 C99 runner），並納入 `scripts/verify-zh-tw.sh`。同步更新上批 Python guard，避免把舊的 `snprintf()` 誤判為唯一合格的主詞輸出。
 - **驗證界線**：本批從 GitHub 重新讀取正式來源後可做靜態一致性核對；這仍**不是**已在完整 checkout 執行 C99/Python 腳本、Android Gradle／NDK 編譯或模擬器／實機驗證。維持原 Draft PR #146、所有提交帶 `[skip ci]`、未執行 GitHub Actions、不合併 `master`。
+
+## 第 251 批 — FAangband 鞭擊屬性與特殊怪物名稱（2026-11-13）
+
+- **實際來源差異**：`variant_lib/faangband/gamedata/projection.txt` 的 `lash-desc:` 共有 **25 個唯一屬性描述**。第 249 批 `mon-spell.c` 誤用怪物回憶的 `mon-lore-terms.h` 翻譯 `{type}`／`{oftype}`，只涵蓋部分相同字串，會讓 `venom`、`dislocation`、`living fire`、`meteoric iron` 等在已中文化的施法句子中仍然出現英文。
+- **修正**：沿用既有 `angband/zh-tw-mon-spell-lash.h` 完整的 **25 組**來源精確翻譯，不重建詞表。在 FAangband `mon-spell.c` 改為 `#include "../angband/zh-tw-mon-spell-lash.h"`，並在 `SPELL_TAG_TYPE` 與 `SPELL_TAG_OF_TYPE` 的兩處 `projections[type].lash_desc` 顯示路徑呼叫 `angdroid_mon_spell_lash(type_name, localized)`。沒有改 `projection.txt`、`projections[]`、法術傷害、吐息類型、已知／未知資訊判定；未翻譯與英文模式保留原來源字串。
+- **特殊唯一怪物**：第 249 批原先只有 `RF_UNIQUE` 檢查，可能無法正確涵蓋變形為其他外觀的唯一怪物。現在施法者及目標名稱都採用原 `monster_desc.c` 使用的 `monster_is_shape_unique()` 判斷，避免將其專有名稱誤加「這隻」或剝除英文字冠詞。玩家幽靈走獨立分支，不與普通怪物冠詞邏輯混用。
+- **玩家幽靈名稱中文化**：`mon-desc.c` 對玩家幽靈原有 `<玩家名稱>, the <怪物種族>`（可能加 ` (offscreen)`）格式。新增純顯示層 `angdroid_fa_spell_ghost_subject()`：只有完整比對原始玩家名稱、字面 `, the `、原種族名稱、合法畫面外尾註時才改為 `<玩家名稱>（<種族>）`，畫面外尾註改為 `（畫面外）`。玩家原名、怪物種族、幽靈識別及視野判斷不改；無法精確比對的特殊來源繼續原文回退。
+- **UTF-8 小容量與標點**：幽靈名稱透過 `angdroid_utf8_copy_complete()` 與 `angdroid_utf8_append_complete()` 組句，不在漢字位元組中截斷。若容量無法容納完整 `（種族）` 及選配的 `（畫面外）`，寧可顯示可容納的原玩家名稱，而不輸出不完整的括號。英文模式及未匹配的特殊格式不變。
+- **離線回歸**：新增 `tests/native/test_faangband_spell_lash_ghost_locale.c`（來源 25 組中文鞭擊屬性、英文原指標回退、幽靈原名與含逗號專名、畫面外尾註、極窄 UTF-8 buffer）、`scripts/test-fa-spell-lash-ghost-locale.sh`（host C99 嚴格參數）、`tests/test_faangband_spell_lash_ghost_locale_source.py`（依正式 projection 的來源值比對現有詞表、`monster_desc()` 與 `monster_is_shape_unique()`、替換佔位符與緩衝安全）。更新前兩批的來源守護斷言，並納入 `scripts/verify-zh-tw.sh`。
+- **驗證限制**：GitHub 來源靜態核對不等於完整 checkout 的 C99／Python 直接執行、Android Gradle／NDK 建置、模擬器或實機測試。本批沿用 Draft PR #146，Commit 均標註 `[skip ci]`，不執行 GitHub Actions，不合併 `master`。
