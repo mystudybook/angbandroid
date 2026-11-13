@@ -1115,9 +1115,31 @@ static void player_kill_monster(struct monster *mon, struct player *p,
 			/* Make sure to flush any monster messages first */
 			notice_stuff(p);
 
-			/* Death by Missile attack */
-			my_strcap(m_name);
-			msgt(soundfx, "%s%s", m_name, note);
+			/* Most death notes originate in other attack handlers and
+			 * stay untouched. Only the arena's exact source phrase is
+			 * translated here, after the original visibility selection. */
+			if (angdroid_zh_tw_enabled() && streq(note, " is defeated!")) {
+				char offscreen_name[320];
+				monster_desc(m_name, sizeof(m_name), mon, MDESC_DEFAULT);
+				display_name = m_name;
+				if (rf_has(mon->race->flags, RF_PLAYER_GHOST) &&
+					cave->ghost) {
+					display_name = angdroid_fa_spell_ghost_subject(m_name,
+						cave->ghost->name, mon->race->name,
+						true, zh_name, sizeof(zh_name));
+				} else if (!monster_is_shape_unique(mon)) {
+					display_name = angdroid_fa_spell_subject(m_name,
+						true, zh_name, sizeof(zh_name));
+				}
+				display_name = angdroid_fa_spell_offscreen_subject(
+					display_name, true, offscreen_name,
+					sizeof(offscreen_name));
+				msgt(soundfx, "%s被擊敗了！", display_name);
+			} else {
+				/* Original missile/special-note display path. */
+				my_strcap(m_name);
+				msgt(soundfx, "%s%s", m_name, note);
+			}
 		}
 	} else {
 		/* Make sure to flush any monster messages first */
