@@ -773,6 +773,9 @@ static inline const char *angdroid_game_ui_text(const char *en, int zh_tw) {
         {"bellow[s] in rage.", "憤怒地怒吼。"},
         {"scream[s] in fury.", "憤怒地尖叫。"},
         {"wince[s].", "痛得縮起身子。"},
+        /* FAangband monster recall footer messages: screen text only. */
+        {"You know everything about this monster.", "你已經完全了解這隻怪物。"},
+        {"You feel an intense desire to kill this monster...  ", "你強烈地想消滅這隻怪物……  "},
         {"No target monster selected!", "尚未選擇目標怪物！"},
         {"This monster has no spells!", "這隻怪物不會施法！"},
         {"The monster can not move.", "這隻怪物無法移動。"},
