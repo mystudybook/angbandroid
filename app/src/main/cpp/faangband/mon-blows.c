@@ -72,7 +72,13 @@ static blow_tag_t blow_tag_lookup(const char *tag)
  * We fill in the monster name and/or pronoun where necessary in
  * the message to replace instances of {name} or {pronoun}.
  */
-char *monster_blow_method_action(const struct blow_method *method, int midx)
+/*
+ * Display-only locale variant. Keep monster_blow_method_action() returning
+ * the original English action for non-UI callers.
+ */
+static char *monster_blow_method_action_for_display(
+		const struct blow_method *method, int midx, bool zh_tw,
+		bool *was_translated)
 {
 	const char punct[] = ".!?;:,'";
 	char buf[1024] = "\0";
@@ -95,7 +101,10 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 	while (choice--) {
 		msg = msg->next;
 	}
-	in_cursor = msg->act_msg;
+	/* Translate the selected template before substituting its target tags. */
+	in_cursor = angdroid_game_ui_text(msg->act_msg, zh_tw);
+	bool translated = (in_cursor != msg->act_msg);
+	if (was_translated) *was_translated = translated;
 
 	/* Add info to the message */
 	next = strchr(in_cursor, '{');
@@ -128,7 +137,8 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 						strnfcat(buf, sizeof(buf),
 							&end, "%s", m_name);
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "you");
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							translated ? "你" : "you");
 					}
 					break;
 				}
@@ -140,15 +150,18 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 							MDESC_TARG | MDESC_POSS);
 						strnfcat(buf, sizeof(buf), &end, "%s", m_name);
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "your");
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							translated ? "你的" : "your");
 					}
 					break;
 				}
 				case BLOW_TAG_HAS: {
 					if (midx > 0) {
-						strnfcat(buf, sizeof(buf), &end, "has");
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							translated ? "有" : "has");
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "have");
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							translated ? "有" : "have");
 					}
 					break;
 				}
@@ -166,6 +179,12 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 	}
 	strnfcat(buf, 1024, &end, "%s", in_cursor);
 	return string_make(buf);
+}
+
+/* Public API remains English and preserves the existing RNG draw count. */
+char *monster_blow_method_action(const struct blow_method *method, int midx)
+{
+	return monster_blow_method_action_for_display(method, midx, false, NULL);
 }
 
 /**
@@ -195,19 +214,25 @@ int blow_index(const char *name)
 static void display_blow_message_vs_player(const struct blow_method *method,
 		const char *m_name, struct player *p, int damage)
 {
-	char *act = monster_blow_method_action(method, -1);
+	bool translated = false;
+	char *act = angdroid_zh_tw_enabled() ?
+		monster_blow_method_action_for_display(method, -1, true,
+			&translated) : monster_blow_method_action(method, -1);
 
 	if (act) {
-		const char *fullstop = ".";
+		const char *fullstop = translated ? "。" : ".";
 
-		if (suffix(act, "'") || suffix(act, "!")) {
+		if (suffix(act, "'") || suffix(act, "!") ||
+			(translated && (suffix(act, "。") || suffix(act, "！") ||
+				suffix(act, "？")))) {
 			fullstop = "";
 		}
 		if (damage > 0 && OPT(p, show_damage)) {
-			msgt(method->msgt, "%s %s%s (%d)", m_name, act,
-				fullstop, damage);
+			msgt(method->msgt, translated ? "%s%s%s (%d)" :
+				"%s %s%s (%d)", m_name, act, fullstop, damage);
 		} else {
-			msgt(method->msgt, "%s %s%s", m_name, act, fullstop);
+			msgt(method->msgt, translated ? "%s%s%s" :
+				"%s %s%s", m_name, act, fullstop);
 		}
 		string_free(act);
 	} else if (damage > 0 && OPT(p, show_damage)) {
@@ -227,15 +252,21 @@ static void display_blow_message_vs_player(const struct blow_method *method,
 static void display_blow_message_vs_monster(const struct blow_method *method,
 		const char *m_name, int t_idx)
 {
-	char *act = monster_blow_method_action(method, t_idx);
+	bool translated = false;
+	char *act = angdroid_zh_tw_enabled() ?
+		monster_blow_method_action_for_display(method, t_idx, true,
+			&translated) : monster_blow_method_action(method, t_idx);
 
 	if (act) {
-		const char *fullstop = ".";
+		const char *fullstop = translated ? "。" : ".";
 
-		if (suffix(act, "'") || suffix(act, "!")) {
+		if (suffix(act, "'") || suffix(act, "!") ||
+			(translated && (suffix(act, "。") || suffix(act, "！") ||
+				suffix(act, "？")))) {
 			fullstop = "";
 		}
-		msgt(method->msgt, "%s %s%s", m_name, act, fullstop);
+		msgt(method->msgt, translated ? "%s%s%s" :
+			"%s %s%s", m_name, act, fullstop);
 		string_free(act);
 	}
 }
@@ -557,7 +588,8 @@ static void melee_effect_timed(melee_effect_handler_context_t *context,
 	} else if (save && randint0(100) < context->p->state.skills[SKILL_SAVE]) {
 		/* Attempt a saving throw if desired. */
 		if (save_msg != NULL) {
-			msg("%s", save_msg);
+			msg("%s", angdroid_game_ui_text(save_msg,
+				angdroid_zh_tw_enabled()));
 		}
 		context->obvious = true;
 	} else {
