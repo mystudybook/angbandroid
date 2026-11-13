@@ -89,6 +89,21 @@ static inline const char *angdroid_fa_spell_ghost_subject(
     tail += race_len;
     if (*tail && strcmp(tail, " (offscreen)") != 0) return full;
 
+    /*
+     * Do not leave a dangling full-width bracket in a narrow buffer.
+     * When the full identity suffix does not fit, show as much of the
+     * original ghost name as will fit rather than a partial description.
+     */
+    {
+        size_t suffix = (sizeof("（") - 1) + race_len +
+            (sizeof("）") - 1);
+        if (*tail) suffix += sizeof("（畫面外）") - 1;
+        if (name_len >= capacity || suffix > capacity - name_len - 1) {
+            (void)angdroid_utf8_copy_complete(output, capacity, ghost_name);
+            return output;
+        }
+    }
+
     used = angdroid_utf8_copy_complete(output, capacity, ghost_name);
     used = angdroid_utf8_append_complete(output, capacity, used, "（");
     used = angdroid_utf8_append_complete(output, capacity, used, race_name);
