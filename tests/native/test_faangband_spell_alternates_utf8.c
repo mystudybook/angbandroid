@@ -73,6 +73,25 @@ int main(void)
         tiny, sizeof tiny), "牠") == 0);
     CHECK(strcmp(angdroid_fa_spell_subject("something", true,
         tiny, sizeof tiny), "某個東西") == 0);
+    /* Theft target mode can preserve anonymity as "someone";
+     * masculine/feminine object pronouns are translated display-only. */
+    CHECK(strcmp(angdroid_fa_spell_subject("someone", true,
+        subject, sizeof subject), "某個身影") == 0);
+    CHECK(strcmp(angdroid_fa_spell_subject("Someone", true,
+        subject, sizeof subject), "某個身影") == 0);
+    CHECK(strcmp(angdroid_fa_spell_subject("him", true,
+        subject, sizeof subject), "他") == 0);
+    CHECK(strcmp(angdroid_fa_spell_subject("her", true,
+        subject, sizeof subject), "她") == 0);
+    CHECK(strcmp(angdroid_fa_spell_subject("Him", true,
+        subject, sizeof subject), "他") == 0);
+    CHECK(strcmp(angdroid_fa_spell_subject("Her", true,
+        subject, sizeof subject), "她") == 0);
+    CHECK(strcmp(angdroid_fa_spell_subject("someone", true,
+        tiny, 4), "某") == 0);
+    CHECK(angdroid_fa_spell_subject("someone", false,
+        tiny, sizeof tiny) != tiny);
+
     CHECK(angdroid_fa_spell_subject(NULL, true, tiny,
         sizeof tiny) == NULL);
     CHECK(angdroid_fa_spell_subject(name, true, tiny, 0) == name);
