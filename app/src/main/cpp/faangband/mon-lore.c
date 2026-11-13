@@ -1829,9 +1829,9 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 			textblock_append(tb, zh_tw ? "，也可能" : ", and may ");
 		} else {
 			if (zh_tw)
-			textblock_append(tb, "牠可能");
-		else
-			textblock_append(tb, "%s may ", initial_pronoun);
+				textblock_append(tb, "牠可能");
+			else
+				textblock_append(tb, "%s may ", initial_pronoun);
 		}
 		textblock_append_c(tb, COLOUR_L_RED, "%s",
 			zh_tw ? "吐出" : "breathe ");
@@ -1853,6 +1853,10 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 		}
 
 		textblock_append(tb, zh_tw ? "。  " : ".  ");
+	} else if (zh_tw && (innate || breath)) {
+		/* No frequency was recorded: keep Chinese sentences separate
+		 * without changing the historic English layout or knowledge. */
+		textblock_append(tb, "。  ");
 	}
 
 	/* Collect spell information */
