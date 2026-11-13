@@ -67,7 +67,7 @@ NEW = (
     ("This staircase leads up.", "這道樓梯通往上層。"),
     ("You enter a winding path to greater danger.", "你踏上了通往更危險地方的蜿蜒小徑。"),
     ("You can not see to set a trap.", "你看不清楚，無法設置陷阱。"),
-    ("You are too confused.", "你過於混亂，無法設置陷阱。"),
+    ("You are too confused.", "你太混亂了。"),
     ("You must disarm an existing trap to free up your equipment.", "必須先拆除一個已設置的陷阱，才能騰出器材。"),
     ("You set a monster trap.", "你設置了一個怪物陷阱。"),
 )
