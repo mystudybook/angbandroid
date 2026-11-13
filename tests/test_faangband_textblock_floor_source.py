@@ -143,6 +143,10 @@ runner = (ROOT / "scripts/test-fa-textblock-floor.sh").read_text(
 require(pager_fixture, "textui_textblock_show", "display_area",
         "extract_core(", "textblock_calculate_display_lines",
         "EVT_RESIZE", "check_column_lines()",
+        "check_whitespace_lines()", "check_mixed_text_property()",
+        'L"A  B", 2, L"A | B"',
+        'L"     ", 2, L"  |  | "',
+        "letters_before == letters_after",
         "lines_allocated == lines_freed", "bad_coordinates == 0")
 require(floor_fixture, "fa_target_floor_list_index",
         "fa_target_floor_list_inkey", "all_letters_nohjkl",
