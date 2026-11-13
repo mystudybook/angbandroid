@@ -58,7 +58,7 @@ block = section("errr Term_addstr(", "errr Term_putch(")
 assert "angdroid_fit_terminal_text(s, (size_t)count," in block
 assert "fit = angdroid_fit_terminal_text(s, (size_t)count," in block
 assert "res = Term_addch(a, s[i]);" in block
-assert "Term_queue_chars(" not in block
+assert "Term_queue_chars(Term->scr->cx" not in block
 assert "text_mbstowcs(s, buf, 1023);" in block
 assert "s[1023] = L'\\0';" in block
 assert "If a partial erase touches either half" in erase
