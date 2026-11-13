@@ -52,6 +52,8 @@ assert "case SPELL_TAG_OF_TYPE:" in body
 assert 'localized ? "（" : " of "' in body
 assert 'strnfcat(buf, sizeof(buf), &end, "）");' in body
 assert "if (type_name) {" in body
+assert 'if (type_name)' in body
+assert body.count("angdroid_mon_spell_lash(type_name, localized)") == 2
 
 # Real player ghosts derive their identity from the saved ghost name and
 # race, not a guessed / translated monster. No extra visibility is exposed.
@@ -72,6 +74,11 @@ for token in [
     assert token in body, token
 assert body.count('if (!localized && !strchr(punct, *in_cursor)) {') == 2
 assert body.count('angdroid_fa_spell_ghost_subject(') == 2
+assert body.count('angdroid_fa_spell_offscreen_subject(') == 2
+assert body.count('char cn_offscreen[320];') == 2
+assert body.index('angdroid_fa_spell_offscreen_subject(') < body.index(
+    'case SPELL_TAG_PRONOUN:')
+assert 'msgt(spell->msgt, "%s", safe_buf);' in body
 
 for token in [
     'rf_has(mon->race->flags, RF_PLAYER_GHOST)',
@@ -98,6 +105,25 @@ for token in [
 ]:
     assert token in LOCALE, token
 assert '#include "../curses/unicode_display.h"' in LOCALE
+for token in [
+    'static inline const char *angdroid_fa_spell_offscreen_subject(',
+    'strcmp(display_name + full_len - (sizeof(suffix) - 1), suffix)',
+    'if (capacity <= sizeof(localized_suffix))',
+    'prefix_capacity = capacity - (sizeof(localized_suffix) - 1)',
+    'angdroid_utf8_copy_complete(output, prefix_capacity, display_name)',
+    'angdroid_utf8_append_complete(',
+    '"（畫面外）"',
+    'return display_name;'
+]:
+    assert token in LOCALE, token
+for token in [
+    '"這隻獸人 (offscreen)"', '"這隻獸人（畫面外）"',
+    '"Wormtongue, Agent of Saruman (offscreen)"',
+    '"Wormtongue, Agent of Saruman（畫面外）"',
+    '"獸龍 (offscreen)"', '"獸（畫面外）"',
+    '"獸龍（畫面外）"'
+]:
+    assert token in NATIVE, token
 assert 'snprintf(' not in LOCALE
 assert "test_faangband_spell_lash_ghost_locale.c" in RUNNER
 assert "-std=c99 -Wall -Wextra -Werror -pedantic" in RUNNER
