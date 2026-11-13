@@ -105,6 +105,37 @@ int main(void)
         "艾莉絲, the 幽靈戰士", ghost, race, true,
         small, 13), "艾莉絲") == 0);
 
+    /* monster_desc() marks off-panel names in English; translated
+     * spell notifications must preserve the positional fact in Chinese. */
+    CHECK(strcmp(angdroid_fa_spell_offscreen_subject(
+        "這隻獸人 (offscreen)", true, out, sizeof out),
+        "這隻獸人（畫面外）") == 0);
+    CHECK(strcmp(angdroid_fa_spell_offscreen_subject(
+        "Wormtongue, Agent of Saruman (offscreen)", true,
+        out, sizeof out),
+        "Wormtongue, Agent of Saruman（畫面外）") == 0);
+    CHECK(strcmp(angdroid_fa_spell_offscreen_subject(
+        "艾莉絲（幽靈戰士）（畫面外）", true, out, sizeof out),
+        "艾莉絲（幽靈戰士）（畫面外）") == 0);
+    {
+        const char *unchanged = "The orc (offscreen)";
+        CHECK(angdroid_fa_spell_offscreen_subject(
+            unchanged, false, out, sizeof out) == unchanged);
+        CHECK(angdroid_fa_spell_offscreen_subject(
+            "The orc", true, out, sizeof out) != out);
+        CHECK(angdroid_fa_spell_offscreen_subject(
+            NULL, true, out, sizeof out) == NULL);
+        CHECK(angdroid_fa_spell_offscreen_subject(
+            unchanged, true, out, 0) == unchanged);
+        CHECK(angdroid_fa_spell_offscreen_subject(
+            unchanged, true, small, 16) == unchanged);
+    }
+    /* At narrow byte budgets, shorten the name, not a CJK suffix. */
+    CHECK(strcmp(angdroid_fa_spell_offscreen_subject(
+        "獸龍 (offscreen)", true, small, 20), "獸（畫面外）") == 0);
+    CHECK(strcmp(angdroid_fa_spell_offscreen_subject(
+        "獸龍 (offscreen)", true, small, 25), "獸龍（畫面外）") == 0);
+
     CHECK(strcmp(angdroid_fa_spell_subject(
         "the orc", true, out, sizeof out), "這隻orc") == 0);
     CHECK(angdroid_fa_spell_subject(
