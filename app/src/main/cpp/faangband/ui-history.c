@@ -139,11 +139,13 @@ void history_display(void)
                 "視窗高度不足，請旋轉螢幕。" :
                 "Screen too short; rotate the device.", 0, 0);
         }
-        fa_history_put_clipped(COLOUR_WHITE,
-            angdroid_zh_tw_enabled() ?
-            "[方向鍵捲動，p/PgUp 上頁，n/PgDn 下頁，ESC 離開]" :
-            "[Arrow keys scroll, p/PgUp for previous page, n/PgDn for next page, ESC to exit.]",
-            hgt - 1, 0);
+        /* A one-row terminal must not overwrite the rotate notice. */
+        if (hgt > 1)
+            fa_history_put_clipped(COLOUR_WHITE,
+                angdroid_zh_tw_enabled() ?
+                "[方向鍵捲動，p/PgUp 上頁，n/PgDn 下頁，ESC 離開]" :
+                "[Arrow keys scroll, p/PgUp for previous page, n/PgDn for next page, ESC to exit.]",
+                hgt - 1, 0);
 
         ch = inkey();
         switch (ch.code) {

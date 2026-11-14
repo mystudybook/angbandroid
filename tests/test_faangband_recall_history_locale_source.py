@@ -66,6 +66,7 @@ has(display,
     "row < page_size && i < max_item",
     "fa_history_screen_row(&history_list_local[i], row + 2, wid);",
     "fa_history_put_clipped(COLOUR_WHITE,",
+    "if (hgt > 1)",
     "case KC_PGDOWN:", "case KC_PGUP:", "case ESCAPE:")
 assert "page_size = hgt - 5" not in display
 assert "row <= page_size" not in display
