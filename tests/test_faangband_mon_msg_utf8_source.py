@@ -16,6 +16,9 @@ NATIVE = read("tests/native/test_faangband_mon_msg_utf8.c")
 RUNNER = read("scripts/test-fa-mon-msg-utf8.sh")
 VERIFY = read("scripts/verify-zh-tw.sh")
 REPOSITORY = read("app/src/main/cpp/faangband/list-mon-message.h")
+PAIN_DATA = read("variant_lib/faangband/gamedata/pain.txt")
+DICT = read("app/src/main/cpp/angband/zh-tw-ui.h")
+FORMATTER = read("app/src/main/cpp/faangband/message.c")
 
 stack = SOURCE.split("static bool stack_message(", 1)[1].split(
     "static int what_delay(", 1)[0]
@@ -170,4 +173,37 @@ assert "test-fa-mon-msg-utf8.sh" in VERIFY
 assert "test_faangband_mon_msg_utf8_source.py" in VERIFY
 assert "MON_MSG(HIT_HARD," in REPOSITORY
 assert "MON_MSG(DIE," in REPOSITORY
+# A composed subject and body already fit well below the actual message.c
+# variadic formatting buffer. The game uses two distinct 256-byte arrays,
+# so enlarging or reformatting msgt() is unnecessary.
+import json
+import re
+pattern = re.compile(
+    r'^\\s*\\{\\s*("(?:\\\\.|[^"\\\\])*"),\\s*("(?:\\\\.|[^"\\\\])*")\\s*\\},',
+    re.MULTILINE)
+dictionary = {json.loads(en): json.loads(zh)
+              for en, zh in pattern.findall(DICT)}
+list_keys = [json.loads(m.group(1)) for line in REPOSITORY.splitlines()
+             if (m := re.search(r',\\s*("(?:\\\\.|[^"\\\\])*")\\s*\\)
+print("PASS: stacked damage race identity, plural/ghost/hidden UTF-8 subjects")
+, line))
+             and json.loads(m.group(1))]
+pain_keys = list(dict.fromkeys(
+    line.split("message:", 1)[1] for line in PAIN_DATA.splitlines()
+    if line.startswith("message:")))
+assert len(list_keys) == 58
+assert len(pain_keys) == 65
+assert all(key in dictionary for key in list_keys + pain_keys)
+assert max(len(dictionary[key].encode("utf-8"))
+           for key in list_keys + pain_keys) == 42
+assert 'void msgt(unsigned int type, const char *fmt, ...)' in FORMATTER
+assert 'char buf[1024];' in FORMATTER
+assert 'vstrnfmt(buf, sizeof(buf), fmt, vp);' in FORMATTER
+# Maximum NUL-terminated subject and message body, plus the signed
+# integer damage/average suffix. Both intact and under the 1023-byte cap.
+max_damage_tail = len("（平均 -2147483648）".encode("utf-8"))
+assert 255 + 255 + max_damage_tail < 1024
+assert 'char subject[256] = "";' in show
+assert 'char body[256];' in show
+
 print("PASS: stacked damage race identity, plural/ghost/hidden UTF-8 subjects")
