@@ -42,13 +42,23 @@ static inline void angdroid_fa_mon_msg_chinese_subject(
             used = angdroid_utf8_copy_complete(dst, base_capacity, number);
         }
     } else if (ghost_name) {
+        /* Either display the complete "(race)" identity, or only a
+         * complete-name prefix: never leave an unmatched Han bracket. */
+        size_t name_bytes = strlen(ghost_name);
+        size_t race_bytes = race_name ? strlen(race_name) : 0;
+        const size_t brackets = (sizeof("（") - 1) +
+            (sizeof("）") - 1);
         used = angdroid_utf8_copy_complete(dst, base_capacity, ghost_name);
-        used = angdroid_utf8_append_complete(
-            dst, base_capacity, used, "（");
-        used = angdroid_utf8_append_complete(
-            dst, base_capacity, used, race_name);
-        used = angdroid_utf8_append_complete(
-            dst, base_capacity, used, "）");
+        if (race_name && name_bytes < base_capacity &&
+            base_capacity - name_bytes - 1 >= brackets &&
+            race_bytes <= base_capacity - name_bytes - 1 - brackets) {
+            used = angdroid_utf8_append_complete(
+                dst, base_capacity, used, "（");
+            used = angdroid_utf8_append_complete(
+                dst, base_capacity, used, race_name);
+            used = angdroid_utf8_append_complete(
+                dst, base_capacity, used, "）");
+        }
     } else if (unique) {
         used = angdroid_utf8_copy_complete(dst, base_capacity, race_name);
     } else {
