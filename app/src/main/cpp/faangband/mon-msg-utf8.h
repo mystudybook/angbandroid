@@ -18,13 +18,37 @@
  * The caller has already established whether the source is visible.
  */
 
+/*
+ * Validate an entire stored display name before using it as an atomic
+ * component. The UTF-8 copier replaces invalid bytes with '?', but this
+ * could turn a known unique name into a misleading partial identity.
+ * Prefer the existing anonymous fallback instead. A correctly encoded
+ * U+FFFD replacement scalar (three bytes) is still valid UTF-8.
+ */
+static inline bool angdroid_fa_mon_msg_valid_utf8(const char *name)
+{
+    size_t offset = 0;
+
+    if (!name) return false;
+    while (name[offset]) {
+        uint32_t scalar;
+        size_t len = angdroid_utf8_next_scalar(name + offset, &scalar);
+        if (!len || (len == 1 && scalar == 0xFFFDu &&
+                (unsigned char)name[offset] >= 0x80u))
+            return false;
+        offset += len;
+    }
+    return true;
+}
+
 /* A display component is atomic: never print half a monster species, a
  * malformed plural count, or an incomplete saved player-ghost name. */
 static inline bool angdroid_fa_mon_msg_can_append(
     size_t capacity, size_t used, const char *component)
 {
     return component && used < capacity &&
-        strlen(component) <= capacity - used - 1;
+        strlen(component) <= capacity - used - 1 &&
+        angdroid_fa_mon_msg_valid_utf8(component);
 }
 
 static inline size_t angdroid_fa_mon_msg_append(
@@ -46,6 +70,20 @@ static inline size_t angdroid_fa_mon_msg_generic(
     if (plural && angdroid_fa_mon_msg_can_append(capacity, 0, "牠"))
         return angdroid_fa_mon_msg_append(dst, capacity, 0, "牠");
     return 0;
+}
+
+/*
+ * Render the existing rounded-up positive average for damage reports.
+ * count/2 + count%2 is equivalent to (count+1)/2 for valid counts,
+ * without overflowing when a very large stacked count reaches INT_MAX.
+ * Grouped damage values and combat calculations are not changed.
+ */
+static inline int angdroid_fa_mon_msg_average_damage(int total_damage,
+    int count)
+{
+    if (count <= 0) return 0;
+    return total_damage / count +
+        (total_damage % count >= count / 2 + count % 2 ? 1 : 0);
 }
 
 /* Only format localized display; never alter monster race information,
@@ -133,7 +171,7 @@ static inline void angdroid_fa_mon_msg_chinese_subject(
                 dst, base_capacity, false);
     } else {
         const char *visible_race =
-            count <= 1 || !plural ? race_name : plural;
+            count <= 1 || !plural || !plural[0] ? race_name : plural;
         if (count <= 1) {
             (void)snprintf(number, sizeof(number), "%s", "這隻");
         } else {
