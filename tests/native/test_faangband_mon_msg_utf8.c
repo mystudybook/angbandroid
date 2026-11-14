@@ -143,15 +143,66 @@ int main(void)
     angdroid_fa_mon_msg_chinese_subject(narrow, 7,
         "獸人", NULL, NULL, NULL, 1,
         false, false, false, false);
-    CHECK(strcmp(narrow, "這隻") == 0);
+    CHECK(strcmp(narrow, "獸人") == 0);
     angdroid_fa_mon_msg_chinese_subject(narrow, 4,
         "獸人", NULL, NULL, NULL, 1,
         false, false, false, false);
-    CHECK(strcmp(narrow, "這") == 0);
+    CHECK(strcmp(narrow, "牠") == 0);
     angdroid_fa_mon_msg_chinese_subject(one, sizeof one,
         "獸人", NULL, NULL, NULL, 1,
         false, false, false, false);
     CHECK(one[0] == '\0');
+
+    /* Batch 260: an offscreen marker or comma without any subject is
+     * misleading. At EVERY capacity, the visible output must contain a
+     * complete useful noun (or be empty when not even "牠" fits). */
+    for (size_t cap = 1; cap <= sizeof narrow; ++cap) {
+        const char *const race = "超級無敵漫長的獸人種族名稱";
+        const char *const ghost = "艾莉絲";
+        const char *const unique_name = "Morgoth, Lord of Darkness";
+        int mode;
+        for (mode = 0; mode < 6; ++mode) {
+            bool invisible = mode == 1 || mode == 2;
+            bool unique = mode == 4;
+            int count = mode == 2 ? 2147483647 : (mode == 3 ? 12 : 1);
+            angdroid_fa_mon_msg_chinese_subject(narrow, cap,
+                mode == 4 ? unique_name : race, "獸人們",
+                mode == 3 ? "極長的玩家種族修飾詞" : NULL,
+                mode == 5 ? ghost : NULL, count, invisible,
+                true, unique, true);
+            CHECK(strlen(narrow) < cap);
+            CHECK(valid_utf8(narrow));
+            CHECK(strcmp(narrow, offscreen) != 0);
+            CHECK(strcmp(narrow, "（畫面外），") != 0);
+            CHECK(strcmp(narrow, "，") != 0);
+            if (strstr(narrow, "，") != NULL) {
+                CHECK(ends_with(narrow, "，"));
+                if (strstr(narrow, offscreen) != NULL)
+                    CHECK(ends_with(narrow, "（畫面外），"));
+            }
+            if (strstr(narrow, "（") != NULL)
+                CHECK(strstr(narrow, "）") != NULL);
+            if (cap >= 4)
+                CHECK(narrow[0] != '\0');
+        }
+    }
+
+    angdroid_fa_mon_msg_chinese_subject(narrow, 17,
+        "獸人", NULL, NULL, NULL, 1,
+        false, true, false, true);
+    CHECK(strcmp(narrow, "這隻獸人") == 0);
+    angdroid_fa_mon_msg_chinese_subject(narrow, 19,
+        "獸人", NULL, NULL, NULL, 1,
+        true, true, false, false);
+    CHECK(strcmp(narrow, "牠（畫面外）") == 0);
+    angdroid_fa_mon_msg_chinese_subject(narrow, 22,
+        "獸人", NULL, NULL, NULL, 1,
+        false, true, true, true);
+    CHECK(strcmp(narrow, "牠（畫面外），") == 0);
+    angdroid_fa_mon_msg_chinese_subject(narrow, 25,
+        "獸人", NULL, NULL, NULL, 1,
+        false, true, false, true);
+    CHECK(strcmp(narrow, "這隻獸人（畫面外），") == 0);
 
     printf("PASS: %u C99 group-message Unicode subject checks\n", checks);
     return 0;
