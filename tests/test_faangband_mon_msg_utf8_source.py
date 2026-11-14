@@ -105,36 +105,44 @@ assert parser.index("angdroid_game_ui_text(source,") < parser.index(
 assert parser.index("assert(state == MSG_PARSE_NORMAL);") > parser.index(
     "for (size_t i = 0; i < maxlen; i++)")
 
-# New UTF-8 subject helper must reserve the full display suffix before
-# copying long names and must not create half of a ghost identity.
+# Batch 260: every displayed component is atomic (whole ghost name,
+# full plural number, complete species, or truthful generic fallback).
+# A tiny buffer must never contain only a location marker or comma.
 for token in (
+    "static inline bool angdroid_fa_mon_msg_can_append(",
+    "static inline size_t angdroid_fa_mon_msg_append(",
+    "static inline size_t angdroid_fa_mon_msg_generic(",
+    "strlen(component) <= capacity - used - 1;",
+    'const char *fallback = plural ? "怪物" : "牠";',
     'static const char suffix[] = "（畫面外）";',
-    'angdroid_utf8_copy_complete(dst, base_capacity, "牠")',
+    "suffix_fits = offscreen &&",
+    'capacity > (sizeof(suffix) - 1) + (sizeof("牠") - 1);',
+    "comma_fits = !invisible && comma &&",
+    'capacity > reserved_bytes + (sizeof("，") - 1) +',
+    "base_capacity = capacity - reserved_bytes;",
     'snprintf(number, sizeof(number), "%d 隻怪物", count)',
     'snprintf(number, sizeof(number), "%d 隻", count)',
-    "suffix_fits = offscreen && capacity > sizeof(suffix);",
-    "if (suffix_fits) reserved_bytes = sizeof(suffix) - 1;",
-    "base_capacity = capacity - reserved_bytes;",
-    'if (comma_fits)',
-    'reserved_bytes += sizeof("，") - 1;',
-    '"angdroid_utf8_append_complete(dst, capacity, used, suffix)"',
-    "if (invisible)",
-    "else if (ghost_name)",
-    "else if (unique)",
-    "if (name_bytes < base_capacity", # boundary gate can be combined
-    "angdroid_utf8_append_complete(",
-    "comma_fits = !invisible && comma;",
-    'angdroid_utf8_append_complete(dst, capacity, used, suffix);',
-    'angdroid_utf8_append_complete(dst, capacity, used, "，");',
+    "if (ghost_name[0] &&",
+    "if (race_name && race_name[0]) {",
+    "else if (unique) {",
     "const char *visible_race =",
+    "angdroid_fa_mon_msg_can_append(",
     "if (qualifier_len < remaining &&",
     "race_len <= remaining - qualifier_len - 1",
-    "count == 1 || !plural ? race_name : plural",
+    "/* Keep a complete species rather than",
+    "/* A truncated race name or number",
+    'angdroid_fa_mon_msg_append(dst, capacity, used, suffix);',
+    'angdroid_fa_mon_msg_append(dst, capacity, used, "，");',
 ):
-    if token == "if (name_bytes < base_capacity":
-        assert "name_bytes < base_capacity" in HELPER
-    else:
-        assert token in HELPER, token
+    assert token in HELPER, token
+
+assert HELPER.index("if (used != 0 && suffix_fits)") < HELPER.index(
+    "if (used != 0 && comma_fits)")
+assert "if (!dst || !capacity) return;" in HELPER
+assert "if (count <= 1)" in HELPER
+assert "if (visible_race && visible_race[0] &&" in HELPER
+assert "if (race_name && race_name[0] &&" in HELPER
+assert "angdroid_utf8_append_complete(dst, capacity, used, component)" in HELPER
 
 # Damage grouping, sound category, singular punctuation, and averaging
 # arithmetic remain the original calculations.
@@ -165,6 +173,12 @@ for token in (
     "4 隻怪物", "牠（畫面外）", "這隻獸人，",
     "超級無敵漫長的獸人種族名稱", "valid_utf8(narrow)",
     "ends_with(narrow, offscreen)", "char one[1]",
+    "for (size_t cap = 1; cap <= sizeof narrow; ++cap)",
+    "strcmp(narrow, offscreen) != 0",
+    'strcmp(narrow, "（畫面外），") != 0',
+    "strcmp(narrow, \"，\") != 0",
+    "INT_MAX",
+
 ):
     assert token in NATIVE, token
 assert "-std=c99 -Wall -Wextra -Werror -pedantic" in RUNNER
