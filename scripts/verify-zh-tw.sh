@@ -71,6 +71,8 @@ run_check "FAangband daily commands, store, input and options bilingual UI" pyth
 run_check "FAangband recall and player history screen-only zh-TW" python3 "$ROOT/tests/test_faangband_recall_history_locale_source.py"
 run_check "FAangband recall layout and cancel safety C99" sh "$ROOT/scripts/test-fa-recall-viewport.sh"
 run_check "FAangband spoiler generator menu zh-TW and command safety" python3 "$ROOT/tests/test_faangband_spoiler_menu_locale_source.py"
+run_check "FAangband short/narrow spell menu geometry C99" sh "$ROOT/scripts/test-fa-spell-viewport.sh"
+run_check "FAangband spell browsing source and localized display" python3 "$ROOT/tests/test_faangband_spell_menu_viewport_source.py"
 run_check "FAangband history viewport paging C99" sh "$ROOT/scripts/test-fa-history-viewport.sh"
 run_check "FAangband curse and Hall of Fame screen zh-TW" python3 "$ROOT/tests/test_faangband_curse_score_locale_source.py"
 run_check "FAangband item commands bilingual dictionary C99" sh "$ROOT/scripts/test-fa-item-command-translation.sh"

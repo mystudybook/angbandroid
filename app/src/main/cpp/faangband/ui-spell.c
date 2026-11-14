@@ -37,6 +37,7 @@
 #include "../angband/zh-tw-spell-descriptions.h"
 #include "../angband/zh-tw-projection-terms.h"
 #include "../angband/menu-text-fit.h"
+#include "ui-spell-viewport.h"
 
 
 /**
@@ -153,19 +154,32 @@ static bool spell_menu_handler(struct menu *m, const ui_event *e, int oid)
 static void spell_menu_browser(int oid, void *data, const region *loc)
 {
 	struct spell_menu_data *d = data;
-	int spell_index = d->spells[oid];
-	const struct class_spell *spell = spell_by_index(player, spell_index);
+	int spell_index, browse_row;
+	const struct class_spell *spell;
 
-	if (d->show_description) {
+	/* On a short phone terminal the menu may have no room for browsing.
+	 * Do not dereference a filtered/invalid row or move the cursor
+	 * outside the display after rotation. */
+	if (!Term || !d || !loc || !d->spells || !d->show_description ||
+		oid < 0 || oid >= d->n_spells ||
+		loc->col < 0 || loc->col >= Term->wid) return;
+	browse_row = loc->row + loc->page_rows;
+	if (browse_row < 0 || browse_row >= Term->hgt) return;
+	spell_index = d->spells[oid];
+	spell = spell_by_index(player, spell_index);
+	if (!spell) return;
+
+	{
 		/* Redirect output to the screen */
 		text_out_hook = text_out_to_screen;
 		text_out_wrap = 0;
 		text_out_indent = loc->col - 1;
 		text_out_pad = 1;
 
-		Term_gotoxy(loc->col, loc->row + loc->page_rows);
-		/* Spell description */
-		text_out("\n%s", angdroid_zh_tw_spell_description(
+		Term_gotoxy(loc->col, browse_row);
+		/* Draw on the first reserved row, rather than skipping it with
+		 * a leading newline when the terminal is only a few rows high. */
+		text_out("%s", angdroid_zh_tw_spell_description(
             spell->name, spell->text, angdroid_zh_tw_enabled()));
 
 		/* To summarize average damage, count the damaging effects */
@@ -243,11 +257,21 @@ static struct menu *spell_menu_new(const struct object *obj,
 		bool (*is_valid)(const struct player *p, int spell_index),
 		bool show_description)
 {
-	struct menu *m = menu_new(MN_SKIN_SCROLL, &spell_menu_iter);
-	struct spell_menu_data *d = mem_alloc(sizeof *d);
-	size_t width = MAX(0, MIN(Term->wid - 15, 80));
+	struct menu *m;
+	struct spell_menu_data *d;
+	int width, page_rows;
+	region loc;
 
-	region loc = { 0 - width, 1, width, -99 };
+	if (!Term) return NULL;
+	width = angdroid_fa_spell_menu_columns(Term->wid);
+	if (width == 0 || Term->hgt < 4) return NULL;
+	m = menu_new(MN_SKIN_SCROLL, &spell_menu_iter);
+	d = mem_alloc(sizeof *d);
+
+	loc.col = -width; /* Fill narrow screens; right-align at 80 columns. */
+	loc.row = 1;
+	loc.width = width;
+	loc.page_rows = 0;
 
 	/* collect spells from object */
 	d->n_spells = spell_collect_from_book(player, obj, &d->spells);
@@ -273,9 +297,16 @@ static struct menu *spell_menu_new(const struct object *obj,
 	m->browse_hook = spell_menu_browser;
 	m->cmd_keys = "?";
 
-	/* Set size */
-	loc.page_rows = d->n_spells + 1;
-	menu_layout(m, &loc);
+	/* Keep one or more rows free for the translated spell description.
+	 * If geometry is unusable, do not enter an invisible input loop. */
+	page_rows = angdroid_fa_spell_menu_rows(Term->hgt, d->n_spells);
+	loc.page_rows = page_rows;
+	if (page_rows == 0 || !menu_layout(m, &loc)) {
+		mem_free(d->spells);
+		mem_free(d);
+		mem_free(m);
+		return NULL;
+	}
 
 	return m;
 }
@@ -299,6 +330,7 @@ static int spell_menu_select(struct menu *m, const char *noun, const char *verb)
 	struct spell_menu_data *d = menu_priv(m);
     char buf[192], visible[192];
 
+    if (!Term) return -1;
     screen_save();
     region_erase_bordered(&m->active);
     if (angdroid_zh_tw_enabled())
@@ -315,7 +347,7 @@ static int spell_menu_select(struct menu *m, const char *noun, const char *verb)
     prt(visible, 0, 0);
 
 	menu_select(m, 0, true);
-	screen_load();
+	if (Term) screen_load();
 
 	return d->selected_spell;
 }
@@ -327,6 +359,7 @@ static void spell_menu_browse(struct menu *m, const char *noun)
 {
 	struct spell_menu_data *d = menu_priv(m);
 
+	if (!Term) return;
 	screen_save();
 
 	region_erase_bordered(&m->active);
@@ -346,7 +379,7 @@ static void spell_menu_browse(struct menu *m, const char *noun)
 	d->browse = true;
 	menu_select(m, 0, true);
 
-	screen_load();
+	if (Term) screen_load();
 }
 
 /**
