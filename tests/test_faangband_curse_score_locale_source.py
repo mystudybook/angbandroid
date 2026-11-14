@@ -83,6 +83,29 @@ has(SCORE,
     "0, Term->wid >= 80 ? 21 : 0);",
     "0, Term->wid >= 80 ? 30 : 0);")
 
+# Height-adaptive score pages must leave one footer row visible and must
+# visit every score once when cycling forward, even in a six-row terminal.
+for height in range(1, 65):
+    page_entries = 0 if height < 6 else min(5, (height - 2) // 4)
+    if not page_entries:
+        assert height < 6
+        continue
+    assert 1 <= page_entries <= 5
+    assert 4 + 4 * (page_entries - 1) < min(23, height - 1)
+    for count in range(1, 61):
+        seen = []
+        start = 0
+        while True:
+            seen.extend(range(start, min(start + page_entries, count)))
+            start += page_entries
+            if start >= count:
+                start = 0
+            if start == 0:
+                break
+        assert seen == list(range(count)), (height, count, seen)
+        last = ((count - 1) // page_entries) * page_entries
+        assert 0 <= last < count
+
 # Score storage, generation and ranking are unchanged.
 has(SCORE,
     "highscore_read(scores, N_ELEMENTS(scores));",
