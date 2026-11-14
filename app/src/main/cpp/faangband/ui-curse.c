@@ -56,9 +56,11 @@ static void get_curse_display(struct menu *menu, int oid, bool cursor, int row,
 	const char *name = curses[choice[oid].index].name;
 
 	fa_curse_label(buf, sizeof(buf), name, power);
-	/* Width means terminal columns, not UTF-8 bytes. */
+	/* Clip to both the menu cell and the remaining terminal columns. */
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid || width <= 0) return;
 	angdroid_menu_copy_columns(visible, sizeof(visible), buf,
-		width > 0 ? (size_t)width : 0);
+		(size_t)MIN(width, Term->wid - col));
 	if (visible[0])
 		c_put_str(attr, visible, row, col);
 }
@@ -170,7 +172,8 @@ static int curse_menu(struct object *obj, char *dice_string)
 		header, (size_t)area.width);
 	m->header = visible_header;
 
-	for (row = area.row; row < area.row + area.page_rows; row++)
+	for (row = area.row; row < area.row + area.page_rows &&
+			row < Term->hgt; row++)
 		prt("", row, MAX(0, area.col - 1));
 
 	menu_layout(m, &area);

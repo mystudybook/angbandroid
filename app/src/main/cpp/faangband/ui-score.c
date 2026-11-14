@@ -57,6 +57,9 @@ static void display_score_page(const struct high_score scores[], int start,
 		struct player_race *r;
 		char out_val[160];
 		char tmp_val[160];
+		/* Preserve original indentation at 80 columns, reclaim room on
+		 * narrow mobile terminals so the details remain legible. */
+		int details_col = Term && Term->wid < 60 ? 0 : 15;
 
 		/* Hack -- indicate death in yellow */
 		attr = (start == highlight) ? COLOUR_L_GREEN : COLOUR_WHITE;
@@ -128,7 +131,7 @@ static void display_score_page(const struct high_score scores[], int start,
 				sizeof(out_val));
 
 		/* Dump the info */
-		fa_score_put_clipped(attr, out_val, n * 4 + 3, 15);
+		fa_score_put_clipped(attr, out_val, n * 4 + 3, details_col);
 
 
 		/* Clean up standard encoded form of "when" */
@@ -147,7 +150,7 @@ static void display_score_page(const struct high_score scores[], int start,
 			strnfmt(out_val, sizeof(out_val),
 				"(User %s, Date %s, Gold %s, Turn %s).",
 				user, when, gold, aged);
-		fa_score_put_clipped(attr, out_val, n * 4 + 4, 15);
+		fa_score_put_clipped(attr, out_val, n * 4 + 4, details_col);
 	}
 }
 
@@ -191,14 +194,15 @@ static void display_scores_aux(const struct high_score scores[], int from,
 			else
 				fa_score_put_clipped(COLOUR_WHITE,
 					format("%s Hall of Fame (from position %d)",
-						VERSION_NAME, k + 1), 0, 21);
+						VERSION_NAME, k + 1), 0, Term->wid >= 80 ? 21 : 0);
 		} else {
 			if (angdroid_zh_tw_enabled())
 				fa_score_put_clipped(COLOUR_WHITE,
 					format("%s 名人榜", VERSION_NAME), 0, 0);
 			else
 				fa_score_put_clipped(COLOUR_WHITE,
-					format("%s Hall of Fame", VERSION_NAME), 0, 30);
+					format("%s Hall of Fame", VERSION_NAME),
+					0, Term->wid >= 80 ? 30 : 0);
 		}
 
 		display_score_page(scores, k, count, highlight);
