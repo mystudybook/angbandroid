@@ -19,7 +19,8 @@ static bool valid_utf8(const char *text)
     uint32_t cp;
     while (text[i]) {
         n = angdroid_utf8_next_scalar(text + i, &cp);
-        if (!n || cp == 0xFFFDu) return false;
+        if (!n || (n == 1 && cp == 0xFFFDu &&
+                (unsigned char)text[i] >= 0x80u)) return false;
         i += n;
     }
     return true;
@@ -208,6 +209,65 @@ int main(void)
         "獸人", NULL, NULL, NULL, 1,
         false, true, false, true);
     CHECK(strcmp(narrow, "這隻獸人（畫面外），") == 0);
+
+    /* Batch 261: malformed names must fall back to a complete known
+     * subject rather than displaying a broken or misleading proper name. */
+    {
+        static const char malformed_race[] = "獸\\xE4\\xB8";
+        static const char malformed_ghost[] = "\\xC0\\xAF";
+        static const char malformed_plural[] = "\\xF0\\x90\\x80";
+        static const char malformed_qualifier[] = "半\\xFF精靈";
+        const char *valid_replacement = "受損\\xEF\\xBF\\xBD怪物";
+
+        CHECK(!angdroid_fa_mon_msg_valid_utf8(malformed_race));
+        CHECK(!angdroid_fa_mon_msg_valid_utf8(malformed_ghost));
+        CHECK(!angdroid_fa_mon_msg_valid_utf8(malformed_plural));
+        CHECK(!angdroid_fa_mon_msg_valid_utf8(malformed_qualifier));
+        CHECK(angdroid_fa_mon_msg_valid_utf8(valid_replacement));
+        CHECK(!angdroid_fa_mon_msg_valid_utf8(NULL));
+
+        angdroid_fa_mon_msg_chinese_subject(subject, sizeof subject,
+            malformed_race, NULL, NULL, NULL, 1,
+            false, false, false, false);
+        CHECK(strcmp(subject, "這隻怪物") == 0);
+        CHECK(valid_utf8(subject));
+        angdroid_fa_mon_msg_chinese_subject(subject, sizeof subject,
+            malformed_race, NULL, NULL, NULL, 1,
+            false, false, true, false);
+        CHECK(strcmp(subject, "牠") == 0);
+
+        angdroid_fa_mon_msg_chinese_subject(subject, sizeof subject,
+            "幽靈戰士", NULL, NULL, malformed_ghost, 1,
+            false, false, false, false);
+        CHECK(strcmp(subject, "幽靈") == 0);
+        angdroid_fa_mon_msg_chinese_subject(subject, sizeof subject,
+            "獸人", malformed_plural, NULL, NULL, 3,
+            false, false, false, false);
+        CHECK(strcmp(subject, "3 隻獸人") == 0);
+
+        angdroid_fa_mon_msg_chinese_subject(subject, sizeof subject,
+            "獸人", NULL, malformed_qualifier, NULL, 1,
+            false, false, false, false);
+        CHECK(strcmp(subject, "這隻獸人") == 0);
+        angdroid_fa_mon_msg_chinese_subject(subject, sizeof subject,
+            valid_replacement, NULL, NULL, NULL, 1,
+            false, false, false, false);
+        CHECK(strcmp(subject, "這隻受損\\xEF\\xBF\\xBD怪物") == 0);
+        CHECK(valid_utf8(subject));
+    }
+
+    /* The original rounded-up damage average remains stable for normal
+     * counts, without count+1 integer overflow near INT_MAX. */
+    CHECK(angdroid_fa_mon_msg_average_damage(5, 2) == 3);
+    CHECK(angdroid_fa_mon_msg_average_damage(4, 2) == 2);
+    CHECK(angdroid_fa_mon_msg_average_damage(1, 2) == 1);
+    CHECK(angdroid_fa_mon_msg_average_damage(0, INT_MAX) == 0);
+    CHECK(angdroid_fa_mon_msg_average_damage(INT_MAX, INT_MAX) == 1);
+    CHECK(angdroid_fa_mon_msg_average_damage(INT_MAX, 2)
+        == INT_MAX / 2 + 1);
+    CHECK(angdroid_fa_mon_msg_average_damage(-3, 2) == -1);
+    CHECK(angdroid_fa_mon_msg_average_damage(100, 0) == 0);
+    CHECK(angdroid_fa_mon_msg_average_damage(100, -1) == 0);
 
     printf("PASS: %u C99 group-message Unicode subject checks\n", checks);
     return 0;
