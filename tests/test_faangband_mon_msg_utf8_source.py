@@ -40,8 +40,8 @@ for key in (
     "mon_msg[i].race == mon->race",
     "mon_msg[i].flags == flags",
     "mon_msg[i].msg_code == msg_code",
-    "mon_msg[i].count++",
-    "mon_msg[i].damage += damage",
+    "mon_msg[i].count = angdroid_fa_mon_msg_next_count(",
+    "mon_msg[i].damage = angdroid_fa_mon_msg_add_damage(",
 ):
     assert key in stack, key
 for part in (regular, damage):
@@ -53,6 +53,14 @@ for part in (regular, damage):
     assert "store_monster(mon, msg_code);" in part
     assert "player->upkeep->notice |= PN_MON_MESSAGE;" in part
 assert "MON_MSG_FLAG_DAMAGE" in damage
+assert "#include <limits.h>" in HELPER
+assert "static inline int angdroid_fa_mon_msg_next_count(" in HELPER
+assert "count >= INT_MAX ? INT_MAX : count + 1" in HELPER
+assert "static inline int angdroid_fa_mon_msg_add_damage(" in HELPER
+assert "current > INT_MAX - damage" in HELPER
+assert "current < INT_MIN - damage" in HELPER
+assert "mon_msg[i].count++" not in stack
+assert "mon_msg[i].damage += damage" not in stack
 
 # Localized display uses exact source-selected names, not independent
 # monster race lookups that could reveal unseen or off-panel identities.
@@ -146,6 +154,10 @@ assert HELPER.index("if (used != 0 && suffix_fits)") < HELPER.index(
 assert "if (!dst || !capacity) return;" in HELPER
 assert "if (count <= 1)" in HELPER
 assert "if (visible_race && visible_race[0] &&" in HELPER
+assert "angdroid_fa_mon_msg_valid_utf8(race_name)) {" in HELPER
+assert "angdroid_fa_mon_msg_valid_utf8(player_race_name)) {" in HELPER
+assert 'CHECK(strcmp(subject, "艾莉絲") == 0);' in NATIVE
+assert "const int values[] = {INT_MIN, INT_MIN + 1" in NATIVE
 assert "if (race_name && race_name[0] &&" in HELPER
 assert "angdroid_utf8_append_complete(dst, capacity, used, component)" in HELPER
 

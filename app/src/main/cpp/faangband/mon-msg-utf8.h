@@ -6,6 +6,7 @@
 #ifndef ANGDROID_FA_MON_MSG_UTF8_H
 #define ANGDROID_FA_MON_MSG_UTF8_H
 
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -86,6 +87,22 @@ static inline int angdroid_fa_mon_msg_average_damage(int total_damage,
         (total_damage % count >= count / 2 + count % 2 ? 1 : 0);
 }
 
+/*
+ * Keep grouped notification counters and signed damage totals inside int.
+ * Both are display-only; the combat engine's actual damage is untouched.
+ */
+static inline int angdroid_fa_mon_msg_next_count(int count)
+{
+    return count >= INT_MAX ? INT_MAX : count + 1;
+}
+
+static inline int angdroid_fa_mon_msg_add_damage(int current, int damage)
+{
+    if (damage > 0 && current > INT_MAX - damage) return INT_MAX;
+    if (damage < 0 && current < INT_MIN - damage) return INT_MIN;
+    return current + damage;
+}
+
 /* Only format localized display; never alter monster race information,
  * visibility rules, message stack keys, or damage/kill calculations. */
 static inline void angdroid_fa_mon_msg_chinese_subject(
@@ -139,7 +156,8 @@ static inline void angdroid_fa_mon_msg_chinese_subject(
             angdroid_fa_mon_msg_can_append(base_capacity, 0, ghost_name)) {
             used = angdroid_fa_mon_msg_append(
                 dst, base_capacity, 0, ghost_name);
-            if (race_name && race_name[0]) {
+            if (race_name && race_name[0] &&
+                angdroid_fa_mon_msg_valid_utf8(race_name)) {
                 size_t opening = sizeof("（") - 1;
                 size_t closing = sizeof("）") - 1;
                 size_t race_bytes = strlen(race_name);
@@ -193,7 +211,8 @@ static inline void angdroid_fa_mon_msg_chinese_subject(
                 size_t race_len = strlen(visible_race);
                 size_t remaining = base_capacity - used - 1;
                 if (qualifier_len < remaining &&
-                    race_len <= remaining - qualifier_len - 1) {
+                    race_len <= remaining - qualifier_len - 1 &&
+                    angdroid_fa_mon_msg_valid_utf8(player_race_name)) {
                     used = angdroid_fa_mon_msg_append(
                         dst, base_capacity, used, player_race_name);
                     used = angdroid_fa_mon_msg_append(

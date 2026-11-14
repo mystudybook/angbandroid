@@ -240,6 +240,13 @@ int main(void)
             "幽靈戰士", NULL, NULL, malformed_ghost, 1,
             false, false, false, false);
         CHECK(strcmp(subject, "幽靈") == 0);
+        /* A malformed species must never produce empty parentheses
+         * after a valid ghost name. */
+        angdroid_fa_mon_msg_chinese_subject(subject, sizeof subject,
+            malformed_race, NULL, NULL, "艾莉絲", 1,
+            false, false, false, false);
+        CHECK(strcmp(subject, "艾莉絲") == 0);
+        CHECK(valid_utf8(subject));
         angdroid_fa_mon_msg_chinese_subject(subject, sizeof subject,
             "獸人", malformed_plural, NULL, NULL, 3,
             false, false, false, false);
@@ -268,6 +275,33 @@ int main(void)
     CHECK(angdroid_fa_mon_msg_average_damage(-3, 2) == -1);
     CHECK(angdroid_fa_mon_msg_average_damage(100, 0) == 0);
     CHECK(angdroid_fa_mon_msg_average_damage(100, -1) == 0);
+
+    /* Batch 262: saturated group counters cannot overflow signed int. */
+    CHECK(angdroid_fa_mon_msg_next_count(1) == 2);
+    CHECK(angdroid_fa_mon_msg_next_count(INT_MAX - 1) == INT_MAX);
+    CHECK(angdroid_fa_mon_msg_next_count(INT_MAX) == INT_MAX);
+
+    /* Check both signed overflow directions and mixed-sign additions. */
+    CHECK(angdroid_fa_mon_msg_add_damage(INT_MAX, 1) == INT_MAX);
+    CHECK(angdroid_fa_mon_msg_add_damage(INT_MIN, -1) == INT_MIN);
+    CHECK(angdroid_fa_mon_msg_add_damage(INT_MAX, -INT_MAX) == 0);
+    CHECK(angdroid_fa_mon_msg_add_damage(INT_MIN, INT_MAX) == -1);
+    CHECK(angdroid_fa_mon_msg_add_damage(-4, 3) == -1);
+    CHECK(angdroid_fa_mon_msg_add_damage(4, -3) == 1);
+    {
+        const int values[] = {INT_MIN, INT_MIN + 1, -101, -1,
+                              0, 1, 101, INT_MAX - 1, INT_MAX};
+        size_t i, j;
+        for (i = 0; i < sizeof values / sizeof values[0]; ++i) {
+            for (j = 0; j < sizeof values / sizeof values[0]; ++j) {
+                long long sum = (long long)values[i] + values[j];
+                int expected = sum > INT_MAX ? INT_MAX :
+                    (sum < INT_MIN ? INT_MIN : (int)sum);
+                CHECK(angdroid_fa_mon_msg_add_damage(values[i],
+                    values[j]) == expected);
+            }
+        }
+    }
 
     printf("PASS: %u C99 group-message Unicode subject checks\n", checks);
     return 0;

@@ -211,25 +211,12 @@ static bool stack_message(struct monster *mon, int msg_code, int flags,
 			mon_msg[i].p_race == mon->player_race &&
 			mon_msg[i].flags == flags &&
 			mon_msg[i].msg_code == msg_code) {
-			mon_msg[i].count++;
+			/* A monster group may be saturated by repeated events. */
+			mon_msg[i].count = angdroid_fa_mon_msg_next_count(
+				mon_msg[i].count);
 			if (flags & MON_MSG_FLAG_DAMAGE) {
-				if (damage >= 0) {
-					if (mon_msg[i].damage <= 0
-							|| mon_msg[i].damage <
-							INT_MAX - damage) {
-						mon_msg[i].damage += damage;
-					} else {
-						mon_msg[i].damage = INT_MAX;
-					}
-				} else {
-					if (mon_msg[i].damage >= 0
-							|| mon_msg[i].damage >
-							INT_MIN - damage) {
-						mon_msg[i].damage += damage;
-					} else {
-						mon_msg[i].damage = INT_MIN;
-					}
-				}
+				mon_msg[i].damage = angdroid_fa_mon_msg_add_damage(
+					mon_msg[i].damage, damage);
 			}
 			store_monster(mon, msg_code);
 			return true;
