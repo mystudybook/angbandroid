@@ -102,6 +102,8 @@ run_check "FAangband player/monster theft and exact arena note source guards" py
 run_check "FAangband real spell failure and melee attack locale branches" python3 "$ROOT/tests/test_faangband_mon_attack_locale_source.py"
 run_check "FAangband 57 blow action templates and Chinese subject C99" sh "$ROOT/scripts/test-fa-blow-action-subject-locale.sh"
 run_check "FAangband melee target and possessive source guards" python3 "$ROOT/tests/test_faangband_blow_action_subject_locale_source.py"
+run_check "FAangband stacked monster names, plural and off-panel UTF-8 C99" sh "$ROOT/scripts/test-fa-mon-msg-utf8.sh"
+run_check "FAangband grouped monster damage identity and UTF-8 source guard" python3 "$ROOT/tests/test_faangband_mon_msg_utf8_source.py"
 run_check "FAangband option colours, visual menus and quality-ignore zh-TW" python3 "$ROOT/tests/test_faangband_options_visual_locale_source.py"
 run_check "FAangband context menus, target help, maps and common commands zh-TW" python3 "$ROOT/tests/test_faangband_context_target_map_locale_source.py"
 run_check "FAangband character sheet, spell browser and savefile picker zh-TW" python3 "$ROOT/tests/test_faangband_player_spell_save_locale_source.py"
