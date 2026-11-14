@@ -213,11 +213,11 @@ int main(void)
     /* Batch 261: malformed names must fall back to a complete known
      * subject rather than displaying a broken or misleading proper name. */
     {
-        static const char malformed_race[] = "獸\\xE4\\xB8";
-        static const char malformed_ghost[] = "\\xC0\\xAF";
-        static const char malformed_plural[] = "\\xF0\\x90\\x80";
-        static const char malformed_qualifier[] = "半\\xFF精靈";
-        const char *valid_replacement = "受損\\xEF\\xBF\\xBD怪物";
+        static const char malformed_race[] = "獸\xE4\xB8";
+        static const char malformed_ghost[] = "\xC0\xAF";
+        static const char malformed_plural[] = "\xF0\x90\x80";
+        static const char malformed_qualifier[] = "半\xFF精靈";
+        const char *valid_replacement = "受損\xEF\xBF\xBD怪物";
 
         CHECK(!angdroid_fa_mon_msg_valid_utf8(malformed_race));
         CHECK(!angdroid_fa_mon_msg_valid_utf8(malformed_ghost));
@@ -252,7 +252,7 @@ int main(void)
         angdroid_fa_mon_msg_chinese_subject(subject, sizeof subject,
             valid_replacement, NULL, NULL, NULL, 1,
             false, false, false, false);
-        CHECK(strcmp(subject, "這隻受損\\xEF\\xBF\\xBD怪物") == 0);
+        CHECK(strcmp(subject, "這隻受損\xEF\xBF\xBD怪物") == 0);
         CHECK(valid_utf8(subject));
     }
 
