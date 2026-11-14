@@ -101,7 +101,7 @@ static inline void angdroid_fa_mon_msg_chinese_subject(
             angdroid_fa_mon_msg_can_append(base_capacity, 0, ghost_name)) {
             used = angdroid_fa_mon_msg_append(
                 dst, base_capacity, 0, ghost_name);
-            if (race_name) {
+            if (race_name && race_name[0]) {
                 size_t opening = sizeof("（") - 1;
                 size_t closing = sizeof("）") - 1;
                 size_t race_bytes = strlen(race_name);
