@@ -1,6 +1,7 @@
 #include "angband.h"
 #include "curses.h"
 #include "droid.h"
+#include "soft-kbd-replace.h"
 
 static char soft_kbd_buffer[256] = "";
 static bool flashing_keys = true;
@@ -54,10 +55,37 @@ void soft_kbd_flash(const char *keys)
 	strdeldup(soft_kbd_buffer);
 }
 
+/* A menu replaces its complete hint set when its filter, page or
+ * viewport changes. Do not inherit keys from a lingering outer prompt.
+ * inkey_ex() will flush this updated buffer before waiting for input. */
+void soft_kbd_replace(const char *keys)
+{
+    size_t length = angdroid_soft_kbd_replace_buffer(
+        soft_kbd_buffer, sizeof(soft_kbd_buffer), keys);
+    flashing_keys = true;
+    if (!length)
+        Term_control_keys("${clear}");
+}
+
 void soft_kbd_linger(const char *keys)
 {
 	soft_kbd_flash(keys);
 	flashing_keys = false;
+}
+
+/* Do not confuse a lingering parent prompt with temporary menu keys. */
+void soft_kbd_save_linger(soft_kbd_linger_snapshot *saved)
+{
+    angdroid_soft_kbd_capture_linger(saved, soft_kbd_buffer, flashing_keys);
+}
+
+void soft_kbd_restore_linger(const soft_kbd_linger_snapshot *saved, int cancelled)
+{
+    if (angdroid_soft_kbd_recover_linger(
+            soft_kbd_buffer, sizeof(soft_kbd_buffer), saved, cancelled)) {
+        flashing_keys = false;
+        soft_kbd_flush();
+    }
 }
 
 void soft_kbd_clear(int force)
@@ -71,7 +99,7 @@ void soft_kbd_clear(int force)
 	}
 }
 
-void soft_kbd_flush()
+void soft_kbd_flush(void)
 {
 	if (soft_kbd_buffer[0] != 0) {
 		/*android_debug("Flushing!");*/

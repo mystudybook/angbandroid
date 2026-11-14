@@ -50,6 +50,26 @@ int main(void)
         buf, sizeof(buf), &end, "（剩餘 ", 45, " 次充能）"));
     assert(strcmp(buf, "長劍（屠龍）（剩餘 45 次充能）") == 0);
 
+    /* A translated ego/artifact suffix must fit with BOTH brackets.
+     * A codepoint-only append would leave "長劍（屠" in the short buffer. */
+    {
+        char suffix_text[64], narrow[16], exact[19];
+        assert(angdroid_zh_tw_item_suffix(suffix_text, sizeof(suffix_text),
+            "屠龍"));
+        strcpy(narrow, "長劍");
+        end = strlen(narrow);
+        assert(!angdroid_zh_tw_item_append_whole(narrow, sizeof(narrow),
+            &end, suffix_text));
+        assert(end == strlen("長劍"));
+        assert(strcmp(narrow, "長劍") == 0);
+        strcpy(exact, "長劍");
+        end = strlen(exact);
+        assert(angdroid_zh_tw_item_append_whole(exact, sizeof(exact),
+            &end, suffix_text));
+        assert(strcmp(exact, "長劍（屠龍）") == 0);
+        assert(end == strlen("長劍（屠龍）"));
+    }
+
     strcpy(tiny, "OK");
     end = strlen(tiny);
     assert(!angdroid_zh_tw_item_append_whole(

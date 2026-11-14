@@ -5,6 +5,7 @@
 #define ANGDROID_ZH_TW_MON_SPELL_TEXT_H
 #include <stddef.h>
 #include <string.h>
+#include "zh-tw-faangband-mon-spell-messages.h"
 static inline const char *angdroid_mon_spell_text(const char *english,
     int zh_tw)
 {
@@ -19,6 +20,6 @@ static inline const char *angdroid_mon_spell_text(const char *english,
     if (!english || !zh_tw) return english;
     for (i = 0; i < sizeof(map) / sizeof(map[0]); ++i)
         if (strcmp(english, map[i].en) == 0) return map[i].zh;
-    return english;
+    return angdroid_faangband_mon_spell_text(english, zh_tw);
 }
 #endif

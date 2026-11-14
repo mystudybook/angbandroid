@@ -38,6 +38,10 @@
 #include "player-calcs.h"
 #include "project.h"
 #include "z-textblock.h"
+#include "droid.h"
+#include "../angband/zh-tw-artifact-lore.h"
+#include "../angband/zh-tw-faangband-artifact-lore.h"
+#include "../angband/zh-tw-faangband-artifact-variants.h"
 
 /**
  * Describes the number of blows possible for given stat bonuses
@@ -1884,11 +1888,24 @@ static bool describe_origin(textblock *tb, const struct object *obj, bool terse)
  * real object)
  */
 static void describe_flavor_text(textblock *tb, const struct object *obj,
-								 bool ego)
+								 bool ego, bool zh_tw)
 {
-	/* Display the known artifact or object description */
+	/* Only reveal already-identified artifact stories, as before. */
 	if (obj->artifact && obj->known->artifact && obj->artifact->text) {
-		textblock_append(tb, "%s\n\n", obj->artifact->text);
+		const char *flavor = obj->artifact->text;
+		if (zh_tw) {
+			bool allow_standard = true;
+			const char *translated =
+				angdroid_zh_tw_faangband_variant_artifact_lore(
+					obj->artifact->name, flavor, &allow_standard);
+			if (!translated && allow_standard)
+				translated = angdroid_zh_tw_artifact_flavor(obj->artifact->name);
+			if (!translated && allow_standard)
+				translated = angdroid_zh_tw_faangband_artifact_flavor(
+					obj->artifact->name);
+			if (translated) flavor = translated;
+		}
+		textblock_append(tb, "%s\n\n", flavor);
 
 	} else if (object_flavor_is_aware(obj) || ego) {
 		bool did_desc = false;
@@ -1987,7 +2004,9 @@ static textblock *object_info_out(const struct object *obj, int mode)
 	get_known_elements(obj, mode, el_info);
 
 	if (subjective) describe_origin(tb, obj, terse);
-	if (!terse) describe_flavor_text(tb, obj, ego);
+	/* Keep character dumps (terse) and spoilers in canonical English. */
+	if (!terse) describe_flavor_text(tb, obj, ego,
+		angdroid_zh_tw_enabled() && !(mode & OINFO_SPOIL));
 
 	if (!object_fully_known(obj) &&	(obj->known->notice & OBJ_NOTICE_ASSESSED) && !tval_is_useable(obj)) {
 		textblock_append(tb, "You do not know the full extent of this item's powers.\n");

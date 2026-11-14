@@ -20,13 +20,16 @@ class FlavoredObjectTest(unittest.TestCase):
 
     def test_visibility_gated_before_translation(self):
         self.assertIn('#include "zh-tw-flavored-object.h"', DESC)
-        self.assertIn("show_flavor && localized_flavor && !obj->artifact", DESC)
+        self.assertIn("show_flavor && obj->kind->flavor && !obj->artifact", DESC)
         self.assertIn("!obj->ego && obj->tval != TV_SCROLL", DESC)
-        self.assertIn("if (aware) {", DESC)
+        self.assertIn("if (aware && obj->kind->name) {", DESC)
+        self.assertIn("if (!visible_effect) visible_effect = obj->kind->name;", DESC)
         self.assertIn("visible_effect = angdroid_zh_tw_item_kind_name(", DESC)
-        self.assertIn("if (!aware || visible_effect)", DESC)
-        self.assertIn("tval_find_name(obj->tval), localized_flavor,", DESC)
+        self.assertIn("if (appearance && *appearance && (!aware || visible_effect))", DESC)
+        self.assertIn("tval_find_name(obj->tval), appearance,", DESC)
+        self.assertIn("localized_flavor : obj->kind->flavor->text;", DESC)
         self.assertIn("else if (localized_flavored)", DESC)
+        self.assertIn("angdroid_zh_tw_item_append_whole(buf, max, &end,", DESC)
         self.assertIn("!localized_flavored &&", DESC)
 
     def test_fallback_export_rng_and_utf8_bounds(self):

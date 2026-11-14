@@ -5,6 +5,7 @@
 #define ANGDROID_ZH_TW_PLAYER_ABILITY_H
 #include <stddef.h>
 #include <string.h>
+#include "zh-tw-faangband-abilities.h"
 struct angdroid_ability_pair { const char *en; const char *zh; };
 
 static inline const char *angdroid_ability_lookup(const char *english, int zh_tw,
@@ -65,8 +66,10 @@ static inline const char *angdroid_ability_name(const char *english, int zh_tw)
         { "Immunity", "免疫" },
         { "Vulnerability", "弱點" },
     };
-    return angdroid_ability_lookup(english, zh_tw, map,
+    const char *translated = angdroid_ability_lookup(english, zh_tw, map,
         sizeof(map) / sizeof(map[0]));
+    return translated != english ? translated :
+        angdroid_faangband_ability_name(english, zh_tw);
 }
 
 static inline const char *angdroid_ability_description(const char *english, int zh_tw)
@@ -117,7 +120,9 @@ static inline const char *angdroid_ability_description(const char *english, int 
         { "You are immune to", "你免疫：" },
         { "You are vulnerable to", "你容易受到以下傷害：" },
     };
-    return angdroid_ability_lookup(english, zh_tw, map,
+    const char *translated = angdroid_ability_lookup(english, zh_tw, map,
         sizeof(map) / sizeof(map[0]));
+    return translated != english ? translated :
+        angdroid_faangband_ability_description(english, zh_tw);
 }
 #endif

@@ -29,6 +29,7 @@
 #include "mon-predicate.h"
 #include "mon-summon.h"
 #include "mon-util.h"
+#include "mon-damage-hp.h"
 #include "obj-chest.h"
 #include "obj-curse.h"
 #include "obj-desc.h"
@@ -1031,9 +1032,10 @@ bool effect_handler_DRAIN_MANA(effect_handler_context_t *context)
 	/* Heal the monster */
 	if (monster) {
 		if (mon->hp < mon->maxhp) {
-			mon->hp += (6 * drain);
-			if (mon->hp > mon->maxhp)
-				mon->hp = mon->maxhp;
+			/* Use wide math for the drain multiplier and cap the heal
+			 * before narrowing the result to the monster's HP field. */
+			mon->hp = angdroid_fa_mon_hp_after_healing(
+				mon->hp, mon->maxhp, (int64_t)6 * drain);
 
 			/* Redraw (later) if needed */
 			if (player->upkeep->health_who == mon)

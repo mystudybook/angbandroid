@@ -1,0 +1,188 @@
+/* Shared artifact names with DIFFERENT source stories in Angband and FAangband.
+ * Display-only: require canonical name + full original English description.
+ * Missing or altered source keeps the source English, never stale lore.
+ */
+#ifndef ANGDROID_ZH_TW_FAANGBAND_ARTIFACT_VARIANTS_H
+#define ANGDROID_ZH_TW_FAANGBAND_ARTIFACT_VARIANTS_H
+#include <stdbool.h>
+#include <stddef.h>
+#include <string.h>
+#define ANGDROID_ZH_TW_FAANGBAND_ARTIFACT_VARIANTS 38
+static inline const char *angdroid_zh_tw_faangband_variant_artifact_lore(
+    const char *name, const char *english_description, bool *allow_standard)
+{
+    static const struct {
+        const char *name, *fa_source, *ang_source, *traditional;
+    } variants[ANGDROID_ZH_TW_FAANGBAND_ARTIFACT_VARIANTS] = {
+        { "'Angrist'",
+          "Forged from meteoric iron by Telchar, greatest of Dwarven smiths, and used by Beren to gouge a Silmaril out of Morgoth's crown, this long chopping dagger slices through ordinary metal as easily as its name, \"Iron Cleaver\", suggests.",
+          "Forged by Telchar, greatest of Dwarven smiths, and used by Beren to gouge a Silmaril out of Morgoth's crown, this long chopping dagger slices through ordinary metal as easily as its name, \"Iron Cleaver\", suggests.",
+          "這把厚重的長匕首由矮人工匠大師特爾查以隕鐵鍛造。貝倫曾用它從魔苟斯的王冠上剜出一顆精靈寶鑽；正如「斬鐵者」之名，它能輕易切開一般金屬。" },
+        { "'Narthanc'",
+          "A fiery dagger finely balanced for deadly throws.",
+          "Instead of a blade, a flame seems to emerge from this dagger's hilt.",
+          "這把帶有火焰之力的匕首平衡極佳，適合投擲並造成致命打擊。" },
+        { "'Nimthanc'",
+          "A finely-balanced dagger that numbs with deadly cold.",
+          "From the hilt of this dagger springs not so much a blade as an icicle.",
+          "這把匕首重量配置精妙，能以致命寒氣使敵人麻木。" },
+        { "'Dethanc'",
+          "A dagger covered in sparks and finely balanced for deadly throws.",
+          "In this dagger is bound the very force of lightning.",
+          "這把匕首佈滿電光火花，配重精準，能在投擲時給予敵人致命一擊。" },
+        { "'Anguirel'",
+          "Forged of black galvorn by the Dark-Elven smith Eöl, this blade has the living lightning trapped inside.",
+          "This black blade was forged of meteoric iron by Eöl the Dark Elf.  It is imbued with the malice of its maker; as dangerous to its wielder as it is deadly to his foes.",
+          "這把利刃由黑暗精靈鐵匠埃歐爾以黑色加爾沃恩金屬鍛造，劍身封存著躍動不息的雷電。" },
+        { "'Glamdring'",
+          "The fiery, shining blade of Turgon.  Mate to Orcrist, it earned its sobriquet \"Beater\" from dying orcs who dared behold hidden Gondolin.",
+          "This fiery, shining blade, mate to Orcrist, earned its sobriquet \"Beater\" from dying orcs who dared to behold hidden Gondolin.",
+          "這是圖爾鞏所持的熾亮利劍，與獸咬劍成對。膽敢窺探隱秘貢多林的半獸人接連死於劍下，因此稱它為「痛擊者」。" },
+        { "'Gurthang'",
+          "Runes dark and deadly stand stark against the naked blade of Túrin's awesome black weapon, and you feel a wrathful power of slaying and rending as you slowly approach.",
+          "A giant sword once wielded by mighty Túrin, and an even greater dragonbane; for what worm could stand against the blade that bathed in Glaurung's blood?",
+          "圖林那把可怕的黑劍，裸露的劍刃上刻滿陰暗而致命的符文。緩步靠近時，你能感受到其中滿溢的怒意與斬裂敵人的力量。" },
+        { "'Firestar'",
+          "A famed battle-lord of old with a ruddy head, colored as embers are that can yet rise up in wrath.",
+          "A famed battle-lord of old with a head as ruddy as embers that can yet rise up in wrath.",
+          "這件古代著名戰爭領主的兵器有著赤紅的槌頭，彷彿隨時都能再度燃起怒火的餘燼。" },
+        { "'Thunderfist'",
+          "The long-lost weapon of Kzurin, Dwarven champion of ancient Belegost.  Runes of strength adorn its handle, and flames and sparks roar and crackle around its massive head.",
+          "The long-lost weapon of Kzurin, Dwarven champion of ancient Belegost Runes of strength adorn its handle, and flames and sparks roar and crackle around its massive head.",
+          "這是古代貝烈戈斯特矮人勇士庫祖林失落已久的武器。槌柄刻著力量符文，巨大的槌頭周圍則有火焰與電花咆哮爆裂。" },
+        { "'Taratol'",
+          "A great ridged mace that surrounds you in a nimbus of living lightning; you remain utterly untouched, even as fat sparks crackle around your fingers and eyebrows.",
+          "A great ridged mace that surrounds you with a nimbus of living lightning.  You remain utterly untouched, even as fat sparks crackle around your fingers and eyebrows.",
+          "這柄帶稜紋的巨錘使你被活生生的雷電光暈包圍；即使粗大的電花在指尖與眉毛旁劈啪作響，你也毫髮無傷。" },
+        { "'Eriril'",
+          "The radiant golden staff of a Maia of legend, this wizard's companion grants keen sight and clear knowledge of many hidden things.",
+          "The radiant golden staff of an Istar of legend, this wizard's companion grants keen sight and clear knowledge of many hidden things.",
+          "這根光輝的金色法杖，曾陪伴傳說中的一位邁雅法師，賦予持有者敏銳的眼光，能清楚認識許多隱藏事物。" },
+        { "of Olórin",
+          "A staff tall and sturdy, borne of old by Olórin, wisest of the Maiar. Rough-hewn runes that invoke the element of Earth stand bold upon its gnarled surface, and no creature who lives in the shadow of mountains can withstand the blows it deals.",
+          "A staff tall and sturdy, borne of old by Gandalf.  Rough-hewn runes that invoke the element of Earth stand bold upon its gnarled surface, and no creature who lives in the shadow of mountains can withstand the blows it deals.",
+          "這根高大結實的法杖，昔日由邁雅中最睿智的歐羅林持有。粗糙扭曲的杖身刻有召喚大地元素的符文，居於群山陰影下的生物都無法抵擋它的打擊。" },
+        { "'Turmil'",
+          "Wielded by the High Priest of Tirion, this great mace gleams coldly as though moonlit, and it can strike as mighty a blow spiritually as physically.",
+          "Once wielded by the High Priest of Meneltarma, this great mace gleams coldly as though moonlit, and can strike equally mighty spiritual and physical blows.",
+          "這柄巨錘曾由提理安城的大祭司揮舞，散發如月光般冰冷的光輝；它在精神與肉體上的打擊同樣強大。" },
+        { "'Aiglos'",
+          "The mighty spear of Gil-galad, famed as \"Snow-point\" in the songs of Elves.",
+          "The mighty spear of Gil-galad, famed as \"Snow-point\" in the songs of Elves.  Against it, all the foul corruptions of Sauron dashed in vain.",
+          "這是吉爾加拉德的強大長槍，在精靈的歌謠中以「雪尖」之名傳頌。" },
+        { "of Oromë",
+          "The spear of wise Oromë the Vala, strong against giants of frost, and able to melt rock or flesh with ease.",
+          "The thrusting spear of wise Oromë the Vala, strong against giants of frost, and able to pierce rock or flesh with ease.",
+          "這是睿智的維拉歐羅米所持的長槍，尤其擅長對付冰霜巨人，能輕易熔穿岩石或血肉。" },
+        { "of Wrath",
+          "A massive triple-pronged spear, so great it normally requires two hands to wield, evoking the spirit of Ossë who with it pierced legions of evil and undead.",
+          "A massive triple-pronged spear, so great it normally requires two hands to wield, evoking the spirit of Osse who with it pierced legions of evil and undead.",
+          "這柄龐大的三叉槍通常必須雙手揮舞，能喚起歐希的精神；他曾以此刺穿成群的邪惡與不死生物。" },
+        { "of Ulmo",
+          "The fearsome weapon of the Vala Ulmo, Lord of Waters.  Mightiest of all the powers of good save Manwë himself, Ulmo laughs to scorn the dread powers of the undead, and is utterly in command of the Element of water.",
+          "The awesome weapon of the Vala Ulmo, Lord of Waters.  Mightiest of all the powers of good save Manwë himself, Ulmo laughs to scorn the dread powers of the undead, and is utterly in command of the Element of water.",
+          "這是水之主宰、維拉烏歐牟的可畏武器。除曼威之外，他是眾善之力中最強大的存在，對不死者的恐怖力量嗤之以鼻，並完全支配水元素。" },
+        { "'Til-i-arc'",
+          "Within this long two-handed spear dwell the spirits of frost giants and fire demons, who war forever, fettered in sorcerous binds.",
+          "Within this long two-handed spear dwell the spirits of frost giants and fire demons, who war forever, fettered by sorcerous binds.",
+          "這柄雙手長槍中囚禁著冰霜巨人與烈焰惡魔的靈魂；他們受巫術束縛，永無休止地彼此交戰。" },
+        { "'Lotharang'",
+          "A superbly crafted double-bladed axe once borne by a commander of the Rangers of Eriador.",
+          "A superbly crafted double-bladed axe once borne by Ceruthain, commander of the Rangers of Arnor.",
+          "這把製作精良的雙刃斧，昔日曾由埃利阿多遊俠的一名指揮官持有。" },
+        { "of Eönwë",
+          "The axe of Eönwë, herald of Manwë Súlimo, strikes with the pure icy wrath of Taniquetil at the undead, disperses hosts of evil at a word, and grants Maia-like powers of body and mind.",
+          "The axe of Eönwë, leader of the Hosts of the West in the War of Wrath, strikes with icy wrath at the undead, disperses hosts of evil at a word, and grants Maia-like powers of body and mind.",
+          "這是曼威·蘇利牟的使者伊昂威所持的戰斧。它以塔尼魁提爾的純淨寒怒打擊不死者，一言之間驅散邪惡軍勢，並賦予身心近似邁雅的力量。" },
+        { "'Avavir'",
+          "Binding elemental powers whose struggles turn this weapon red and purest white, this shining reaper bears within it a power of going forth and returning.",
+          "Holding elemental powers whose struggles turn this weapon red and purest white, this shining reaper bears within it a power of going forth and returning.",
+          "這柄閃耀的收割之刃封存著相互爭鬥的元素之力，使刀鋒忽紅忽白；其中蘊藏著啟程與歸返的力量。" },
+        { "of Eöl",
+          "A small throwing javelin with a poisoned tip, crafted by the master of trickery in his darkened woods.",
+          "The iron-shod gauntlets of the Dark Elven smith Eöl, who imbued them with magics he could channel in battle.",
+          "這是一支尖端塗毒的小型投擲標槍，由精通詭計的埃歐爾在陰暗森林中打造。" },
+        { "of Amrod",
+          "A hunter's bow used for sport and war across the plains of East Beleriand.  It remembers the fury of the sons of Fëanor.",
+          "One of a pair of hunting bows once belonging to Fëanor's two youngest sons.  The bows are like and yet unlike, much as the twin brothers were.",
+          "這把獵弓曾在東貝烈瑞安德的平原上用於狩獵與戰爭，記載著費諾諸子盛怒的記憶。" },
+        { "of Celegorm",
+          "A cunning bow, crafted by the Noldor of old.  It remembers the wiles of the sons of Fëanor.",
+          "This shield emblazoned with a multitude of creatures unseen for ages once protected Celegorm, Lord of Himlad; around it, a mystic balance lies, containing the conflicts of the elements.",
+          "這是一把巧妙的長弓，由古代諾多族工匠打造，記得費諾諸子的計謀與狡智。" },
+        { "'Belthronding'",
+          "The great bow of Beleg Cúthalion, made of black yew and strung with elven hair that faintly shimmers a pale clear gold.",
+          "The great bow of Beleg Cúthalion, the most famous archer of the Elves.  Its backbone of black yew holds strings of bear sinew, and of old, only Beleg himself could draw them.",
+          "這是貝烈格·庫薩里昂的巨弓，以黑色紫杉木製成，弓弦由精靈髮絲編成，在微光下閃爍著淡金色澤。" },
+        { "'Dal-i-thalion'",
+          "A pair of high-laced shoes, strong against the powers of corruption and withering, that grant the wearer extraordinary agility.",
+          "A pair of high-laced shoes, bestowing extraordinary agility and proof against the powers of corruption and withering.",
+          "這雙高筒繫帶靴能抵抗腐化與枯萎的力量，並賦予穿戴者異常敏捷的身手。" },
+        { "'Holhenneth'",
+          "A famous cap of forged iron granting extraordinary powers of mind and awareness.",
+          "A famous forged iron helm granting extraordinary powers of mind and awareness.",
+          "這頂著名的鍛鐵帽能賦予穿戴者異常強大的心智與感知能力。" },
+        { "of Dor-Lómin",
+          "The legendary dragon helm of Hador, crafted by Telchar of Nogrod.  It's dwarven visor allowed Túrin Turambar alone to face the fire of Glaurung, an image of whose head was set on its crest in defiance.",
+          "The legendary Dragon-helm, forged by one of the legendary Dwarven smiths of the First Age.  The visage of mighty Glaurung forms its crest, and the mere sight of the helm, borne by Túrin Turambar, struck dread into the hearts of the servants of Morgoth.",
+          "這是哈多爾傳奇的龍盔，由諾格羅德的特爾查鍛造。矮人製成的面甲使圖林·圖倫拔得以獨自抵擋格勞龍的烈焰，盔頂則刻著格勞龍的頭顱，彷彿向巨龍挑戰。" },
+        { "of Celeborn",
+          "A shimmering suit of true-silver, forged by dwarven smiths for Celeborn of the Teleri.  It gleams with purest white as you gaze upon it, and mighty are its powers to protect and banish.",
+          "A shimmering suit of true-silver, forged long ago by dwarven smiths of legend.  It gleams with purest white as you gaze upon it, and mighty are its powers to protect and banish.",
+          "這套閃耀的真銀鎧甲由矮人工匠為帖勒瑞族的凱勒鵬鍛造。凝視時，它泛著純淨的白光，蘊含強大的守護與驅逐之力。" },
+        { "of Thingol",
+          "A cloak of translucent, pearly grey, with glowing elven-runes to restore magic showing calm and clear as moonlight on still water.",
+          "A translucent cloak of pearly grey with glowing, energized Elven runes showing calm and clear as moonlight on still water.",
+          "這件披風半透明而帶珍珠灰色，繡著發光的精靈符文，能恢復魔力；那些符文沉靜明亮，如同月光映在平靜的水面上。" },
+        { "'Colannon'",
+          "A crystal-blue cape of fine silk worn by a silent messenger of the forces of Law.",
+          "A crystal-blue cape of fine silk worn by a silent messenger of the forces of Law.  Seldom will its wearer be diverted from his mission.",
+          "這件水晶藍色細絲披風，昔日由律法勢力的一名無聲信使穿戴。" },
+        { "'Cammithrim'",
+          "These gloves glow so brightly as to light the way for the wearer.",
+          "These gloves glow so brightly as to light the way for the wearer and cast magical bolts with great frequency.",
+          "這雙手套綻放著明亮光芒，足以照亮穿戴者前方的道路。" },
+        { "'Paurnimmen'",
+          "A set of handgear which freezes your opponents.",
+          "A set of handgear, freezing with unnatural cold.",
+          "這組護手能以冰霜凍結你的敵人。" },
+        { "'Pauraegen'",
+          "A set of handgear with sparks that dance upon its knuckleguards.",
+          "A set of handgear with sparks that crackle across its knuckleguards.",
+          "這組護手的指節護板上跳動著細小的電光火花。" },
+        { "'Paurnen'",
+          "A set of handgear able to infuse your attacks with acid.",
+          "A set of gauntlets that give off a foul, acrid odour yet remain untarnished.",
+          "這組護手能使你的攻擊附帶酸蝕之力。" },
+        { "of Gil-galad",
+          "The shield of Ereinion Gil-Galad son of Fingon, made to keep him from harm in times of trouble.",
+          "The legendary shield of Ereinion Gil-galad, who fought his way to the gates of the Dark Tower, and with whom came light even to Gorgoroth.",
+          "這面盾牌屬於芬鞏之子埃瑞尼安·吉爾加拉德，為了在危難時保護他而製成。" },
+        { "of the Dwarves",
+          "The Nauglamír; the carcanet of gold set with a multitude of shining gems of Valinor is but a setting.  The true power lies in the Silmaril of Fëanor at its centre, shining forth the light of the Two Trees of Valinor.  Its beauty and desirability are equalled only by its revealing power.",
+          "The Nauglamír, a carcanet of gold set with a multitude of shining gems of Valinor.  The radiant Silmaril of Fëanor hangs in its midst as its crowning glory.  The sturdy spirits of Dwarvish craftsmen who labored long in mountain smithies lie within it still, and as gossamer it rests upon the bearer.",
+          "這是諾格拉米爾：金質項鍊鑲著許多來自維林諾的璀璨寶石，但它們只是陪襯。真正的力量來自中央費諾所造的精靈寶鑽，散發維林諾雙聖樹的光芒。它的美麗與吸引力唯有揭示真相的力量能與之相比。" },
+        { "'Elessar'",
+          "Crafted by Enerdhil of Gondolin, a jewel as green as leaves within which the clear light of the sun is imprisoned.  The hands of one who holds it bring to all that they touch healing from hurt.",
+          "A green stone, imbued with the power of Elvendom and the light of the Sun.  Those who gaze through it see the aged and infirm as young again, and its wearer brings healing after victory in battle.",
+          "這顆寶石由貢多林的埃納迪爾製造，翠綠如樹葉，封存著純淨的陽光。持有者的雙手所觸及之處，皆能療癒傷痛。" },
+    };
+    size_t i;
+    if (allow_standard) *allow_standard = false;
+    if (!name || !english_description) return NULL;
+    for (i = 0; i < ANGDROID_ZH_TW_FAANGBAND_ARTIFACT_VARIANTS; ++i) {
+        if (strcmp(name, variants[i].name) == 0) {
+            if (strcmp(english_description, variants[i].fa_source) == 0)
+                return variants[i].traditional;
+            if (allow_standard)
+                *allow_standard =
+                    strcmp(english_description, variants[i].ang_source) == 0;
+            return NULL;
+        }
+    }
+    /* Unrelated names can still use the original Angband lookup or
+     * the FAangband-exclusive artifact dictionary. */
+    if (allow_standard) *allow_standard = true;
+    return NULL;
+}
+#endif /* ANGDROID_ZH_TW_FAANGBAND_ARTIFACT_VARIANTS_H */

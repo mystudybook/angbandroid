@@ -29,6 +29,7 @@
 #include "player-timed.h"
 #include "player-util.h"
 #include "trap.h"
+#include "../angband/zh-tw-ui.h"
 
 
 /**
@@ -1584,7 +1585,8 @@ void square_add_glyph(struct chunk *c, struct loc grid, int type)
 			break;
 		}
 		default: {
-			msg("Non-existent glyph requested. Please report this bug.");
+			msg("%s", angdroid_game_ui_text("Non-existent glyph requested. Please report this bug.",
+			angdroid_zh_tw_enabled()));
 			return;
 		}
 	}
@@ -1627,7 +1629,8 @@ void square_add_stairs(struct chunk *c, struct loc grid, int place) {
 	} else if (down) {
 		square_set_feat(c, grid, FEAT_MORE);
 	} else {
-		msg("No stairs can be created here!");
+		msg("%s", angdroid_game_ui_text("No stairs can be created here!",
+			angdroid_zh_tw_enabled()));
 	}
 }
 
@@ -1694,7 +1697,8 @@ void square_destroy_decoy(struct chunk *c, struct loc grid)
 	square_remove_all_traps_of_type(c, grid, decoy_kind->tidx);
 	c->decoy = loc(0, 0);
 	if (los(c, player->grid, grid) && !player->timed[TMD_BLIND]){
-		msg("The decoy is destroyed!");
+		msg("%s", angdroid_game_ui_text("The decoy is destroyed!",
+			angdroid_zh_tw_enabled()));
 	}
 }
 

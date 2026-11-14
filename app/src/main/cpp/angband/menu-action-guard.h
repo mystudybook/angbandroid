@@ -30,4 +30,17 @@ static inline int angdroid_menu_allow_empty_input(
     return (flags & allow_flag) != 0 && keyboard_or_mouse_event;
 }
 
+/* An empty shop can still sell from inventory, show help, inspect player
+ * inventory, open settings and leave.  Stock purchase/examine shortcuts are
+ * disabled until a real stock row exists. This filters only Android visual
+ * hints; command handling retains its own selection checks. */
+static inline int angdroid_menu_empty_shop_key_visible(
+    int flags, int empty_shop_flag, int visible_count, char key)
+{
+    if (!(flags & empty_shop_flag) || visible_count > 0)
+        return 1;
+
+    return key != 'p' && key != 'g' && key != 'l' && key != 'x';
+}
+
 #endif

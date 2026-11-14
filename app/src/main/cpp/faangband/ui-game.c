@@ -63,7 +63,22 @@
 #include "z-file.h"
 #include "z-util.h"
 #include "z-virt.h"
+#include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
 
+
+/* Only visible save selection text is translated. Never change the
+ * filename or the metadata stored in character save files. */
+static void fa_game_print_prompt(const char *label, int row)
+{
+    char visible[512];
+    if (!Term || !label || row < 0 || row >= Term->hgt ||
+        Term->wid <= 0) return;
+    angdroid_menu_copy_columns(visible, sizeof(visible),
+        label, (size_t)Term->wid);
+    prt(visible, row, 0);
+}
 
 struct savefile_getter_impl {
 	ang_dir *d;
@@ -618,7 +633,7 @@ void check_for_player_interrupt(game_event_type type, game_event_data *data,
 			/* Flush and disturb */
 			event_signal(EVENT_INPUT_FLUSH);
 			disturb(player);
-			msg("Cancelled.");
+			msg("%s", angdroid_game_ui_text("Cancelled.", angdroid_zh_tw_enabled()));
 		}
 	}
 }
@@ -675,7 +690,7 @@ static bool start_game(bool new_game)
 		newer = file_newer(panicfile, loadpath);
 		safe_setuid_drop();
 		if (newer) {
-			if (get_check("A panic save exists.  Use it? ")) {
+			if (get_check(angdroid_game_ui_text("A panic save exists.  Use it? ", angdroid_zh_tw_enabled()))) {
 				loadpath = panicfile;
 			}
 		} else {
@@ -773,10 +788,10 @@ static void select_savefile(bool retry, bool *new_game)
 			names = mem_realloc(names, allocated * sizeof(*names));
 		}
 		if (details->desc) {
-			entries[count] = string_make(format("Use %s: %s",
+			entries[count] = string_make(format(angdroid_game_ui_text("Use %s: %s", angdroid_zh_tw_enabled()),
 				details->fnam + details->foff, details->desc));
 		} else {
-			entries[count] = string_make(format("Use %s",
+			entries[count] = string_make(format(angdroid_game_ui_text("Use %s", angdroid_zh_tw_enabled()),
 				details->fnam + details->foff));
 		}
 		names[count] = string_make(details->fnam);
@@ -826,7 +841,7 @@ static void select_savefile(bool retry, bool *new_game)
 			--count;
 			allow_new_game = false;
 		} else {
-			entries[0] = string_make("New game");
+			entries[0] = string_make(angdroid_game_ui_text("New game", angdroid_zh_tw_enabled()));
 		}
 		failed = false;
 	} else {
@@ -846,11 +861,11 @@ static void select_savefile(bool retry, bool *new_game)
 	m->flags |= MN_DBL_TAP;
 
 	screen_save();
-	prt("Select the save to use (movement keys and enter or mouse) or quit",
-		0, 0);
-	prt("(escape or second mouse button).", 1, 0);
-	prt((retry) ? "The previously selected savefile was unusable." : "",
-		2, 0);
+	fa_game_print_prompt(angdroid_game_ui_text(
+        "Select the save to use (movement keys and enter or mouse) or quit",
+        angdroid_zh_tw_enabled()), 0);
+	fa_game_print_prompt(angdroid_game_ui_text("(escape or second mouse button).", angdroid_zh_tw_enabled()), 1);
+	fa_game_print_prompt(retry ? angdroid_game_ui_text("The previously selected savefile was unusable.", angdroid_zh_tw_enabled()) : "", 2);
 	selection = menu_select(m, 0, false);
 	screen_load();
 
@@ -1012,7 +1027,7 @@ bool save_game_checked(void)
 	handle_stuff(player);
 
 	/* Message */
-	prt("Saving game...", 0, 0);
+	fa_game_print_prompt(angdroid_game_ui_text("Saving game...", angdroid_zh_tw_enabled()), 0);
 
 	/* Refresh */
 	Term_fresh();
@@ -1025,10 +1040,10 @@ bool save_game_checked(void)
 
 	/* Save the player */
 	if (savefile_save(savefile)) {
-		prt("Saving game... done.", 0, 0);
+		fa_game_print_prompt(angdroid_game_ui_text("Saving game... done.", angdroid_zh_tw_enabled()), 0);
 		result = true;
 	} else {
-		prt("Saving game... failed!", 0, 0);
+		fa_game_print_prompt(angdroid_game_ui_text("Saving game... failed!", angdroid_zh_tw_enabled()), 0);
 		result = false;
 	}
 
@@ -1041,14 +1056,14 @@ bool save_game_checked(void)
 	/* Save the window prefs */
 	path_build(path, sizeof(path), ANGBAND_DIR_USER, "window.prf");
 	if (!prefs_save(path, option_dump, "Dump window settings"))
-		prt("Failed to save subwindow preferences", 0, 0);
+		fa_game_print_prompt(angdroid_game_ui_text("Failed to save subwindow preferences", angdroid_zh_tw_enabled()), 0);
 
 	/* Refresh */
 	Term_fresh();
 
 	/* Save monster memory to user directory */
 	if (!lore_save("lore.txt")) {
-		msg("lore save failed!");
+		msg("%s", angdroid_game_ui_text("lore save failed!", angdroid_zh_tw_enabled()));
 		event_signal(EVENT_MESSAGE_FLUSH);
 	}
 
@@ -1106,9 +1121,9 @@ void close_game(bool prompt_failed_save)
 		/* Save dead player */
 		while (prompting && !savefile_save(savefile)) {
 			if (!prompt_failed_save
-					|| !get_check("Saving failed.  Try again? ")) {
+					|| !get_check(angdroid_game_ui_text("Saving failed.  Try again? ", angdroid_zh_tw_enabled()))) {
 				prompting = false;
-				msg("death save failed!");
+				msg("%s", angdroid_game_ui_text("death save failed!", angdroid_zh_tw_enabled()));
 				event_signal(EVENT_MESSAGE_FLUSH);
 			}
 		}
@@ -1116,7 +1131,7 @@ void close_game(bool prompt_failed_save)
 		/* Save the game */
 		while (prompting && !save_game_checked()) {
 			if (!prompt_failed_save
-					|| !get_check("Saving failed.  Try again? ")) {
+					|| !get_check(angdroid_game_ui_text("Saving failed.  Try again? ", angdroid_zh_tw_enabled()))) {
 				prompting = false;
 			}
 		}
@@ -1124,7 +1139,7 @@ void close_game(bool prompt_failed_save)
 		if (Term->mapped_flag) {
 			struct keypress ch;
 
-			prt("Press Return (or Escape).", 0, 40);
+			fa_game_print_prompt(angdroid_game_ui_text("Press Return (or Escape).", angdroid_zh_tw_enabled()), 0);
 			ch = inkey();
 			if (ch.code != ESCAPE)
 				predict_score(false);

@@ -18,11 +18,14 @@
 
 #include "angband.h"
 #include "mon-desc.h"
+#include "mon-msg-utf8.h"
+#include "mon-msg-pain.h"
 #include "mon-msg.h"
 #include "mon-predicate.h"
 #include "mon-util.h"
 #include "game-input.h"
 #include "player-calcs.h"
+#include "../angband/zh-tw-ui.h"
 
 /**
  * Maxinum number of stacked monster messages
@@ -100,11 +103,10 @@ static int get_pain_msg_code(struct monster *mon, int dam)
 
 	/* Calculate damage levels */
 	if (dam > 0) {
-		/* Note -- subtle fix -CFT */
-		long newhp = (long)(mon->hp);
-		long oldhp = newhp + (long)(dam);
-		long tmp = (newhp * 100L) / oldhp;
-		int percentage = (int)(tmp);
+		/* Original integer thresholds, with a wide previous-HP sum and
+		 * a zero-divisor guard for abnormal damage notifications. */
+		int percentage = angdroid_fa_mon_msg_pain_percentage(
+			mon->hp, dam);
 
 		if (percentage > 95)		msg_code = MON_MSG_95;
 		else if (percentage > 75)	msg_code = MON_MSG_75;
@@ -209,25 +211,12 @@ static bool stack_message(struct monster *mon, int msg_code, int flags,
 			mon_msg[i].p_race == mon->player_race &&
 			mon_msg[i].flags == flags &&
 			mon_msg[i].msg_code == msg_code) {
-			mon_msg[i].count++;
+			/* A monster group may be saturated by repeated events. */
+			mon_msg[i].count = angdroid_fa_mon_msg_next_count(
+				mon_msg[i].count);
 			if (flags & MON_MSG_FLAG_DAMAGE) {
-				if (damage >= 0) {
-					if (mon_msg[i].damage <= 0
-							|| mon_msg[i].damage <
-							INT_MAX - damage) {
-						mon_msg[i].damage += damage;
-					} else {
-						mon_msg[i].damage = INT_MAX;
-					}
-				} else {
-					if (mon_msg[i].damage >= 0
-							|| mon_msg[i].damage >
-							INT_MIN - damage) {
-						mon_msg[i].damage += damage;
-					} else {
-						mon_msg[i].damage = INT_MIN;
-					}
-				}
+				mon_msg[i].damage = angdroid_fa_mon_msg_add_damage(
+					mon_msg[i].damage, damage);
 			}
 			store_monster(mon, msg_code);
 			return true;
@@ -300,6 +289,8 @@ bool add_monster_message_show_damage(struct monster *mon, int msg_code,
 			!stack_message(mon, msg_code, flags, damage) &&
 			size_mon_msg < MAX_STORED_MON_MSG) {
 		mon_msg[size_mon_msg].race = mon->race;
+		/* The damage path needs the same race metadata for stacking. */
+		mon_msg[size_mon_msg].p_race = mon->player_race;
 		mon_msg[size_mon_msg].flags = flags;
 		mon_msg[size_mon_msg].msg_code = msg_code;
 		mon_msg[size_mon_msg].count = 1;
@@ -325,8 +316,21 @@ static void get_subject(char *buf, size_t buflen,
 		struct player_race *p_race,
 		int count,
 		bool invisible,
-		bool offscreen)
+		bool offscreen,
+		bool localized)
 {
+	if (localized) {
+		/* The original race/visibility flags have already been selected;
+		 * reserve room for CJK suffixes and never cut an UTF-8 glyph. */
+		angdroid_fa_mon_msg_chinese_subject(buf, buflen,
+			race->name, race->plural, p_race ? p_race->name : NULL,
+			(rf_has(race->flags, RF_PLAYER_GHOST) && cave->ghost)
+				? cave->ghost->name : NULL,
+			count, invisible, offscreen,
+			rf_has(race->flags, RF_UNIQUE),
+			rf_has(race->flags, RF_NAME_COMMA));
+		return;
+	}
 	if (invisible) {
 		if (count == 1) {
 			my_strcpy(buf, "It", buflen);
@@ -376,7 +380,7 @@ static void get_subject(char *buf, size_t buflen,
  *
  * \param	pos		the position in buf to start writing the message into
  */
-static void get_message_text(char *buf, size_t buflen,
+static bool get_message_text(char *buf, size_t buflen,
 		int msg_code,
 		const struct monster_race *race,
 		bool do_plural)
@@ -398,38 +402,62 @@ static void get_message_text(char *buf, size_t buflen,
 		case MON_MSG_0:  source = race->base->pain->messages[6]; break;
 	}
 
+	/* Look up the unexpanded source template: both regular monster events
+	 * and the 7 pain grades retain their original game-data identifiers. */
+	const char *localized = angdroid_game_ui_text(source,
+		angdroid_zh_tw_enabled());
+	bool translated = (localized != source);
+	source = localized;
+
 	int state = MSG_PARSE_NORMAL;
 	size_t maxlen = strlen(source);
 	size_t pos = 0;
+	bool writable = true;
 
-	/* Put the message characters in the buffer */
-	/* XXX This logic should be used everywhere for pluralising strings */
-	for (size_t i = 0; i < maxlen && pos < buflen - 1; i++) {
+	/* Parse the entire template even after the output buffer is full, so
+	 * singular/plural markers retain their original state transitions.
+	 * A Chinese scalar must be copied as one unit, never byte-by-byte. */
+	if (!buf || buflen == 0) return translated;
+	for (size_t i = 0; i < maxlen; i++) {
 		char cur = source[i];
 
-		/*
-		 * The characters '[|]' switch parsing mode and are never output.
-		 * The syntax is [singular|plural]
-		 */
-		if (state == MSG_PARSE_NORMAL        && cur == '[') {
+		if (state == MSG_PARSE_NORMAL && cur == '[') {
 			state = MSG_PARSE_SINGLE;
 		} else if (state == MSG_PARSE_SINGLE && cur == '|') {
 			state = MSG_PARSE_PLURAL;
 		} else if (state != MSG_PARSE_NORMAL && cur == ']') {
 			state = MSG_PARSE_NORMAL;
 		} else if (state == MSG_PARSE_NORMAL ||
-				(state == MSG_PARSE_SINGLE && do_plural == false) ||
-				(state == MSG_PARSE_PLURAL && do_plural == true)) {
-			/* Copy the characters according to the mode */
-			buf[pos++] = cur;
+				(state == MSG_PARSE_SINGLE && !do_plural) ||
+				(state == MSG_PARSE_PLURAL && do_plural)) {
+			if (!writable) continue;
+			if (translated) {
+				uint32_t cp;
+				size_t n = angdroid_utf8_next_scalar(source + i, &cp);
+				if (!n) break;
+				if (n > buflen - pos - 1) {
+					writable = false;
+				} else if (n == 1 && cp == 0xFFFDu &&
+						(unsigned char)cur >= 0x80u) {
+					buf[pos++] = '?';
+				} else {
+					memcpy(buf + pos, source + i, n);
+					pos += n;
+				}
+				i += n - 1;
+			} else if (pos < buflen - 1) {
+				/* English format, unchanged byte-for-byte. */
+				buf[pos++] = cur;
+			} else {
+				writable = false;
+			}
 		}
 	}
 
-	/* We should always return to the normal state */
+	/* The parser must finish, even when only a display prefix fits. */
 	assert(state == MSG_PARSE_NORMAL);
-
-	/* Terminate the buffer */
-	buf[pos] = 0;
+	buf[pos] = '\0';
+	return translated;
 }
 
 #undef MSG_PARSE_NORMAL
@@ -473,36 +501,38 @@ static int get_message_type(int msg_code, const struct monster_race *race)
  */
 static void show_message(struct monster_race_message *msg)
 {
-	char subject[60] = "";
-	char body[60];
+	char subject[256] = "";
+	char body[256];
 	int msg_type = get_message_type(msg->msg_code, msg->race);
+
+	/* Translate the source before expanding singular/plural markers.
+	 * Unknown templates keep the original English subject and spacing. */
+	bool localized = get_message_text(body, sizeof(body),
+			msg->msg_code,
+			msg->race,
+			msg->count > 1);
 
 	/* Some messages don't require a monster name */
 	if (!skip_subject(msg->msg_code)) {
-		/* Get 'it ' or '3 monsters (offscreen) ' or '15000 snakes ' etc */
 		get_subject(subject, sizeof(subject),
 				msg->race,
 				msg->p_race,
 				msg->count,
 				msg->flags & MON_MSG_FLAG_INVISIBLE,
-				msg->flags & MON_MSG_FLAG_OFFSCREEN);
+				msg->flags & MON_MSG_FLAG_OFFSCREEN,
+				localized);
 	}
-
-	/* Get the message proper, corrected for singular/plural etc. */
-	get_message_text(body, sizeof(body),
-			msg->msg_code,
-			msg->race,
-			msg->count > 1);
 
 	/* Show the message */
 	if (msg->flags & MON_MSG_FLAG_DAMAGE) {
 		if (msg->count <= 1) {
-			msgt(msg_type, "%s%s (%d)", subject, body, msg->damage);
+			msgt(msg_type, localized ? "%s%s（%d）" :
+				"%s%s (%d)", subject, body, msg->damage);
 		} else {
-			msgt(msg_type, "%s%s (average %d)", subject, body,
-				msg->damage / msg->count
-				+ (msg->damage % msg->count
-				>= (msg->count + 1) / 2 ? 1 : 0));
+			msgt(msg_type, localized ? "%s%s（平均 %d）" :
+				"%s%s (average %d)", subject, body,
+				angdroid_fa_mon_msg_average_damage(
+					msg->damage, msg->count));
 		}
 	} else {
 		msgt(msg_type, "%s%s", subject, body);

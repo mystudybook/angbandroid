@@ -18,7 +18,8 @@ class ItemSelectionRotationTest(unittest.TestCase):
         )[0]
         self.assertIn("angdroid_item_selection_footer_row(local_area->row,", browser)
         self.assertIn("if (line < 0 || i >= (int)strlen(all_letters_nohjkl)) break;", browser)
-        self.assertIn("if (z_info->quiver_slot_size <= 0) return;", browser)
+        self.assertIn("angdroid_item_quiver_footer_slots(", browser)
+        self.assertIn("if (quiver_slots <= 0)", browser)
         self.assertNotIn("local_area->row + i", browser)
         self.assertIn("angdroid_menu_copy_columns(visible, sizeof(visible),", browser)
         self.assertIn("row = (int64_t)first_row + page_rows + index;", LAYOUT)

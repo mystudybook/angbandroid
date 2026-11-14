@@ -26,13 +26,23 @@
 #include "obj-util.h"
 #include "droid.h"
 #include "zh-tw-items.h"
+#include "zh-tw-faangband-items.h"
+#include "zh-tw-class-book-names.h"
 #include "zh-tw-ego-names.h"
 #include "zh-tw-artifact-names.h"
+#include "zh-tw-faangband-artifact-names.h"
 #include "zh-tw-flavor-names.h"
 #include "zh-tw-scroll-title.h"
 #include "zh-tw-flavored-object.h"
 #include "zh-tw-item-grammar.h"
 #include "zh-tw-item-details.h"
+#include "../curses/unicode_display.h"
+#include "obj-desc-name-utf8.h"
+#include "obj-desc-inscription-utf8.h"
+#include "obj-desc-suffix-utf8.h"
+#include "obj-desc-effect-utf8.h"
+#include "obj-desc-chest-money-utf8.h"
+#include "obj-desc-numeric-utf8.h"
 
 /**
  * Puts the object base kind's name into buf.
@@ -68,17 +78,44 @@ void object_kind_name(char *buf, size_t max, const struct object_kind *kind,
 		if (kind->tval == TV_SCROLL && angdroid_zh_tw_enabled() &&
 				angdroid_zh_tw_scroll_title(buf, max, flavor, false))
 			return;
-		my_strcpy(buf, localized ? localized : flavor, max);
+		if (localized)
+			angdroid_utf8_copy_complete(buf, max, localized);
+		else
+			my_strcpy(buf, flavor, max);
 	}
 
 	/* Use the localized DISPLAY name only for a known kind. Keep
 	 * object_desc(), unidentified flavors and the canonical grammar
 	 * template untouched for gameplay and save compatibility. */
 	else {
-		const char *translated = angdroid_zh_tw_enabled() ?
+		bool zh_tw = angdroid_zh_tw_enabled();
+		const char *translated = zh_tw ?
 			angdroid_zh_tw_item_kind_name(kind->name) : NULL;
+		if (zh_tw && !translated)
+			translated = angdroid_zh_tw_class_book_name(
+				kind->name, tval_find_name(kind->tval));
+		if (zh_tw && !translated)
+			translated = angdroid_zh_tw_faangband_item_kind_name(
+				kind->name, tval_find_name(kind->tval));
+
+		/* Only already-known flavored kinds can show their effect.
+		 * In knowledge and ignore lists, include the Chinese item noun
+		 * (力量戒指, 治療藥水) rather than an isolated effect label.
+		 * Existing full-noun translations must not repeat the noun. */
+		if (zh_tw && kind->flavor && kind->name) {
+			const char *type = tval_find_name(kind->tval);
+			const char *noun = angdroid_zh_tw_identified_flavor_noun(type);
+			char display_name[256];
+			if (*noun && angdroid_zh_tw_identified_flavor_name(display_name,
+					sizeof(display_name), type,
+					translated ? translated : kind->name) &&
+					strlen(display_name) < max) {
+				angdroid_utf8_copy_complete(buf, max, display_name);
+				return;
+			}
+		}
 		if (translated)
-			my_strcpy(buf, translated, max);
+			angdroid_utf8_copy_complete(buf, max, translated);
 		else
 			(void) obj_desc_name_format(buf, max, 0, kind->name, NULL, false);
 	}
@@ -258,65 +295,8 @@ static size_t obj_desc_name_prefix(char *buf, size_t max, size_t end,
 size_t obj_desc_name_format(char *buf, size_t max, size_t end,
 		const char *fmt, const char *modstr, bool pluralise)
 {
-	/* Copy the string */
-	while (*fmt) {
-		/* Skip */
-		if (*fmt == '&') {
-			while (*fmt == ' ' || *fmt == '&')
-				fmt++;
-			continue;
-		} else if (*fmt == '~') {
-			/* Pluralizer (regular English plurals) */
-			char prev = *(fmt - 1);
-
-			if (!pluralise)	{
-				fmt++;
-				continue;
-			}
-
-			/* e.g. cutlass-e-s, torch-e-s, box-e-s */
-			if (prev == 's' || prev == 'h' || prev == 'x')
-				strnfcat(buf, max, &end, "es");
-			else
-				strnfcat(buf, max, &end, "s");
-		} else if (*fmt == '|') {
-			/* Special plurals 
-			* e.g. kni|fe|ves|
-			*          ^  ^  ^ */
-			const char *singular = fmt + 1;
-			const char *plural   = strchr(singular, '|');
-			const char *endmark  = NULL;
-
-			if (plural) {
-				plural++;
-				endmark = strchr(plural, '|');
-			}
-
-			if (!singular || !plural || !endmark) return end;
-
-			if (!pluralise)
-				strnfcat(buf, max, &end, "%.*s",
-					(int) (plural - singular) - 1,
-					singular);
-			else
-				strnfcat(buf, max, &end, "%.*s",
-					(int) (endmark - plural), plural);
-
-			fmt = endmark;
-		} else if (*fmt == '#') {
-			/* Add modstr, with pluralisation if relevant */
-			end = obj_desc_name_format(buf, max, end, modstr, NULL,	pluralise);
-		}
-
-		else
-			buf[end++] = *fmt;
-
-		fmt++;
-	}
-
-	buf[end] = 0;
-
-	return end;
+	return angdroid_obj_desc_name_format_safe(
+		buf, max, end, fmt, modstr, pluralise);
 }
 
 
@@ -363,8 +343,15 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		if (localized_flavor) modstr = localized_flavor;
 	}
 	if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() && aware &&
-			!show_flavor && obj->kind->name)
+			!show_flavor && obj->kind->name) {
 		localized_kind = angdroid_zh_tw_item_kind_name(obj->kind->name);
+		if (!localized_kind)
+			localized_kind = angdroid_zh_tw_class_book_name(
+					obj->kind->name, tval_find_name(obj->tval));
+		if (!localized_kind)
+			localized_kind = angdroid_zh_tw_faangband_item_kind_name(
+					obj->kind->name, tval_find_name(obj->tval));
+	}
 
 	/* The title is random Latin-like text, not a translatable word. Do
 	 * not regenerate it, change the flavor pointer, or disclose the kind.
@@ -377,30 +364,47 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 			obj->kind->flavor->text, true);
 
 
-	/* Only names with a translated visible appearance can use the
-	 * Chinese noun grammar. Unknown effects stay hidden until aware. */
+	/* The Chinese noun can still be shown for an uncovered/custom
+	 * appearance. Keep its original flavor spelling instead of returning
+	 * to an English article + type name. Never reveal the kind before it
+	 * is aware: only an already-known effect may be shown in parentheses. */
 	if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() &&
-			show_flavor && localized_flavor && !obj->artifact &&
+			show_flavor && obj->kind->flavor && !obj->artifact &&
 			!obj->ego && obj->tval != TV_SCROLL) {
+		const char *appearance = localized_flavor ?
+			localized_flavor : obj->kind->flavor->text;
 		const char *visible_effect = NULL;
-		if (aware) {
+		if (aware && obj->kind->name) {
 			visible_effect = angdroid_zh_tw_item_kind_name(
 				obj->kind->name);
+			if (!visible_effect)
+				visible_effect = angdroid_zh_tw_faangband_item_kind_name(
+					obj->kind->name, tval_find_name(obj->tval));
+			if (!visible_effect) visible_effect = obj->kind->name;
 		}
-		if (!aware || visible_effect)
+		if (appearance && *appearance && (!aware || visible_effect))
 			localized_flavored = angdroid_zh_tw_flavored_object(
 				flavored_display, sizeof(flavored_display),
-				tval_find_name(obj->tval), localized_flavor,
+				tval_find_name(obj->tval), appearance,
 				visible_effect, prefix, number);
 	}
 	if (localized_scroll) {
-		if (prefix && number == 0)
-			strnfcat(buf, max, &end, "沒有剩餘的");
-		else if (prefix && number > 1)
-			strnfcat(buf, max, &end, "%u 張", number);
-		strnfcat(buf, max, &end, "%s", scroll_display);
+		char complete_scroll[160];
+		/* Include quantity and closing quote in a single optional unit.
+		 * Narrow buffers show the safe category, not half a title. */
+		if (!angdroid_zh_tw_known_item_name(complete_scroll,
+				sizeof(complete_scroll), "scroll", scroll_display,
+				prefix, number) ||
+			!angdroid_zh_tw_item_append_whole(buf, max, &end,
+				complete_scroll))
+			angdroid_zh_tw_item_append_utf8(buf, max, &end, "卷軸");
 	} else if (localized_flavored) {
-		strnfcat(buf, max, &end, "%s", flavored_display);
+		/* No half-open known-effect parenthesis on tiny terminals. */
+		if (!angdroid_zh_tw_item_append_whole(buf, max, &end,
+				flavored_display))
+			angdroid_zh_tw_item_append_utf8(buf, max, &end,
+				angdroid_zh_tw_identified_flavor_noun(
+					tval_find_name(obj->tval)));
 	} else if (localized_kind) {
 		char known_display[256];
 		char named_effect[160];
@@ -423,10 +427,12 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		} else {
 			/* Safe backward fallback for unexpectedly long source labels. */
 			if (prefix && number == 0)
-				strnfcat(buf, max, &end, "沒有剩餘的");
+				angdroid_zh_tw_item_append_utf8(buf, max, &end, "沒有剩餘的");
 			else if (prefix && number > 1)
-				strnfcat(buf, max, &end, "%u 件", number);
-			strnfcat(buf, max, &end, "%s", localized_kind);
+				angdroid_zh_tw_item_append_amount(buf, max, &end,
+					"", number, " 件");
+			angdroid_zh_tw_item_append_utf8(buf, max, &end,
+				localized_kind);
 		}
 	} else {
 		/* Preserve English pluralization and unidentified flavor text. */
@@ -445,6 +451,8 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 		bool chinese_suffix_done = false;
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled()) {
 			const char *localized = angdroid_zh_tw_artifact_name(artifact_name);
+			if (!localized)
+				localized = angdroid_zh_tw_faangband_artifact_name(artifact_name);
 			if (localized) artifact_name = localized;
 			translated_suffix = localized;
 		}
@@ -452,13 +460,21 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 			char suffix_display[192];
 			if (angdroid_zh_tw_item_suffix(suffix_display,
 					sizeof(suffix_display), translated_suffix)) {
-				angdroid_zh_tw_item_append_utf8(buf, max, &end,
-					suffix_display);
+				/* A translated (name) / quoted suffix is one visual
+				 * unit: never leave an opening bracket without its mate. */
+				/* An optional displayed name is either complete or absent.
+				 * Never fall back to a clipped translated suffix. */
+				(void)angdroid_obj_desc_append_suffix_atomic(buf, max,
+					&end, suffix_display, false);
 				chinese_suffix_done = true;
 			}
 		}
-		if (!chinese_suffix_done)
-			strnfcat(buf, max, &end, " %s", artifact_name);
+		if (!chinese_suffix_done) {
+			/* Exact same canonical or translated name if it fits;
+			 * no isolated space or incomplete UTF-8 otherwise. */
+			(void)angdroid_obj_desc_append_suffix_atomic(buf, max,
+				&end, artifact_name, true);
+		}
 	}
 	else if ((obj->known->ego && !(mode & ODESC_NOEGO)) || (obj->ego && store)) {
 		/* Only translate a revealed ego suffix for opted-in screen calls.
@@ -475,27 +491,40 @@ static size_t obj_desc_name(char *buf, size_t max, size_t end,
 			char suffix_display[192];
 			if (angdroid_zh_tw_item_suffix(suffix_display,
 					sizeof(suffix_display), translated_suffix)) {
-				angdroid_zh_tw_item_append_utf8(buf, max, &end,
-					suffix_display);
+				/* A translated (name) / quoted suffix is one visual
+				 * unit: never leave an opening bracket without its mate. */
+				/* An optional displayed name is either complete or absent.
+				 * Never fall back to a clipped translated suffix. */
+				(void)angdroid_obj_desc_append_suffix_atomic(buf, max,
+					&end, suffix_display, false);
 				chinese_suffix_done = true;
 			}
 		}
-		if (!chinese_suffix_done)
-			strnfcat(buf, max, &end, " %s", ego_name);
+		if (!chinese_suffix_done) {
+			/* Exact same canonical or translated name if it fits;
+			 * no isolated space or incomplete UTF-8 otherwise. */
+			(void)angdroid_obj_desc_append_suffix_atomic(buf, max,
+				&end, ego_name, true);
+		}
 	}
 	else if (localized_scroll && aware && !obj->artifact) {
 		/* Only an identified scroll may reveal its actual effect. */
 		const char *known = angdroid_zh_tw_item_kind_name(obj->kind->name);
-		strnfcat(buf, max, &end, "（%s）",
+		if (!known)
+			known = angdroid_zh_tw_faangband_item_kind_name(
+				obj->kind->name, tval_find_name(obj->tval));
+		/* Keep the translated (or canonical fallback) effect and its
+		 * full-width parentheses as one optional, complete display unit. */
+		(void)angdroid_obj_desc_append_scroll_effect(buf, max, &end,
 			known ? known : obj->kind->name);
 	}
 	else if (!localized_kind && aware && !obj->artifact &&
 			 !localized_flavored &&
 			 (obj->kind->flavor || obj->kind->tval == TV_SCROLL)) {
-		if (terse)
-			strnfcat(buf, max, &end, " '%s'", obj->kind->name);
-		else
-			strnfcat(buf, max, &end, " of %s", obj->kind->name);
+		/* Preserve the original English punctuation and identification
+		 * checks, but never display a partial UTF-8 effect or quote. */
+		(void)angdroid_obj_desc_append_flavor_effect(buf, max, &end,
+			obj->kind->name, terse);
 	}
 
 	return end;
@@ -526,15 +555,18 @@ static bool obj_desc_show_armor(const struct object *obj,
  * Special descriptions for types of chest traps
  */
 static size_t obj_desc_chest(const struct object *obj, char *buf, size_t max,
-							 size_t end)
+							 size_t end, uint32_t mode)
 {
 	if (!tval_is_chest(obj)) return end;
 
 	/* The chest is unopened, but we know nothing about its trap/lock */
 	if (obj->pval && !obj->known->pval) return end;
 
-	/* Describe the traps */
-	strnfcat(buf, max, &end, " (%s)", chest_trap_name(obj));
+	/* Localize only the visible trap name.  The existing known-pval
+	 * check above keeps hidden traps and gameplay behavior unchanged. */
+	(void)angdroid_obj_desc_append_chest_status(buf, max, &end,
+		chest_trap_name(obj),
+		(mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled());
 
 	return end;
 }
@@ -557,7 +589,7 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_DICE, obj->dd, obj->ds);
 		else
-			strnfcat(buf, max, &end, " (%dd%d)", obj->dd, obj->ds);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%dd%d)", obj->dd, obj->ds);
 	}
 
 	/* Display shooting power as part of the multiplier */
@@ -567,7 +599,7 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 				ANGDROID_ITEM_MULTIPLIER,
 				obj->pval + obj->modifiers[OBJ_MOD_MIGHT], 0);
 		else
-			strnfcat(buf, max, &end, " (x%d)",
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (x%d)",
 				obj->pval + obj->modifiers[OBJ_MOD_MIGHT]);
 	}
 
@@ -590,28 +622,28 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_ATTACK_PAIR, to_h, to_d);
 		else
-			strnfcat(buf, max, &end, " (%+d,%+d)", to_h, to_d);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%+d,%+d)", to_h, to_d);
 	} else if (obj->to_h < 0 && object_has_standard_to_h(obj)) {
 		/* Special treatment for body armor with only a to-hit penalty */
 		if (zh_tw)
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_HIT, obj->to_h, 0);
 		else
-			strnfcat(buf, max, &end, " (%+d)", obj->to_h);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%+d)", obj->to_h);
 	} else if (to_d != 0 && (!p || p->obj_k->to_d)) {
 		/* To-dam rune known only */
 		if (zh_tw)
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_DAMAGE, to_d, 0);
 		else
-			strnfcat(buf, max, &end, " (%+d)", to_d);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%+d)", to_d);
 	} else if (to_h != 0 && (!p || p->obj_k->to_h)) {
 		/* To-hit rune known only */
 		if (zh_tw)
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_HIT, to_h, 0);
 		else
-			strnfcat(buf, max, &end, " (%+d)", to_h);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%+d)", to_h);
 	}
 
 	/* Show armor bonuses */
@@ -621,20 +653,20 @@ static size_t obj_desc_combat(const struct object *obj, char *buf, size_t max,
 				end = obj_desc_combat_zh_tw(buf, max, end,
 					ANGDROID_ITEM_ARMOR_PAIR, obj->ac, to_a);
 			else
-				strnfcat(buf, max, &end, " [%d,%+d]", obj->ac, to_a);
+				(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " [%d,%+d]", obj->ac, to_a);
 		} else if (to_a) {
 			if (zh_tw)
 				end = obj_desc_combat_zh_tw(buf, max, end,
 					ANGDROID_ITEM_ARMOR_BONUS, to_a, 0);
 			else
-				strnfcat(buf, max, &end, " [%+d]", to_a);
+				(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " [%+d]", to_a);
 		}
 	} else if (obj_desc_show_armor(obj, p)) {
 		if (zh_tw)
 			end = obj_desc_combat_zh_tw(buf, max, end,
 				ANGDROID_ITEM_ARMOR, obj->ac, 0);
 		else
-			strnfcat(buf, max, &end, " [%d]", obj->ac);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " [%d]", obj->ac);
 	}
 
 	return end;
@@ -652,7 +684,7 @@ static size_t obj_desc_light(const struct object *obj, char *buf, size_t max,
 			angdroid_zh_tw_item_append_amount(buf, max, &end,
 				"（剩餘 ", obj->timeout, " 回合）");
 		else
-			strnfcat(buf, max, &end, " (%d turns)", obj->timeout);
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%d turns)", obj->timeout);
 	}
 
 	return end;
@@ -699,13 +731,10 @@ static size_t obj_desc_mods(const struct object *obj, char *buf, size_t max,
 		}
 	}
 
-	/* Print the modifiers */
-	strnfcat(buf, max, &end, " <");
-	for (j = 0; j < num_mods; j++) {
-		if (j) strnfcat(buf, max, &end, ", ");
-		strnfcat(buf, max, &end, "%+d", mods[j]);
-	}
-	strnfcat(buf, max, &end, ">");
+	/* The original English fallback must have balanced angle brackets
+	 * and all distinct known modifiers, or be omitted as a whole. */
+	(void)angdroid_obj_desc_append_modifiers_ascii(buf, max, &end,
+		mods, (size_t)num_mods);
 
 	return end;
 }
@@ -724,7 +753,7 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
 			angdroid_zh_tw_item_append_amount(buf, max, &end,
 				"（剩餘 ", obj->pval, " 次充能）");
 		else
-			strnfcat(buf, max, &end, " (%d charge%s)", obj->pval,
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%d charge%s)", obj->pval,
 				PLURAL(obj->pval));
 	} else if (obj->timeout > 0) {
 		if (tval_is_rod(obj) && obj->number > 1) {
@@ -732,12 +761,12 @@ static size_t obj_desc_charges(const struct object *obj, char *buf, size_t max,
 				angdroid_zh_tw_item_append_amount(buf, max, &end,
 					"（", number_charging(obj), " 根充能中）");
 			else
-				strnfcat(buf, max, &end, " (%d charging)", number_charging(obj));
+				(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (%d charging)", number_charging(obj));
 		} else if (tval_is_rod(obj) || obj->activation || obj->effect) {
 			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
 				angdroid_zh_tw_item_append_whole(buf, max, &end, "（充能中）");
 			else
-				strnfcat(buf, max, &end, " (charging)");
+				(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " (charging)");
 		}
 	}
 
@@ -778,31 +807,27 @@ static size_t obj_desc_inscrip(const struct object *obj, char *buf,
 		u[n++] = "??";
 
 	if (n) {
+		const bool zh_tw = (mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled();
+		const char *display[6];
 		int i;
+
 		for (i = 0; i < n; i++) {
-			if (i == 0)
-				strnfcat(buf, max, &end, " {");
-			if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled() &&
-					!(i == 0 && obj->note)) {
-				const char *label = u[i];
+			const char *label = u[i];
+			/* A player's own inscription is never translated, including
+			 * when it contains Chinese or an original English status word. */
+			if (zh_tw && !(i == 0 && obj->note)) {
 				if (streq(label, "empty")) label = "已耗盡";
 				else if (streq(label, "tried")) label = "已試用";
 				else if (streq(label, "cursed")) label = "受詛咒";
 				else if (streq(label, "ignore")) label = "忽略";
-				angdroid_zh_tw_item_append_whole(buf, max, &end, label);
-			} else {
-				/* User-written inscriptions are never translated. */
-				strnfcat(buf, max, &end, "%s", u[i]);
 			}
-			if (i < n - 1) {
-				if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
-					angdroid_zh_tw_item_append_whole(buf, max, &end, "、");
-				else
-					strnfcat(buf, max, &end, ", ");
-			}
+			display[i] = label;
 		}
 
-		strnfcat(buf, max, &end, "}");
+		/* Show complete UTF-8 scalars, reserve the closing brace, and
+		 * never display only part of an automatic status label. */
+		angdroid_obj_desc_inscription_append(buf, max, &end,
+			display, (size_t)n, zh_tw, obj->note != 0);
 	}
 
 	return end;
@@ -820,14 +845,14 @@ static size_t obj_desc_aware(const struct object *obj, char *buf, size_t max,
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
 			angdroid_zh_tw_item_append_whole(buf, max, &end, " {未見過}");
 		else
-			strnfcat(buf, max, &end, " {unseen}");
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " {unseen}");
 	} else if (!object_runes_known(obj)) {
-		strnfcat(buf, max, &end, " {??}");
+		(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " {??}");
 	} else if (obj->known->curses) {
 		if ((mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled())
 			angdroid_zh_tw_item_append_whole(buf, max, &end, " {受詛咒}");
 		else
-			strnfcat(buf, max, &end, " {cursed}");
+			(void)angdroid_obj_desc_append_formatted_detail(buf, max, &end, " {cursed}");
 	}
 
 	return end;
@@ -887,9 +912,9 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 	}
 
 	if (tval_is_money(obj))
-		return strnfmt(buf, max, "%d gold pieces worth of %s%s",
-				obj->pval, obj->kind->name,
-				ignore_item_ok(p, obj) ? " {ignore}" : "");
+		return angdroid_obj_desc_money_text(buf, max, obj->pval,
+			obj->kind->name, ignore_item_ok(p, obj),
+			(mode & ODESC_ZH_TW) && angdroid_zh_tw_enabled());
 
 	/* Egos and kinds whose name we know are seen */
 	if (obj->known->ego && !spoil)
@@ -906,7 +931,7 @@ size_t object_desc(char *buf, size_t max, const struct object *obj,
 	/* Combat properties */
 	if (mode & ODESC_COMBAT) {
 		if (tval_is_chest(obj))
-			end = obj_desc_chest(obj, buf, max, end);
+			end = obj_desc_chest(obj, buf, max, end, mode);
 		else if (tval_is_light(obj))
 			end = obj_desc_light(obj, buf, max, end, mode);
 

@@ -27,6 +27,8 @@
 #include "z-textblock.h"
 #include "droid.h"
 #include "../curses/unicode_display.h"
+#include "object-list-compact-layout.h"
+#include "zh-tw-list-location.h"
 
 /**
  * Format a section of the object list: a header followed by object list entry
@@ -109,25 +111,25 @@ static void object_list_format_section(const object_list_t *list,
 		char location[20] = { '\0' };
 		uint8_t line_attr;
 		size_t full_width;
-		const char *direction_y = (list->entries[entry_index].dy <= 0) ? "N" : "S";
-		const char *direction_x = (list->entries[entry_index].dx <= 0) ? "W" : "E";
-
 		line_buffer[0] = '\0';
 
 		if (list->entries[entry_index].count[section] == 0)
 			continue;
 
 		/* Build the location string. */
-		strnfmt(location, sizeof(location), " %d %s %d %s",
-				abs(list->entries[entry_index].dy), direction_y,
-				abs(list->entries[entry_index].dx), direction_x);
+		angdroid_list_relative_location(location, sizeof(location),
+			list->entries[entry_index].dy, list->entries[entry_index].dx,
+			zh_tw);
 
-		/* Get width available for object name: 2 for char and space; location
-		 * includes padding; last -1 for some reason? */
+		/* Display the optional distance only when there is room for the
+		 * item count prefix and at least two wide name characters.
+		 * The name is more important than the item's exact location. */
 		{
-			size_t reserved = 3 + angdroid_utf8_display_columns(location);
-			full_width = (max_width > 0 && (size_t)max_width > reserved) ?
-				(size_t)max_width - reserved : 0;
+			struct angdroid_object_row_budget budget =
+				angdroid_object_row_fit(max_width,
+					angdroid_utf8_display_columns(location));
+			full_width = budget.name_columns;
+			if (!budget.show_location) location[0] = '\0';
 		}
 
 		/* Add the object count and clip the object name to fit. */
@@ -322,7 +324,7 @@ void object_list_show_subwindow(int height, int width)
 	textblock *tb;
 	object_list_t *list;
 
-	if (height < 1 || width < 1)
+	if (height < 1 || width < 7)
 		return;
 
 	tb = textblock_new();
@@ -353,8 +355,9 @@ void object_list_show_interactive(int height, int width)
 	size_t max_width = 0, max_height = 0;
 	int safe_height, safe_width;
 	region r;
+	struct angdroid_object_list_popup popup;
 
-	if (height < 1 || width < 1)
+	if (height < 7 || width < 12)
 		return;
 
 	tb = textblock_new();
@@ -373,10 +376,19 @@ void object_list_show_interactive(int height, int width)
 	 */
 	object_list_format_textblock(list, NULL, 1000, 1000, &max_height,
 								 &max_width);
-	safe_height = MIN(height - 2, (int)max_height + 2);
-	safe_width = MIN(width - 13, (int)max_width);
-	r.col = -safe_width;
-	r.row = 1;
+	/* Reject zero/negative rectangles before region_calculate() can
+	 * reinterpret them as remaining screen space. The textblock pager
+	 * needs one content row plus two footer rows below the top bar. */
+	if (!angdroid_object_list_popup_fit(width, height,
+			max_width, max_height, &popup)) {
+		textblock_free(tb);
+		object_list_free(list);
+		return;
+	}
+	safe_height = popup.height;
+	safe_width = popup.width;
+	r.col = popup.col;
+	r.row = popup.row;
 	r.width = safe_width;
 	r.page_rows = safe_height;
 

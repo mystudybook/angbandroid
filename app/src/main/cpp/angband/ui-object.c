@@ -56,7 +56,10 @@
 #include "zh-tw-inscription-confirm.h"
 #include "object-list-text.h"
 #include "inventory-list-display.h"
+#include "inventory-equip-mention.h"
 #include "item-selection-layout.h"
+#include "item-picker-switch-keys.h"
+#include "item-picker-start-source.h"
 #include "item-picker-tag-guard.h"
 
 /**
@@ -351,23 +354,12 @@ static void build_obj_list(int last, struct object **list, item_tester tester,
 
 		/* Show full slot labels for equipment (or quiver in subwindow) */
 		if (equip) {
+			/* The equipment column is 14 display cells, not 14 UTF-8
+			 * codepoints: clipping by codepoints misaligns CJK rows. */
 			const char *mention = equip_mention(player, i);
-			size_t u8len = utf8_strlen(mention);
-
-			if (u8len < 14) {
-				strnfmt(buf, sizeof(buf), "%s%*s", mention,
-					(int)(14 - u8len), " ");
-			} else {
-				char *mention_copy = string_make(mention);
-
-				if (u8len > 14) {
-					utf8_clipto(mention_copy, 14);
-				}
-				strnfmt(buf, sizeof(buf), "%s", mention_copy);
-				string_free(mention_copy);
-			}
-			my_strcpy(items[num_obj].equip_label, buf,
-					  sizeof(items[num_obj].equip_label));
+			angdroid_inventory_equip_mention(
+				items[num_obj].equip_label,
+				sizeof(items[num_obj].equip_label), mention);
 		} else if ((in_term || dead) && quiver) {
 			angdroid_inventory_slot_text(buf, sizeof(buf), i,
 				angdroid_zh_tw_enabled());
@@ -1007,7 +999,11 @@ static char get_item_tag(struct menu *menu, int oid)
 {
 	struct object_menu_data *choice = menu_priv(menu);
 
-	return choice[oid].key;
+	/* Empty equipment slots are visible with SHOW_EMPTY, but should
+	 * never display an actionable item tag or read an invalid index. */
+	if (!angdroid_item_picker_row_in_range(oid, menu->count))
+		return 0;
+	return choice[oid].object ? choice[oid].key : 0;
 }
 
 /**
@@ -1017,6 +1013,8 @@ static int get_item_validity(struct menu *menu, int oid)
 {
 	struct object_menu_data *choice = menu_priv(menu);
 
+	if (!angdroid_item_picker_row_in_range(oid, menu->count))
+		return 0;
 	return (choice[oid].object != NULL) ? 1 : 0;
 }
 
@@ -1041,7 +1039,11 @@ static bool get_item_action(struct menu *menu, const ui_event *event, int oid)
 	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
 
 	if (event->type == EVT_SELECT) {
-		if (choice[oid].object && get_item_allow(choice[oid].object, cmd_lookup_key(item_cmd, mode),
+		/* A delayed tap or Enter must never dereference a removed slot.
+		 * Blank equipment placeholders cannot be selected. */
+		if (angdroid_item_picker_row_in_range(oid, menu->count) &&
+			choice[oid].object &&
+			get_item_allow(choice[oid].object, cmd_lookup_key(item_cmd, mode),
 						   item_cmd, is_harmless))
 			selection = choice[oid].object;
 	}
@@ -1109,9 +1111,12 @@ static void item_menu_browser(int oid, void *data, const region *local_area)
         player->upkeep->command_wrk != USE_INVEN)
         return;
 
-    if (z_info->quiver_slot_size <= 0) return;
-    quiver_slots = (player->upkeep->quiver_cnt +
-        z_info->quiver_slot_size - 1) / z_info->quiver_slot_size;
+	/* No overflow even when the quiver contains INT_MAX missiles;
+	 * a zero-sized slot never produces a drawable footer. */
+	quiver_slots = angdroid_item_quiver_footer_slots(
+		player->upkeep->quiver_cnt, z_info->quiver_slot_size);
+	if (quiver_slots <= 0)
+		return;
     for (j = 0; j < quiver_slots; ++j, ++i) {
         int line = angdroid_item_selection_footer_row(local_area->row,
             local_area->page_rows, Term->hgt, j);
@@ -1162,7 +1167,9 @@ static void item_menu_resize(struct menu *m)
         player->upkeep->quiver_cnt > 0;
     if (!angdroid_item_selection_region(width, height,
             item_prompt_columns, max_len,
-            angdroid_utf8_display_columns(header), ex_width, m->count,
+            angdroid_utf8_display_columns(header), ex_width,
+            angdroid_item_selection_viewport_count(
+                m->count, m->switch_keys && m->switch_keys[0]),
             footer, &layout)) {
         area.col = 0;
         area.row = 1;
@@ -1191,6 +1198,9 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	ui_event evt = { 0 };
 	int inscrip;
 	struct object *obj = NULL;
+	char switch_keys[4];
+	int row;
+	int selectable_objects = 0;
 
 	/* Set up the menu */
 	menu_setpriv(m, num_obj, items);
@@ -1198,9 +1208,44 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 		m->selections = "0123456789";
 	else
 		m->selections = all_letters_nohjkl;
-	m->switch_keys = "/|-";
+	/* A switch key may otherwise leave the modal picker after an
+	 * invalid target (for example an empty quiver). Show only keys that
+	 * really lead to another allowed tab. Physical and soft keys agree. */
+	angdroid_item_picker_switch_keys(
+		switch_keys,
+		((((item_mode & USE_INVEN) != 0) || allow_all) &&
+			player->upkeep->command_wrk != USE_INVEN) ||
+		((((item_mode & USE_EQUIP) != 0) || allow_all) &&
+			player->upkeep->command_wrk != USE_EQUIP),
+		((q1 <= q2) || allow_all) &&
+			player->upkeep->command_wrk != USE_QUIVER,
+		((f1 <= f2) || allow_all) &&
+			player->upkeep->command_wrk != USE_FLOOR);
+	/* NULL also prevents a zero-valued key event from matching the
+	 * terminator of an otherwise empty switch-key string. */
+	m->switch_keys = switch_keys[0] ? switch_keys : NULL;
+	/* SHOW_EMPTY can display several equipment slot placeholders
+	 * while none has a real object. In that case count > 0 but the
+	 * cursor is -1, so ordinary action dispatch would drop / | - and
+	 * incorrectly cancel the picker instead of switching sources.
+	 * Let keyboard switches pass through with oid=-1, just as with a
+	 * truly zero-row picker. Invalid slots cannot emit EVT_SELECT. */
+	for (row = 0; row < num_obj; ++row) {
+		if (items[row].object)
+			++selectable_objects;
+	}
 	m->flags = (MN_PVT_TAGS | MN_INSCRIP_TAGS);
+	if (angdroid_item_picker_allow_blank_switch(
+			selectable_objects, m->switch_keys))
+		m->flags |= MN_ALLOW_EMPTY_INPUT;
 	m->browse_hook = item_menu_browser;
+	/* The quiver summary has its own reserved terminal rows, even when
+	 * the current inventory is empty or contains only placeholders.
+	 * item_menu_browser() never dereferences the incoming oid. */
+	if ((mode & OLIST_QUIVER) &&
+		player->upkeep->command_wrk == USE_INVEN &&
+		player->upkeep->quiver_cnt > 0)
+		m->flags |= MN_BROWSE_WITHOUT_SELECTION;
 
 	/* Get inscriptions */
 	m->inscriptions = mem_zalloc(10 * sizeof(char));
@@ -1239,6 +1284,7 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	/* Deal with menu switch */
 	if (evt.type == EVT_SWITCH && !newmenu) {
 		bool left = evt.key.code == ARROW_LEFT;
+		int original_source = player->upkeep->command_wrk;
 
 		if (player->upkeep->command_wrk == USE_EQUIP) {
 			if (left) {
@@ -1292,7 +1338,9 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 			}
 		}
 
-		newmenu = true;
+		/* An arrow with no reachable source must not rebuild the
+		 * identical empty picker indefinitely. */
+		newmenu = (player->upkeep->command_wrk != original_source);
 	}
 
 	/* Result */
@@ -1349,6 +1397,8 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 	bool allow_equip = false;
 	bool allow_quiver = false;
 	bool allow_floor = false;
+	bool equip_has_item = false;
+	int equipped_slot;
 
 	bool toggle = false;
 
@@ -1428,6 +1478,19 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 	else if (item_mode & USE_EQUIP)
 		item_mode -= USE_EQUIP;
 
+	/* With CMD_NULL, equipment slots are intentionally not trimmed to
+	 * allow SHOW_EMPTY. A slot range is not proof that an actual object
+	 * exists. Only count a tester-eligible equipped object as populated. */
+	if (allow_equip) {
+		for (equipped_slot = e1; equipped_slot <= e2; ++equipped_slot) {
+			struct object *equipped = slot_object(player, equipped_slot);
+			if (equipped && object_test(tester, equipped)) {
+				equip_has_item = true;
+				break;
+			}
+		}
+	}
+
 	/* Restrict quiver indexes */
 	q1 = 0;
 	q2 = z_info->quiver_size - 1;
@@ -1474,37 +1537,36 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 
 	/* Require at least one legal choice */
 	if (allow_inven || allow_equip || allow_quiver || allow_floor) {
-		/* Use throwing menu if at all possible */
+		soft_kbd_linger_snapshot outer_keys;
+		/* Parent hints return only after cancellation of the entire picker,
+		 * never between inventory/equipment/quiver/floor tabs. */
+		soft_kbd_save_linger(&outer_keys);
+		/* Throwing remains an explicit higher-priority view. Otherwise
+		 * begin with an allowed tab containing at least one real item,
+		 * instead of inheriting a now-empty inventory page. */
 		if (show_throwing && throwing_num) {
 			player->upkeep->command_wrk = SHOW_THROWING;
-
-			/* Start where requested if possible */
-		} else if ((player->upkeep->command_wrk == USE_EQUIP) && allow_equip)
-			player->upkeep->command_wrk = USE_EQUIP;
-		else if ((player->upkeep->command_wrk == USE_INVEN) && allow_inven)
-			player->upkeep->command_wrk = USE_INVEN;
-		else if ((player->upkeep->command_wrk == USE_QUIVER) && allow_quiver)
-			player->upkeep->command_wrk = USE_QUIVER;
-		else if ((player->upkeep->command_wrk == USE_FLOOR) && allow_floor)
-			player->upkeep->command_wrk = USE_FLOOR;
-
-		/* If we are obviously using the quiver then start on quiver */
-		else if (quiver_tags && allow_quiver && (cmd != CMD_USE))
-			player->upkeep->command_wrk = USE_QUIVER;
-
-		/* Otherwise choose whatever is allowed */
-		else if (use_inven && allow_inven)
-			player->upkeep->command_wrk = USE_INVEN;
-		else if (use_equip && allow_equip)
-			player->upkeep->command_wrk = USE_EQUIP;
-		else if (use_quiver && allow_quiver)
-			player->upkeep->command_wrk = USE_QUIVER;
-		else if (use_floor && allow_floor)
-			player->upkeep->command_wrk = USE_FLOOR;
-
-		/* If nothing to choose, use (empty) inventory */
-		else
-			player->upkeep->command_wrk = USE_INVEN;
+		} else {
+			angdroid_item_picker_start_options start = {
+				player->upkeep->command_wrk,
+				{ USE_INVEN, USE_EQUIP, USE_QUIVER, USE_FLOOR },
+				(allow_inven ? ANGDROID_PICKER_INVEN : 0u) |
+				(allow_equip ? ANGDROID_PICKER_EQUIP : 0u) |
+				(allow_quiver ? ANGDROID_PICKER_QUIVER : 0u) |
+				(allow_floor ? ANGDROID_PICKER_FLOOR : 0u),
+				(i1 <= i2 ? ANGDROID_PICKER_INVEN : 0u) |
+				(equip_has_item ? ANGDROID_PICKER_EQUIP : 0u) |
+				(q1 <= q2 ? ANGDROID_PICKER_QUIVER : 0u) |
+				(f1 <= f2 ? ANGDROID_PICKER_FLOOR : 0u),
+				(use_inven ? ANGDROID_PICKER_INVEN : 0u) |
+				(use_equip ? ANGDROID_PICKER_EQUIP : 0u) |
+				(use_quiver ? ANGDROID_PICKER_QUIVER : 0u) |
+				(use_floor ? ANGDROID_PICKER_FLOOR : 0u),
+				quiver_tags && cmd != CMD_USE
+			};
+			player->upkeep->command_wrk =
+				angdroid_item_picker_initial_source(&start);
+		}
 
 		while (true) {
 			int j;
@@ -1612,6 +1674,7 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 				break;
 			}
 		}
+		soft_kbd_restore_linger(&outer_keys, *choice == NULL);
 	} else {
 		/* Warning if needed */
 		if (str) msg("%s", str);
@@ -1741,6 +1804,7 @@ void textui_cmd_ignore_menu(struct object *obj)
 	struct menu *m;
 	region r;
 	int selected;
+	soft_kbd_linger_snapshot parent_keys;
 	uint8_t value;
 	int type;
 
@@ -1840,9 +1904,14 @@ void textui_cmd_ignore_menu(struct object *obj)
 	region_erase_bordered(&r);
 
 	prt(angdroid_game_ui_text("(Enter to select, ESC) Ignore:", angdroid_zh_tw_enabled()), 0, 0);
+	/* This nested popup must not leave its menu letters on the phone.
+	 * If Escape returns to a lingering parent prompt, restore only that. */
+	soft_kbd_save_linger(&parent_keys);
 	selected = menu_dynamic_select(m);
 
 	screen_load();
+	soft_kbd_replace("");
+	soft_kbd_restore_linger(&parent_keys, selected < 0);
 
 	if (selected == IGNORE_THIS_ITEM) {
 		obj->known->notice |= OBJ_NOTICE_IGNORE;

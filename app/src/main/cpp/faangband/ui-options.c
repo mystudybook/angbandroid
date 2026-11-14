@@ -36,6 +36,24 @@
 #include "ui-options.h"
 #include "ui-prefs.h"
 #include "ui-target.h"
+#include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
+#include "obj-desc-item-zh-tw.h"
+
+/* Restrict Chinese menu labels to the visible terminal-cell budget.
+ * This helper never changes the underlying selection item or shortcut. */
+static void fa_options_put_clipped(uint8_t attr, const char *label,
+    int row, int col, int width)
+{
+    char clipped[512];
+    if (!Term || !label || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid || width <= 0) return;
+    angdroid_menu_copy_columns(clipped, sizeof(clipped), label,
+        (size_t)MIN(width, Term->wid - col));
+    if (clipped[0]) c_prt(attr, clipped, row, col);
+}
+
 
 
 /**
@@ -52,9 +70,12 @@ static bool get_pref_path(const char *what, int row, char *buf, size_t max)
 	if (row > 0) {
 		prt("", row - 1, 0);
 	}
-	prt(format("%s to a pref file", what), row, 0);
+	prt(angdroid_zh_tw_enabled() ?
+        format("將%s儲存到設定檔", angdroid_game_ui_text(what, true)) :
+        format("%s to a pref file", what), row, 0);
 	prt("", row + 1, 0);
-	prt("File: ", row + 2, 0);
+	prt(angdroid_game_ui_text("File: ",
+            angdroid_zh_tw_enabled()), row + 2, 0);
 	prt("", row + 3, 0);
 
 	/* Get the filesystem-safe name and append .prf */
@@ -67,7 +88,9 @@ static bool get_pref_path(const char *what, int row, char *buf, size_t max)
 		ok = askfor_aux(ftmp, sizeof ftmp, NULL);
 	
 	else
-		ok = get_check(format("Confirm writing to %s? ", ftmp));
+		ok = get_check(angdroid_zh_tw_enabled() ?
+            format("確認寫入 %s？ ", ftmp) :
+            format("Confirm writing to %s? ", ftmp));
 
 	screen_load();
 
@@ -82,16 +105,19 @@ static bool get_pref_path(const char *what, int row, char *buf, size_t max)
 static void dump_pref_file(void (*dump)(ang_file *), const char *title, int row)
 {
 	char buf[1024];
+    const char *space = strchr(title, ' ');
+    const char *item = space ? space + 1 : title;
 
-	/* Get filename from user */
-	if (!get_pref_path(title, row, buf, sizeof(buf)))
-		return;
+    /* The file header keeps a stable English identifier, even if the
+     * visible action label was translated in the menu. */
+    if (!get_pref_path(title, row, buf, sizeof(buf)))
+        return;
 
-	/* Try to save */
-	if (prefs_save(buf, dump, title))
-		msg("Saved %s.", strstr(title, " ") + 1);
-	else
-		msg("Failed to save %s.", strstr(title, " ") + 1);
+    if (prefs_save(buf, dump, title))
+        msg(angdroid_zh_tw_enabled() ? "已儲存%s。" : "Saved %s.", item);
+    else
+        msg(angdroid_zh_tw_enabled() ? "儲存%s失敗。" :
+            "Failed to save %s.", item);
 
 	event_signal(EVENT_MESSAGE_FLUSH);
 
@@ -115,27 +141,40 @@ static void do_cmd_pref_file_hack(long row);
  * Displays an option entry.
  */
 static void option_toggle_display(struct menu *m, int oid, bool cursor,
-		int row, int col, int width)
+        int row, int col, int width)
 {
-	uint8_t attr = curs_attrs[CURS_KNOWN][cursor != 0];
-	bool *options = menu_priv(m);
-	const char *desc = option_desc(oid);
-	size_t u8len = utf8_strlen(desc);
+    uint8_t attr = curs_attrs[CURS_KNOWN][cursor != 0];
+    bool *options = menu_priv(m);
+    const char *desc = angdroid_game_ui_text(option_desc(oid),
+        angdroid_zh_tw_enabled());
+    int available, desc_cols;
+    char clipped[4 * 45 + 1];
+    char status[160], status_visible[160];
+    size_t columns;
 
-	if (u8len < 45) {
-		c_prt(attr, format("%s%*s", desc, (int)(45 - u8len), " "), row,
-			col);
-	} else {
-		char *desc_copy = string_make(desc);
+    if (!Term || col < 0 || col >= Term->wid || width <= 0)
+        return;
 
-		if (u8len > 45) {
-			utf8_clipto(desc_copy, 45);
-		}
-		c_prt(attr, desc_copy, row, col);
-		string_free(desc_copy);
-	}
-	c_prt(attr, format(": %s  (%s)", options[oid] ? "yes" : "no ",
-		option_name(oid)), row, col + 45);
+    available = MIN(width, Term->wid - col);
+    /* On a phone keep at least 16 columns for the state and stable
+     * option_name() key; full-size terminals retain the legacy 45. */
+    desc_cols = MIN(45, MAX(0, available - 16));
+    if (desc_cols <= 0)
+        desc_cols = available;
+    columns = angdroid_menu_copy_columns(clipped, sizeof(clipped),
+        desc, (size_t)desc_cols);
+    c_prt(attr, format("%s%*s", clipped,
+        (int)(desc_cols - columns), ""), row, col);
+
+    if (available > desc_cols) {
+        strnfmt(status, sizeof(status), ": %s  (%s)",
+            angdroid_game_ui_text(options[oid] ? "yes" : "no",
+                angdroid_zh_tw_enabled()), option_name(oid));
+        angdroid_menu_copy_columns(status_visible, sizeof(status_visible),
+            status, (size_t)(available - desc_cols));
+        if (status_visible[0])
+            c_prt(attr, status_visible, row, col + desc_cols);
+    }
 }
 
 /**
@@ -168,9 +207,11 @@ static bool option_toggle_handle(struct menu *m, const ui_event *event,
 
 			screen_save();
 			if (options_save_custom(&player->opts, page)) {
-				get_com("Successfully saved.  Press any key to continue.", &dummy);
+				get_com(angdroid_game_ui_text("Successfully saved.  Press any key to continue.",
+                    angdroid_zh_tw_enabled()), &dummy);
 			} else {
-				get_com("Save failed.  Press any key to continue.", &dummy);
+				get_com(angdroid_game_ui_text("Save failed.  Press any key to continue.",
+                    angdroid_zh_tw_enabled()), &dummy);
 			}
 			screen_load();
 		/*
@@ -186,7 +227,8 @@ static bool option_toggle_handle(struct menu *m, const ui_event *event,
 			} else {
 				char dummy;
 
-				get_com("Restore failed.  Press any key to continue.", &dummy);
+				get_com(angdroid_game_ui_text("Restore failed.  Press any key to continue.",
+                    angdroid_zh_tw_enabled()), &dummy);
 				screen_load();
 			}
 		/*
@@ -241,18 +283,24 @@ static bool use_option_context_menu(struct menu *m, const ui_event *in,
 	char *labels = string_make(lower_case);
 	struct menu *cm = menu_dynamic_new();
 	bool refresh = false;
-	char save_label[40];
+	char save_label[128];
 	int selected;
 	char dummy;
 
 	cm->selections = labels;
-	strnfmt(save_label, sizeof(save_label), "Save as default %s options",
-		option_type_name(page));
+	if (angdroid_zh_tw_enabled())
+        strnfmt(save_label, sizeof(save_label), "將%s選項設為預設值",
+            angdroid_game_ui_text(option_type_name(page), true));
+    else
+        strnfmt(save_label, sizeof(save_label), "Save as default %s options",
+            option_type_name(page));
 	menu_dynamic_add_label(cm, save_label, 's', ACT_CTX_OPT_SAVE, labels);
 	if (m->flags == MN_DBL_TAP) {
-		menu_dynamic_add_label(cm, "Restore from saved defaults", 'r',
+		menu_dynamic_add_label(cm, angdroid_game_ui_text(
+            "Restore from saved defaults", angdroid_zh_tw_enabled()), 'r',
 			ACT_CTX_OPT_RESTORE, labels);
-		menu_dynamic_add_label(cm, "Reset to factory defaults", 'x',
+		menu_dynamic_add_label(cm, angdroid_game_ui_text(
+            "Reset to factory defaults", angdroid_zh_tw_enabled()), 'x',
 			ACT_CTX_OPT_RESET, labels);
 	}
 
@@ -270,11 +318,12 @@ static bool use_option_context_menu(struct menu *m, const ui_event *in,
 	switch (selected) {
 	case ACT_CTX_OPT_SAVE:
 		if (options_save_custom(&player->opts, page)) {
-			get_com("Successfully saved.  Press any key to "
-				"continue.", &dummy);
+			get_com(angdroid_game_ui_text(
+                "Successfully saved.  Press any key to continue.",
+                angdroid_zh_tw_enabled()), &dummy);
 		} else {
-			get_com("Save failed.  Press any key to continue.",
-				&dummy);
+			get_com(angdroid_game_ui_text("Save failed.  Press any key to continue.",
+                angdroid_zh_tw_enabled()), &dummy);
 		}
 		break;
 
@@ -282,8 +331,8 @@ static bool use_option_context_menu(struct menu *m, const ui_event *in,
 		if (options_restore_custom(&player->opts, page)) {
 			refresh = true;
 		} else {
-			get_com("Restore failed.  Press any key to continue.",
-				&dummy);
+			get_com(angdroid_game_ui_text("Restore failed.  Press any key to continue.",
+                angdroid_zh_tw_enabled()), &dummy);
 		}
 		break;
 
@@ -329,18 +378,24 @@ static void option_toggle_menu(const char *name, int page)
 	struct menu *m = menu_new(MN_SKIN_SCROLL, &option_toggle_iter);
 
 	/* for all menus */
-	m->prompt = "Set option (y/n/t), select with movement keys or index";
+	m->prompt = angdroid_game_ui_text(
+        "Set option (y/n/t), select with movement keys or index",
+        angdroid_zh_tw_enabled());
 	m->cmd_keys = "YyNnTt";
 	m->selections = selections;
 	m->flags = MN_DBL_TAP;
 
 	/* We add 10 onto the page amount to indicate we're at birth */
 	if (page == OPT_PAGE_BIRTH) {
-		m->prompt = "You can only modify these options at character birth.";
+		m->prompt = angdroid_game_ui_text(
+            "You can only modify these options at character birth.",
+            angdroid_zh_tw_enabled());
 		m->cmd_keys = "";
 		m->flags = MN_NO_TAGS;
 	} else if (page == OPT_PAGE_BIRTH + 10 || page == OP_INTERFACE) {
-		m->prompt = "Set option (y/n/t), 's' to save, 'r' to restore, 'x' to reset";
+		m->prompt = angdroid_game_ui_text(
+            "Set option (y/n/t), 's' to save, 'r' to restore, 'x' to reset",
+            angdroid_zh_tw_enabled());
 		m->cmd_keys = "YyNnTtSsRrXx";
 		/* Provide a context menu for equivalents to 's', 'r', .... */
 		m->context_hook = use_option_context_menu;
@@ -379,7 +434,8 @@ static void option_toggle_menu(const char *name, int page)
  */
 void do_cmd_options_birth(void)
 {
-	option_toggle_menu("Birth options", OPT_PAGE_BIRTH + 10);
+	option_toggle_menu(angdroid_game_ui_text(
+        "Birth options", angdroid_zh_tw_enabled()), OPT_PAGE_BIRTH + 10);
 }
 
 
@@ -405,7 +461,9 @@ static void do_cmd_options_win(const char *name, int row)
 	/* Interact */
 	while (1) {
 		/* Prompt */
-		prt("Window flags (<dir> to move, 't'/Enter to toggle, or ESC)", 0, 0);
+		prt(angdroid_game_ui_text(
+            "Window flags (<dir> to move, 't'/Enter to toggle, or ESC)",
+            angdroid_zh_tw_enabled()), 0, 0);
 
 		/* Display the windows */
 		for (j = 0; j < ANGBAND_TERM_MAX; j++) {
@@ -424,16 +482,24 @@ static void do_cmd_options_win(const char *name, int row)
 		for (i = 0; i < PW_MAX_FLAGS; i++) {
 			uint8_t a = COLOUR_WHITE;
 
-			const char *str = window_flag_desc[i];
+            const char *str = window_flag_desc[i];
 
 			/* Use color */
 			if (i == y) a = COLOUR_L_BLUE;
 
 			/* Unused option */
-			if (!str) str = "(Unused option)";
+            if (!str) str = "(Unused option)";
+            str = angdroid_game_ui_text(str, angdroid_zh_tw_enabled());
 
 			/* Flag name */
-			Term_putstr(0, i + 5, -1, a, str);
+            /* Names occupy only the 35-cell flag column. */
+            if (Term && Term->wid > 0) {
+                char clipped[4 * 34 + 1];
+                angdroid_menu_copy_columns(clipped, sizeof(clipped),
+                    str, (size_t)MIN(34, Term->wid));
+                if (clipped[0])
+                    Term_putstr(0, i + 5, -1, a, clipped);
+            }
 
 			/* Display the windows */
 			for (j = 0; j < ANGBAND_TERM_MAX; j++) {
@@ -597,7 +663,7 @@ static void ui_keymap_query(const char *title, int row)
 	const struct keypress *act;
 
 	prt(title, 13, 0);
-	prt("Key: ", 14, 0);
+	prt(angdroid_game_ui_text("Key: ", angdroid_zh_tw_enabled()), 14, 0);
 	
 	/* Get a keymap trigger & mapping */
 	c = keymap_get_trigger();
@@ -606,17 +672,17 @@ static void ui_keymap_query(const char *title, int row)
 	/* Keymap found? */
 	if (!act) {
 		/* Prompt */
-		prt("No keymap with that trigger.  Press any key to continue.", 16, 0);
+		prt(angdroid_game_ui_text("No keymap with that trigger.  Press any key to continue.", angdroid_zh_tw_enabled()), 16, 0);
 		inkey();
 	} else {
 		/* Analyze the current action */
 		keypress_to_text(tmp, sizeof(tmp), act, false);
 	
 		/* Display the current action */
-		prt("Found: ", 15, 0);
+		prt(angdroid_game_ui_text("Found: ", angdroid_zh_tw_enabled()), 15, 0);
 		Term_addstr(-1, COLOUR_WHITE, tmp);
 
-		prt("Press any key to continue.", 17, 0);
+		prt(angdroid_game_ui_text("Press any key to continue.", angdroid_zh_tw_enabled()), 17, 0);
 		inkey();
 	}
 }
@@ -631,12 +697,13 @@ static void ui_keymap_create(const char *title, int row)
 	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
 
 	prt(title, 13, 0);
-	prt("Key: ", 14, 0);
+	prt(angdroid_game_ui_text("Key: ", angdroid_zh_tw_enabled()), 14, 0);
 
 	c = keymap_get_trigger();
 	if (c.code == '=') {
-		c_prt(COLOUR_L_RED, "The '=' key is reserved.", 16, 2);
-		prt("Press any key to continue.", 18, 0);
+		c_prt(COLOUR_L_RED, angdroid_game_ui_text(
+            "The '=' key is reserved.", angdroid_zh_tw_enabled()), 16, 2);
+		prt(angdroid_game_ui_text("Press any key to continue.", angdroid_zh_tw_enabled()), 18, 0);
 		inkey();
 		return;
 	}
@@ -650,10 +717,13 @@ static void ui_keymap_create(const char *title, int row)
 		if (n == KEYMAP_ACTION_MAX) color = COLOUR_L_RED;
 
 		keypress_to_text(tmp, sizeof(tmp), keymap_buffer, false);
-		c_prt(color, format("Action: %s", tmp), 15, 0);
+		c_prt(color, angdroid_zh_tw_enabled() ?
+            format("操作：%s", tmp) : format("Action: %s", tmp), 15, 0);
 
-		c_prt(COLOUR_L_BLUE, "  Press '=' when finished.", 17, 0);
-		c_prt(COLOUR_L_BLUE, "  Use 'CTRL-u' to reset.", 18, 0);
+		c_prt(COLOUR_L_BLUE, angdroid_game_ui_text(
+            "  Press '=' when finished.", angdroid_zh_tw_enabled()), 17, 0);
+		c_prt(COLOUR_L_BLUE, angdroid_game_ui_text(
+            "  Use 'CTRL-u' to reset.", angdroid_zh_tw_enabled()), 18, 0);
 		c_prt(COLOUR_L_BLUE, format("(Maximum keymap length is %d keys.)",
 									KEYMAP_ACTION_MAX), 19, 0);
 
@@ -694,9 +764,10 @@ static void ui_keymap_create(const char *title, int row)
 		}
 	}
 
-	if (c.code && get_check("Keep this keymap? ")) {
+	if (c.code && get_check(angdroid_game_ui_text(
+        "Keep this keymap? ", angdroid_zh_tw_enabled()))) {
 		keymap_add(mode, c, keymap_buffer, true);
-		prt("To use in other sessions, save the keymaps to a file.  Press a key to continue.", 17, 0);
+		prt(angdroid_game_ui_text("To use in other sessions, save the keymaps to a file.  Press a key to continue.", angdroid_zh_tw_enabled()), 17, 0);
 		inkey();
 	}
 }
@@ -707,17 +778,17 @@ static void ui_keymap_remove(const char *title, int row)
 	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
 
 	prt(title, 13, 0);
-	prt("Key: ", 14, 0);
+	prt(angdroid_game_ui_text("Key: ", angdroid_zh_tw_enabled()), 14, 0);
 
 	c = keymap_get_trigger();
 
 	if (keymap_remove(mode, c))
-		prt("Removed.", 16, 0);
+		prt(angdroid_game_ui_text("Removed.", angdroid_zh_tw_enabled()), 16, 0);
 	else
-		prt("No keymap to remove!", 16, 0);
+		prt(angdroid_game_ui_text("No keymap to remove!", angdroid_zh_tw_enabled()), 16, 0);
 
 	/* Prompt */
-	prt("Press any key to continue.", 17, 0);
+	prt(angdroid_game_ui_text("Press any key to continue.", angdroid_zh_tw_enabled()), 17, 0);
 	inkey();
 }
 
@@ -730,7 +801,7 @@ static void keymap_browse_hook(int oid, void *db, const region *loc)
 	clear_from(13);
 
 	/* Show current action */
-	prt("Current action (if any) shown below:", 13, 0);
+	prt(angdroid_game_ui_text("Current action (if any) shown below:", angdroid_zh_tw_enabled()), 13, 0);
 	keypress_to_text(tmp, sizeof(tmp), keymap_buffer, false);
 	prt(tmp, 14, 0);
 }
@@ -745,9 +816,22 @@ static menu_action keymap_actions[] =
 	{ 0, 0, "Remove a keymap",          ui_keymap_remove },
 };
 
+static const char *const keymap_action_english[] = {
+    "Load a user pref file",
+    "Save keymaps to file",
+    "Query a keymap",
+    "Create a keymap",
+    "Remove a keymap",
+};
+
 static void do_cmd_keymaps(const char *title, int row)
 {
-	region loc = {0, 0, 0, 12};
+    region loc = {0, 0, 0, 12};
+    size_t i;
+    assert(N_ELEMENTS(keymap_actions) == N_ELEMENTS(keymap_action_english));
+    for (i = 0; i < N_ELEMENTS(keymap_actions); ++i)
+        keymap_actions[i].name = angdroid_game_ui_text(
+            keymap_action_english[i], angdroid_zh_tw_enabled());
 
 	screen_save();
 	clear_from(0);
@@ -761,8 +845,10 @@ static void do_cmd_keymaps(const char *title, int row)
 		keymap_menu->browse_hook = keymap_browse_hook;
 	}
 
-	menu_layout(keymap_menu, &loc);
-	menu_select(keymap_menu, 0, false);
+    /* This menu is cached; language may change between openings. */
+    keymap_menu->title = title;
+    menu_layout(keymap_menu, &loc);
+    menu_select(keymap_menu, 0, false);
 
 	screen_load();
 }
@@ -781,22 +867,22 @@ static void visuals_pref_load(const char *title, int row)
 
 static void visuals_dump_monsters(const char *title, int row)
 {
-	dump_pref_file(dump_monsters, title, 15);
+	dump_pref_file(dump_monsters, "Save monster attr/chars", 15);
 }
 
 static void visuals_dump_objects(const char *title, int row)
 {
-	dump_pref_file(dump_objects, title, 15);
+	dump_pref_file(dump_objects, "Save object attr/chars", 15);
 }
 
 static void visuals_dump_features(const char *title, int row)
 {
-	dump_pref_file(dump_features, title, 15);
+	dump_pref_file(dump_features, "Save feature attr/chars", 15);
 }
 
 static void visuals_dump_flavors(const char *title, int row)
 {
-	dump_pref_file(dump_flavors, title, 15);
+	dump_pref_file(dump_flavors, "Save flavor attr/chars", 15);
 }
 
 static void visuals_reset(const char *title, int row)
@@ -806,7 +892,8 @@ static void visuals_reset(const char *title, int row)
 
 	/* Message */
 	prt("", 0, 0);
-	msg("Visual attr/char tables reset.");
+	msg("%s", angdroid_game_ui_text(
+        "Visual attr/char tables reset.", angdroid_zh_tw_enabled()));
 	event_signal(EVENT_MESSAGE_FLUSH);
 }
 
@@ -823,6 +910,16 @@ static menu_action visual_menu_items [] =
 };
 
 
+static const char *const visual_action_english[] = {
+    "Load a user pref file",
+    "Save monster attr/chars",
+    "Save object attr/chars",
+    "Save feature attr/chars",
+    "Save flavor attr/chars",
+    "Reset visuals",
+};
+
+/* Action keys are never translated: only the menu text is refreshed. */
 static void visuals_browse_hook(int oid, void *db, const region *loc)
 {
 	event_signal(EVENT_MESSAGE_FLUSH);
@@ -835,6 +932,12 @@ static void visuals_browse_hook(int oid, void *db, const region *loc)
  */
 static void do_cmd_visuals(const char *title, int row)
 {
+    size_t i;
+    assert(N_ELEMENTS(visual_menu_items) == N_ELEMENTS(visual_action_english));
+    for (i = 0; i < N_ELEMENTS(visual_menu_items); ++i) {
+        visual_menu_items[i].name = angdroid_game_ui_text(
+            visual_action_english[i], angdroid_zh_tw_enabled());
+    }
 	screen_save();
 	clear_from(0);
 
@@ -846,11 +949,17 @@ static void do_cmd_visuals(const char *title, int row)
 		visual_menu->title = title;
 		visual_menu->selections = lower_case;
 		visual_menu->browse_hook = visuals_browse_hook;
-		visual_menu->header = "To edit visuals, use the knowledge menu";
+        visual_menu->header = angdroid_game_ui_text(
+            "To edit visuals, use the knowledge menu",
+            angdroid_zh_tw_enabled());
 	}
 
-	menu_layout(visual_menu, &SCREEN_REGION);
-	menu_select(visual_menu, 0, false);
+    /* Cached menu must also refresh the currently selected language. */
+    visual_menu->title = title;
+    visual_menu->header = angdroid_game_ui_text(
+        "To edit visuals, use the knowledge menu", angdroid_zh_tw_enabled());
+    menu_layout(visual_menu, &SCREEN_REGION);
+    menu_select(visual_menu, 0, false);
 
 	screen_load();
 }
@@ -875,7 +984,7 @@ static void colors_pref_load(const char *title, int row)
 
 static void colors_pref_dump(const char *title, int row)
 {
-	dump_pref_file(dump_colors, title, 15);
+	dump_pref_file(dump_colors, "Dump colors", 15);
 }
 
 static void colors_modify(const char *title, int row)
@@ -885,7 +994,8 @@ static void colors_modify(const char *title, int row)
 	static uint8_t a = 0;
 
 	/* Prompt */
-	prt("Command: Modify colors", 8, 0);
+	prt(angdroid_game_ui_text("Command: Modify colors",
+        angdroid_zh_tw_enabled()), 8, 0);
 
 	/* Hack -- query until done */
 	while (1) {
@@ -915,9 +1025,12 @@ static void colors_modify(const char *title, int row)
 		index = ((a < BASIC_COLORS) ? color_table[a].index_char : '?');
 
 		/* Describe the color */
-		Term_putstr(5, 10, -1, COLOUR_WHITE,
-					format("Color = %d, Name = %s, Index = %c",
-						   a, name, index));
+        Term_putstr(5, 10, -1, COLOUR_WHITE,
+            angdroid_zh_tw_enabled() ?
+                format("顏色：%d  名稱：%s  索引：%c",
+                    a, angdroid_game_ui_text(name, true), index) :
+                format("Color = %d, Name = %s, Index = %c",
+                    a, name, index));
 
 		/* Label the Current values */
 		Term_putstr(5, 12, -1, COLOUR_WHITE,
@@ -928,8 +1041,9 @@ static void colors_modify(const char *title, int row)
 				   angband_color_table[a][3]));
 
 		/* Prompt */
-		Term_putstr(0, 14, -1, COLOUR_WHITE,
-				"Command (n/N/k/K/r/R/g/G/b/B): ");
+        Term_putstr(0, 14, -1, COLOUR_WHITE,
+            angdroid_game_ui_text("Command (n/N/k/K/r/R/g/G/b/B): ",
+                angdroid_zh_tw_enabled()));
 
 		/* Get a command */
 		cx = inkey();
@@ -998,11 +1112,22 @@ static menu_action color_events [] =
 	{ 0, 0, "Modify colors",         colors_modify }
 };
 
+static const char *const color_action_english[] = {
+    "Load a user pref file",
+    "Dump colors",
+    "Modify colors",
+};
+
 /**
  * Interact with "colors"
  */
 static void do_cmd_colors(const char *title, int row)
 {
+    size_t i;
+    assert(N_ELEMENTS(color_events) == N_ELEMENTS(color_action_english));
+    for (i = 0; i < N_ELEMENTS(color_events); ++i)
+        color_events[i].name = angdroid_game_ui_text(
+            color_action_english[i], angdroid_zh_tw_enabled());
 	screen_save();
 	clear_from(0);
 
@@ -1016,8 +1141,9 @@ static void do_cmd_colors(const char *title, int row)
 		color_menu->browse_hook = colors_browse_hook;
 	}
 
-	menu_layout(color_menu, &SCREEN_REGION);
-	menu_select(color_menu, 0, false);
+    color_menu->title = title;
+    menu_layout(color_menu, &SCREEN_REGION);
+    menu_select(color_menu, 0, false);
 
 	screen_load();
 }
@@ -1070,9 +1196,13 @@ static void do_cmd_delay(const char *name, int unused)
 
 	/* Prompt */
 	prt("", 19, 0);
-	prt("Command: Base Delay Factor", 20, 0);
-	prt("New base delay factor (0-255): ", 21, 0);
-	prt(format("Current base delay factor: %d msec", msec), 22, 0);
+	prt(angdroid_game_ui_text("Command: Base Delay Factor",
+            angdroid_zh_tw_enabled()), 20, 0);
+	prt(angdroid_game_ui_text("New base delay factor (0-255): ",
+            angdroid_zh_tw_enabled()), 21, 0);
+	prt(angdroid_zh_tw_enabled() ?
+        format("目前基本延遲：%d 毫秒", msec) :
+        format("Current base delay factor: %d msec", msec), 22, 0);
 	prt("", 23, 0);
 
 	/* Ask for a numeric value */
@@ -1098,13 +1228,20 @@ static void do_cmd_sidebar_mode(const char *name, int unused)
 	while (true) {	
 
 		// Get the name
-		my_strcpy(tmp, names[SIDEBAR_MODE % SIDEBAR_MAX], sizeof(tmp));
+		my_strcpy(tmp, angdroid_zh_tw_enabled() ?
+            ((SIDEBAR_MODE % SIDEBAR_MAX) == 0 ? "左側" :
+             (SIDEBAR_MODE % SIDEBAR_MAX) == 1 ? "頂部" : "無") :
+            names[SIDEBAR_MODE % SIDEBAR_MAX], sizeof(tmp));
 
 		/* Prompt */
 		prt("", 19, 0);
-		prt("Command: Sidebar Mode", 20, 0);
-		prt(format("Current mode: %s", tmp), 21, 0);
-		prt("ESC: go back, other: cycle", 22, 0);
+		prt(angdroid_game_ui_text("Command: Sidebar Mode",
+            angdroid_zh_tw_enabled()), 20, 0);
+		prt(angdroid_zh_tw_enabled() ?
+            format("目前模式：%s", tmp) :
+            format("Current mode: %s", tmp), 21, 0);
+		prt(angdroid_game_ui_text("ESC: go back, other: cycle",
+            angdroid_zh_tw_enabled()), 22, 0);
 		prt("", 23, 0);
 
 		/* Get a command */
@@ -1136,11 +1273,16 @@ static void do_cmd_hp_warn(const char *name, int unused)
 
 	/* Prompt */
 	prt("", 19, 0);
-	prt("Command: Hitpoint Warning", 20, 0);
-	prt("New hitpoint warning (0-9): ", 21, 0);
-	prt(format("Current hitpoint warning: %d (%d%%)",
-		player->opts.hitpoint_warn, player->opts.hitpoint_warn * 10),
-		22, 0);
+	prt(angdroid_game_ui_text("Command: Hitpoint Warning",
+            angdroid_zh_tw_enabled()), 20, 0);
+	prt(angdroid_game_ui_text("New hitpoint warning (0-9): ",
+            angdroid_zh_tw_enabled()), 21, 0);
+	prt(angdroid_zh_tw_enabled() ?
+        format("目前生命值警告：%d（%d%%）",
+            player->opts.hitpoint_warn, player->opts.hitpoint_warn * 10) :
+        format("Current hitpoint warning: %d (%d%%)",
+            player->opts.hitpoint_warn, player->opts.hitpoint_warn * 10),
+        22, 0);
 	prt("", 23, 0);
 
 	/* Ask the user for a string */
@@ -1175,11 +1317,17 @@ static void do_cmd_lazymove_delay(const char *name, int unused)
 
 	/* Prompt */
 	prt("", 19, 0);
-	prt("Command: Movement Delay Factor", 20, 0);
-	prt("New movement delay: ", 21, 0);
-	prt(format("Current movement delay: %d (%d msec)",
-		player->opts.lazymove_delay, player->opts.lazymove_delay * 10),
-		22, 0);
+	prt(angdroid_game_ui_text("Command: Movement Delay Factor",
+            angdroid_zh_tw_enabled()), 20, 0);
+	prt(angdroid_game_ui_text("New movement delay: ",
+            angdroid_zh_tw_enabled()), 21, 0);
+	prt(angdroid_zh_tw_enabled() ?
+        format("目前移動延遲：%d（%d 毫秒）",
+            player->opts.lazymove_delay,
+            player->opts.lazymove_delay * 10) :
+        format("Current movement delay: %d (%d msec)",
+            player->opts.lazymove_delay,
+            player->opts.lazymove_delay * 10), 22, 0);
 	prt("", 23, 0);
 
 	/* Ask the user for a string */
@@ -1215,9 +1363,11 @@ static void do_cmd_pref_file_hack(long row)
 	if (row > 0) {
 		prt("", row - 1, 0);
 	}
-	prt("Command: Load a user pref file", row, 0);
+	prt(angdroid_game_ui_text("Command: Load a user pref file",
+            angdroid_zh_tw_enabled()), row, 0);
 	prt("", row + 1, 0);
-	prt("File: ", row + 2, 0);
+	prt(angdroid_game_ui_text("File: ",
+            angdroid_zh_tw_enabled()), row + 2, 0);
 	prt("", row + 3, 0);
 
 	/* Get the filesystem-safe name and append .prf */
@@ -1235,11 +1385,13 @@ static void do_cmd_pref_file_hack(long row)
 		if (process_pref_file(ftmp, false, true) == false) {
 			/* Mention failure */
 			prt("", 0, 0);
-			msg("Failed to load '%s'!", ftmp);
+			msg(angdroid_zh_tw_enabled() ?
+                "載入「%s」失敗！" : "Failed to load '%s'!", ftmp);
 		} else {
 			/* Mention success */
 			prt("", 0, 0);
-			msg("Loaded '%s'.", ftmp);
+			msg(angdroid_zh_tw_enabled() ?
+                "已載入「%s」。" : "Loaded '%s'.", ftmp);
 		}
 	}
 
@@ -1286,6 +1438,8 @@ static void options_load_pref_file(const char *n, int row)
 
 #define EGO_MENU_HELPTEXT \
 "{light green}Movement keys{/} scroll the list\n{light red}ESC{/} returns to the previous menu\n{light blue}Enter{/} toggles the current setting."
+#define EGO_MENU_HELPTEXT_ZH \
+"{light green}方向鍵{/}瀏覽清單\n{light red}Esc{/}返回上一層\n{light blue}Enter{/}切換目前設定。"
 
 /**
  * Skip common prefixes in ego-item names.
@@ -1372,6 +1526,36 @@ static void ego_display(struct menu * menu, int oid, bool cursor, int row,
 
 	uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
 	uint8_t sq_attr = (ignored ? COLOUR_L_RED : COLOUR_L_GREEN);
+
+    /* This entry is already restricted to ever-seen ego kinds.  Use the
+     * shared full-name dictionary only for the visible row, preserving
+     * ego IDs, the original short_name pointer and the sort order. */
+    if (angdroid_zh_tw_enabled() && Term &&
+        col >= 0 && col < Term->wid) {
+        const char *known_name = angdroid_faangband_known_ego_ui_name(
+            e_info[choice[oid].e_idx].name, true);
+        if (known_name) {
+            char prefix[128], clipped_prefix[128], clipped_name[256];
+            int available = MIN(width, Term->wid - col);
+            size_t prefix_columns;
+            strnfmt(prefix, sizeof(prefix), "[ ] %s ",
+                angdroid_game_ui_text(
+                    quality_choices[choice[oid].itype].name, true));
+            prefix_columns = angdroid_menu_copy_columns(clipped_prefix,
+                sizeof(clipped_prefix), prefix, (size_t)MAX(0, available));
+            if (clipped_prefix[0]) c_put_str(attr, clipped_prefix, row, col);
+            if (ignored && available > 1)
+                c_put_str(COLOUR_L_RED, "*", row, col + 1);
+            if (available > (int)prefix_columns) {
+                angdroid_menu_copy_columns(clipped_name, sizeof(clipped_name),
+                    known_name, (size_t)(available - (int)prefix_columns));
+                if (clipped_name[0])
+                    c_put_str(sq_attr, clipped_name, row,
+                        col + (int)prefix_columns);
+            }
+            return;
+        }
+    }
 
 	/* Acquire the "name" of object "i" */
 	(void) ego_item_name(buf, sizeof(buf), &choice[oid]);
@@ -1460,18 +1644,20 @@ static void ego_menu(const char *unused, int also_unused)
 	clear_from(0);
 
 	/* Help text */
-	prt("Ego item ignore menu", 0, 0);
+	prt(angdroid_game_ui_text("Ego item ignore menu",
+            angdroid_zh_tw_enabled()), 0, 0);
 
 	/* Output to the screen */
 	text_out_hook = text_out_to_screen;
 
 	/* Indent output */
 	text_out_indent = 1;
-	text_out_wrap = 79;
+	text_out_wrap = MIN(79, MAX(1, Term->wid - 2));
 	Term_gotoxy(1, 1);
 
 	/* Display some helpful information */
-	text_out_e(EGO_MENU_HELPTEXT);
+	text_out_e(angdroid_zh_tw_enabled() ?
+        EGO_MENU_HELPTEXT_ZH : EGO_MENU_HELPTEXT);
 
 	text_out_indent = 0;
 
@@ -1541,34 +1727,37 @@ static int quality_validity(struct menu *menu, int oid)
 /**
  * Display an entry in the menu.
  */
-static void quality_display(struct menu *menu, int oid, bool cursor, int row,
-							int col, int width)
+static void quality_display(struct menu *menu, int oid, bool cursor,
+        int row, int col, int width)
 {
-	if (oid) {
-		/* Note: the order of the values in quality_choices do not
-			align with the ignore_type_t enum order. - fix? NRM*/
-		const char *name = quality_choices[oid].name;
-		uint8_t level = ignore_level[oid];
-		const char *level_name = quality_values[level].name;
-		uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
-		size_t u8len = utf8_strlen(name);
+    if (oid && Term && col >= 0 && col < Term->wid) {
+        /* Reuse original ignore enums and values; change only row text. */
+        const char *name = angdroid_game_ui_text(
+            quality_choices[oid].name, angdroid_zh_tw_enabled());
+        uint8_t level = ignore_level[oid];
+        const char *level_name = angdroid_game_ui_text(
+            quality_values[level].name, angdroid_zh_tw_enabled());
+        uint8_t attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
+        int available = MIN(width, Term->wid - col);
+        int left_columns = MIN(30, MAX(0, available - 12));
+        char clipped[4 * 30 + 1], status[128], visible[128];
+        size_t columns;
 
-		if (u8len < 30) {
-			c_put_str(attr, format("%s%*s", name, (int)(30 - u8len),
-				" "), row, col);
-		} else {
-			char *name_copy = string_make(name);
-
-			if (u8len > 30) {
-				utf8_clipto(name_copy, 30);
-			}
-			c_put_str(attr, name_copy, row, col);
-			string_free(name_copy);
-		}
-		c_put_str(attr, format(" : %s", level_name), row, col + 30);
-	}
+        if (left_columns <= 0) left_columns = available;
+        if (left_columns <= 0) return;
+        columns = angdroid_menu_copy_columns(clipped, sizeof(clipped),
+            name, (size_t)left_columns);
+        c_put_str(attr, format("%s%*s", clipped,
+            (int)(left_columns - columns), ""), row, col);
+        if (available > left_columns) {
+            strnfmt(status, sizeof(status), " : %s", level_name);
+            angdroid_menu_copy_columns(visible, sizeof(visible),
+                status, (size_t)(available - left_columns));
+            if (visible[0])
+                c_put_str(attr, visible, row, col + left_columns);
+        }
+    }
 }
-
 
 /**
  * Display the quality ignore subtypes.
@@ -1576,10 +1765,15 @@ static void quality_display(struct menu *menu, int oid, bool cursor, int row,
 static void quality_subdisplay(struct menu *menu, int oid, bool cursor, int row,
 							   int col, int width)
 {
-	const char *name = quality_values[oid].name;
-	uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
-
-	c_put_str(attr, name, row, col);
+    const char *name = angdroid_game_ui_text(
+        quality_values[oid].name, angdroid_zh_tw_enabled());
+    uint8_t attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
+    if (Term && col >= 0 && col < Term->wid && width > 0) {
+        char clipped[256];
+        angdroid_menu_copy_columns(clipped, sizeof(clipped),
+            name, (size_t)MIN(width, Term->wid - col));
+        if (clipped[0]) c_put_str(attr, clipped, row, col);
+    }
 }
 
 
@@ -1590,9 +1784,16 @@ static bool quality_action(struct menu *m, const ui_event *event, int oid)
 {
 	struct menu menu;
 	menu_iter menu_f = { NULL, NULL, quality_subdisplay, NULL, NULL };
-	region area = { 37, 2, 29, IGNORE_MAX };
-	ui_event evt;
-	int count;
+    region area = { 37, 2, 29, IGNORE_MAX };
+    ui_event evt;
+    int count;
+
+    /* Never place the quality popup outside the actual phone terminal. */
+    if (!Term || Term->wid < 9 || Term->hgt < 4) return false;
+    if (area.col + area.width + 2 > Term->wid) {
+        area.width = MIN(29, Term->wid - 4);
+        area.col = Term->wid - area.width - 2;
+    }
 
 	/* Display at the right point */
 	area.row += oid;
@@ -1643,7 +1844,8 @@ static void quality_menu(const char *unused, int also_unused)
 
 	/* Set up the menu */
 	menu_init(&menu, MN_SKIN_SCROLL, &menu_f);
-	menu.title = "Quality ignore menu";
+	menu.title = angdroid_game_ui_text(
+        "Quality ignore menu", angdroid_zh_tw_enabled());
 	menu_setpriv(&menu, ITYPE_MAX, quality_values);
 	menu_layout(&menu, &area);
 
@@ -1726,11 +1928,19 @@ static void ignore_sval_menu_display(struct menu *menu, int oid, bool cursor,
 
 	uint8_t attr = curs_attrs[(int)aware][0 != cursor];
 
-	/* Acquire the "name" of object "i" */
-	object_kind_name(buf, sizeof(buf), kind, aware);
-
-	/* Print it */
-	c_put_str(attr, format("[ ] %s", buf), row, col);
+    /* Only show the localized real kind when already learned.  The
+     * aware/unaware ignore row selection and flags remain canonical. */
+    object_kind_name(buf, sizeof(buf), kind, aware);
+    {
+        const char *display = buf;
+        if (aware && kind->aware && angdroid_zh_tw_enabled()) {
+            const char *known = angdroid_faangband_known_kind_ui_name(
+                kind->name, tval_find_name(kind->tval), true);
+            if (known) display = known;
+        }
+        fa_options_put_clipped(attr, format("[ ] %s", display),
+            row, col, width);
+    }
 	if ((aware && (kind->ignore & IGNORE_IF_AWARE)) ||
 			(!aware && (kind->ignore & IGNORE_IF_UNAWARE)))
 		c_put_str(COLOUR_L_RED, "*", row, col + 1);
@@ -1857,7 +2067,12 @@ static bool sval_menu(int tval, const char *desc)
 	clear_from(0);
 
 	/* Help text */
-	prt(format("Ignore the following %s:", desc), 0, 0);
+    if (angdroid_zh_tw_enabled()) {
+        prt(format("忽略以下%s：", angdroid_game_ui_text(desc, true)),
+            0, 0);
+    } else {
+        prt(format("Ignore the following %s:", desc), 0, 0);
+    }
 
 	/* Run menu */
 	menu = menu_new(MN_SKIN_COLUMNS, &ignore_sval_menu);
@@ -1962,14 +2177,18 @@ static void display_options_item(struct menu *menu, int oid, bool cursor,
 		bool known = seen_tval(sval_dependent[line].tval);
 		uint8_t attr = curs_attrs[known ? CURS_KNOWN: CURS_UNKNOWN][(int)cursor];
 
-		c_prt(attr, sval_dependent[line].desc, row, col);
+		fa_options_put_clipped(attr,
+            angdroid_game_ui_text(sval_dependent[line].desc,
+                angdroid_zh_tw_enabled()), row, col, width);
 	} else {
 		uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 
 		line = line - N_ELEMENTS(sval_dependent) - 1;
 
 		if (line < N_ELEMENTS(extra_item_options))
-			c_prt(attr, extra_item_options[line].name, row, col);
+			fa_options_put_clipped(attr,
+                angdroid_game_ui_text(extra_item_options[line].name,
+                    angdroid_zh_tw_enabled()), row, col, width);
 	}
 }
 
@@ -2060,24 +2279,60 @@ static menu_action option_actions[] =
 };
 
 
+static const char *const option_action_english[] = {
+    "User interface options",
+    "Birth (difficulty) options",
+    "Cheat options",
+    "Subwindow setup",
+    "Item ignoring setup",
+    "Auto-inscription setup",
+    NULL,
+    "Set base delay factor",
+    "Set hitpoint warning",
+    "Set movement delay",
+    "Set sidebar mode",
+    NULL,
+    "Save subwindow setup to pref file",
+    "Save autoinscriptions to pref file",
+    "Save char screen options to pref file",
+    NULL,
+    "Load a user pref file",
+    "Edit keymaps (advanced)",
+    "Edit colours (advanced)",
+    "Save visuals (advanced)",
+};
+
+/* Menu callbacks and their original tags remain fixed; translated labels are
+ * refreshed only when opening the options screen. */
 /**
  * Display the options main menu.
  */
 void do_cmd_options(void)
 {
+    size_t i;
+    assert(N_ELEMENTS(option_action_english) == N_ELEMENTS(option_actions));
+    for (i = 0; i < N_ELEMENTS(option_actions); ++i) {
+        option_actions[i].name = option_action_english[i] ?
+            angdroid_game_ui_text(option_action_english[i],
+                angdroid_zh_tw_enabled()) : NULL;
+    }
+
 	if (!option_menu) {
 		/* Main option menu */
 		option_menu = menu_new_action(option_actions,
 				N_ELEMENTS(option_actions));
 
-		option_menu->title = "Options Menu";
+		option_menu->title = angdroid_game_ui_text(
+            "Options Menu", angdroid_zh_tw_enabled());
 		option_menu->flags = MN_CASELESS_TAGS;
 	}
 
-	screen_save();
-	clear_from(0);
+    option_menu->title = angdroid_game_ui_text(
+        "Options Menu", angdroid_zh_tw_enabled());
+    screen_save();
+    clear_from(0);
 
-	menu_layout(option_menu, &SCREEN_REGION);
+    menu_layout(option_menu, &SCREEN_REGION);
 	menu_select(option_menu, 0, false);
 
 	screen_load();

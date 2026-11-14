@@ -32,11 +32,98 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_screen_text_wrap"
 "$BUILD_DIR/test_screen_text_wrap"
 
+# Long monster recall pages wrap on physical CJK columns, not codepoint count.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_textblock_column_layout.c" \
+    -o "$BUILD_DIR/test_textblock_column_layout"
+"$BUILD_DIR/test_textblock_column_layout"
+
+# Tiny native terminal windows may have fewer than two rows for the footer.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_textblock_pager_layout.c" \
+    -o "$BUILD_DIR/test_textblock_pager_layout"
+"$BUILD_DIR/test_textblock_pager_layout"
+
+# UTF-8 file export must never split a CJK scalar at a byte boundary.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_file_text_wrap.c" \
+    -o "$BUILD_DIR/test_file_text_wrap"
+"$BUILD_DIR/test_file_text_wrap"
+
+# Extract the real z-textblock.c file-output function; mock only file I/O.
+python3 "$ROOT/tests/native/generate_file_text_out_host.py" \
+    "$BUILD_DIR/test_file_text_out.generated.c"
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$BUILD_DIR/test_file_text_out.generated.c" \
+    -o "$BUILD_DIR/test_file_text_out"
+"$BUILD_DIR/test_file_text_out"
+
+# Use the actual native textblock append and text_out functions: an entire
+# lore string passed via %s must survive the formatter's 1024-byte limit.
+python3 "$ROOT/tests/native/generate_long_lore_text_host.py" \
+    "$BUILD_DIR/test_long_lore.generated.c"
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$BUILD_DIR/test_long_lore.generated.c" \
+    -o "$BUILD_DIR/test_long_lore"
+"$BUILD_DIR/test_long_lore"
+
+# Byte-limited narrow %s must keep UTF-8 glyphs complete, including
+# multibyte CJK, emoji, and dynamic printf precision.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_narrow_utf8_precision.c" \
+    -o "$BUILD_DIR/test_narrow_utf8_precision"
+"$BUILD_DIR/test_narrow_utf8_precision"
+
+# Test the actual z-form.c vstrnfmt and z-textblock.c compound-format
+# callers against long CJK strings, including both colored and plain text.
+python3 "$ROOT/tests/native/generate_compound_utf8_format_host.py" \
+    "$BUILD_DIR/test_compound_format.generated.c"
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$BUILD_DIR/test_compound_format.generated.c" \
+    -o "$BUILD_DIR/test_compound_format"
+"$BUILD_DIR/test_compound_format"
+
+# Extract the real vformat(), vformat_kill() and strnfmt() from z-form.c.
+# Guard against use-after-free after cleanup and size_t capacity overflow.
+python3 "$ROOT/tests/native/generate_vformat_lifecycle_host.py" \
+    "$BUILD_DIR/test_vformat_lifecycle.generated.c"
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$BUILD_DIR/test_vformat_lifecycle.generated.c" \
+    -o "$BUILD_DIR/test_vformat_lifecycle"
+"$BUILD_DIR/test_vformat_lifecycle"
+
+# Compile the actual ui-output.c display and pager functions with a fake Term
+# so UTF-8/wide-cell and scroll regressions fail without Android hardware.
+python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
+    "$BUILD_DIR/test_textblock_ui.generated.c"
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$BUILD_DIR/test_textblock_ui.generated.c" \
+    -o "$BUILD_DIR/test_textblock_ui"
+"$BUILD_DIR/test_textblock_ui"
+
+# A real long FAangband monster description must wrap at CJK column boundaries.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_faangband_lore_textblock_columns.c" \
+    -o "$BUILD_DIR/test_faangband_lore_textblock_columns"
+"$BUILD_DIR/test_faangband_lore_textblock_columns"
+
+# Top-line message wrap preserves Chinese glyphs and original words.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_message_wrap_utf8.c" \
+    -o "$BUILD_DIR/test_message_wrap_utf8"
+"$BUILD_DIR/test_message_wrap_utf8"
+
 # Full-screen localized spell description pages; no JNI needed.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_spell_reader_pages.c" \
     -o "$BUILD_DIR/test_spell_reader_pages"
 "$BUILD_DIR/test_spell_reader_pages"
+
+# UTF-8 editor: deletion byte spans, display columns and safe prefills.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_ui_input_utf8.c" \
+    -o "$BUILD_DIR/test_ui_input_utf8"
+"$BUILD_DIR/test_ui_input_utf8"
 
 # CJK display columns differ from Unicode scalar counts.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
@@ -82,6 +169,13 @@ CC="${CC:-cc}"
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_item_locale.c" \
     -o "$BUILD_DIR/test_item_locale"
+"$BUILD_DIR/test_item_locale"
+
+# Known and unidentified display names may be clipped on small buffers.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_item_kind_utf8_copy.c" \
+    -o "$BUILD_DIR/test_item_kind_utf8_copy"
+"$BUILD_DIR/test_item_kind_utf8_copy"
 
 # Identified ego suffixes are translated only in opted-in UI descriptions.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
@@ -112,6 +206,209 @@ CC="${CC:-cc}"
     "$ROOT/tests/native/test_item_name_grammar_locale.c" \
     -o "$BUILD_DIR/test_item_name_grammar_locale"
 "$BUILD_DIR/test_item_name_grammar_locale"
+
+# Unknown/custom appearances still get Chinese nouns without revealing effects.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_visible_flavor_fallback_locale.c" \
+    -o "$BUILD_DIR/test_visible_flavor_fallback_locale"
+"$BUILD_DIR/test_visible_flavor_fallback_locale"
+
+# Twenty class-book titles from both variants' class.txt files.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_class_book_names_locale.c" \
+    -o "$BUILD_DIR/test_class_book_names_locale"
+"$BUILD_DIR/test_class_book_names_locale"
+
+# FAangband-specific descriptions for two shared-name spells.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_variant_spell_descriptions.c" \
+    -o "$BUILD_DIR/test_faangband_variant_spell_descriptions"
+"$BUILD_DIR/test_faangband_variant_spell_descriptions"
+
+# Exact FAangband-only spell name and description display fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_spells_locale.c" \
+    -o "$BUILD_DIR/test_faangband_spells_locale"
+"$BUILD_DIR/test_faangband_spells_locale"
+
+# All 38 same-name but divergent FAangband/Angband artifact stories.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_shared_artifact_lore.c" \
+    -o "$BUILD_DIR/test_faangband_shared_artifact_lore"
+"$BUILD_DIR/test_faangband_shared_artifact_lore"
+
+# FAangband-exclusive artifact stories: canonical English and unknown-name fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_artifact_lore_locale.c" \
+    -o "$BUILD_DIR/test_faangband_artifact_lore_locale"
+"$BUILD_DIR/test_faangband_artifact_lore_locale"
+
+# Modal keyboard hints: replace, deduplicate and clear empty selections.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_soft_kbd_replace.c" \
+    -o "$BUILD_DIR/test_soft_kbd_replace"
+"$BUILD_DIR/test_soft_kbd_replace"
+
+# A nested picker preserves only the parent's lingering controls on ESC.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_soft_kbd_linger_scope.c" \
+    -o "$BUILD_DIR/test_soft_kbd_linger_scope"
+"$BUILD_DIR/test_soft_kbd_linger_scope"
+
+# FAangband popup geometry after rotation and filtered source selection.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_popup_filter.c" \
+    -o "$BUILD_DIR/test_faangband_menu_popup_filter"
+"$BUILD_DIR/test_faangband_menu_popup_filter"
+
+# Shopkeeper header touches must not trigger the item-list Back margin.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_menu_header_back.c" \
+    -o "$BUILD_DIR/test_menu_header_back"
+"$BUILD_DIR/test_menu_header_back"
+
+# FAangband empty shops, refreshed stock identity and cancel-safe purchases.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_store_stock_lifecycle.c" \
+    -o "$BUILD_DIR/test_faangband_store_stock_lifecycle"
+"$BUILD_DIR/test_faangband_store_stock_lifecycle"
+
+# FAangband store + inventory: match taps to scrolled visible rows, not old cursors.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_store_touch_flow.c" \
+    -o "$BUILD_DIR/test_faangband_store_touch_flow"
+"$BUILD_DIR/test_faangband_store_touch_flow"
+
+# FAangband hidden/filtered entries: only actually visible rows may
+# emit relative shortcuts or Android soft keyboard hints.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_visibility_contract.c" \
+    -o "$BUILD_DIR/test_faangband_menu_visibility_contract"
+"$BUILD_DIR/test_faangband_menu_visibility_contract"
+
+# FAangband keyboard arrow/page movement and multi-column vs. compact
+# screen-relative shortcuts; compile the production navigation helpers.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_direction.c" \
+    -o "$BUILD_DIR/test_faangband_menu_direction"
+"$BUILD_DIR/test_faangband_menu_direction"
+
+# FAangband blank-row mouse hits, narrow/compact columns and rotated
+# scroll positions; these helpers run without an Android SDK.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_touch_viewport.c" \
+    -o "$BUILD_DIR/test_faangband_menu_touch_viewport"
+"$BUILD_DIR/test_faangband_menu_touch_viewport"
+
+# FAangband filtered item menus: independent screen-to-source row mapping,
+# bounded soft keyboard hints and visible-page relative shortcuts.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_key_guard.c" \
+    -o "$BUILD_DIR/test_faangband_menu_key_guard"
+"$BUILD_DIR/test_faangband_menu_key_guard"
+
+# FAangband generic menu title/row/prompt clipping: physical cell
+# width 0..48, every buffer capacity, and invalid terminal geometry.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_cell_text.c" \
+    -o "$BUILD_DIR/test_faangband_menu_cell_text"
+"$BUILD_DIR/test_faangband_menu_cell_text"
+
+# FAangband shared menus: repaint on rotation, close impossible
+# rectangles safely and prevent signed coordinate overflow.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_menu_resize_guard.c" \
+    -o "$BUILD_DIR/test_faangband_menu_resize_guard"
+"$BUILD_DIR/test_faangband_menu_resize_guard"
+
+# FAangband ground-item LOS/non-LOS lists must not overflow the
+# terminal when 0..24 rows are available or miscount hidden sections.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_object_list_row_budget.c" \
+    -o "$BUILD_DIR/test_faangband_object_list_row_budget"
+"$BUILD_DIR/test_faangband_object_list_row_budget"
+
+# FAangband ground-item list direction, zero/huge distance, CJK
+# display widths, and popup geometry at rotation boundaries.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_object_list_location.c" \
+    -o "$BUILD_DIR/test_faangband_object_list_location"
+"$BUILD_DIR/test_faangband_object_list_location"
+
+# FAangband dungeon list and store share Unicode-safe name and cell
+# geometry helpers with the original Angband engine.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_dungeon_store_columns.c" \
+    -o "$BUILD_DIR/test_faangband_dungeon_store_columns"
+"$BUILD_DIR/test_faangband_dungeon_store_columns"
+
+# FAangband object lists use terminal cell budgets, complete UTF-8
+# Chinese names, 14-cell equipment labels and resize-safe geometry.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_inventory_columns.c" \
+    -o "$BUILD_DIR/test_faangband_inventory_columns"
+"$BUILD_DIR/test_faangband_inventory_columns"
+
+# FAangband stage complete fallback names before appending multiple atomic
+# combat/charge/inscription groups at widths 0..128 and 0..32.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_narrow_desc_chain.c" \
+    -o "$BUILD_DIR/test_faangband_narrow_desc_chain"
+"$BUILD_DIR/test_faangband_narrow_desc_chain"
+
+# FAangband complete early descriptions: null/unknown item, tiny flavor
+# copy and 11 exact source money-kind labels with UTF-8 boundaries.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_obj_basic_utf8.c" \
+    -o "$BUILD_DIR/test_faangband_obj_basic_utf8"
+"$BUILD_DIR/test_faangband_obj_basic_utf8"
+
+# FAangband combat/charges/status/inscriptions: append whole Unicode-safe
+# bracket and brace groups; assert numeric and small-buffer behavior.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_obj_details_utf8.c" \
+    -o "$BUILD_DIR/test_faangband_obj_details_utf8"
+"$BUILD_DIR/test_faangband_obj_details_utf8"
+
+# FAangband's legacy grammar had unbounded literal buf[end++] writes.
+# This C99 regression covers original grammar, tiny buffers and UTF-8 edges.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_obj_desc_name_utf8.c" \
+    -o "$BUILD_DIR/test_faangband_obj_desc_name_utf8"
+"$BUILD_DIR/test_faangband_obj_desc_name_utf8"
+
+# FAangband assigned flavor appearance, identified effect, and scroll
+# random-title display, including C99 buffer and privacy regressions.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_flavor_ui.c" \
+    -o "$BUILD_DIR/test_faangband_flavor_ui"
+"$BUILD_DIR/test_faangband_flavor_ui"
+
+# FAangband identified item kinds and ego modifiers: 118 unique ego
+# names, 39 FA-only kinds, localized quantity and complete UTF-8 suffixes.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_item_ego_ui.c" \
+    -o "$BUILD_DIR/test_faangband_item_ego_ui"
+"$BUILD_DIR/test_faangband_item_ego_ui"
+
+# FAangband's actual object-description UI: all 126 names, explicit
+# locale selection, exact buffer fit and atomic UTF-8 suffixes.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_artifact_name_ui.c" \
+    -o "$BUILD_DIR/test_faangband_artifact_name_ui"
+"$BUILD_DIR/test_faangband_artifact_name_ui"
+
+# All 41 FAangband-only artifact names with English/standard fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_artifact_names_locale.c" \
+    -o "$BUILD_DIR/test_faangband_artifact_names_locale"
+"$BUILD_DIR/test_faangband_artifact_names_locale"
+
+# Exact FAangband-only item kind additions (screen-only fallback).
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_item_names_locale.c" \
+    -o "$BUILD_DIR/test_faangband_item_names_locale"
+"$BUILD_DIR/test_faangband_item_names_locale"
 
 # Seven flavored noun phrases: count, identification and UTF-8 safety.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
@@ -223,6 +520,30 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_knowledge_groups_locale"
 "$BUILD_DIR/test_knowledge_groups_locale"
 
+# Monster list-count labels keep [U]/counts and complete CJK glyphs.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_monster_list_render_utf8.c" \
+    -o "$BUILD_DIR/test_monster_list_render_utf8"
+"$BUILD_DIR/test_monster_list_render_utf8"
+
+# Localized hallucination warning and unchanged 'x' sort shortcut.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_monster_list_special_locale.c" \
+    -o "$BUILD_DIR/test_monster_list_special_locale"
+"$BUILD_DIR/test_monster_list_special_locale"
+
+# Shared monster/object-list directions and CJK terminal-column budgets.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_list_relative_location_locale.c" \
+    -o "$BUILD_DIR/test_list_relative_location_locale"
+"$BUILD_DIR/test_list_relative_location_locale"
+
+# Narrow-screen monster list geometry, optional distance and sleep tags.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_monster_list_compact_layout.c" \
+    -o "$BUILD_DIR/test_monster_list_compact_layout"
+"$BUILD_DIR/test_monster_list_compact_layout"
+
 # Monster knowledge labels reuse canonical non-unique names and clip CJK glyphs.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_knowledge_monster_label.c" \
@@ -234,6 +555,12 @@ CC="${CC:-cc}"
     "$ROOT/tests/native/test_knowledge_column_text.c" \
     -o "$BUILD_DIR/test_knowledge_column_text"
 "$BUILD_DIR/test_knowledge_column_text"
+
+# Refuse lossy edits of existing object/rune notes before askfor_aux.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_knowledge_note_prefill.c" \
+    -o "$BUILD_DIR/test_knowledge_note_prefill"
+"$BUILD_DIR/test_knowledge_note_prefill"
 
 # Glyph editor strict Unicode input and bilingual rune/object inscriptions.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
@@ -252,6 +579,18 @@ CC="${CC:-cc}"
     "$ROOT/tests/native/test_terrain_trap_locale.c" \
     -o "$BUILD_DIR/test_terrain_trap_locale"
 "$BUILD_DIR/test_terrain_trap_locale"
+
+# FAangband-only monster trap knowledge and all canonical trap notifications.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_trap_locale.c" \
+    -o "$BUILD_DIR/test_faangband_trap_locale"
+"$BUILD_DIR/test_faangband_trap_locale"
+
+# FAangband wilderness terrain names, lore and cliff/lava prompts.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_terrain_locale.c" \
+    -o "$BUILD_DIR/test_faangband_terrain_locale"
+"$BUILD_DIR/test_faangband_terrain_locale"
 
 # Symbol lookup is bilingual for all canonical tval classes and known terrain.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
@@ -301,6 +640,24 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_mon_spell_render_utf8"
 "$BUILD_DIR/test_mon_spell_render_utf8"
 
+# Remaining 77 FAangband exclusive monsters and 76 complete source descriptions.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_monster_flavor_remaining.c" \
+    -o "$BUILD_DIR/test_faangband_monster_flavor_remaining"
+"$BUILD_DIR/test_faangband_monster_flavor_remaining"
+
+# FAangband first 15 exclusive monster names and eight divergent descriptions.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_monster_flavor.c" \
+    -o "$BUILD_DIR/test_faangband_monster_flavor"
+"$BUILD_DIR/test_faangband_monster_flavor"
+
+# FAangband extra monster base, lore and spell messages.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_monster_spells.c" \
+    -o "$BUILD_DIR/test_faangband_monster_spells"
+"$BUILD_DIR/test_faangband_monster_spells"
+
 # All canonical monster spell messages (and original race overrides).
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_mon_spell_message_locale.c" \
@@ -312,6 +669,12 @@ CC="${CC:-cc}"
     "$ROOT/tests/native/test_attack_feedback_locale.c" \
     -o "$BUILD_DIR/test_attack_feedback_locale"
 "$BUILD_DIR/test_attack_feedback_locale"
+
+# FAangband projection spell summaries and monster lash descriptions.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_projection_locale.c" \
+    -o "$BUILD_DIR/test_faangband_projection_locale"
+"$BUILD_DIR/test_faangband_projection_locale"
 
 # Projection feedback and monster direct attack messages.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
@@ -354,6 +717,30 @@ CC="${CC:-cc}"
     "$ROOT/tests/native/test_timed_messages_locale.c" \
     -o "$BUILD_DIR/test_timed_messages_locale"
 "$BUILD_DIR/test_timed_messages_locale"
+
+# FAangband-specific on-increase messages for temporary resistances.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_timed_renewals.c" \
+    -o "$BUILD_DIR/test_faangband_timed_renewals"
+"$BUILD_DIR/test_faangband_timed_renewals"
+
+# FAangband-only 14 shape names and FLYING flag, standalone C99.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_shapes_locale.c" \
+    -o "$BUILD_DIR/test_faangband_shapes_locale"
+"$BUILD_DIR/test_faangband_shapes_locale"
+
+# Player shapechange attacks: all 14 Angband/FAangband blow verbs.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_shape_combat_verbs.c" \
+    -o "$BUILD_DIR/test_shape_combat_verbs"
+"$BUILD_DIR/test_shape_combat_verbs"
+
+# FAangband-only ability names and source-matched descriptions.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_faangband_abilities_locale.c" \
+    -o "$BUILD_DIR/test_faangband_abilities_locale"
+"$BUILD_DIR/test_faangband_abilities_locale"
 
 # Shape knowledge: bilingual display names and restriction text, C99.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
@@ -415,6 +802,18 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_player_ability_locale"
 "$BUILD_DIR/test_player_ability_locale"
 
+# World targeting terrain/trap descriptions, hallucination and item piles.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_target_world_locale.c" \
+    -o "$BUILD_DIR/test_target_world_locale"
+"$BUILD_DIR/test_target_world_locale"
+
+# Monster targeting and look prompts: visible-only names and status.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_target_monster_locale.c" \
+    -o "$BUILD_DIR/test_target_monster_locale"
+"$BUILD_DIR/test_target_monster_locale"
+
 # Target selection help only localizes descriptive fragments, not key bindings.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_target_help_locale.c" \
@@ -454,6 +853,11 @@ CC="${CC:-cc}"
 # Object information property and brand/slay labels.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_object_info_locale.c" -o "$BUILD_DIR/test_object_info_locale"
 "$BUILD_DIR/test_object_info_locale"
+# Item origin: preserve full source race names, accents and suffix commas.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_item_origin_monster_name.c" \
+    -o "$BUILD_DIR/test_item_origin_monster_name"
+"$BUILD_DIR/test_item_origin_monster_name"
 
 # All source class.txt spell names, display-only C99 lookup and English fallback.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic "$ROOT/tests/native/test_spell_names_locale.c" -o "$BUILD_DIR/test_spell_names_locale"
@@ -474,6 +878,36 @@ CC="${CC:-cc}"
     "$ROOT/tests/native/test_menu_visible_tags.c" \
     -o "$BUILD_DIR/test_menu_visible_tags"
 "$BUILD_DIR/test_menu_visible_tags"
+
+# Only genuine byte keycodes may be compared with modal shortcut strings.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_menu_shortcut_code.c" \
+    -o "$BUILD_DIR/test_menu_shortcut_code"
+"$BUILD_DIR/test_menu_shortcut_code"
+
+# Choose a populated initial item tab while preserving current/requested source.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_item_picker_start_source.c" \
+    -o "$BUILD_DIR/test_item_picker_start_source"
+"$BUILD_DIR/test_item_picker_start_source"
+
+# Inventory/equipment/quiver/floor picker keys: only actionable tab targets.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_item_picker_switch_keys.c" \
+    -o "$BUILD_DIR/test_item_picker_switch_keys"
+"$BUILD_DIR/test_item_picker_switch_keys"
+
+# Scrolled and item viewports after Android rotation and filter shrink.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_menu_scroll_viewport.c" \
+    -o "$BUILD_DIR/test_menu_scroll_viewport"
+"$BUILD_DIR/test_menu_scroll_viewport"
+
+# Column-major keyboard moves after rotation and shortened final columns.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_menu_column_navigation.c" \
+    -o "$BUILD_DIR/test_menu_column_navigation"
+"$BUILD_DIR/test_menu_column_navigation"
 
 # Horizontal movement across invalid menu rows must terminate.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
@@ -511,6 +945,58 @@ CC="${CC:-cc}"
     -o "$BUILD_DIR/test_store_menu_flow"
 "$BUILD_DIR/test_store_menu_flow"
 
+# Equipment mentions share a 14-screen-column cell budget in zh-TW.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_inventory_equip_mention.c" \
+    -o "$BUILD_DIR/test_inventory_equip_mention"
+"$BUILD_DIR/test_inventory_equip_mention"
+
+# Visible object list must keep its popup in bounds and prioritize item names.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_object_list_compact_layout.c" \
+    -o "$BUILD_DIR/test_object_list_compact_layout"
+"$BUILD_DIR/test_object_list_compact_layout"
+
+# Numeric, charging and modifier details must never leave half punctuation.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security     "$ROOT/tests/native/test_obj_desc_numeric_utf8.c"     -o "$BUILD_DIR/test_obj_desc_numeric_utf8"
+"$BUILD_DIR/test_obj_desc_numeric_utf8"
+
+# Known chest trap labels and money-kind descriptions are UTF-8 complete.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_obj_desc_chest_money_utf8.c" \
+    -o "$BUILD_DIR/test_obj_desc_chest_money_utf8"
+"$BUILD_DIR/test_obj_desc_chest_money_utf8"
+
+# Scroll effect parentheses and fallback 'of' names must stay complete.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_obj_desc_effect_utf8.c" \
+    -o "$BUILD_DIR/test_obj_desc_effect_utf8"
+"$BUILD_DIR/test_obj_desc_effect_utf8"
+
+# Artifact and ego suffixes must be added as complete UTF-8 units.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_obj_desc_suffix_utf8.c" \
+    -o "$BUILD_DIR/test_obj_desc_suffix_utf8"
+"$BUILD_DIR/test_obj_desc_suffix_utf8"
+
+# Visible inscriptions: complete player UTF-8, atomic status tags and brace.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_obj_desc_inscription_utf8.c" \
+    -o "$BUILD_DIR/test_obj_desc_inscription_utf8"
+"$BUILD_DIR/test_obj_desc_inscription_utf8"
+
+# Core object description grammar must stay within buffers on CJK text.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_obj_desc_name_utf8.c" \
+    -o "$BUILD_DIR/test_obj_desc_name_utf8"
+"$BUILD_DIR/test_obj_desc_name_utf8"
+
+# Object list article/count prefixes and CJK names must remain complete.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
+    "$ROOT/tests/native/test_object_list_name_utf8.c" \
+    -o "$BUILD_DIR/test_object_list_name_utf8"
+"$BUILD_DIR/test_object_list_name_utf8"
+
 # Inventory, equipment and quiver text must not be truncated mid-UTF8.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
     "$ROOT/tests/native/test_object_list_text.c" \
@@ -528,6 +1014,18 @@ CC="${CC:-cc}"
     "$ROOT/tests/native/test_ignore_quality_action_locale.c" \
     -o "$BUILD_DIR/test_ignore_quality_action_locale"
 "$BUILD_DIR/test_ignore_quality_action_locale"
+
+# Ignore-by-kind and ignore-by-ego labels must fit before being published.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_ignore_named_action_locale.c" \
+    -o "$BUILD_DIR/test_ignore_named_action_locale"
+"$BUILD_DIR/test_ignore_named_action_locale"
+
+# Monster knowledge totals preserve the original counters in both locales.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_knowledge_kill_summary_locale.c" \
+    -o "$BUILD_DIR/test_knowledge_kill_summary_locale"
+"$BUILD_DIR/test_knowledge_kill_summary_locale"
 
 # Native bilingual version title and complete UTF-8 buffer boundary.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \

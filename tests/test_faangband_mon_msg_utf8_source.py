@@ -1,0 +1,272 @@
+#!/usr/bin/env python3
+"""Batch 258: complete Chinese monster-event glyphs and grouping metadata.
+
+This verifies the production source gates. It is not a simulated game test.
+"""
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+
+def read(path):
+    return (ROOT / path).read_text(encoding="utf-8")
+
+SOURCE = read("app/src/main/cpp/faangband/mon-msg.c")
+HELPER = read("app/src/main/cpp/faangband/mon-msg-utf8.h")
+PAIN_HELPER = read("app/src/main/cpp/faangband/mon-msg-pain.h")
+NATIVE = read("tests/native/test_faangband_mon_msg_utf8.c")
+RUNNER = read("scripts/test-fa-mon-msg-utf8.sh")
+VERIFY = read("scripts/verify-zh-tw.sh")
+REPOSITORY = read("app/src/main/cpp/faangband/list-mon-message.h")
+PAIN_DATA = read("variant_lib/faangband/gamedata/pain.txt")
+DICT = read("app/src/main/cpp/angband/zh-tw-ui.h")
+FORMATTER = read("app/src/main/cpp/faangband/message.c")
+
+stack = SOURCE.split("static bool stack_message(", 1)[1].split(
+    "static int what_delay(", 1)[0]
+regular = SOURCE.split("bool add_monster_message(", 1)[1].split(
+    "bool add_monster_message_show_damage(", 1)[0]
+damage = SOURCE.split("bool add_monster_message_show_damage(", 1)[1].split(
+    "static void get_subject(", 1)[0]
+subject = SOURCE.split("static void get_subject(", 1)[1].split(
+    "/* State machine constants", 1)[0]
+parser = SOURCE.split("static bool get_message_text(", 1)[1].split(
+    "#undef MSG_PARSE_NORMAL", 1)[0]
+show = SOURCE.split("static void show_message(", 1)[1].split(
+    "void show_monster_messages(", 1)[0]
+
+# The pain-grade message classification remains the same: only the
+# intermediate HP arithmetic is made wide and the invalid divisor guarded.
+pain_logic = SOURCE.split("static int get_pain_msg_code(", 1)[1].split(
+    "void message_pain(", 1)[0]
+assert '#include "mon-msg-pain.h"' in SOURCE
+assert "angdroid_fa_mon_msg_pain_percentage(" in pain_logic
+assert "mon->hp, dam);" in pain_logic
+assert "long newhp" not in pain_logic
+for threshold in ("95", "75", "50", "35", "20", "10"):
+    assert f"percentage > {threshold}" in pain_logic, threshold
+assert "#include <stdint.h>" in PAIN_HELPER
+assert "int64_t previous_hp;" in PAIN_HELPER
+assert "damage <= 0 || remaining_hp <= 0" in PAIN_HELPER
+assert "(int64_t)remaining_hp + (int64_t)damage" in PAIN_HELPER
+assert "(int64_t)remaining_hp * 100" in PAIN_HELPER
+
+# p_race is part of the existing stack identity. It must be assigned in
+# both fresh-entry constructors, including damage notifications.
+for key in (
+    "mon_msg[i].p_race == mon->player_race",
+    "mon_msg[i].race == mon->race",
+    "mon_msg[i].flags == flags",
+    "mon_msg[i].msg_code == msg_code",
+    "mon_msg[i].count = angdroid_fa_mon_msg_next_count(",
+    "mon_msg[i].damage = angdroid_fa_mon_msg_add_damage(",
+):
+    assert key in stack, key
+for part in (regular, damage):
+    assert "mon_msg[size_mon_msg].race = mon->race;" in part
+    assert "mon_msg[size_mon_msg].p_race = mon->player_race;" in part
+    assert "mon_msg[size_mon_msg].flags = flags;" in part
+    assert "mon_msg[size_mon_msg].msg_code = msg_code;" in part
+    assert "mon_msg[size_mon_msg].count = 1;" in part
+    assert "store_monster(mon, msg_code);" in part
+    assert "player->upkeep->notice |= PN_MON_MESSAGE;" in part
+assert "MON_MSG_FLAG_DAMAGE" in damage
+assert "#include <limits.h>" in HELPER
+assert "static inline int angdroid_fa_mon_msg_next_count(" in HELPER
+assert "count >= INT_MAX ? INT_MAX : count + 1" in HELPER
+assert "static inline int angdroid_fa_mon_msg_add_damage(" in HELPER
+assert "current > INT_MAX - damage" in HELPER
+assert "current < INT_MIN - damage" in HELPER
+assert "mon_msg[i].count++" not in stack
+assert "mon_msg[i].damage += damage" not in stack
+
+# Localized display uses exact source-selected names, not independent
+# monster race lookups that could reveal unseen or off-panel identities.
+assert '#include "mon-msg-utf8.h"' in SOURCE
+assert "angdroid_fa_mon_msg_chinese_subject(buf, buflen," in subject
+assert "race->name, race->plural, p_race ? p_race->name : NULL," in subject
+for token in (
+    "rf_has(race->flags, RF_PLAYER_GHOST) && cave->ghost",
+    "rf_has(race->flags, RF_UNIQUE)",
+    "rf_has(race->flags, RF_NAME_COMMA)",
+    "count, invisible, offscreen,",
+    'my_strcpy(buf, "It", buflen);',
+    'strnfmt(buf, buflen, "%d monsters", count);',
+    'strnfmt(buf, buflen, "The %s%s", p_name, race->name);',
+    'my_strcat(buf, " (offscreen)", buflen);',
+    'my_strcat(buf, " ", buflen);',
+):
+    assert token in subject, token
+assert "if (localized) {" in subject
+assert subject.index("angdroid_fa_mon_msg_chinese_subject") < (
+    subject.index('my_strcpy(buf, "It", buflen);'))
+
+# Complete Chinese scalars in a clipped body and always parse until the
+# end of the singular/plural brackets; the original message code is intact.
+for token in (
+    "case MON_MSG_95:", "case MON_MSG_75:", "case MON_MSG_50:",
+    "case MON_MSG_35:", "case MON_MSG_20:", "case MON_MSG_10:",
+    "case MON_MSG_0:",
+    "angdroid_game_ui_text(source,",
+    "bool translated = (localized != source);",
+    "source = localized;",
+    "for (size_t i = 0; i < maxlen; i++)",
+    "bool writable = true;",
+    "if (!writable) continue;",
+    "if (translated) {",
+    "angdroid_utf8_next_scalar(source + i, &cp);",
+    "if (n > buflen - pos - 1)",
+    "memcpy(buf + pos, source + i, n);",
+    "i += n - 1;",
+    "buf[pos++] = '?';",
+    "buf[pos++] = cur;",
+    "assert(state == MSG_PARSE_NORMAL);",
+    "buf[pos] = '\\0';",
+    "return translated;",
+):
+    assert token in parser, token
+assert "i < maxlen && pos < buflen - 1" not in parser
+assert parser.index("angdroid_game_ui_text(source,") < parser.index(
+    "for (size_t i = 0; i < maxlen; i++)")
+assert parser.index("assert(state == MSG_PARSE_NORMAL);") > parser.index(
+    "for (size_t i = 0; i < maxlen; i++)")
+
+# Batch 260: every displayed component is atomic (whole ghost name,
+# full plural number, complete species, or truthful generic fallback).
+# A tiny buffer must never contain only a location marker or comma.
+for token in (
+    "static inline bool angdroid_fa_mon_msg_can_append(",
+    "static inline size_t angdroid_fa_mon_msg_append(",
+    "static inline size_t angdroid_fa_mon_msg_generic(",
+    "strlen(component) <= capacity - used - 1 &&",
+    "static inline bool angdroid_fa_mon_msg_valid_utf8(",
+    "angdroid_utf8_next_scalar(name + offset, &scalar)",
+    "len == 1 && scalar == 0xFFFDu",
+    "angdroid_fa_mon_msg_valid_utf8(component);",
+    "!angdroid_fa_mon_msg_valid_utf8(plural)",
+    'const char *fallback = plural ? "怪物" : "牠";',
+    'static const char suffix[] = "（畫面外）";',
+    "suffix_fits = offscreen &&",
+    'capacity > (sizeof(suffix) - 1) + (sizeof("牠") - 1);',
+    "comma_fits = !invisible && comma &&",
+    'capacity > reserved_bytes + (sizeof("，") - 1) +',
+    "base_capacity = capacity - reserved_bytes;",
+    'snprintf(number, sizeof(number), "%d 隻怪物", count)',
+    'snprintf(number, sizeof(number), "%d 隻", count)',
+    "if (ghost_name[0] &&",
+    "if (race_name && race_name[0]) {",
+    "else if (unique) {",
+    "const char *visible_race =",
+    "angdroid_fa_mon_msg_can_append(",
+    "if (qualifier_len < remaining &&",
+    "race_len <= remaining - qualifier_len - 1",
+    "/* Keep a complete species rather than",
+    "/* A truncated race name or number",
+    'angdroid_fa_mon_msg_append(dst, capacity, used, suffix);',
+    'angdroid_fa_mon_msg_append(dst, capacity, used, "，");',
+):
+    assert token in HELPER, token
+
+assert HELPER.index("if (used != 0 && suffix_fits)") < HELPER.index(
+    "if (used != 0 && comma_fits)")
+assert "if (!dst || !capacity) return;" in HELPER
+assert "if (count <= 1)" in HELPER
+assert "if (visible_race && visible_race[0] &&" in HELPER
+assert "angdroid_fa_mon_msg_valid_utf8(race_name)) {" in HELPER
+assert "angdroid_fa_mon_msg_valid_utf8(player_race_name)) {" in HELPER
+assert 'CHECK(strcmp(subject, "艾莉絲") == 0);' in NATIVE
+assert "const int values[] = {INT_MIN, INT_MIN + 1" in NATIVE
+assert "if (race_name && race_name[0] &&" in HELPER
+assert "angdroid_utf8_append_complete(dst, capacity, used, component)" in HELPER
+
+# Damage grouping, sound category, singular punctuation, and averaging
+# arithmetic remain the original calculations.
+assert 'char subject[256] = "";' in show
+assert "char body[256];" in show
+assert "get_message_type(msg->msg_code, msg->race)" in show
+assert "get_message_text(body, sizeof(body)," in show
+assert "get_subject(subject, sizeof(subject)," in show
+assert "msg->p_race," in show
+assert "msg->count > 1" in show
+assert "skip_subject(msg->msg_code)" in show
+assert "MON_MSG_FLAG_INVISIBLE" in show
+assert "MON_MSG_FLAG_OFFSCREEN" in show
+assert "MON_MSG_FLAG_DAMAGE" in show
+assert 'localized ? "%s%s（%d）" :' in show
+assert '"%s%s (%d)"' in show
+assert 'localized ? "%s%s（平均 %d）" :' in show
+assert '"%s%s (average %d)"' in show
+assert "angdroid_fa_mon_msg_average_damage(" in show
+assert "msg->damage, msg->count)" in show
+assert "static inline int angdroid_fa_mon_msg_average_damage(" in HELPER
+assert "if (count <= 0) return 0;" in HELPER
+assert "total_damage / count +" in HELPER
+assert "total_damage % count >= count / 2 + count % 2" in HELPER
+assert "(msg->count + 1)" not in show
+assert 'msgt(msg_type, "%s%s", subject, body);' in show
+
+for token in (
+    "這隻獸人", "3 隻獸人們", "這隻半精靈 獸人",
+    "這隻獸人（畫面外），", "這隻半精靈 獸人（畫面外），",
+    "非常非常漫長的玩家種族前綴",
+    "艾莉絲（幽靈戰士）", "艾莉絲（幽靈戰士）（畫面外）",
+    "4 隻怪物", "牠（畫面外）", "這隻獸人，",
+    "超級無敵漫長的獸人種族名稱", "valid_utf8(narrow)",
+    "ends_with(narrow, offscreen)", "char one[1]",
+    "malformed_race", "malformed_ghost", "malformed_plural",
+    "malformed_qualifier", "angdroid_fa_mon_msg_valid_utf8(",
+    "angdroid_fa_mon_msg_average_damage(", "INT_MAX",
+    "for (size_t cap = 1; cap <= sizeof narrow; ++cap)",
+    "strcmp(narrow, offscreen) != 0",
+    'strcmp(narrow, "（畫面外），") != 0',
+    "strcmp(narrow, \"，\") != 0",
+    "INT_MAX",
+
+):
+    assert token in NATIVE, token
+assert "angdroid_fa_mon_msg_pain_percentage(32767, INT_MAX)" in NATIVE
+assert "angdroid_fa_mon_msg_pain_percentage(INT_MAX, INT_MAX)" in NATIVE
+assert "for (hp = 0; hp <= 32767; hp += 131)" in NATIVE
+assert '#include "app/src/main/cpp/faangband/mon-msg-pain.h"' in NATIVE
+assert "-std=c99 -Wall -Wextra -Werror -pedantic" in RUNNER
+assert "test_faangband_mon_msg_utf8.c" in RUNNER
+assert "test-fa-mon-msg-utf8.sh" in VERIFY
+assert "test_faangband_mon_msg_utf8_source.py" in VERIFY
+assert "MON_MSG(HIT_HARD," in REPOSITORY
+assert "MON_MSG(DIE," in REPOSITORY
+# A composed subject and body already fit well below the actual message.c
+# variadic formatting buffer. The game uses two distinct 256-byte arrays,
+# so enlarging or reformatting msgt() is unnecessary.
+import json
+import re
+pattern = re.compile(
+    r'^\s*\{\s*("(?:\\.|[^"\\])*")\s*,\s*("(?:\\.|[^"\\])*")\s*\},',
+    re.MULTILINE)
+dictionary = {json.loads(en): json.loads(zh)
+              for en, zh in pattern.findall(DICT)}
+list_keys = []
+for line in REPOSITORY.splitlines():
+    if line.startswith("MON_MSG("):
+        quoted = re.findall(r'"(?:\\.|[^"\\])*"', line)
+        if quoted:
+            value = json.loads(quoted[-1])
+            if value:
+                list_keys.append(value)
+pain_keys = list(dict.fromkeys(
+    line.split("message:", 1)[1] for line in PAIN_DATA.splitlines()
+    if line.startswith("message:")))
+assert len(list_keys) == 58
+assert len(pain_keys) == 65
+assert all(key in dictionary for key in list_keys + pain_keys)
+assert max(len(dictionary[key].encode("utf-8"))
+           for key in list_keys + pain_keys) == 42
+assert 'void msgt(unsigned int type, const char *fmt, ...)' in FORMATTER
+assert 'char buf[1024];' in FORMATTER
+assert 'vstrnfmt(buf, sizeof(buf), fmt, vp);' in FORMATTER
+# Maximum NUL-terminated subject and message body, plus the signed
+# integer damage/average suffix. Both intact and under the 1023-byte cap.
+max_damage_tail = len("（平均 -2147483648）".encode("utf-8"))
+assert 255 + 255 + max_damage_tail < 1024
+assert 'char subject[256] = "";' in show
+assert 'char body[256];' in show
+
+print("PASS: stacked damage race identity, plural/ghost/hidden UTF-8 subjects")

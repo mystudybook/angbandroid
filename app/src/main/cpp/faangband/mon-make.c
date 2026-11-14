@@ -23,6 +23,7 @@
 #include "mon-group.h"
 #include "mon-lore.h"
 #include "mon-make.h"
+#include "mon-damage-hp.h"
 #include "mon-predicate.h"
 #include "mon-spell.h"
 #include "mon-timed.h"
@@ -1870,12 +1871,12 @@ static bool place_new_monster_one(struct chunk *c, struct loc grid,
 		}
 	}
 
-	/* Uniques get a fixed amount of HP */
-	if (rf_has(race->flags, RF_UNIQUE))
-		mon->maxhp = race->avg_hp;
-	else {
-		mon->maxhp = mon_hp(race, RANDOMISE);
-		mon->maxhp = MAX(mon->maxhp, 1);
+	/* Uniques keep fixed HP and others keep their random roll.  Check the
+	 * int result before storing it in the 16-bit monster HP field. */
+	{
+		int generated_hp = rf_has(race->flags, RF_UNIQUE) ?
+			race->avg_hp : MAX(mon_hp(race, RANDOMISE), 1);
+		mon->maxhp = angdroid_fa_mon_maxhp_from_roll(generated_hp);
 	}
 
 	/* And start out fully healthy */

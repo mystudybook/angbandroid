@@ -24,6 +24,7 @@
 #include "zh-tw-ui.h"
 #include "z-textblock.h"
 #include "../curses/unicode_layout.h"
+#include "textblock-pager-layout.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -112,11 +113,26 @@ static void display_area(const wchar_t *text, const uint8_t *attrs,
 	n_lines = MIN(n_lines, (size_t) area.page_rows);
 
 	for (i = 0; i < n_lines; i++) {
+		size_t columns = 0;
+		size_t available = (size_t)MAX(area.width, 0);
 		Term_erase(area.col, area.row + i, area.width);
+		Term_gotoxy(area.col, area.row + i);
 		for (j = 0; j < line_lengths[line_from + i]; j++) {
-			Term_putch(area.col + j, area.row + i,
-					attrs[line_starts[line_from + i] + j],
-					text[line_starts[line_from + i] + j]);
+			size_t offset = line_starts[line_from + i] + j;
+			wchar_t glyph = text[offset];
+			int attr = attrs[offset];
+			size_t span = angdroid_is_wide_text(glyph, attr) ? 2u : 1u;
+
+			/* Term_putch() is a fixed-cell API: it cannot emit a wide
+			 * text glyph without clobbering the next grid cell. The
+			 * stream API reserves both cells and advances correctly. */
+			if (span > available - columns) {
+				/* A 1-cell region cannot fit a CJK glyph. */
+				if (columns < available) Term_addch(attr, L'?');
+				break;
+			}
+			Term_addch(attr, angdroid_stream_glyph(glyph));
+			columns += span;
 		}
 	}
 }
@@ -132,6 +148,10 @@ void textui_textblock_place(textblock *tb, region orig_area, const char *header)
 	size_t *line_starts = NULL, *line_lengths = NULL;
 	size_t n_lines;
 
+	/* A zero-height or zero-width subwindow has no drawable content.
+	 * Avoid converting a negative row count into a huge size_t. */
+	if (area.width <= 0 || area.page_rows <= 0) return;
+
 	n_lines = textblock_calculate_lines(tb,
 			&line_starts, &line_lengths, area.width);
 
@@ -143,7 +163,7 @@ void textui_textblock_place(textblock *tb, region orig_area, const char *header)
 	}
 
 	if (n_lines > (size_t) area.page_rows)
-		n_lines = area.page_rows;
+		n_lines = (size_t) area.page_rows;
 
 	display_area(textblock_text(tb), textblock_attrs(tb), line_starts,
 	             line_lengths, n_lines, area, 0);
@@ -162,65 +182,82 @@ struct keypress textui_textblock_show(textblock *tb, region orig_area, const cha
 
 	size_t *line_starts = NULL, *line_lengths = NULL;
 	size_t n_lines;
+	int has_footer = 0;
+	int content_rows;
 
 	struct keypress ch = KEYPRESS_NULL;
+
+	if (area.width <= 0 || area.page_rows <= 0) return ch;
+
+	/* A header takes one row. Reserve a two-row footer only when at
+	 * least one text row would remain; very small mobile views still
+	 * scroll, but omit the hint rather than calculating negative rows. */
+	content_rows = angdroid_textblock_pager_content_rows(
+		area.page_rows, header != NULL, &has_footer);
 
 	n_lines = textblock_calculate_lines(tb,
 			&line_starts, &line_lengths, area.width);
 
 	screen_save();
 
-	/* make room for the footer */
-	area.page_rows -= 2;
-
 	if (header != NULL) {
-		area.page_rows--;
 		Term_erase(area.col, area.row, area.width);
 		c_put_str(COLOUR_L_BLUE, header, area.row, area.col);
 		area.row++;
 	}
+	area.page_rows = content_rows;
 
-	if (n_lines > (size_t) area.page_rows) {
-		int start_line = 0;
+	if (content_rows == 0) {
+		/* Only the header fits. Let the player dismiss it normally. */
+		ch = inkey();
+	} else if (n_lines > (size_t) content_rows) {
+		size_t start_line = 0;
+		size_t max_start = n_lines - (size_t) content_rows;
 
-		Term_erase(area.col, area.row + area.page_rows, area.width);
-		Term_erase(area.col, area.row + area.page_rows + 1, area.width);
-		c_put_str(COLOUR_L_BLUE, angdroid_game_ui_text("(Up/down or ESCAPE to exit.)", angdroid_zh_tw_enabled()),
-				area.row + area.page_rows + 1, area.col);
+		if (has_footer) {
+			Term_erase(area.col, area.row + content_rows, area.width);
+			Term_erase(area.col, area.row + content_rows + 1, area.width);
+			c_put_str(COLOUR_L_BLUE,
+				angdroid_game_ui_text("(Up/down or ESCAPE to exit.)",
+					angdroid_zh_tw_enabled()),
+				area.row + content_rows + 1, area.col);
+		}
 
-		/* Pager mode */
-		while (1) {			
-
+		/* Pager mode. Bounds stay within n_lines, even on tiny screens. */
+		while (1) {
 			display_area(textblock_text(tb), textblock_attrs(tb), line_starts,
 					line_lengths, n_lines, area, start_line);
 
 			ch = inkey();
-			if (ch.code == ARROW_UP)
-				start_line--;
-			else if (ch.code == ESCAPE || ch.code == 'q' || ch.code == 'x')
+			if (ch.code == ARROW_UP) {
+				if (start_line > 0) --start_line;
+			} else if (ch.code == ESCAPE || ch.code == 'q' || ch.code == 'x') {
 				break;
-			else if (ch.code == ']' || ch.code == '[')
-				/* Special case to deal with monster and object lists -
-				 * see bug #2120 */
+			} else if (ch.code == ']' || ch.code == '[') {
+				/* Preserve the existing monster/object list key handling. */
 				break;
-			else if (ch.code == ARROW_DOWN)
-				start_line++;
-			else if (ch.code == ' ')
-				start_line += area.page_rows;
-
-			if (start_line < 0)
-				start_line = 0;
-			if (start_line + (size_t) area.page_rows > n_lines)
-				start_line = n_lines - area.page_rows;
+			} else if (ch.code == ARROW_DOWN) {
+				if (start_line < max_start) ++start_line;
+			} else if (ch.code == ' ') {
+				size_t step = (size_t) content_rows;
+				start_line = max_start - start_line < step ?
+					max_start : start_line + step;
+			}
+			start_line = angdroid_textblock_pager_clamp_start(
+				start_line, n_lines, content_rows);
 		}
 	} else {
 		display_area(textblock_text(tb), textblock_attrs(tb), line_starts,
 				line_lengths, n_lines, area, 0);
 
-		Term_erase(area.col, area.row + n_lines, area.width);
-		Term_erase(area.col, area.row + n_lines + 1, area.width);
-		c_put_str(COLOUR_L_BLUE, angdroid_game_ui_text("(Press any key to continue.)", angdroid_zh_tw_enabled()),
+		if (has_footer) {
+			Term_erase(area.col, area.row + n_lines, area.width);
+			Term_erase(area.col, area.row + n_lines + 1, area.width);
+			c_put_str(COLOUR_L_BLUE,
+				angdroid_game_ui_text("(Press any key to continue.)",
+					angdroid_zh_tw_enabled()),
 				area.row + n_lines + 1, area.col);
+		}
 		ch = inkey();
 	}
 
@@ -231,7 +268,6 @@ struct keypress textui_textblock_show(textblock *tb, region orig_area, const cha
 
 	return (ch);
 }
-
 
 /**
  * ------------------------------------------------------------------------

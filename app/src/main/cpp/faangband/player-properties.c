@@ -41,33 +41,34 @@ struct player_ability *lookup_ability(const char *type, int index, int value)
 }
 
 bool class_has_ability(const struct player_class *class,
-					   struct player_ability *ability)
+                       struct player_ability *ability)
 {
-	if (streq(ability->type, "player") &&
-		pf_has(class->pflags, ability->index)) {
-		return true;
-	} else if (streq(ability->type, "object") &&
-			   of_has(class->flags, ability->index)) {
-		return true;
-	}
-	return false;
+    if (!class || !ability || !ability->type || ability->index < 0)
+        return false;
+    if (streq(ability->type, "player"))
+        return ability->index < PF_MAX &&
+            pf_has(class->pflags, ability->index);
+    if (streq(ability->type, "object"))
+        return ability->index < OF_MAX &&
+            of_has(class->flags, ability->index);
+    return false;
 }
 
 bool race_has_ability(const struct player_race *race,
-					  struct player_ability *ability)
+                      struct player_ability *ability)
 {
-	if (streq(ability->type, "player") &&
-		pf_has(race->pflags, ability->index)) {
-		return true;
-	} else if (streq(ability->type, "object") &&
-			   of_has(race->flags, ability->index)) {
-		return true;
-	} else if (streq(ability->type, "element") &&
-			   (race->el_info[ability->index].res_level == ability->value)) {
-		return true;
-	}
-
-	return false;
+    if (!race || !ability || !ability->type || ability->index < 0)
+        return false;
+    if (streq(ability->type, "player"))
+        return ability->index < PF_MAX &&
+            pf_has(race->pflags, ability->index);
+    if (streq(ability->type, "object"))
+        return ability->index < OF_MAX &&
+            of_has(race->flags, ability->index);
+    if (streq(ability->type, "element"))
+        return ability->index < ELEM_MAX &&
+            race->el_info[ability->index].res_level == ability->value;
+    return false;
 }
 
 /**
@@ -85,7 +86,16 @@ void gain_specialty(void)
 	/* Make one choice */
 	if (gain_specialty_menu(&pick)) {
 		char buf[120];
-		struct player_ability *ability = lookup_ability("player", pick, 0);
+		struct player_ability *ability;
+
+        /* The menu may have been cancelled or source data may be
+         * incomplete. Never change player flags on an invalid ID. */
+        if (pick <= PF_NONE || pick >= PF_MAX ||
+            pf_has(player->specialties, pick) ||
+            !pf_has(player->class->specialties, pick))
+            return;
+        ability = lookup_ability("player", pick, 0);
+        if (!ability || !ability->name) return;
 
 		/* Add it to the specialties */
 		pf_on(player->specialties, pick);
@@ -112,42 +122,46 @@ void gain_specialty(void)
  */
 void view_abilities(void)
 {
-	int i;
-	struct player_ability *ability;
-	int num_abilities = 0;
-	struct player_ability ability_list[32];
+    int i, capacity = 0, count = 0;
+    struct player_ability *ability;
+    struct player_ability *list;
 
-	/* Count the number of specialties we know */
-	num_abilities = 0;
-	for (i = 0; i < PF_MAX; i++) {
-		if (!pf_has(player->specialties, i)) continue;
-		memcpy(&ability_list[num_abilities], lookup_ability("player", i, 0),
-			   sizeof(struct player_ability));
-		ability_list[num_abilities++].group = PLAYER_FLAG_SPECIAL;
-	}
+    /* All three sources can exceed the old fixed 32-element stack array.
+     * Count each actual entry before copying to avoid a buffer overflow. */
+    for (i = 0; i < PF_MAX; ++i) {
+        if (pf_has(player->specialties, i) &&
+            lookup_ability("player", i, 0))
+            ++capacity;
+    }
+    for (ability = player_abilities; ability; ability = ability->next) {
+        if (class_has_ability(player->class, ability)) ++capacity;
+        if (race_has_ability(player->race, ability)) ++capacity;
+    }
 
-	/* Count the number of class powers we have */
-	for (ability = player_abilities; ability; ability = ability->next) {
-		if (class_has_ability(player->class, ability)) {
-			memcpy(&ability_list[num_abilities], ability,
-				   sizeof(struct player_ability));
-			ability_list[num_abilities++].group = PLAYER_FLAG_CLASS;
-		}
-	}
+    if (capacity == 0) return;
+    list = mem_alloc((size_t)capacity * sizeof(*list));
 
-	/* Count the number of race powers we have */
-	for (ability = player_abilities; ability; ability = ability->next) {
-		if (race_has_ability(player->race, ability)) {
-			memcpy(&ability_list[num_abilities], ability,
-				   sizeof(struct player_ability));
-			ability_list[num_abilities++].group = PLAYER_FLAG_RACE;
-		}
-	}
+    /* Preserve the original specialty, class, race display order. */
+    for (i = 0; i < PF_MAX; ++i) {
+        if (!pf_has(player->specialties, i)) continue;
+        ability = lookup_ability("player", i, 0);
+        if (!ability) continue;
+        list[count] = *ability;
+        list[count++].group = PLAYER_FLAG_SPECIAL;
+    }
+    for (ability = player_abilities; ability; ability = ability->next) {
+        if (!class_has_ability(player->class, ability)) continue;
+        list[count] = *ability;
+        list[count++].group = PLAYER_FLAG_CLASS;
+    }
+    for (ability = player_abilities; ability; ability = ability->next) {
+        if (!race_has_ability(player->race, ability)) continue;
+        list[count] = *ability;
+        list[count++].group = PLAYER_FLAG_RACE;
+    }
 
-	/* View choices until user exits */
-	view_ability_menu(ability_list, num_abilities);
-
-	return;
+    view_ability_menu(list, count);
+    mem_free(list);
 }
 
 

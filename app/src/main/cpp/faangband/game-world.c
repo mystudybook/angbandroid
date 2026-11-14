@@ -37,6 +37,7 @@
 #include "source.h"
 #include "target.h"
 #include "trap.h"
+#include "../angband/zh-tw-ui.h"
 
 uint16_t daycount = 0;
 uint32_t seed_randart;		/* Hack -- consistent random artifacts */
@@ -314,14 +315,21 @@ static void recharged_notice(const struct object *obj, bool all)
 	/* Disturb the player */
 	disturb(player);
 
-	/* Notify the player */
+	/* Notification formatting only; recharge state and item name stay intact. */
 	if (obj->number > 1) {
-		if (all) msg("Your %s have recharged.", o_name);
-		else msg("One of your %s has recharged.", o_name);
-	} else if (obj->artifact)
-		msg("The %s has recharged.", o_name);
-	else
-		msg("Your %s has recharged.", o_name);
+		if (all)
+			msg(angdroid_zh_tw_enabled() ? "你的%s已全部充能完畢。" :
+				"Your %s have recharged.", o_name);
+		else
+			msg(angdroid_zh_tw_enabled() ? "你的一件%s已充能完畢。" :
+				"One of your %s has recharged.", o_name);
+	} else if (obj->artifact) {
+		msg(angdroid_zh_tw_enabled() ? "%s已充能完畢。" :
+			"The %s has recharged.", o_name);
+	} else {
+		msg(angdroid_zh_tw_enabled() ? "你的%s已充能完畢。" :
+			"Your %s has recharged.", o_name);
+	}
 }
 
 
@@ -420,7 +428,8 @@ static void sun_banish(void)
 
 	process_monsters(0);
 	if (some_gone) {
-		msg("Creatures of the darkness flee from the sunlight!");
+		msg("%s", angdroid_game_ui_text("Creatures of the darkness flee from the sunlight!",
+				angdroid_zh_tw_enabled()));
 	}
 }
 
@@ -474,8 +483,14 @@ static void ghost_challenge(void)
 {
 	struct monster_race *race = &r_info[cave->ghost->race];
 
-	msg("%s, the %s %s", cave->ghost->name, race->name,
-		challenge_text[randint0(14)]);
+	/* Keep exactly one RNG draw and preserve the original English challenge. */
+	const char *challenge = challenge_text[randint0(14)];
+	if (angdroid_zh_tw_enabled()) {
+		msg("%s（%s）%s", cave->ghost->name, race->name,
+			angdroid_game_ui_text(challenge, true));
+	} else {
+		msg("%s, the %s %s", cave->ghost->name, race->name, challenge);
+	}
 }
 
 /**
@@ -615,11 +630,13 @@ void process_world(struct chunk *c)
 
 			if (dawn) {
 				/* Day breaks */
-				msg("The sun has risen.");
+				msg("%s", angdroid_game_ui_text("The sun has risen.",
+				angdroid_zh_tw_enabled()));
 				sun_banish();
 			} else {
 				/* Night falls */
-				msg("The sun has fallen.");
+				msg("%s", angdroid_game_ui_text("The sun has fallen.",
+				angdroid_zh_tw_enabled()));
 			}
 
 			/* Illuminate */
@@ -707,17 +724,20 @@ void process_world(struct chunk *c)
 		bool hardy = player_has(player, PF_HARDY);
 
 		if (one_in_(hardy ? 4 : 2)) {
-			msg("The Black Breath sickens you.");
+			msg("%s", angdroid_game_ui_text("The Black Breath sickens you.",
+				angdroid_zh_tw_enabled()));
 			player_stat_dec(player, STAT_CON, false);
 		}
 		if (one_in_(hardy ? 4 : 2)) {
-			msg("The Black Breath saps your strength.");
+			msg("%s", angdroid_game_ui_text("The Black Breath saps your strength.",
+				angdroid_zh_tw_enabled()));
 			player_stat_dec(player, STAT_STR, false);
 		}
 		if (one_in_(hardy ? 4 : 2)) {
 			/* Life draining */
 			int drain = 100 + (player->exp / 100) * z_info->life_drain_percent;
-			msg("The Black Breath dims your life force.");
+			msg("%s", angdroid_game_ui_text("The Black Breath dims your life force.",
+				angdroid_zh_tw_enabled()));
 			player_exp_lose(player, drain, false);
 		}
 	}
@@ -768,7 +788,8 @@ void process_world(struct chunk *c)
 		/* Faint occasionally */
 		if (!player->timed[TMD_PARALYZED] && one_in_(10)) {
 			/* Message */
-			msg("You faint from the lack of food.");
+			msg("%s", angdroid_game_ui_text("You faint from the lack of food.",
+				angdroid_zh_tw_enabled()));
 			disturb(player);
 
 			/* Faint (bypass free action) */
@@ -877,11 +898,13 @@ void process_world(struct chunk *c)
 			/* Determine the level */
 			if (player->place != player->home) {
 				int new_last_place = (player->upkeep->arena_level) ? player->last_place : 0;
-				msgt(MSG_TPLEVEL, "You feel yourself yanked homewards!");
+				msgt(MSG_TPLEVEL, "%s", angdroid_game_ui_text("You feel yourself yanked homewards!",
+					angdroid_zh_tw_enabled()));
 				player_change_place(player, player->home);
 				player->last_place = new_last_place;
 			} else {
-				msgt(MSG_TPLEVEL, "You feel yourself yanked away!");
+				msgt(MSG_TPLEVEL, "%s", angdroid_game_ui_text("You feel yourself yanked away!",
+					angdroid_zh_tw_enabled()));
 				player_change_place(player, player->recall_pt);
 			}
 		}
@@ -909,11 +932,13 @@ void process_world(struct chunk *c)
 
 			/* Determine the level */
 			if (lev->depth > player->depth) {
-				msgt(MSG_TPLEVEL, "The floor opens beneath you!");
+				msgt(MSG_TPLEVEL, "%s", angdroid_game_ui_text("The floor opens beneath you!",
+					angdroid_zh_tw_enabled()));
 				player_change_place(player, target_place);
 			} else {
 				/* Otherwise do something disastrous */
-				msgt(MSG_TPLEVEL, "You are thrown back in an explosion!");
+				msgt(MSG_TPLEVEL, "%s", angdroid_game_ui_text("You are thrown back in an explosion!",
+					angdroid_zh_tw_enabled()));
 				effect_simple(EF_DESTRUCTION, source_none(), "0", 0, 5, 0, 0, 0, NULL);
 			}
 		}

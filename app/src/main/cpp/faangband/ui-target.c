@@ -45,6 +45,8 @@
 #include "ui-term.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
 
 /*
  * Holds state passed between target_set_interactive_aux() and the handlers
@@ -118,74 +120,154 @@ int target_dir_allow(struct keypress ch, bool allow_5)
 /**
  * Display targeting help at the bottom of the screen.
  */
+/* Keep targeting help on the current bottom row and within UTF-8
+ * terminal columns. Long translations must not spill into the map or
+ * leave an incomplete Han glyph on a narrow Android display. */
+static void fa_target_draw_short_help(int row)
+{
+    char visible[128];
+    const char *prompt = angdroid_game_ui_text(
+        "Press '?' for help.", angdroid_zh_tw_enabled());
+    int width = Term ? Term->wid - 1 : 0;
+
+    if (!Term || Term->hgt <= 0 || row < 0 || row >= Term->hgt)
+        return;
+    if (width < 1) {
+        prt("", row, 0);
+        return;
+    }
+    angdroid_menu_copy_columns(visible, sizeof(visible), prompt,
+        (size_t)width);
+    prt(visible, row, 0);
+}
+
+/* One visual terminal row for target details and compact help. Source
+ * descriptions may already have reached their fixed byte formatter limit:
+ * replacing an incomplete final UTF-8 sequence with '?' avoids broken
+ * wide glyphs, while leaving all game and monster data unchanged. */
+static void fa_target_draw_bounded_line(const char *description, int row)
+{
+    char visible[TARGET_OUT_VAL_SIZE];
+    int width;
+
+    if (!Term || Term->hgt <= 0 || row < 0 || row >= Term->hgt)
+        return;
+    width = Term->wid - 1;
+    if (width < 1) {
+        prt("", row, 0);
+        return;
+    }
+    angdroid_menu_copy_columns(visible, sizeof(visible), description,
+        (size_t)width);
+    prt(visible, row, 0);
+}
+
+/* inkey_m() swallows terminal resize events, leaving the previous
+ * target-description line clipped for the old display. Redraw the SAME
+ * description and restore the map cursor each time the display changes.
+ * Keep the original Escape, Android button, and mouse event semantics. */
+static ui_event fa_target_inkey_described(
+    const char *description, int y, int x)
+{
+    ui_event press = EVENT_EMPTY;
+
+    for (;;) {
+        press = inkey_ex();
+        if (press.type == EVT_RESIZE) {
+            /* A terminal that cannot show a meaningful target row must
+             * cancel, not silently accept the next queued mouse/key. */
+            if (!Term || Term->wid < 3 || Term->hgt < 1) {
+                if (Term && Term->wid > 0 && Term->hgt > 0)
+                    prt("", 0, 0);
+                press.type = EVT_KBRD;
+                press.key.code = ESCAPE;
+                press.key.mods = 0;
+                return press;
+            }
+            fa_target_draw_bounded_line(description, 0);
+            move_cursor_relative(y, x);
+            continue;
+        }
+        if (press.type == EVT_NONE) continue;
+        if (press.type == EVT_ESCAPE) {
+            press.type = EVT_KBRD;
+            press.key.code = ESCAPE;
+            press.key.mods = 0;
+        } else if (press.type == EVT_BUTTON) {
+            press.type = EVT_KBRD;
+        }
+        if (press.type == EVT_KBRD || press.type == EVT_MOUSE)
+            return press;
+    }
+}
+
+/* A short landscape terminal cannot safely show the full multi-line help.
+ * Keep map rows available and put the essential controls in its footer. */
+static void fa_target_draw_compact_help(int row)
+{
+    fa_target_draw_bounded_line(angdroid_zh_tw_enabled() ?
+        "q 離開，t 設目標，方向／點擊查看，? 說明" :
+        "q: exit, t: target, dir/click: look, ?: help", row);
+}
+
 void target_display_help(bool monster, bool object, bool free)
 {
-	/* Determine help location */
-	int wid, hgt, help_loc;
-	Term_get_size(&wid, &hgt);
-	help_loc = hgt - HELP_HEIGHT;
-	
-	/* Clear */
-	clear_from(help_loc);
+    int wid, hgt, help_loc;
+    bool zh = angdroid_zh_tw_enabled();
+    char third[TARGET_OUT_VAL_SIZE];
 
-	/* Prepare help hooks */
-	text_out_hook = text_out_to_screen;
-	text_out_indent = 1;
-	Term_gotoxy(1, help_loc);
+    Term_get_size(&wid, &hgt);
+    if (wid <= 1 || hgt <= 0) return;
+    if (hgt <= HELP_HEIGHT + 2 || wid < 64) {
+        /* Never clear the map or let translated help wrap beyond the
+         * bottom on a short or narrow rotated phone. */
+        fa_target_draw_compact_help(hgt - 1);
+        return;
+    }
 
-	/* Display help */
-	text_out_c(COLOUR_L_GREEN, "<dir>");
-	text_out(" and ");
-	text_out_c(COLOUR_L_GREEN, "<click>");
-	text_out(" look around. '");
-	text_out_c(COLOUR_L_GREEN, "g");
-	text_out("' moves to selection. '");
-	text_out_c(COLOUR_L_GREEN, "p");
-	text_out("' selects player. '");
-	text_out_c(COLOUR_L_GREEN, "q");
-	text_out("' exits. '");
-	text_out_c(COLOUR_L_GREEN, "r");
-	text_out("' displays details. '");
+    /* HELP_HEIGHT is three lines. The old sequence of text_out() calls
+     * could produce far more than three wrapped rows, overwriting the
+     * map. Write exactly the reserved rows with UTF-8 cell clipping. */
+    help_loc = hgt - HELP_HEIGHT;
+    clear_from(help_loc);
+    fa_target_draw_bounded_line(zh ?
+        "方向／點擊查看，g 移動，p 玩家，q 離開" :
+        "Dir/click: look; g: move; p: player; q: exit", help_loc);
+    fa_target_draw_bounded_line(free ?
+        (zh ? "m 重要位置，r 詳情，? 收起說明" :
+              "m: notable spots; r: details; ?: close help") :
+        (zh ? "+/- 切換目標，o 自由選取，r 詳情，? 收起說明" :
+              "+/-: cycle; o: free; r: details; ?: close help"),
+        help_loc + 1);
 
-	if (free) {
-		text_out_c(COLOUR_L_GREEN, "m");
-		text_out("' restricts to interesting places.");
-	} else {
-		text_out_c(COLOUR_L_GREEN, "+");
-		text_out("' and '");
-		text_out_c(COLOUR_L_GREEN, "-");
-		text_out("' cycle through places. '");
-		text_out_c(COLOUR_L_GREEN, "o");
-		text_out("' allows free selection.");
-	}
-	
-	if (monster || free) {
-		text_out(" '");
-		text_out_c(COLOUR_L_GREEN, "t");
-		text_out("' targets selection.");
-	}
+    if (object) {
+        unsigned char key = cmd_lookup_key(CMD_IGNORE,
+            OPT(player, rogue_like_commands) ?
+            KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG);
+        char label[3];
 
-	if (object) {
-		unsigned char key = cmd_lookup_key(CMD_IGNORE,
-			(OPT(player, rogue_like_commands)) ?
-			KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG);
-		char label[3];
-
-		if (KTRL(key) == key) {
-			label[0] = '^';
-			label[1] = UN_KTRL(key);
-			label[2] = '\0';
-		} else {
-			label[0] = key;
-			label[1] = '\0';
-		}
-		text_out(" '");
-		text_out_c(COLOUR_L_GREEN, "%s", label);
-		text_out("' ignores selection.");
-	}
-
-	/* Reset */
-	text_out_indent = 0;
+        /* Retain the keymap-defined item-ignore shortcut, including
+         * control-key notation. This is just its display label. */
+        if (KTRL(key) == key) {
+            label[0] = '^';
+            label[1] = UN_KTRL(key);
+            label[2] = '\0';
+        } else {
+            label[0] = key;
+            label[1] = '\0';
+        }
+        strnfmt(third, sizeof(third), zh ?
+            "%s%s 忽略，Enter/空白 下一項" :
+            "%s%s: ignore; Enter/space: next",
+            (monster || free) ? (zh ? "t 設目標，" : "t: target; ") : "",
+            label);
+    } else {
+        strnfmt(third, sizeof(third), "%s", monster || free ?
+            (zh ? "t 設目標，Enter/空白 下一項" :
+                  "t: target; Enter/space: next") :
+            (zh ? "Enter/空白 下一項" : "Enter/space: next"));
+    }
+    fa_target_draw_bounded_line(third, help_loc + 2);
 }
 
 
@@ -299,8 +381,13 @@ static ui_event target_recall_loop_object(struct object *obj, int y, int x,
 
 	while (1) {
 		if (recall) {
+            /* The modal object viewer already waits for its exit key.
+             * Do not require a second unrelated key on returning to
+             * target inspection. Repaint the description for the
+             * current terminal width on the next pass. */
 			display_object_recall_interactive(cave->objects[obj->oidx]);
-			press = inkey_m();
+            recall = false;
+            continue;
 		} else {
 			char o_name[80];
 
@@ -320,9 +407,9 @@ static ui_event target_recall_loop_object(struct object *obj, int y, int x,
 						"%s%s%s%s, %s.", s1, s2, s3, o_name, coords);
 			}
 
-			prt(out_val, 0, 0);
+			fa_target_draw_bounded_line(out_val, 0);
 			move_cursor_relative(y, x);
-			press = inkey_m();
+            press = fa_target_inkey_described(out_val, y, x);
 		}
 
 		if ((press.type == EVT_MOUSE) && (press.mouse.button == 1) &&
@@ -411,10 +498,19 @@ static bool aux_hallucinate(struct chunk *c, struct player *p,
 			name_strange,
 			auxst->coord_desc);
 	}
-	prt(out_val, 0, 0);
+	fa_target_draw_bounded_line(out_val, 0);
 	move_cursor_relative(auxst->grid.y, auxst->grid.x);
 
-	auxst->press.key = inkey();
+    /* Match inkey()'s mouse-as-key contract, but repaint the target
+     * line after rotation instead of swallowing its resize event. */
+    auxst->press = fa_target_inkey_described(out_val,
+        auxst->grid.y, auxst->grid.x);
+    if (auxst->press.type == EVT_MOUSE) {
+        uint8_t button = auxst->press.mouse.button;
+        auxst->press.type = EVT_KBRD;
+        auxst->press.key.code = button == 1 ? '\n' : ESCAPE;
+        auxst->press.key.mods = 0;
+    }
 
 	/* Stop on everything but "return" */
 	return auxst->press.key.code != KC_ENTER;
@@ -459,8 +555,12 @@ static bool aux_monster(struct chunk *c, struct player *p,
 	while (1) {
 		/* Recall or target */
 		if (recall) {
+            /* lore_show_interactive() owns the entire modal key loop.
+             * Its close key should return to this description directly,
+             * not block on an extra inkey_m() before the next draw. */
 			lore_show_interactive(mon->race, lore);
-			auxst->press = inkey_m();
+            recall = false;
+            continue;
 		} else {
 			char buf[80];
 
@@ -491,13 +591,14 @@ static bool aux_monster(struct chunk *c, struct player *p,
 					auxst->coord_desc);
 			}
 
-			prt(out_val, 0, 0);
+			fa_target_draw_bounded_line(out_val, 0);
 
 			/* Place cursor */
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
 
 			/* Command */
-			auxst->press = inkey_m();
+            auxst->press = fa_target_inkey_described(out_val,
+                auxst->grid.y, auxst->grid.x);
 		}
 
 		/* Normal commands */
@@ -568,9 +669,10 @@ static bool aux_monster(struct chunk *c, struct player *p,
 				(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
 				(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
 
-			prt(out_val, 0, 0);
+			fa_target_draw_bounded_line(out_val, 0);
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
-			auxst->press = inkey_m();
+            auxst->press = fa_target_inkey_described(out_val,
+                auxst->grid.y, auxst->grid.x);
 
 			if (auxst->press.type == EVT_MOUSE) {
 				/* Stop on right click */
@@ -648,13 +750,14 @@ static bool aux_trap(struct chunk *c, struct player *p,
 				auxst->coord_desc);
 		}
 
-		prt(out_val, 0, 0);
+		fa_target_draw_bounded_line(out_val, 0);
 
 		/* Place cursor */
 		move_cursor_relative(auxst->grid.y, auxst->grid.x);
 
 		/* Command */
-		auxst->press = inkey_m();
+        auxst->press = fa_target_inkey_described(out_val,
+            auxst->grid.y, auxst->grid.x);
 
 		/* Stop on everything but "return"/"space" */
 		if (auxst->press.key.code != KC_ENTER
@@ -668,6 +771,67 @@ static bool aux_trap(struct chunk *c, struct player *p,
 	}
 
 	return true;
+}
+
+/* Match the shortcut label actually shown by show_floor(), not
+ * 'a' + index: item lists omit hjkl to reserve motion commands.
+ * Touch input is accepted only on a rendered item row, after rotation. */
+static int fa_target_floor_list_index(
+    ui_event press, int floor_count, int width, int height)
+{
+    if (floor_count <= 0 || width < 2 || height < 2) return -1;
+    if (press.type == EVT_MOUSE) {
+        int x = KEY_GRID_X(press), y = KEY_GRID_Y(press);
+        if (press.mouse.button != 1 || x < 0 || x >= width - 1 ||
+                y < 1 || y >= height || y - 1 >= floor_count)
+            return -1;
+        return y - 1;
+    }
+    /* The label set may contain uppercase shortcuts for larger piles.
+     * Only pass printable one-byte codes to strchr(), never NUL or a
+     * truncated special/Unicode key that could match a false label. */
+    if (press.type == EVT_KBRD &&
+            press.key.code >= 33 && press.key.code <= 126) {
+        const char *label = strchr(all_letters_nohjkl,
+            (char)press.key.code);
+        if (label && label - all_letters_nohjkl < floor_count)
+            return (int)(label - all_letters_nohjkl);
+    }
+    return -1;
+}
+
+/* A nested floor list has its own visible rows. Redraw those rows after
+ * resizing instead of applying old mouse coordinates to the new list. */
+static ui_event fa_target_floor_list_inkey(
+    struct object **floor_list, int floor_count, const char *description)
+{
+    ui_event press = EVENT_EMPTY;
+
+    for (;;) {
+        press = inkey_ex();
+        if (press.type == EVT_RESIZE) {
+            if (!Term || Term->wid < 3 || Term->hgt < 2) {
+                press.type = EVT_KBRD;
+                press.key.code = ESCAPE;
+                press.key.mods = 0;
+                return press;
+            }
+            show_floor(floor_list, floor_count,
+                OLIST_DEATH | OLIST_WEIGHT | OLIST_GOLD, NULL);
+            fa_target_draw_bounded_line(description, 0);
+            continue;
+        }
+        if (press.type == EVT_NONE) continue;
+        if (press.type == EVT_ESCAPE) {
+            press.type = EVT_KBRD;
+            press.key.code = ESCAPE;
+            press.key.mods = 0;
+        } else if (press.type == EVT_BUTTON) {
+            press.type = EVT_KBRD;
+        }
+        if (press.type == EVT_KBRD || press.type == EVT_MOUSE)
+            return press;
+    }
 }
 
 /**
@@ -720,9 +884,10 @@ static bool aux_object(struct chunk *c, struct player *p,
 					auxst->coord_desc);
 			}
 
-			prt(out_val, 0, 0);
+			fa_target_draw_bounded_line(out_val, 0);
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
-			auxst->press = inkey_m();
+            auxst->press = fa_target_inkey_described(out_val,
+                auxst->grid.y, auxst->grid.x);
 
 			/* Display objects */
 			if ((auxst->press.type == EVT_MOUSE
@@ -745,19 +910,18 @@ static bool aux_object(struct chunk *c, struct player *p,
 						(OLIST_DEATH | OLIST_WEIGHT
 						| OLIST_GOLD), NULL);
 
-					/* Describe the pile */
-					prt(out_val, 0, 0);
-					auxst->press = inkey_m();
+					/* Describe the pile and wait with resize support. */
+					fa_target_draw_bounded_line(out_val, 0);
+                    auxst->press = fa_target_floor_list_inkey(
+                        floor_list, floor_num, out_val);
+                    /* Validate against the list geometry while it is
+                     * still displayed, before restoring the map. */
+                    pos = fa_target_floor_list_index(auxst->press,
+                        floor_num, Term ? Term->wid : 0,
+                        Term ? Term->hgt : 0);
 
 					/* Load screen */
 					screen_load();
-
-					if (auxst->press.type == EVT_MOUSE) {
-						pos = auxst->press.mouse.y - 1;
-					} else {
-						pos = auxst->press.key.code -
-							'a';
-					}
 					if (0 <= pos && pos < floor_num) {
 						track_object(p->upkeep,
 							floor_list[pos]);
@@ -847,9 +1011,10 @@ static bool aux_terrain(struct chunk *c, struct player *p,
 			auxst->coord_desc);
 	}
 
-	prt(out_val, 0, 0);
+	fa_target_draw_bounded_line(out_val, 0);
 	move_cursor_relative(auxst->grid.y, auxst->grid.x);
-	auxst->press = inkey_m();
+    auxst->press = fa_target_inkey_described(out_val,
+        auxst->grid.y, auxst->grid.x);
 
 	/*
 	 * Stop on right click of mouse or everything but "return"/"space" for
@@ -936,9 +1101,9 @@ static ui_event target_set_interactive_aux(int y, int x, int mode)
 void textui_target(void)
 {
 	if (target_set_interactive(TARGET_KILL, -1, -1))
-		msg("Target Selected.");
+		msg("%s", angdroid_game_ui_text("Target Selected.", angdroid_zh_tw_enabled()));
 	else
-		msg("Target Aborted.");
+		msg("%s", angdroid_game_ui_text("Target Aborted.", angdroid_zh_tw_enabled()));
 }
 
 /**
@@ -1203,10 +1368,10 @@ bool target_set_interactive(int mode, int x, int y)
 
 	/* Calculate the window location for the help prompt */
 	Term_get_size(&wid, &hgt);
-	help_prompt_loc = hgt - 1;
-	
-	/* Display the help prompt */
-	prt("Press '?' for help.", help_prompt_loc, 0);
+	help_prompt_loc = hgt > 0 ? hgt - 1 : 0;
+
+	/* Display the help prompt inside the phone terminal. */
+    fa_target_draw_short_help(help_prompt_loc);
 
 	/* Prepare the target set */
 	struct point_set *targets = target_get_monsters(mode, NULL, true);
@@ -1214,7 +1379,17 @@ bool target_set_interactive(int mode, int x, int y)
 
 	/* Interact */
 	while (!done) {
+        int current_wid, current_hgt;
 		bool path_drawn = false;
+        Term_get_size(&current_wid, &current_hgt);
+        if (current_wid != wid || current_hgt != hgt) {
+            /* The nested targeting input may have consumed a resize.
+             * Recalculate the footer row before this new target pass. */
+            wid = current_wid;
+            hgt = current_hgt;
+            help_prompt_loc = hgt > 0 ? hgt - 1 : 0;
+            if (!help) fa_target_draw_short_help(help_prompt_loc);
+        }
 		bool use_interesting_mode = show_interesting && point_set_size(targets);
 		bool use_free_mode = !use_interesting_mode;
 
@@ -1252,6 +1427,17 @@ bool target_set_interactive(int mode, int x, int y)
 				mode | (use_free_mode ? TARGET_LOOK : 0));
 
 		soft_kbd_clear(true);
+
+        /* A resize can be swallowed by the nested inkey_m() before
+         * an immediately following Esc or target selection. Refresh the
+         * footer position now, not only on the next loop iteration. */
+        Term_get_size(&current_wid, &current_hgt);
+        if (current_wid != wid || current_hgt != hgt) {
+            wid = current_wid;
+            hgt = current_hgt;
+            help_prompt_loc = hgt > 0 ? hgt - 1 : 0;
+            if (!help) fa_target_draw_short_help(help_prompt_loc);
+        }
 
 		/* Remove the path */
 		if (path_drawn) load_path(path_n, path_g, path_char, path_attr);
@@ -1434,7 +1620,7 @@ bool target_set_interactive(int mode, int x, int y)
 			Term_clear();
 			handle_stuff(player);
 			if (!help)
-				prt("Press '?' for help.", help_prompt_loc, 0);
+                fa_target_draw_short_help(help_prompt_loc);
 
 		} else {
 			/* Try to extract a direction from the key press */

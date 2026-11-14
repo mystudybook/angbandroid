@@ -51,6 +51,9 @@
 #include "ui-target.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
+#include "ui-confirm-prompt-utf8.h"
 
 static bool inkey_xtra;
 uint32_t inkey_scan;		/* See the "inkey()" function */
@@ -1081,7 +1084,9 @@ bool get_character_name(char *buf, size_t buflen)
 	event_signal(EVENT_MESSAGE_FLUSH);
 
 	/* Display prompt */
-	prt("Enter a name for your character (* for a random name): ", 0, 0);
+	prt(angdroid_game_ui_text(
+        "Enter a name for your character (* for a random name): ",
+        angdroid_zh_tw_enabled()), 0, 0);
 
 	/* Save the player name */
 	my_strcpy(buf, player->full_name, buflen);
@@ -1120,8 +1125,8 @@ static bool textui_get_string(const char *prompt, char *buf, size_t len)
 	/* Paranoia */
 	event_signal(EVENT_MESSAGE_FLUSH);
 
-	/* Display prompt */
-	prt(prompt, 0, 0);
+    prt(angdroid_game_ui_text(prompt, angdroid_zh_tw_enabled()),
+        0, 0);
 
 	/* Ask the user for a string */
 	res = askfor_aux(buf, len, NULL);
@@ -1150,7 +1155,9 @@ static int textui_get_quantity(const char *prompt, int max)
 		/* Build a prompt if needed */
 		if (!prompt) {
 			/* Build a prompt */
-			strnfmt(tmp, sizeof(tmp), "Quantity (0-%d, *=all): ", max);
+			strnfmt(tmp, sizeof(tmp), angdroid_zh_tw_enabled() ?
+                "數量（0-%d，* 代表全部）：" :
+                "Quantity (0-%d, *=all): ", max);
 
 			/* Use that prompt */
 			prompt = tmp;
@@ -1199,42 +1206,49 @@ static int textui_get_quantity(const char *prompt, int max)
  */
 static bool textui_get_check(const char *prompt)
 {
-	ui_event ke;
+    ui_event ke = EVENT_EMPTY;
+    char buf[512];
 
-	char buf[80];
+    /* A bounded UTF-8/cell-aware line reserves room for [y/n]. The old
+     * %.70s printf precision could split a Chinese character and drew
+     * past a portrait phone's terminal width. */
+    event_signal(EVENT_MESSAGE_FLUSH);
+    soft_kbd_flash("${yes_no}");
 
-	/*
-	 * Hack -- Build a "useful" prompt; do this first so prompts built by
-	 * format() won't run afoul of event_signal()'s side effects.
-	 */
-	strnfmt(buf, 78, "%.70s[y/n] ", prompt);
+    for (;;) {
+        int width = Term && Term->hgt > 0 ? Term->wid - 1 : 0;
 
-	/* Paranoia */
-	event_signal(EVENT_MESSAGE_FLUSH);
+        /* At fewer than three visible cells the choices cannot be
+         * distinguished. Refuse to confirm rather than act blindly. */
+        if (width < 3) {
+            /* A resize can make a previously printed prompt unusable.
+             * Remove that line before abandoning the confirmation. */
+            if (Term && Term->wid > 0 && Term->hgt > 0)
+                prt("", 0, 0);
+            soft_kbd_replace("");
+            return false;
+        }
+        angdroid_fa_confirm_prompt_line(buf, sizeof(buf), prompt, width);
+        prt(buf, 0, 0);
+        ke = inkey_ex();
+        if (ke.type == EVT_RESIZE) {
+            /* inkey_ex() clears flashing hints after input. Repaint the
+             * changed terminal and present only the current Yes/No keys. */
+            soft_kbd_replace("");
+            soft_kbd_flash("${yes_no}");
+            continue;
+        }
+        if (ke.type == EVT_NONE) continue;
+        if (ke.type == EVT_ESCAPE || ke.type == EVT_MOUSE ||
+            ke.type == EVT_KBRD || ke.type == EVT_BUTTON)
+            break;
+    }
 
-	soft_kbd_flash("${yes_no}");
-
-	/* Prompt for it */
-	prt(buf, 0, 0);
-	ke = inkey_m();
-
-	/* Erase the prompt */
-	prt("", 0, 0);
-
-	/* Normal negation */
-	if (ke.type == EVT_MOUSE) {
-		/* Changed for android
-		if ((ke.mouse.button != 1) && (ke.mouse.y != 0))
-			return (false);
-		*/
-		return (false);
-	} else {
-		if ((ke.key.code != 'Y') && (ke.key.code != 'y'))
-			return (false);
-	}
-
-	/* Success */
-	return (true);
+    prt("", 0, 0);
+    /* Keep inkey_m()'s original behavior: an Android mouse tap is No;
+     * only explicit Y/y on the keyboard or a button confirms. */
+    return (ke.type == EVT_KBRD || ke.type == EVT_BUTTON) &&
+        (ke.key.code == 'Y' || ke.key.code == 'y');
 }
 
 /* TODO: refactor get_check() in terms of get_char() */
@@ -1249,37 +1263,77 @@ static bool textui_get_check(const char *prompt)
  */
 char get_char(const char *prompt, const char *options, size_t len, char fallback)
 {
-	struct keypress key;
-	char buf[80];
+    ui_event ke = EVENT_EMPTY;
+    char buf[512], allowed[256];
+    size_t i, allowed_count = 0;
+    keycode_t code = 0;
 
-	/* Paranoia */
-	event_signal(EVENT_MESSAGE_FLUSH);
+    if (!options || len == 0) return fallback;
+    /* Only ASCII one-byte shortcuts can be returned by this char API.
+     * Respect the advertised source length, drop invalid UTF-8 bytes and
+     * never read beyond the options string's NUL. */
+    for (i = 0; i < len && allowed_count < sizeof(allowed) - 1 &&
+            options[i]; ++i) {
+        if ((unsigned char)options[i] <= 0x7fu)
+            allowed[allowed_count++] = options[i];
+    }
+    allowed[allowed_count] = '\0';
+    if (!allowed_count) return fallback;
 
-	/* Hack -- Build a "useful" prompt */
-	strnfmt(buf, 78, "%.70s[%s] ", prompt, options);
+    event_signal(EVENT_MESSAGE_FLUSH);
+    soft_kbd_flash(allowed);
 
-	/* Prompt for it */
-	prt(buf, 0, 0);
+    for (;;) {
+        int width = Term && Term->hgt > 0 ? Term->wid - 1 : 0;
 
-	soft_kbd_flash(options);
+        if (width < 3) {
+            /* Clear the previous prompt after a resize to a tiny
+             * viewport, rather than leaving misleading old choices. */
+            if (Term && Term->wid > 0 && Term->hgt > 0)
+                prt("", 0, 0);
+            soft_kbd_replace("");
+            return fallback;
+        }
+        angdroid_fa_choice_prompt_line(buf, sizeof(buf), prompt,
+            allowed, width);
+        prt(buf, 0, 0);
+        ke = inkey_ex();
+        if (ke.type == EVT_RESIZE || ke.type == EVT_NONE) {
+            /* inkey_ex() clears temporary hints after every input.
+             * Restore only this question's choices when continuing. */
+            soft_kbd_replace(allowed);
+            continue;
+        }
+        if (ke.type == EVT_KBRD || ke.type == EVT_BUTTON) {
+            code = ke.key.code;
+            break;
+        }
+        if (ke.type == EVT_MOUSE) {
+            /* Match inkey(): a primary tap is Return; all other
+             * mouse buttons mean Escape, never silent acceptance. */
+            code = ke.mouse.button == 1 ? '\n' : ESCAPE;
+            break;
+        }
+        if (ke.type == EVT_ESCAPE) {
+            code = ESCAPE;
+            break;
+        }
+        soft_kbd_replace(allowed);
+    }
 
-	/* Get an acceptable answer */
-	key = inkey();
+    prt("", 0, 0);
+    soft_kbd_replace("");
 
-	/* Lowercase answer if necessary */
-	if (key.code >= 'A' && key.code <= 'Z') key.code += 32;
-
-	/* See if key is in our options string */
-	if (!strchr(options, (char)key.code))
-		key.code = fallback;
-
-	/* Erase the prompt */
-	prt("", 0, 0);
-
-	/* Success */
-	return key.code;
+    /* strchr(options, 0) matches the NUL terminator; truncating an
+     * extended Unicode/special key to char can also alias a valid tag. */
+    if (code == 0 || code > 0x7fu) return fallback;
+    if (code >= 'A' && code <= 'Z') code += 'a' - 'A';
+    for (i = 0; i < allowed_count; ++i) {
+        if ((unsigned char)allowed[i] == code)
+            return (char)code;
+    }
+    return fallback;
 }
-
 
 /**
  * Text-native way of getting a filename.
@@ -1293,7 +1347,9 @@ static bool get_file_text(const char *suggested_name, char *path, size_t len)
 	
 	if (!arg_force_name) {
 			
-			if (!get_string("File name: ", buf, sizeof buf)) return false;
+			if (!get_string(angdroid_game_ui_text(
+                "File name: ", angdroid_zh_tw_enabled()),
+                buf, sizeof buf)) return false;
 
 			/* Make sure it's actually a filename */
 			if (buf[0] == '\0' || buf[0] == ' ') return false;
@@ -1306,7 +1362,8 @@ static bool get_file_text(const char *suggested_name, char *path, size_t len)
 		time(&ltime);
 		today = localtime(&ltime);
 
-		prt("File name: ", 0,0);
+		prt(angdroid_game_ui_text(
+            "File name: ", angdroid_zh_tw_enabled()), 0, 0);
 
 		/* Overwrite the ".txt" that was added */
 		assert(strlen(buf) >= 4);
@@ -1323,11 +1380,13 @@ static bool get_file_text(const char *suggested_name, char *path, size_t len)
 	path_build(path, len, ANGBAND_DIR_USER, buf);
 
 	/* Check if it already exists */
-	if (file_exists(path) && !get_check("Replace existing file? "))
+	if (file_exists(path) && !get_check(angdroid_game_ui_text(
+            "Replace existing file? ", angdroid_zh_tw_enabled())))
 		return false;
 
 	/* Tell the user where it's saved to. */
-	prt(format("Saving as %s.", path), 0, 0);
+	prt(format(angdroid_game_ui_text(
+        "Saving as %s.", angdroid_zh_tw_enabled()), path), 0, 0);
 	anykey();
 	prt("", 0, 0);
 
@@ -1370,31 +1429,53 @@ static bool textui_get_com(const char *prompt, char *command)
 
 bool get_com_ex(const char *prompt, ui_event *command)
 {
-	ui_event ke;
+    ui_event ke = EVENT_EMPTY;
+    char visible[512];
+    const char *display = angdroid_game_ui_text(
+        prompt, angdroid_zh_tw_enabled());
 
-	/* Paranoia XXX XXX XXX */
-	event_signal(EVENT_MESSAGE_FLUSH);
+    if (!command) return false;
+    event_signal(EVENT_MESSAGE_FLUSH);
 
-	/* Display a prompt */
-	prt(prompt, 0, 0);
+    for (;;) {
+        int width = Term && Term->hgt > 0 ? Term->wid - 1 : 0;
+        if (width < 3) {
+            /* Do not leave the previous prompt visible when an Android
+             * rotation makes the input row unreadable. */
+            if (Term && Term->wid > 0 && Term->hgt > 0)
+                prt("", 0, 0);
+            ke.type = EVT_KBRD;
+            ke.key.code = ESCAPE;
+            break;
+        }
+        angdroid_menu_copy_columns(visible, sizeof(visible), display,
+            (size_t)width);
+        prt(visible, 0, 0);
+        ke = inkey_ex();
+        if (ke.type == EVT_RESIZE || ke.type == EVT_NONE)
+            continue;
+        if (ke.type == EVT_ESCAPE) {
+            /* Preserve inkey_m()'s escape normalization. */
+            ke.type = EVT_KBRD;
+            ke.key.code = ESCAPE;
+            ke.key.mods = 0;
+            break;
+        }
+        if (ke.type == EVT_BUTTON) {
+            /* inkey_m() also exposes Android buttons as keyboard input. */
+            ke.type = EVT_KBRD;
+            break;
+        }
+        if (ke.type == EVT_KBRD || ke.type == EVT_MOUSE)
+            break;
+    }
 
-	/* Get a key */
-	ke = inkey_m();
-
-	/* Clear the prompt */
-	prt("", 0, 0);
-
-	/* Save the command */
-	*command = ke;
-
-	/* Done */
-	if ((ke.type == EVT_KBRD && ke.key.code != ESCAPE) ||
-		(ke.type == EVT_MOUSE))
-		return true;
-	else
-		return false;
+    if (Term && Term->wid > 0 && Term->hgt > 0)
+        prt("", 0, 0);
+    *command = ke;
+    return (ke.type == EVT_KBRD && ke.key.code != ESCAPE) ||
+        ke.type == EVT_MOUSE;
 }
-
 
 /**
  * Pause for user response
@@ -1403,9 +1484,17 @@ bool get_com_ex(const char *prompt, ui_event *command)
  */
 void pause_line(struct term *tm)
 {
-	prt("", tm->hgt - 1, 0);
-	put_str("[Press any key to continue]", tm->hgt - 1, (tm->wid - 27) / 2);
-	(void)anykey();
+    const char *message = angdroid_game_ui_text(
+        "[Press any key to continue]", angdroid_zh_tw_enabled());
+    char visible[96];
+    int columns, x;
+    prt("", tm->hgt - 1, 0);
+    columns = (int)angdroid_utf8_display_columns(message);
+    x = columns >= tm->wid ? 0 : (tm->wid - columns) / 2;
+    angdroid_menu_copy_columns(visible, sizeof(visible), message,
+        (size_t)MAX(0, tm->wid - x));
+    put_str(visible, tm->hgt - 1, x);
+    (void)anykey();
 	prt("", tm->hgt - 1, 0);
 }
 
@@ -1443,12 +1532,14 @@ static bool textui_get_rep_dir(int *dp, bool allow_5)
 	int dir = 0;
 
 	ui_event ke;
+    char visible[256];
 
 	/* Initialize */
 	(*dp) = 0;
 
 	/* Get a direction */
 	while (!dir) {
+        bool resized = false;
 		/* Paranoia*/
 		event_signal(EVENT_MESSAGE_FLUSH);
 
@@ -1460,12 +1551,43 @@ static bool textui_get_rep_dir(int *dp, bool allow_5)
 		ke = inkey_ex();
 		inkey_scan = SCAN_OFF;
 
+        /* Rotation is a layout event, not a movement command. Never
+         * ring a warning bell or use the stale screen coordinates. */
+        if (ke.type == EVT_RESIZE) continue;
+        if (ke.type == EVT_ESCAPE) {
+            if (Term && Term->wid > 0 && Term->hgt > 0)
+                prt("", 0, 0);
+            return false;
+        }
+
 		if (ke.type == EVT_NONE ||
 				(ke.type == EVT_KBRD
 				&& !target_dir_allow(ke.key, allow_5))) {
-			prt("Direction or <click> (Escape to cancel)? ", 0, 0);
-			ke = inkey_ex();
-		}
+            const char *prompt = angdroid_game_ui_text(
+                "Direction or <click> (Escape to cancel)? ",
+                angdroid_zh_tw_enabled());
+            int width = Term && Term->hgt > 0 ? Term->wid - 1 : 0;
+
+            if (width < 3) {
+                /* A resize can leave the old direction prompt on a tiny
+                 * terminal. Clear it rather than accept a blind move. */
+                if (Term && Term->wid > 0 && Term->hgt > 0)
+                    prt("", 0, 0);
+                return false;
+            }
+            angdroid_menu_copy_columns(visible, sizeof(visible), prompt,
+                (size_t)width);
+            prt(visible, 0, 0);
+            ke = inkey_ex();
+        }
+
+        /* A terminal resize invalidates the previous prompt and any
+         * tap coordinates; redisplay with the latest column count. */
+        if (ke.type == EVT_RESIZE) continue;
+        if (ke.type == EVT_ESCAPE) {
+            prt("", 0, 0);
+            return false;
+        }
 
 		/* Check mouse coordinates, or get keypresses until a dir is chosen */
 		if (ke.type == EVT_MOUSE) {
@@ -1507,6 +1629,14 @@ static bool textui_get_rep_dir(int *dp, bool allow_5)
 
 				inkey_scan = player->opts.lazymove_delay;
 				ke = inkey_ex();
+                inkey_scan = SCAN_OFF;
+                if (ke.type == EVT_RESIZE) {
+                    /* A pending second direction cannot be resolved
+                     * against the pre-rotation terminal geometry. */
+                    dir = 0;
+                    resized = true;
+                    break;
+                }
 			}
 
 			/* 5 is equivalent to "escape" */
@@ -1519,7 +1649,7 @@ static bool textui_get_rep_dir(int *dp, bool allow_5)
 		}
 
 		/* Oops */
-		if (!dir) bell();
+		if (!dir && !resized) bell();
 	}
 
 	/* Clear the prompt */

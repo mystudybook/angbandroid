@@ -22,6 +22,7 @@
 #include "obj-ignore.h"
 #include "obj-knowledge.h"
 #include "obj-list.h"
+#include "../angband/object-list-name-display.h"
 #include "obj-pile.h"
 #include "obj-tval.h"
 #include "obj-util.h"
@@ -364,9 +365,7 @@ uint8_t object_list_entry_line_attribute(const object_list_entry_t *entry)
 void object_list_format_name(const object_list_entry_t *entry,
 							 char *line_buffer, size_t size)
 {
-	char name[80];
-	const char *chunk;
-	char *source;
+	char name[256];
 	bool has_singular_prefix;
 	bool los = false;
 	int field;
@@ -375,6 +374,9 @@ void object_list_format_name(const object_list_entry_t *entry,
 	struct loc grid;
 	bool object_is_recognized_artifact;
 
+	/* Character count and byte count are not terminal-cell count. */
+	if (!line_buffer || !size) return;
+	line_buffer[0] = '\0';
 	if (entry == NULL || entry->object == NULL || entry->object->kind == NULL)
 		return;
 
@@ -417,25 +419,12 @@ void object_list_format_name(const object_list_entry_t *entry,
 	 * mechanism:  it's in the high 16 bits of the mode.
 	 */
 	object_desc(name, sizeof(name), base_obj, ODESC_PREFIX | ODESC_FULL |
-		ODESC_ALTNUM | (entry->count[field] << 16), player);
+		ODESC_ZH_TW | ODESC_ALTNUM | (entry->count[field] << 16), player);
 
-	/* The source string for strtok() needs to be set properly, depending on
-	 * when we use it. */
-	if (!has_singular_prefix && entry->count[field] == 1) {
-		chunk = " ";
-		source = name;
-	} else {
-		chunk = strtok(name, " ");
-		source = NULL;
-	}
-
-	/* Right alight the prefix and clip. */
-	strnfmt(line_buffer, size, "%3.3s ", chunk);
-
-	/* Get the rest of the name and clip it to fit the max width. */
-	chunk = strtok(source, "\0");
-	if (chunk) {
-		my_strcat(line_buffer, chunk, size);
-	}
+	/* Preserve 3 ASCII count/article cells only when the first token
+	 * really is an English numeric/article prefix. In particular, do not
+	 * split a Chinese scroll title or a UTF-8 item name by its bytes. */
+	(void)angdroid_object_list_name_copy(line_buffer, size, name,
+		has_singular_prefix || entry->count[field] != 1);
 }
 

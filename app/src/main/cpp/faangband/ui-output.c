@@ -21,6 +21,9 @@
 #include "ui-input.h"
 #include "ui-output.h"
 #include "z-textblock.h"
+#include "../angband/menu-text-fit.h"
+#include "../angband/zh-tw-ui.h"
+#include "../curses/unicode_layout.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -100,22 +103,44 @@ bool region_inside(const region *loc, const ui_event *key)
  * Utility function
  */
 static void display_area(const wchar_t *text, const uint8_t *attrs,
-		size_t *line_starts, size_t *line_lengths,
-		size_t n_lines,
-		region area, size_t line_from)
+        size_t *line_starts, size_t *line_lengths,
+        size_t n_lines, region area, size_t line_from)
 {
-	size_t i, j;
+    size_t i, j, available;
 
-	n_lines = MIN(n_lines, (size_t) area.page_rows);
+    if (!Term || area.width <= 0 || area.page_rows <= 0 ||
+            area.col < 0 || area.row < 0 ||
+            area.col >= Term->wid || area.row >= Term->hgt)
+        return;
 
-	for (i = 0; i < n_lines; i++) {
-		Term_erase(area.col, area.row + i, area.width);
-		for (j = 0; j < line_lengths[line_from + i]; j++) {
-			Term_putch(area.col + j, area.row + i,
-					attrs[line_starts[line_from + i] + j],
-					text[line_starts[line_from + i] + j]);
-		}
-	}
+    /* Never address lines before the first page, after the last page,
+     * or beyond the terminal after rotation. Clear unused rows too,
+     * so a short last page does not leave stale description text. */
+    available = line_from < n_lines ? n_lines - line_from : 0;
+    if (!text || !attrs || !line_starts || !line_lengths) available = 0;
+    for (i = 0; i < (size_t)area.page_rows &&
+            area.row + (int)i < Term->hgt; ++i) {
+        size_t cells = 0;
+        Term_erase(area.col, area.row + (int)i, area.width);
+        if (i >= available) continue;
+        for (j = 0; j < line_lengths[line_from + i]; ++j) {
+            uint32_t cp = (uint32_t)text[line_starts[line_from + i] + j];
+            size_t width = (size_t)angdroid_terminal_columns(cp);
+            if (width > (size_t)area.width - cells) {
+                /* A lone wide glyph is not drawable in a 1-cell area.
+                 * Show an explicit placeholder rather than losing a
+                 * complete line with no indication of its content. */
+                if (cells == 0 && width > (size_t)area.width)
+                    Term_putch(area.col, area.row + (int)i,
+                        attrs[line_starts[line_from + i] + j], L'?');
+                break;
+            }
+            Term_putch(area.col + (int)cells, area.row + (int)i,
+                attrs[line_starts[line_from + i] + j],
+                text[line_starts[line_from + i] + j]);
+            cells += width;
+        }
+    }
 }
 
 /**
@@ -123,112 +148,189 @@ static void display_area(const wchar_t *text, const uint8_t *attrs,
  */
 void textui_textblock_place(textblock *tb, region orig_area, const char *header)
 {
-	/* xxx on resize this should be recalculated */
-	region area = region_calculate(orig_area);
+    size_t *line_starts = NULL, *line_lengths = NULL;
+    size_t n_lines = 0;
+    region area;
+    int wid, hgt;
 
-	size_t *line_starts = NULL, *line_lengths = NULL;
-	size_t n_lines;
+    if (!Term) return;
+    Term_get_size(&wid, &hgt);
+    if (wid <= 1 || hgt <= 0) return;
+    area = region_calculate(orig_area);
+    if (area.col < 0) area.col = 0;
+    if (area.row < 0) area.row = 0;
+    if (area.col >= wid - 1 || area.row >= hgt) return;
+    area.width = MAX(0, MIN(area.width, wid - area.col - 1));
+    area.page_rows = MAX(0, MIN(area.page_rows, hgt - area.row));
+    if (!area.width || !area.page_rows) return;
 
-	n_lines = textblock_calculate_lines(tb,
-			&line_starts, &line_lengths, area.width);
+    if (header && area.page_rows > 1) {
+        char visible[256];
+        angdroid_menu_copy_columns(visible, sizeof(visible), header,
+            (size_t)area.width);
+        Term_erase(area.col, area.row, area.width);
+        c_put_str(COLOUR_L_BLUE, visible, area.row, area.col);
+        ++area.row;
+        --area.page_rows;
+    }
 
-	if (header != NULL) {
-		area.page_rows--;
-		Term_erase(area.col, area.row, area.width);
-		c_put_str(COLOUR_L_BLUE, header, area.row, area.col);
-		area.row++;
-	}
-
-	if (n_lines > (size_t) area.page_rows)
-		n_lines = area.page_rows;
-
-	display_area(textblock_text(tb), textblock_attrs(tb), line_starts,
-	             line_lengths, n_lines, area, 0);
-
-	mem_free(line_starts);
-	mem_free(line_lengths);
+    n_lines = textblock_calculate_display_lines(tb,
+        &line_starts, &line_lengths, (size_t)area.width);
+    display_area(textblock_text(tb), textblock_attrs(tb), line_starts,
+        line_lengths, n_lines, area, 0);
+    mem_free(line_starts);
+    mem_free(line_lengths);
 }
 
 /**
  * Show a textblock interactively
  */
-struct keypress textui_textblock_show(textblock *tb, region orig_area, const char *header)
+/* Use the same key normalization as inkey(), but allow the modal
+ * textblock pager to receive EVT_RESIZE instead of swallowing it. */
+static struct keypress fa_textblock_key_from_event(ui_event event)
 {
-	/* xxx on resize this should be recalculated */
-	region area = region_calculate(orig_area);
+    struct keypress key = KEYPRESS_NULL;
 
-	size_t *line_starts = NULL, *line_lengths = NULL;
-	size_t n_lines;
-
-	struct keypress ch = KEYPRESS_NULL;
-
-	n_lines = textblock_calculate_lines(tb,
-			&line_starts, &line_lengths, area.width);
-
-	screen_save();
-
-	/* make room for the footer */
-	area.page_rows -= 2;
-
-	if (header != NULL) {
-		area.page_rows--;
-		Term_erase(area.col, area.row, area.width);
-		c_put_str(COLOUR_L_BLUE, header, area.row, area.col);
-		area.row++;
-	}
-
-	if (n_lines > (size_t) area.page_rows) {
-		int start_line = 0;
-
-		Term_erase(area.col, area.row + area.page_rows, area.width);
-		Term_erase(area.col, area.row + area.page_rows + 1, area.width);
-		c_put_str(COLOUR_L_BLUE, "(Up/down or ESCAPE to exit.)",
-				area.row + area.page_rows + 1, area.col);
-
-		/* Pager mode */
-		while (1) {			
-
-			display_area(textblock_text(tb), textblock_attrs(tb), line_starts,
-					line_lengths, n_lines, area, start_line);
-
-			ch = inkey();
-			if (ch.code == ARROW_UP)
-				start_line--;
-			else if (ch.code == ESCAPE || ch.code == 'q' || ch.code == 'x')
-				break;
-			else if (ch.code == ']' || ch.code == '[')
-				/* Special case to deal with monster and object lists -
-				 * see bug #2120 */
-				break;
-			else if (ch.code == ARROW_DOWN)
-				start_line++;
-			else if (ch.code == ' ')
-				start_line += area.page_rows;
-
-			if (start_line < 0)
-				start_line = 0;
-			if (start_line + (size_t) area.page_rows > n_lines)
-				start_line = n_lines - area.page_rows;
-		}
-	} else {
-		display_area(textblock_text(tb), textblock_attrs(tb), line_starts,
-				line_lengths, n_lines, area, 0);
-
-		Term_erase(area.col, area.row + n_lines, area.width);
-		Term_erase(area.col, area.row + n_lines + 1, area.width);
-		c_put_str(COLOUR_L_BLUE, "(Press any key to continue.)",
-				area.row + n_lines + 1, area.col);
-		ch = inkey();
-	}
-
-	mem_free(line_starts);
-	mem_free(line_lengths);
-
-	screen_load();
-
-	return (ch);
+    if (event.type == EVT_KBRD || event.type == EVT_BUTTON) {
+        key = event.key;
+        key.type = EVT_KBRD;
+    } else if (event.type == EVT_ESCAPE || event.type == EVT_MOUSE) {
+        key.type = EVT_KBRD;
+        key.code = (event.type == EVT_MOUSE && event.mouse.button == 1) ?
+            '\n' : ESCAPE;
+        key.mods = 0;
+    }
+    return key;
 }
 
+static void fa_textblock_print_bounded(
+    const char *label, int row, int col, int columns)
+{
+    char visible[256];
+
+    if (columns <= 0 || !Term || row < 0 || col < 0 ||
+            row >= Term->hgt || col >= Term->wid)
+        return;
+    angdroid_menu_copy_columns(visible, sizeof(visible), label,
+        (size_t)columns);
+    c_put_str(COLOUR_L_BLUE, visible, row, col);
+}
+
+/* Show a long textblock with layout recalculated after window rotations.
+ * At small heights, reserve body content before optional header/footer. */
+struct keypress textui_textblock_show(textblock *tb, region orig_area, const char *header)
+{
+    size_t *line_starts = NULL, *line_lengths = NULL;
+    size_t n_lines = 0, start_line = 0;
+    struct keypress ch = KEYPRESS_NULL;
+    int layout_width = -1;
+
+    screen_save();
+    for (;;) {
+        int term_width, term_height, body_rows;
+        region full, area;
+        bool show_header, show_footer, pager;
+        ui_event input;
+        const char *footer;
+
+        Term_get_size(&term_width, &term_height);
+        /* A phone can briefly report an empty terminal during rotation.
+         * Do not calculate zero-width lines or negative page sizes. */
+        if (term_width <= 1 || term_height <= 0) {
+            input = inkey_ex();
+            if (input.type == EVT_RESIZE || input.type == EVT_NONE) continue;
+            ch = fa_textblock_key_from_event(input);
+            if (ch.type == EVT_KBRD) break;
+            continue;
+        }
+
+        full = region_calculate(orig_area);
+        if (full.col < 0) full.col = 0;
+        if (full.row < 0) full.row = 0;
+        if (full.col >= term_width - 1 || full.row >= term_height) {
+            input = inkey_ex();
+            if (input.type == EVT_RESIZE || input.type == EVT_NONE) continue;
+            ch = fa_textblock_key_from_event(input);
+            if (ch.type == EVT_KBRD) break;
+            continue;
+        }
+        full.width = MAX(0, MIN(full.width, term_width - full.col - 1));
+        full.page_rows = MAX(0, MIN(full.page_rows, term_height - full.row));
+        if (full.width <= 0 || full.page_rows <= 0) {
+            input = inkey_ex();
+            if (input.type == EVT_RESIZE || input.type == EVT_NONE) continue;
+            ch = fa_textblock_key_from_event(input);
+            if (ch.type == EVT_KBRD) break;
+            continue;
+        }
+
+        show_header = header && full.page_rows >= 3;
+        show_footer = full.page_rows >= (show_header ? 3 : 2);
+        body_rows = full.page_rows - (show_header ? 1 : 0) -
+            (show_footer ? 1 : 0);
+        area = full;
+        if (show_header) {
+            Term_erase(full.col, full.row, full.width);
+            fa_textblock_print_bounded(header, full.row, full.col, full.width);
+            ++area.row;
+        }
+        area.page_rows = body_rows;
+
+        if (layout_width != area.width) {
+            mem_free(line_starts);
+            mem_free(line_lengths);
+            line_starts = NULL;
+            line_lengths = NULL;
+            n_lines = textblock_calculate_display_lines(
+                tb, &line_starts, &line_lengths, (size_t)area.width);
+            layout_width = area.width;
+        }
+        /* Subtract only when the result is known to be nonnegative.
+         * Old code mixed signed and size_t and could underflow after
+         * a resize or with an empty textblock. */
+        if (n_lines <= (size_t)body_rows) {
+            start_line = 0;
+        } else if (start_line > n_lines - (size_t)body_rows) {
+            start_line = n_lines - (size_t)body_rows;
+        }
+        pager = n_lines > (size_t)body_rows;
+        display_area(textblock_text(tb), textblock_attrs(tb),
+            line_starts, line_lengths, n_lines, area, start_line);
+
+        if (show_footer) {
+            int row = area.row + body_rows;
+            Term_erase(full.col, row, full.width);
+            footer = pager ?
+                (angdroid_zh_tw_enabled() ?
+                    "上下鍵捲動，Esc 離開" : "Up/down or Esc to exit") :
+                (angdroid_zh_tw_enabled() ?
+                    "按任意鍵繼續" : "Press any key to continue");
+            fa_textblock_print_bounded(footer, row, full.col, full.width);
+        }
+
+        input = inkey_ex();
+        if (input.type == EVT_RESIZE || input.type == EVT_NONE) continue;
+        ch = fa_textblock_key_from_event(input);
+        if (ch.type != EVT_KBRD) continue;
+        if (!pager || ch.code == ESCAPE || ch.code == 'q' ||
+                ch.code == 'x' || ch.code == ']' || ch.code == '[')
+            break;
+        if (ch.code == ARROW_UP) {
+            if (start_line) --start_line;
+        } else if (ch.code == ARROW_DOWN) {
+            if (start_line < n_lines - (size_t)body_rows) ++start_line;
+        } else if (ch.code == ' ') {
+            size_t remaining = n_lines - (size_t)body_rows - start_line;
+            size_t step = (size_t)body_rows;
+            start_line += remaining < step ? remaining : step;
+        }
+    }
+
+    mem_free(line_starts);
+    mem_free(line_lengths);
+    screen_load();
+    return ch;
+}
 
 /**
  * ------------------------------------------------------------------------
@@ -260,14 +362,15 @@ void text_out_to_screen(uint8_t a, const char *str)
 	const wchar_t *s;
 	wchar_t buf[1024];
 
-	/* Obtain the size */
-	(void)Term_get_size(&wid, &h);
-
-	/* Obtain the cursor */
-	(void)Term_locate(&x, &y);
+    /* Android rotation may briefly invalidate the terminal. */
+    if (!Term || !str) return;
+    (void)Term_get_size(&wid, &h);
+    if (wid < 2 || h < 1) return;
+    if (Term_locate(&x, &y) != 0) return;
 
 	/* Copy to a rewriteable string */
-	text_mbstowcs(buf, str, 1024);
+	text_mbstowcs(buf, str, 1023);
+    buf[1023] = L'\0';
 	
 	/* Use special wrapping boundary? */
 	if ((text_out_wrap > 0) && (text_out_wrap < wid))
@@ -275,20 +378,25 @@ void text_out_to_screen(uint8_t a, const char *str)
 	else
 		wrap = wid;
 
+    /* The legacy wrap scratch arrays have only 256 entries. */
+    if (wrap > 256) wrap = 256;
+    if (wrap < 2) return;
+
 	/* Process the string */
 	for (s = buf; *s; s++) {
 		wchar_t ch;
+        int span;
 
 		/* Force wrap */
 		if (*s == L'\n') {
 			/* Wrap */
-			x = text_out_indent;
-			y++;
+            x = MAX(0, MIN(text_out_indent, wrap - 1));
+            if (++y >= h) return;
 
 			/* Clear line, move cursor */
 			Term_erase(x, y, 255);
 
-			x += text_out_pad;
+            x = MAX(0, MIN(x + text_out_pad, wrap - 1));
 			Term_gotoxy(x, y);
 
 			continue;
@@ -296,20 +404,47 @@ void text_out_to_screen(uint8_t a, const char *str)
 
 		/* Clean up the char */
 		ch = (text_iswprint(*s) ? *s : L' ');
+        span = angdroid_is_wide_text(ch, a) ? 2 : 1;
+        if (span > wrap - 1) {
+            /* An extremely narrow region cannot contain this glyph. */
+            ch = L'?';
+            span = 1;
+        }
 
-		/* Wrap words as needed */
-		if ((x >= wrap - 1) && (ch != L' ')) {
+        /* Width is measured in physical screen cells. Keep one cell
+         * available at the edge as the original English wrapper did. */
+		if (angdroid_screen_text_needs_wrap(x, wrap, ch, a)) {
+            if (ch == L' ') {
+                /* A separator at the margin should not trigger an
+                 * extra blank or consume an invalid terminal cell. */
+                continue;
+            }
 			int i, n = 0;
 
 			int av[256];
 			wchar_t cv[256];
 
 			/* Wrap word */
-			if (x < wrap) {
-				/* Scan existing text */
+			if (span == 1 && x < wrap) {
+				/* ASCII words may move intact. An already-painted CJK
+                 * glyph and its continuation must remain together. */
 				for (i = wrap - 2; i >= 0; i--) {
 					/* Grab existing attr/char */
 					Term_what(i, y, &av[i], &cv[i]);
+                    if (cv[i] == ANGDROID_TEXT_CONTINUATION ||
+                            angdroid_is_wide_text(cv[i], av[i])) {
+                        n = wrap;
+                        break;
+                    }
+                    if (i > 0) {
+                        int previous_attr = 0;
+                        wchar_t previous_char = L' ';
+                        Term_what(i - 1, y, &previous_attr, &previous_char);
+                        if (angdroid_is_wide_text(previous_char, previous_attr)) {
+                            n = wrap;
+                            break;
+                        }
+                    }
 
 					/* Break on space */
 					if (cv[i] == L' ') break;
@@ -322,17 +457,19 @@ void text_out_to_screen(uint8_t a, const char *str)
 			/* Special case */
 			if (n == 0) n = wrap;
 
-			/* Clear line */
-			Term_erase(n, y, 255);
+            /* A whole word can reach the wrap boundary. In that case
+             * n == wrap and there is no on-screen tail to erase. */
+            if (n >= 0 && n < wrap)
+                Term_erase(n, y, 255);
 
 			/* Wrap */
-			x = text_out_indent;
-			y++;
+            x = MAX(0, MIN(text_out_indent, wrap - 1));
+            if (++y >= h) return;
 
 			/* Clear line, move cursor */
 			Term_erase(x, y, 255);
 
-			x += text_out_pad;
+            x = MAX(0, MIN(x + text_out_pad, wrap - 1));
 			Term_gotoxy(x, y);
 
 			/* Wrap the word (if any) */
@@ -345,11 +482,13 @@ void text_out_to_screen(uint8_t a, const char *str)
 			}
 		}
 
-		/* Dump */
-		Term_addch(a, ch);
-
-		/* Advance */
-		if (++x > wrap) x = wrap;
+		/* Term_addch() now owns both physical cells of a wide
+         * character and advances its cursor by that display width.
+         * Keep this local x aligned with the terminal cursor, without
+         * inserting a second continuation marker. */
+        if (Term_addch(a, ch) < 0) return;
+        x += span;
+        if (x > wrap) x = wrap;
 	}
 }
 

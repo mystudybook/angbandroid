@@ -65,6 +65,20 @@
 #include "z-util.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/zh-tw-knowledge-groups.h"
+#include "../angband/knowledge-column-text.h"
+#include "obj-desc-item-zh-tw.h"
+#include "../angband/knowledge-monster-label.h"
+#include "../angband/zh-tw-knowledge-kill-summary.h"
+#include "../angband/zh-tw-shape-lore.h"
+#include "../angband/zh-tw-player-ability.h"
+#include "ui-birth-elements-zh-tw.h"
+#include "../angband/zh-tw-symbol-query.h"
+#include "../angband/zh-tw-terrain-trap.h"
+#include "../angband/zh-tw-spell-names.h"
+#include "../angband/zh-tw-class-book-names.h"
+#include "../angband/zh-tw-rune-lore.h"
 
 /**
  * The first part of this file contains the knowledge menus.  Generic display
@@ -723,8 +737,21 @@ static void display_group_member(struct menu *menu, int oid,
 
 static const char *recall_prompt(int oid)
 {
-	(void)oid;
-	return ", 'r' to recall";
+    (void)oid;
+    soft_kbd_flash("r");
+    return ", 'r' to recall";
+}
+
+/* Column-aware headers; do not publish fixed-column metadata outside the
+ * terminal on a portrait phone or after a rotation. */
+static void fa_knowledge_header_field(const char *label, int col)
+{
+    char clipped[64];
+    if (!Term || col < 0 || col >= Term->wid) return;
+    angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+        label, col, Term->wid, Term->wid);
+    if (clipped[0])
+        Term_putstr(col, 4, -1, COLOUR_WHITE, clipped);
 }
 
 #define swap(a, b) (swapspace = (void*)(a)), ((a) = (b)), ((b) = swapspace)
@@ -748,7 +775,7 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 
 	const char **g_names;
 
-	int g_name_len = 8;  /* group name length, minumum is 8 */
+	int g_name_len = 8;  /* terminal display columns, not UTF-8 bytes */
 
 	int grp_cnt = 0; /* total number groups */
 
@@ -796,9 +823,14 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 	int prev_g = -1;
 	ui_event ke;
 
-	/* Get size */
-	Term_get_size(&wid, &hgt);
-	browser_rows = hgt - 8;
+	/* A transient zero-sized or extremely small terminal cannot hold the
+     * two knowledge panels and footer. Return without an invalid layout. */
+    Term_get_size(&wid, &hgt);
+    if (wid < 12 || hgt < 9) {
+        soft_kbd_clear(true);
+        return;
+    }
+    browser_rows = hgt - 8;
 
 	/* Determine if using tiles or not */
 	if (tiles) tiles = (current_graphics_mode->grafID != 0);
@@ -826,14 +858,20 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 	g_names = mem_zalloc(grp_cnt * sizeof(char*));
 
 	for (i = 0; i < grp_cnt; i++) {
-		int len;
-		g_names[i] = g_funcs.name(g_list[i]);
-		len = strlen(g_names[i]);
-		if (len > g_name_len) g_name_len = len;
-	}
+        size_t columns;
+        /* Names are only translated in the visible knowledge browser.
+         * Sorting, group IDs and canonical source names are unchanged. */
+        g_names[i] = angdroid_knowledge_group_text(
+            g_funcs.name(g_list[i]), angdroid_zh_tw_enabled());
+        columns = angdroid_utf8_display_columns(g_names[i]);
+        if (columns > (size_t)g_name_len)
+            g_name_len = columns > 20 ? 20 : (int)columns;
+    }
 
-	/* Reasonable max group name len */
-	if (g_name_len >= 20) g_name_len = 20;
+	/* Leave room for the item column on narrow portrait terminals.
+     * The underlying canonical group IDs and sort order are unchanged. */
+    if (g_name_len >= 20) g_name_len = 20;
+    g_name_len = MIN(g_name_len, MAX(1, wid - 11));
 
 	object_region.col = g_name_len + 3;
 	group_region.width = g_name_len;
@@ -879,19 +917,54 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 		if (redraw) {
 			/* Print the title bits */
 			region_erase(&title_area);
-			prt(format("Knowledge - %s", title), 2, 0);
-			prt("Group", 4, 0);
-			prt("Name", 4, g_name_len + 3);
+            {
+                char full_title[256], visible_title[256];
+                if (angdroid_zh_tw_enabled())
+                    strnfmt(full_title, sizeof(full_title),
+                        "知識圖鑑：%s", angdroid_game_ui_text(title, true));
+                else
+                    strnfmt(full_title, sizeof(full_title),
+                        "Knowledge - %s", title);
+                angdroid_knowledge_clip_label(visible_title,
+                    sizeof(visible_title), full_title, 0, wid, wid);
+                prt(visible_title, 2, 0);
+            }
+            prt(angdroid_zh_tw_enabled() ? "分類" : "Group", 4, 0);
+            prt(angdroid_zh_tw_enabled() ? "名稱" : "Name",
+                4, g_name_len + 3);
 
-			if (otherfields)
-				prt(otherfields, 4, 46);
+            /* Localize only known visible headers. Menu IDs and layout
+             * definitions are deliberately not translated. */
+            if (otherfields) {
+                if (angdroid_zh_tw_enabled() &&
+                    streq(otherfields, "                   Sym  Kills")) {
+                    fa_knowledge_header_field("符號", 65);
+                    fa_knowledge_header_field("擊殺", 70);
+                } else if (angdroid_zh_tw_enabled() &&
+                    streq(otherfields, "Ignore  Inscribed          Sym")) {
+                    fa_knowledge_header_field("忽略", 46);
+                    fa_knowledge_header_field("刻字", 55);
+                    fa_knowledge_header_field("符號", 76);
+                } else if (angdroid_zh_tw_enabled() &&
+                    streq(otherfields, "                    Sym")) {
+                    fa_knowledge_header_field("符號", 66);
+                } else if (angdroid_zh_tw_enabled() &&
+                    streq(otherfields, "Inscribed")) {
+                    fa_knowledge_header_field("刻字", 46);
+                } else if (wid > 46) {
+                    char clipped[128];
+                    angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+                        otherfields, 46, wid, wid);
+                    if (clipped[0]) Term_putstr(46, 4, -1,
+                        COLOUR_WHITE, clipped);
+                }
+            }
 
+            /* Stop at the current terminal's edge, not historic 80 cols. */
+            for (i = 0; i < MIN(79, wid); i++)
+                Term_putch(i, 5, COLOUR_WHITE, L'=');
 
-			/* Print dividers: horizontal and vertical */
-			for (i = 0; i < 79; i++)
-				Term_putch(i, 5, COLOUR_WHITE, L'=');
-
-			for (i = 0; i < browser_rows; i++)
+			for (i = 0; i < browser_rows && g_name_len + 1 < wid; i++)
 				Term_putch(g_name_len + 1, 6 + i, COLOUR_WHITE, L'|');
 
 
@@ -928,6 +1001,8 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 
 		/* Print prompt */
 		{
+            /* Each knowledge page owns only the buttons visible here. */
+            soft_kbd_clear(true);
 			const char *pedit = (!o_funcs.xattr) ? "" :
 					(!(attr_idx|char_idx) ?
 					 ", 'c' to copy" : ", 'c', 'p' to paste");
@@ -935,11 +1010,60 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 				o_funcs.xtra_prompt(oid) : "";
 			const char *pvs = "";
 
-			if (tile_picker) pvs = ", ENTER to accept";
-			else if (glyph_picker) pvs = ", 'i' to insert, ENTER to accept";
-			else if (o_funcs.xattr) pvs = ", 'v' for visuals";
+            if (pedit[0]) {
+                soft_kbd_flash("c");
+                if (strstr(pedit, "paste")) soft_kbd_flash("p");
+            }
+            if (tile_picker) {
+                pvs = ", ENTER to accept";
+            } else if (glyph_picker) {
+                pvs = ", 'i' to insert, ENTER to accept";
+                soft_kbd_flash("i");
+            } else if (o_funcs.xattr) {
+                pvs = ", 'v' for visuals";
+                soft_kbd_flash("v");
+            }
 
-			prt(format("<dir>%s%s%s, ESC", pvs, pedit, xtra), hgt - 1, 0);
+            {
+                char full_prompt[512], visible_prompt[512];
+                if (angdroid_zh_tw_enabled()) {
+                    strnfmt(full_prompt, sizeof(full_prompt),
+                        "方向鍵移動%s%s%s，Esc 返回",
+                        angdroid_game_ui_text(pvs, true),
+                        angdroid_game_ui_text(pedit, true),
+                        angdroid_game_ui_text(xtra, true));
+                } else {
+                    strnfmt(full_prompt, sizeof(full_prompt),
+                        "<dir>%s%s%s, ESC", pvs, pedit, xtra);
+                }
+                /* A long translated prompt may hide ESC at the right
+                 * edge. Prefer a short hint that still shows how to exit.
+                 * Actual hotkeys above are never changed. */
+                if (angdroid_utf8_display_columns(full_prompt) >
+                    (size_t)wid) {
+                    const bool zh_tw = angdroid_zh_tw_enabled();
+                    const char *short_prompt;
+                    if (tile_picker)
+                        short_prompt = zh_tw ? "Enter 確認／Esc 返回" :
+                            "Enter accept / Esc";
+                    else if (glyph_picker)
+                        short_prompt = zh_tw ? "i 插入／Esc 返回" :
+                            "i insert / Esc";
+                    else if (o_funcs.xattr)
+                        short_prompt = zh_tw ? "v 外觀／r 詳情／Esc 返回" :
+                            "v visuals / r recall / Esc";
+                    else
+                        short_prompt = zh_tw ? "r 詳情／Esc 返回" :
+                            "r recall / Esc";
+                    if (angdroid_utf8_display_columns(short_prompt) >
+                        (size_t)wid)
+                        short_prompt = zh_tw ? "Esc 返回" : "Esc";
+                    my_strcpy(full_prompt, short_prompt, sizeof(full_prompt));
+                }
+                angdroid_knowledge_clip_label(visible_prompt,
+                    sizeof(visible_prompt), full_prompt, 0, wid, wid);
+                prt(visible_prompt, hgt - 1, 0);
+            }
 		}
 
 		if (do_swap) {
@@ -990,6 +1114,7 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 		}
 
 		ke = inkey_ex();
+        soft_kbd_clear(true);
 		if (!tile_picker && !glyph_picker) {
 			ui_event ke0 = EVENT_EMPTY;
 
@@ -1088,8 +1213,17 @@ static void display_knowledge(const char *title, int *obj_list, int o_count,
 	}
 
 	/* Prompt */
-	if (!grp_cnt)
-		prt(format("No %s known.", title), 15, 0);
+	if (!grp_cnt) {
+        char message[256], clipped[256];
+        if (angdroid_zh_tw_enabled())
+            strnfmt(message, sizeof(message), "目前沒有已知%s。",
+                angdroid_game_ui_text(title, true));
+        else
+            strnfmt(message, sizeof(message), "No %s known.", title);
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            message, 0, wid, wid);
+        prt(clipped, MIN(15, MAX(0, hgt - 1)), 0);
+    }
 
 	mem_free(g_names);
 	mem_free(g_offset);
@@ -1153,26 +1287,37 @@ static void display_monster(int col, int row, bool cursor, int oid)
 			 rf_has(race->flags, RF_UNIQUE))
 		a = COLOUR_VIOLET;
 
-	/* Display the name */
-	if (rf_has(race->flags, RF_PLAYER_GHOST)) {
-		c_prt(attr, format("%s, the %s", cave->ghost->name, race->name),
-			  row, col);
-	} else {
-		c_prt(attr, race->name, row, col);
-	}
+    /* Render-only translations and UTF-8 clipping: leave race->name and
+     * ghost identity unchanged. Never paint over the symbol at column 66. */
+    if (Term && col >= 0 && col < Term->wid && col < 65) {
+        const char *name = rf_has(race->flags, RF_PLAYER_GHOST)
+            ? format("%s, the %s", cave->ghost->name, race->name)
+            : angdroid_knowledge_monster_label(race->name,
+                rf_has(race->flags, RF_UNIQUE), angdroid_zh_tw_enabled());
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            name, col, 65, Term->wid);
+        if (clipped[0]) c_prt(attr, clipped, row, col);
+    }
 
-	/* Display symbol */
-	big_pad(66, row, a, c);
-
-	/* Display kills */
-	if (!race->rarity) {
-		put_str(format("%s", "shape"), row, 70);
-	} else if (rf_has(race->flags, RF_UNIQUE)) {
-		put_str(format("%s", (race->max_num == 0)?  " dead" : "alive"),
-				row, 70);
-	} else {
-		put_str(format("%5d", lore->pkills), row, 70);
-	}
+    /* The legacy status columns are absent on narrow screens. */
+    if (Term && Term->wid > 66) big_pad(66, row, a, c);
+    if (Term && Term->wid > 70) {
+        const char *status;
+        char clipped[64];
+        if (!race->rarity)
+            status = angdroid_game_ui_text("shape",
+                angdroid_zh_tw_enabled());
+        else if (rf_has(race->flags, RF_UNIQUE))
+            status = angdroid_game_ui_text(
+                (race->max_num == 0) ? " dead" : "alive",
+                angdroid_zh_tw_enabled());
+        else
+            status = format("%5d", lore->pkills);
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            status, 70, Term->wid, Term->wid);
+        if (clipped[0]) put_str(clipped, row, 70);
+    }
 }
 
 static int m_cmp_race(const void *a, const void *b)
@@ -1274,19 +1419,27 @@ static void mon_summary(int gid, const int *item_list, int n, int top,
 		kills += l_list[oid].pkills;
 	}
 
-	/* Different display for the first item if we've got uniques to show */
-	if (gid == 0 &&
-		rf_has((&r_info[default_join[item_list[0]].oid])->flags, RF_UNIQUE)) {
-		c_prt(COLOUR_L_BLUE, format("%d known uniques, %d slain.", n, kills),
-					row, col);
-	} else {
-		int tkills = 0;
-
-		for (i = 0; i < z_info->r_max; i++)
-			tkills += l_list[i].pkills;
-
-		c_prt(COLOUR_L_BLUE, format("Creatures slain: %d/%d (in group/in total)", kills, tkills), row, col);
-	}
+    /* Keep kill counts unchanged; only format the visible caption.
+     * Guard the empty group before inspecting its first join entry. */
+    {
+        const bool uniques = gid == 0 && n > 0 &&
+            rf_has((&r_info[default_join[item_list[top]].oid])->flags,
+                RF_UNIQUE);
+        int tkills = 0;
+        char message[160], clipped[160];
+        if (!uniques) {
+            for (i = 0; i < z_info->r_max; i++)
+                tkills += l_list[i].pkills;
+        }
+        if (Term && col >= 0 && col < Term->wid &&
+            row >= 0 && row < Term->hgt &&
+            angdroid_knowledge_kill_summary(message, sizeof(message),
+                uniques, n, kills, tkills, angdroid_zh_tw_enabled())) {
+            angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+                message, col, Term->wid, Term->wid);
+            if (clipped[0]) c_prt(COLOUR_L_BLUE, clipped, row, col);
+        }
+    }
 }
 
 static int count_known_monsters(void)
@@ -1601,7 +1754,7 @@ static void desc_art_fake(int a_idx)
 
 	tb = object_info(obj, OINFO_NONE);
 	object_desc(header, sizeof(header), obj,
-		ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL | ODESC_ZH_TW, player);
 	if (fake) {
 		object_wipe(known_obj);
 		object_wipe(obj);
@@ -1732,8 +1885,17 @@ static void display_ego_item(int col, int row, bool cursor, int oid)
 	/* Choose a color */
 	uint8_t attr = curs_attrs[0 != (int)ego->everseen][0 != (int)cursor];
 
-	/* Display the name */
-	c_prt(attr, ego->name, row, col);
+	/* Known ego names use the existing 118-entry display-only dictionary.
+     * Width is measured in terminal cells: never cut a Han glyph. */
+    if (Term && col >= 0 && col < Term->wid) {
+        const char *localized = angdroid_faangband_known_ego_ui_name(
+            ego->name, angdroid_zh_tw_enabled());
+        const char *label = localized ? localized : ego->name;
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            label, col, Term->wid, Term->wid);
+        if (clipped[0]) c_prt(attr, clipped, row, col);
+    }
 }
 
 /**
@@ -1750,9 +1912,16 @@ static void desc_ego_fake(int oid)
 	/* List ego flags */
 	tb = object_info_ego(ego);
 
-	textui_textblock_show(tb, area, format("%s %s",
-										   ego_grp_name(default_group_id(oid)),
-										   ego->name));
+	/* Title translation never affects lore flags, object knowledge or IDs. */
+    {
+        int zh_tw = angdroid_zh_tw_enabled();
+        const char *localized = angdroid_faangband_known_ego_ui_name(
+            ego->name, zh_tw);
+        const char *label = localized ? localized : ego->name;
+        const char *group = angdroid_knowledge_group_text(
+            ego_grp_name(default_group_id(oid)), zh_tw);
+        textui_textblock_show(tb, area, format("%s %s", group, label));
+    }
 	textblock_free(tb);
 }
 
@@ -1844,7 +2013,7 @@ static void display_object(int col, int row, bool cursor, int oid)
 	struct object_kind *kind = &k_info[oid];
 	const char *inscrip = get_autoinscription(kind, kind->aware);
 
-	char o_name[80];
+	char o_name[160] = "";
 
 	/* Choose a color */
 	bool aware = (!kind->flavor || kind->aware);
@@ -1860,24 +2029,47 @@ static void display_object(int col, int row, bool cursor, int oid)
 
 	/* If the type is "tried", display that */
 	if (kind->tried && !aware)
-		my_strcat(o_name, " {tried}", sizeof(o_name));
+		my_strcat(o_name, angdroid_knowledge_tried_suffix(
+            angdroid_zh_tw_enabled()), sizeof(o_name));
 
-	/* Display the name */
-	c_prt(attr, o_name, row, col);
+    /* Identification and show_flavors remain canonical. Translate only
+     * a kind whose real name has already been learned and whose flavor is
+     * not currently requested by the player's display preference. */
+    {
+        const char *visible_name = o_name;
+        if (angdroid_zh_tw_enabled() && kind->aware &&
+            (!kind->flavor || !OPT(player, show_flavors))) {
+            const char *localized = angdroid_faangband_known_kind_ui_name(
+                kind->name, tval_find_name(kind->tval), true);
+            if (localized) visible_name = localized;
+        }
+        if (Term && col >= 0 && col < Term->wid) {
+            char clipped[256];
+            angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+                visible_name, col, 45, Term->wid);
+            if (clipped[0]) c_prt(attr, clipped, row, col);
+        }
+    }
 
-	/* Show ignore status */
-	if ((aware && kind_is_ignored_aware(kind)) ||
-		(!aware && kind_is_ignored_unaware(kind)))
-		c_put_str(attr, "Yes", row, 46);
+    if (((aware && kind_is_ignored_aware(kind)) ||
+         (!aware && kind_is_ignored_unaware(kind))) &&
+        Term && Term->wid > 46) {
+        char clipped[32];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            angdroid_game_ui_text("Yes", angdroid_zh_tw_enabled()),
+            46, 54, Term->wid);
+        if (clipped[0]) c_put_str(attr, clipped, row, 46);
+    }
 
-
-	/* Show autoinscription if around */
-	if (inscrip)
-		c_put_str(COLOUR_YELLOW, inscrip, row, 55);
-
-	if (tile_height == 1) {
-		big_pad(76, row, a, c);
-	}
+    /* Preserve user-provided inscription bytes, but clip in full glyphs. */
+    if (inscrip && Term && Term->wid > 55) {
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            inscrip, 55, 75, Term->wid);
+        if (clipped[0]) c_put_str(COLOUR_YELLOW, clipped, row, 55);
+    }
+    if (tile_height == 1 && Term && Term->wid > 76)
+        big_pad(76, row, a, c);
 }
 
 /**
@@ -1912,7 +2104,8 @@ static void desc_obj_fake(int k_idx)
 
 	tb = object_info(obj, OINFO_FAKE);
 	object_desc(header, sizeof(header), obj,
-		ODESC_PREFIX | ODESC_CAPITAL, player);
+		ODESC_PREFIX | ODESC_CAPITAL |
+        (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	textui_textblock_show(tb, area, header);
 	object_delete(NULL, NULL, &known_obj);
@@ -2005,16 +2198,21 @@ static const char *o_xtra_prompt(int oid)
 {
 	struct object_kind *kind = objkind_byid(oid);
 
-	const char *no_insc = ", 's' to toggle ignore, 'r'ecall, '{'";
-	const char *with_insc = ", 's' to toggle ignore, 'r'ecall, '{', '}'";
+    const char *no_insc = ", 's' to toggle ignore, 'r'ecall, '{'";
+    const char *with_insc = ", 's' to toggle ignore, 'r'ecall, '{', '}'";
+    const char *no_ignore = ", 'r'ecall, '{'";
+    const char *no_ignore_with_note = ", 'r'ecall, '{', '}'";
 
 	if (!kind) return NULL;
 
-	/* Appropriate prompt */
-	if (kind->aware)
-		return kind->note_aware ? with_insc : no_insc;
-	else
-		return kind->note_unaware ? with_insc : no_insc;
+    /* Only advertise the keys actually active on this object. */
+    soft_kbd_flash("r{");
+    if (ignore_tval(kind->tval)) soft_kbd_flash("s");
+    if (kind->aware ? kind->note_aware : kind->note_unaware) {
+        soft_kbd_flash("}");
+        return ignore_tval(kind->tval) ? with_insc : no_ignore_with_note;
+    }
+    return ignore_tval(kind->tval) ? no_insc : no_ignore;
 }
 
 /**
@@ -2053,7 +2251,8 @@ static void o_xtra_act(struct keypress ch, int oid)
 		screen_save();
 
 		/* Prompt */
-		prt("Inscribe with: ", 0, 0);
+		prt(angdroid_game_ui_text("Inscribe with: ",
+            angdroid_zh_tw_enabled()), 0, 0);
 
 		/* Default note */
 		if (k->note_aware || k->note_unaware)
@@ -2142,11 +2341,22 @@ static void display_rune(int col, int row, bool cursor, int oid )
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 	const char *inscrip = quark_str(rune_note(oid));
 
-	c_prt(attr, rune_name(oid), row, col);
+    if (Term && col >= 0 && col < Term->wid) {
+        char localized[256], clipped[256];
+        const char *label = angdroid_zh_tw_rune_title(rune_name(oid),
+            angdroid_zh_tw_enabled(), localized, sizeof(localized));
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            label, col, 46, Term->wid);
+        if (clipped[0]) c_prt(attr, clipped, row, col);
+    }
 
-	/* Show autoinscription if around */
-	if (inscrip)
-		c_put_str(COLOUR_YELLOW, inscrip, row, 47);
+    if (inscrip && Term && Term->wid > 47) {
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            inscrip, 47, Term->wid, Term->wid);
+        if (clipped[0])
+            c_put_str(COLOUR_YELLOW, clipped, row, 47);
+    }
 }
 
 
@@ -2163,12 +2373,19 @@ static int rune_var(int oid)
 static void rune_lore(int oid)
 {
 	textblock *tb = textblock_new();
-	char *title = string_make(rune_name(oid));
+    char localized_title[256], localized_detail[512];
+    char *title = string_make(angdroid_zh_tw_rune_title(
+        rune_name(oid), angdroid_zh_tw_enabled(),
+        localized_title, sizeof(localized_title)));
 
-	my_strcap(title);
-	textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
-	textblock_append(tb, "\n");
-	textblock_append(tb, "%s", rune_desc(oid));
+    /* ASCII capitalization is not meaningful for UTF-8 CJK glyphs. */
+        if ((unsigned char)title[0] < 0x80u)
+            my_strcap(title);
+    textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
+    textblock_append(tb, "\n");
+    textblock_append(tb, "%s", angdroid_zh_tw_rune_description(
+        rune_desc(oid), angdroid_zh_tw_enabled(),
+        localized_detail, sizeof(localized_detail)));
 	textblock_append(tb, "\n");
 	textui_textblock_show(tb, SCREEN_REGION, NULL);
 	textblock_free(tb);
@@ -2184,8 +2401,12 @@ static const char *rune_xtra_prompt(int oid)
 	const char *no_insc = ", 'r'ecall, '{'";
 	const char *with_insc = ", 'r'ecall, '{', '}'";
 
-	/* Appropriate prompt */
-	return rune_note(oid) ? with_insc : no_insc;
+    soft_kbd_flash("r{");
+    if (rune_note(oid)) {
+        soft_kbd_flash("}");
+        return with_insc;
+    }
+    return no_insc;
 }
 
 /**
@@ -2204,7 +2425,8 @@ static void rune_xtra_act(struct keypress ch, int oid)
 		screen_save();
 
 		/* Prompt */
-		prt("Inscribe with: ", 0, 0);
+		prt(angdroid_game_ui_text("Inscribe with: ",
+            angdroid_zh_tw_enabled()), 0, 0);
 
 		/* Default note */
 		if (rune_note(oid))
@@ -2247,7 +2469,7 @@ static void do_cmd_knowledge_runes(const char *name, int row)
 	int rune_max = max_runes();
 	int count = 0;
 	int i;
-	char buf[30];
+	char buf[96];
 
 	runes = mem_zalloc(rune_max * sizeof(int));
 
@@ -2259,7 +2481,10 @@ static void do_cmd_knowledge_runes(const char *name, int row)
 		runes[count++] = i;
 	}
 
-	strnfmt(buf, sizeof(buf), "runes (%d unknown)", rune_max - count);
+	if (angdroid_zh_tw_enabled())
+        strnfmt(buf, sizeof(buf), "符文（%d 個尚未辨識）", rune_max - count);
+    else
+        strnfmt(buf, sizeof(buf), "runes (%d unknown)", rune_max - count);
 
 	display_knowledge(buf, runes, count, rune_var_f, rune_f, "Inscribed");
 	mem_free(runes);
@@ -2295,20 +2520,35 @@ static void display_feature(int col, int row, bool cursor, int oid )
 	struct feature *feat = &f_info[oid];
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 
-	c_prt(attr, feat->name, row, col);
+    /* Translate visible terrain names without changing feature IDs/order. */
+    if (Term && col >= 0 && col < Term->wid) {
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            angdroid_terrain_name(feat->name, angdroid_zh_tw_enabled()),
+            col, 64, Term->wid);
+        if (clipped[0]) c_prt(attr, clipped, row, col);
+    }
 
-	if (tile_height == 1) {
-		/* Display symbols */
-		col = 65;
-		col += big_pad(col, row, feat_x_attr[LIGHTING_DARK][feat->fidx],
-					   feat_x_char[LIGHTING_DARK][feat->fidx]);
-		col += big_pad(col, row, feat_x_attr[LIGHTING_LIT][feat->fidx],
-					   feat_x_char[LIGHTING_LIT][feat->fidx]);
-		col += big_pad(col, row, feat_x_attr[LIGHTING_TORCH][feat->fidx],
-					   feat_x_char[LIGHTING_TORCH][feat->fidx]);
-		(void) big_pad(col, row, feat_x_attr[LIGHTING_LOS][feat->fidx],
-					   feat_x_char[LIGHTING_LOS][feat->fidx]);
-	}
+    if (tile_height == 1 && Term && Term->wid > 65) {
+        int visual_col = 65;
+        /* Each successive lighting symbol is optional on narrow screens. */
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                feat_x_attr[LIGHTING_DARK][feat->fidx],
+                feat_x_char[LIGHTING_DARK][feat->fidx]);
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                feat_x_attr[LIGHTING_LIT][feat->fidx],
+                feat_x_char[LIGHTING_LIT][feat->fidx]);
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                feat_x_attr[LIGHTING_TORCH][feat->fidx],
+                feat_x_char[LIGHTING_TORCH][feat->fidx]);
+        if (visual_col < Term->wid)
+            (void)big_pad(visual_col, row,
+                feat_x_attr[LIGHTING_LOS][feat->fidx],
+                feat_x_char[LIGHTING_LOS][feat->fidx]);
+    }
 }
 
 
@@ -2353,13 +2593,17 @@ static void feat_lore(int oid)
 
 	if (feat->desc) {
 		textblock *tb = textblock_new();
-		char *title = string_make(feat->name);
+		char *title = string_make(angdroid_terrain_name(
+            feat->name, angdroid_zh_tw_enabled()));
 
-		my_strcap(title);
+		/* ASCII capitalization is not meaningful for UTF-8 CJK glyphs. */
+        if ((unsigned char)title[0] < 0x80u)
+            my_strcap(title);
 		textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
 		string_free(title);
 		textblock_append(tb, "\n");
-		textblock_append(tb, "%s", feat->desc);
+		textblock_append(tb, "%s", angdroid_terrain_lore(
+            feat->name, feat->desc, angdroid_zh_tw_enabled()));
 		textblock_append(tb, "\n");
 		textui_textblock_show(tb, SCREEN_REGION, NULL);
 		textblock_free(tb);
@@ -2367,8 +2611,9 @@ static void feat_lore(int oid)
 }
 static const char *feat_prompt(int oid)
 {
-	(void)oid;
-		switch (f_uik_lighting) {
+    (void)oid;
+    soft_kbd_flash("tT");
+    switch (f_uik_lighting) {
 				case LIGHTING_LIT:  return ", 't/T' for lighting (lit)";
                 case LIGHTING_TORCH: return ", 't/T' for lighting (torch)";
 				case LIGHTING_LOS:  return ", 't/T' for lighting (LOS)";
@@ -2459,20 +2704,33 @@ static void display_trap(int col, int row, bool cursor, int oid )
 	struct trap_kind *trap = &trap_info[oid];
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
 
-	c_prt(attr, trap->desc, row, col);
+    if (Term && col >= 0 && col < Term->wid) {
+        char clipped[256];
+        angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+            angdroid_trap_name(trap->desc, angdroid_zh_tw_enabled()),
+            col, 64, Term->wid);
+        if (clipped[0]) c_prt(attr, clipped, row, col);
+    }
 
-	if (tile_height == 1) {
-		/* Display symbols */
-		col = 65;
-		col += big_pad(col, row, trap_x_attr[LIGHTING_DARK][trap->tidx],
-				trap_x_char[LIGHTING_DARK][trap->tidx]);
-		col += big_pad(col, row, trap_x_attr[LIGHTING_LIT][trap->tidx],
-				trap_x_char[LIGHTING_LIT][trap->tidx]);
-		col += big_pad(col, row, trap_x_attr[LIGHTING_TORCH][trap->tidx],
-				trap_x_char[LIGHTING_TORCH][trap->tidx]);
-		(void) big_pad(col, row, trap_x_attr[LIGHTING_LOS][trap->tidx],
-				trap_x_char[LIGHTING_LOS][trap->tidx]);
-	}
+    if (tile_height == 1 && Term && Term->wid > 65) {
+        int visual_col = 65;
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                trap_x_attr[LIGHTING_DARK][trap->tidx],
+                trap_x_char[LIGHTING_DARK][trap->tidx]);
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                trap_x_attr[LIGHTING_LIT][trap->tidx],
+                trap_x_char[LIGHTING_LIT][trap->tidx]);
+        if (visual_col < Term->wid)
+            visual_col += big_pad(visual_col, row,
+                trap_x_attr[LIGHTING_TORCH][trap->tidx],
+                trap_x_char[LIGHTING_TORCH][trap->tidx]);
+        if (visual_col < Term->wid)
+            (void)big_pad(visual_col, row,
+                trap_x_attr[LIGHTING_LOS][trap->tidx],
+                trap_x_char[LIGHTING_LOS][trap->tidx]);
+    }
 }
 
 static int trap_order(int trap)
@@ -2541,17 +2799,21 @@ static void trap_lore(int oid)
 
 	if (trap->text) {
 		textblock *tb = textblock_new();
-		char *title = string_make(trap->desc);
+		char *title = string_make(angdroid_trap_name(
+            trap->desc, angdroid_zh_tw_enabled()));
 		textblock *tbe = effect_describe(trap->effect, "This trap ", 0, false);
 		textblock *tbex = effect_describe(trap->effect_xtra,
 										  "if you're unlucky it also ", 0,
 										  false);
 
-		my_strcap(title);
+		/* ASCII capitalization is not meaningful for UTF-8 CJK glyphs. */
+        if ((unsigned char)title[0] < 0x80u)
+            my_strcap(title);
 		textblock_append_c(tb, COLOUR_L_BLUE, "%s", title);
 		string_free(title);
 		textblock_append(tb, "\n");
-		textblock_append(tb, "%s", trap->text);
+		textblock_append(tb, "%s", angdroid_trap_lore(
+            trap->text, angdroid_zh_tw_enabled()));
 		textblock_append(tb, "\n");
 		if (tbe) {
 			textblock_append(tb, "\n");
@@ -2571,8 +2833,9 @@ static void trap_lore(int oid)
 
 static const char *trap_prompt(int oid)
 {
-	(void)oid;
-	return ", 't' to cycle lighting";
+    (void)oid;
+    soft_kbd_flash("tT");
+    return ", 't/T' to cycle lighting";
 }
 
 /**
@@ -2739,12 +3002,16 @@ static void shape_lore_append_list(textblock *tb,
 	int i;
 
 	if (n > 0) {
-		textblock_append(tb, " %s", list[0]);
-	}
-	for (i = 1; i < n; ++i) {
-		textblock_append(tb, "%s %s", (i < n - 1) ? "," : " and",
-			list[i]);
-	}
+        textblock_append(tb, " %s", list[0]);
+    }
+    for (i = 1; i < n; ++i) {
+        if (angdroid_zh_tw_enabled())
+            textblock_append(tb, "%s%s",
+                (i < n - 1) ? "、" : "與", list[i]);
+        else
+            textblock_append(tb, "%s %s",
+                (i < n - 1) ? "," : " and", list[i]);
+    }
 }
 
 
@@ -2758,24 +3025,35 @@ static void shape_lore_append_basic_combat(textblock *tb,
 	int n = 0;
 
 	if (s->to_a != 0) {
-		strnfmt(toa_msg, sizeof(toa_msg), "%+d to AC", s->to_a);
+        if (angdroid_zh_tw_enabled())
+            strnfmt(toa_msg, sizeof(toa_msg), "護甲 %+d", s->to_a);
+        else
+            strnfmt(toa_msg, sizeof(toa_msg), "%+d to AC", s->to_a);
 		msgs[n] = toa_msg;
 		++n;
 	}
 	if (s->to_h != 0) {
-		strnfmt(toh_msg, sizeof(toh_msg), "%+d to hit", s->to_h);
+        if (angdroid_zh_tw_enabled())
+            strnfmt(toh_msg, sizeof(toh_msg), "命中 %+d", s->to_h);
+        else
+            strnfmt(toh_msg, sizeof(toh_msg), "%+d to hit", s->to_h);
 		msgs[n] = toh_msg;
 		++n;
 	}
 	if (s->to_d != 0) {
-		strnfmt(tod_msg, sizeof(tod_msg), "%+d to damage", s->to_d);
+        if (angdroid_zh_tw_enabled())
+            strnfmt(tod_msg, sizeof(tod_msg), "傷害 %+d", s->to_d);
+        else
+            strnfmt(tod_msg, sizeof(tod_msg), "%+d to damage", s->to_d);
 		msgs[n] = tod_msg;
 		++n;
 	}
 	if (n > 0) {
-		textblock_append(tb, "Adds");
-		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s",
+            angdroid_shape_term("Adds", angdroid_zh_tw_enabled()));
+        shape_lore_append_list(tb, msgs, n);
+        textblock_append(tb, "%s",
+            angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 	}
 }
 
@@ -2789,17 +3067,24 @@ static void shape_lore_append_skills(textblock *tb,
 
 	for (i = 0; i < SKILL_MAX; ++i) {
 		if (s->skills[i] != 0) {
-			shape_lore_helper_append_to_list(
-				format("%+d to %s", s->skills[i],
-					skill_index_to_name(i)),
-				&msgs, &nmax, &n);
+			{
+                const char *label = angdroid_shape_term(
+                    skill_index_to_name(i), angdroid_zh_tw_enabled());
+                const char *caption = angdroid_zh_tw_enabled() ?
+                    format("%s %+d", label, s->skills[i]) :
+                    format("%+d to %s", s->skills[i], label);
+                shape_lore_helper_append_to_list(caption,
+                    &msgs, &nmax, &n);
+            }
 		}
 	}
 
 	if (n > 0) {
-		textblock_append(tb, "Adds");
-		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s",
+            angdroid_shape_term("Adds", angdroid_zh_tw_enabled()));
+        shape_lore_append_list(tb, msgs, n);
+        textblock_append(tb, "%s",
+            angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
@@ -2818,18 +3103,25 @@ static void shape_lore_append_non_stat_modifiers(textblock *tb,
 
 	for (i = STAT_MAX; i < OBJ_MOD_MAX; ++i) {
 		if (s->modifiers[i] != 0) {
-			shape_lore_helper_append_to_list(
-				format("%+d to %s",
-					s->modifiers[i],
-					lookup_obj_property(OBJ_PROPERTY_MOD, i)->name),
-				&msgs, &nmax, &n);
+			{
+                const char *label = angdroid_shape_term(
+                    lookup_obj_property(OBJ_PROPERTY_MOD, i)->name,
+                    angdroid_zh_tw_enabled());
+                const char *caption = angdroid_zh_tw_enabled() ?
+                    format("%s %+d", label, s->modifiers[i]) :
+                    format("%+d to %s", s->modifiers[i], label);
+                shape_lore_helper_append_to_list(caption,
+                    &msgs, &nmax, &n);
+            }
 		}
 	}
 
 	if (n > 0) {
-		textblock_append(tb, "Adds");
-		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s",
+            angdroid_shape_term("Adds", angdroid_zh_tw_enabled()));
+        shape_lore_append_list(tb, msgs, n);
+        textblock_append(tb, "%s",
+            angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
@@ -2848,24 +3140,42 @@ static void shape_lore_append_stat_modifiers(textblock *tb,
 
 	for (i = 0; i < STAT_MAX; ++i) {
 		if (s->modifiers[i] != 0) {
-			shape_lore_helper_append_to_list(
-				format("%+d to %s",
-					s->modifiers[i],
-					lookup_obj_property(OBJ_PROPERTY_MOD, i)->name),
-				&msgs, &nmax, &n);
+			{
+                const char *label = angdroid_shape_term(
+                    lookup_obj_property(OBJ_PROPERTY_MOD, i)->name,
+                    angdroid_zh_tw_enabled());
+                const char *caption = angdroid_zh_tw_enabled() ?
+                    format("%s %+d", label, s->modifiers[i]) :
+                    format("%+d to %s", s->modifiers[i], label);
+                shape_lore_helper_append_to_list(caption,
+                    &msgs, &nmax, &n);
+            }
 		}
 	}
 
 	if (n > 0) {
-		textblock_append(tb, "Adds");
-		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
+		textblock_append(tb, "%s",
+            angdroid_shape_term("Adds", angdroid_zh_tw_enabled()));
+        shape_lore_append_list(tb, msgs, n);
+        textblock_append(tb, "%s",
+            angdroid_zh_tw_enabled() ? "。\n" : ".\n");
 		for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
 	}
 
 	mem_free(msgs);
+}
+
+
+/* Use the same native ELEM_ labels as the birth screen. The English
+ * projection names and resistance percentages remain unchanged. */
+static const char *fa_shape_element_visible_name(int index)
+{
+    bool zh = angdroid_zh_tw_enabled();
+    const char *localized = zh ? angdroid_fa_birth_element_name(index) : NULL;
+    return localized ? localized :
+        angdroid_shape_term(projections[index].name, zh);
 }
 
 
@@ -2880,34 +3190,40 @@ static void shape_lore_append_resistances(textblock *tb,
 
 	for (i = 0; i < ELEM_MAX; ++i) {
 		if (s->el_info[i].res_level == RES_LEVEL_MAX) {
-			imm[nimm] = projections[i].name;
+			imm[nimm] = fa_shape_element_visible_name(i);
 			++nimm;
 		} else if (s->el_info[i].res_level < RES_LEVEL_BASE) {
-			res[nres] = projections[i].name;
+			res[nres] = fa_shape_element_visible_name(i);
 			++nres;
 		} else if (s->el_info[i].res_level > RES_LEVEL_BASE) {
-			vul[nvul] = projections[i].name;
+			vul[nvul] = fa_shape_element_visible_name(i);
 			++nvul;
 		}
 	}
 
 	if (nvul != 0) {
-		textblock_append(tb, "Makes you vulnerable to");
+		textblock_append(tb, "%s",
+            angdroid_shape_term("Makes you vulnerable to", angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, vul, nvul);
-		textblock_append(tb, ".\n");
-	}
+		textblock_append(tb, "%s",
+            angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+    }
 
 	if (nres != 0) {
-		textblock_append(tb, "Makes you resistant to");
+		textblock_append(tb, "%s",
+            angdroid_shape_term("Makes you resistant to", angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, res, nres);
-		textblock_append(tb, ".\n");
-	}
+		textblock_append(tb, "%s",
+            angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+    }
 
 	if (nimm != 0) {
-		textblock_append(tb, "Makes you immune to");
+		textblock_append(tb, "%s",
+            angdroid_shape_term("Makes you immune to", angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, imm, nimm);
-		textblock_append(tb, ".\n");
-	}
+		textblock_append(tb, "%s",
+            angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+    }
 }
 
 
@@ -2925,15 +3241,18 @@ static void shape_lore_append_protection_flags(textblock *tb,
 		if (prop->subtype == OFT_PROT &&
 			of_has(s->flags, prop->index)) {
 			shape_lore_helper_append_to_list(
-				prop->desc, &msgs, &nmax, &n);
+				angdroid_shape_misc_desc(prop->desc,
+                    angdroid_zh_tw_enabled()), &msgs, &nmax, &n);
 		}
 	}
 
 	if (n > 0) {
-		textblock_append(tb, "Provides protection from");
+		textblock_append(tb, "%s",
+            angdroid_shape_term("Provides protection from", angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
-		for (i = 0; i < n; ++i) {
+		textblock_append(tb, "%s",
+            angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+        for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
 	}
@@ -2955,15 +3274,18 @@ static void shape_lore_append_sustains(textblock *tb,
 
 		if (of_has(s->flags, sustain_flag(prop->index))) {
 			shape_lore_helper_append_to_list(
-				prop->name, &msgs, &nmax, &n);
+				angdroid_shape_term(prop->name,
+                    angdroid_zh_tw_enabled()), &msgs, &nmax, &n);
 		}
 	}
 
 	if (n > 0) {
-		textblock_append(tb, "Sustains");
+		textblock_append(tb, "%s",
+            angdroid_shape_term("Sustains", angdroid_zh_tw_enabled()));
 		shape_lore_append_list(tb, msgs, n);
-		textblock_append(tb, ".\n");
-		for (i = 0; i < n; ++i) {
+		textblock_append(tb, "%s",
+            angdroid_zh_tw_enabled() ? "。\n" : ".\n");
+        for (i = 0; i < n; ++i) {
 			string_free((char*) msgs[i]);
 		}
 	}
@@ -2986,8 +3308,17 @@ static void shape_lore_append_misc_flags(textblock *tb,
 		if ((prop->subtype == OFT_MISC || prop->subtype == OFT_WEAPON ||
 			prop->subtype == OFT_BAD) &&
 			of_has(s->flags, prop->index)) {
-			textblock_append(tb, "%s%s.", (n > 0) ? "  " : "",
-				prop->desc);
+			{
+                const char *localized = angdroid_shape_misc_desc(
+                    prop->desc, angdroid_zh_tw_enabled());
+                size_t bytes = localized ? strlen(localized) : 0;
+                bool ends_zh = angdroid_zh_tw_enabled() &&
+                    bytes >= strlen("。") &&
+                    strcmp(localized + bytes - strlen("。"), "。") == 0;
+                textblock_append(tb, "%s%s%s",
+                    (n > 0) ? "  " : "", localized ? localized : "",
+                    ends_zh ? "" : (angdroid_zh_tw_enabled() ? "。" : "."));
+            }
 			++n;
 		}
 	}
@@ -2995,8 +3326,14 @@ static void shape_lore_append_misc_flags(textblock *tb,
 	for (ability = player_abilities; ability; ability = ability->next) {
 		if (streq(ability->type, "player") &&
 			pf_has(s->pflags, ability->index)) {
-			textblock_append(tb, "%s%s", (n > 0) ? "  " : "",
-				ability->desc);
+            const char *localized = angdroid_ability_description(
+                ability->desc, angdroid_zh_tw_enabled());
+            if (localized == ability->desc) {
+                localized = angdroid_shape_misc_desc(ability->desc,
+                    angdroid_zh_tw_enabled());
+            }
+            textblock_append(tb, "%s%s", (n > 0) ? "  " : "",
+                localized ? localized : "");
 			++n;
 		}
 	}
@@ -3016,8 +3353,10 @@ static void shape_lore_append_change_effects(textblock *tb,
 	if (tbe) {
 		textblock_append_textblock(tb, tbe);
 		textblock_free(tbe);
-		textblock_append(tb, ".\n");
-	}
+		/* The underlying effect_describe() is English. Preserve its
+         * English punctuation until a full localized effect is available. */
+        textblock_append(tb, ".\n");
+    }
 }
 
 
@@ -3052,12 +3391,19 @@ static void shape_lore_append_triggering_spells(textblock *tb,
 						if (n == 0) {
 							textblock_append(tb, "\n");
 						}
-						textblock_append(tb,
-							"The %s spell, %s, from %s triggers the shapechange.",
-							c->name,
-							spell->name,
-							kind->name
-						);
+                        if (angdroid_zh_tw_enabled()) {
+                            const char *book = angdroid_zh_tw_class_book_name(
+                                kind->name, tval_find_name(kind->tval));
+                            textblock_append(tb,
+                                "%s的法術「%s」（出自 %s）會觸發變身。",
+                                angdroid_shape_class(c->name, true),
+                                angdroid_zh_tw_spell_name(spell->name, true),
+                                book ? book : kind->name);
+                        } else {
+                            textblock_append(tb,
+                                "The %s spell, %s, from %s triggers the shapechange.",
+                                c->name, spell->name, kind->name);
+                        }
 						++n;
 					}
 				}
@@ -3078,14 +3424,10 @@ static void shape_lore(const struct player_shape *s)
 {
 	textblock *tb = textblock_new();
 
-	textblock_append(tb, "%s", s->name);
-	textblock_append(tb, "\nLike all shapes, the equipment at the time of "
-		"the shapechange sets the base attributes, including damage "
-		"per blow, number of blows and resistances.  While changed, "
-		"items in your pack or on the floor (except for pickup or "
-		"eating) are inaccessible.  To switch back to your normal "
-		"shape, cast a spell or use an item command other than eat "
-		"(drop, for instance).\n");
+	textblock_append(tb, "%s",
+        angdroid_shape_name(s->name, angdroid_zh_tw_enabled()));
+    textblock_append(tb, "%s",
+        angdroid_shape_intro(angdroid_zh_tw_enabled()));
 	shape_lore_append_basic_combat(tb, s);
 	shape_lore_append_skills(tb, s);
 	shape_lore_append_non_stat_modifiers(tb, s);
@@ -3110,16 +3452,21 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 	struct menu* m;
 	struct player_shape **sarray;
 	const char **narray;
-	int h, mark, mark_old;
+	int h, w, mark, mark_old;
 	bool displaying, redraw;
 	struct player_shape *s;
 	int i;
 
-	if (!count) {
-		return;
-	}
+    if (!count) return;
 
-	m = menu_new(MN_SKIN_SCROLL, menu_find_iter(MN_ITER_STRINGS));
+    /* The shape list needs a header, a scroll region, and a footer. */
+    {
+        int first_w, first_h;
+        Term_get_size(&first_w, &first_h);
+        if (first_w < 12 || first_h < 9) return;
+    }
+
+    m = menu_new(MN_SKIN_SCROLL, menu_find_iter(MN_ITER_STRINGS));
 
 	/* Set up an easily indexable list of the interesting shapes. */
 	sarray = mem_alloc(count * sizeof(*sarray));
@@ -3138,7 +3485,7 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 	sort(sarray, count, sizeof(sarray[0]), compare_shape_names);
 	narray = mem_alloc(count * sizeof(*narray));
 	for (i = 0; i < count; ++i) {
-		narray[i] = sarray[i]->name;
+		narray[i] = angdroid_shape_name(sarray[i]->name, angdroid_zh_tw_enabled());
 	}
 
 	menu_setpriv(m, count, narray);
@@ -3149,6 +3496,7 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 	clear_from(0);
 
 	h = 0;
+    w = 0;
 	mark = 0;
 	mark_old = -1;
 	displaying = true;
@@ -3159,21 +3507,41 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 		ui_event ke0 = EVENT_EMPTY;
 		ui_event ke;
 
-		Term_get_size(&wnew, &hnew);
-		if (h != hnew) {
-			h = hnew;
-			redraw = true;
-		}
+        Term_get_size(&wnew, &hnew);
+        if (wnew < 12 || hnew < 9) break;
+        if (h != hnew || w != wnew) {
+            h = hnew;
+            w = wnew;
+            menu_layout(m, &list_region);
+            redraw = true;
+        }
 
 		if (redraw) {
 			region_erase(&header_region);
-			prt("Knowledge - shapes", 2, 0);
-			prt("Name", 4, 0);
+            {
+                const char *title = angdroid_zh_tw_enabled() ?
+                    "知識圖鑑：變身形態" : "Knowledge - shapes";
+                const char *footer = angdroid_zh_tw_enabled() ?
+                    "方向鍵移動／r 詳情／Esc 返回" :
+                    "<dir>, 'r' to recall, ESC";
+                char clipped[128];
+                angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+                    title, 0, wnew, wnew);
+                prt(clipped, 2, 0);
+                prt(angdroid_zh_tw_enabled() ? "名稱" : "Name", 4, 0);
+                if (angdroid_utf8_display_columns(footer) > (size_t)wnew)
+                    footer = angdroid_zh_tw_enabled() ?
+                        "r 詳情／Esc 返回" : "r recall / Esc";
+                if (angdroid_utf8_display_columns(footer) > (size_t)wnew)
+                    footer = angdroid_zh_tw_enabled() ? "Esc 返回" : "Esc";
+                angdroid_knowledge_clip_label(clipped, sizeof(clipped),
+                    footer, 0, wnew, wnew);
+                prt(clipped, h - 2, 0);
+            }
 			for (i = 0; i < MIN(80, wnew); i++) {
 				Term_putch(i, 5, COLOUR_WHITE, L'=');
 			}
-			prt("<dir>, 'r' to recall, ESC", h - 2, 0);
-			redraw = false;
+            redraw = false;
 		}
 
 		if (mark_old != mark) {
@@ -3185,8 +3553,10 @@ static void do_cmd_knowledge_shapechange(const char *name, int row)
 
 		handle_stuff(player);
 
-		ke = inkey_ex();
-		if (ke.type == EVT_MOUSE) {
+        soft_kbd_flash("r");
+        ke = inkey_ex();
+        soft_kbd_clear(true);
+        if (ke.type == EVT_MOUSE) {
 			menu_handle_mouse(m, &ke, &ke0);
 		} else if (ke.type == EVT_KBRD) {
 			menu_handle_keypress(m, &ke, &ke0);
@@ -3464,6 +3834,24 @@ static menu_action knowledge_actions[] =
 
 static struct menu knowledge_menu;
 
+/* Preserve the canonical English action keys independently of the current
+ * display language. This allows switching zh-TW on/off between menu opens,
+ * without changing a single callback, action index or shortcut. */
+static const char *const knowledge_action_keys[] = {
+    "Display object knowledge",
+    "Display rune knowledge",
+    "Display artifact knowledge",
+    "Display ego item knowledge",
+    "Display monster knowledge",
+    "Display feature knowledge",
+    "Display trap knowledge",
+    "Display shapechange effects",
+    "Display contents of home",
+    "Display hall of fame",
+    "Display character history",
+    "Display equippable comparison"
+};
+
 void textui_knowledge_init(void)
 {
 	/* Initialize the menus */
@@ -3512,8 +3900,18 @@ void textui_knowledge_cleanup(void)
  */
 void textui_browse_knowledge(void)
 {
-	int i, rune_max = max_runes();
-	region knowledge_region = { 0, 0, -1, 2 + (int)N_ELEMENTS(knowledge_actions) };
+    int i, rune_max = max_runes();
+    region knowledge_region = { 0, 0, -1,
+        2 + (int)N_ELEMENTS(knowledge_actions) };
+
+    /* Never translate or reorder action callbacks. Only their labels and
+     * the title are refreshed for the current app language. */
+    assert(N_ELEMENTS(knowledge_action_keys) == N_ELEMENTS(knowledge_actions));
+    for (i = 0; i < (int)N_ELEMENTS(knowledge_actions); ++i)
+        knowledge_actions[i].name = angdroid_game_ui_text(
+            knowledge_action_keys[i], angdroid_zh_tw_enabled());
+    knowledge_menu.title = angdroid_game_ui_text(
+        "Display current knowledge", angdroid_zh_tw_enabled());
 
 	/* Runes */
 	knowledge_actions[1].flags = MN_ACT_GRAYED;
@@ -3610,13 +4008,17 @@ void do_cmd_messages(void)
 	q = 0;
 
 	/* Get size */
-	Term_get_size(&wid, &hgt);
+    Term_get_size(&wid, &hgt);
+    if (wid < 3 || hgt < 5) return;
 
 	/* Save screen */
 	screen_save();
 
 	/* Process requests until done */
 	while (more) {
+        /* Rotation can change the terminal's dimensions mid-recall. */
+        Term_get_size(&wid, &hgt);
+        if (wid < 3 || hgt < 5) break;
 		/* Clear screen */
 		Term_clear();
 
@@ -3632,43 +4034,76 @@ void do_cmd_messages(void)
 			else
 				msg = format("%s <%dx>", str, count);
 
-			/* Apply horizontal scroll */
-			msg = ((int)strlen(msg) >= q) ? (msg + q) : "";
+            /* q is a number of display cells, never UTF-8 bytes.
+             * A column offset inside a Han glyph skips the whole glyph. */
+            msg = angdroid_utf8_skip_columns(msg, (size_t)q);
 
-			/* Dump the messages, bottom to top */
-			Term_putstr(0, hgt - 3 - j, -1, attr, msg);
+            /* Render whole scalars in visible terminal cells only. */
+            {
+                char visible[1024];
+                angdroid_knowledge_clip_label(visible, sizeof(visible),
+                    msg, 0, wid, wid);
+                Term_putstr(0, hgt - 3 - j, -1, attr, visible);
+            }
 
-			/* Highlight "shower" */
-			if (strlen(shower)) {
-				str = msg;
-
-				/* Display matches */
-				while ((str = my_stristr(str, shower)) != NULL) {
-					int len = strlen(shower);
-
-					/* Display the match */
-					Term_putstr(str-msg, hgt - 3 - j, len, COLOUR_YELLOW, str);
-
-					/* Advance */
-					str += len;
-				}
-			}
+            /* Highlight using terminal cell offsets, not UTF-8 byte
+             * positions. Never paint outside the right screen edge. */
+            if (shower[0]) {
+                str = msg;
+                while ((str = my_stristr(str, shower)) != NULL) {
+                    size_t match_bytes = strlen(shower);
+                    size_t column = angdroid_utf8_prefix_columns(msg, str);
+                    if (column < (size_t)wid) {
+                        char highlighted[sizeof(shower)];
+                        memcpy(highlighted, str, match_bytes);
+                        highlighted[match_bytes] = '\0';
+                        angdroid_utf8_clip_columns(highlighted,
+                            (size_t)wid - column);
+                        if (highlighted[0])
+                            Term_putstr((int)column, hgt - 3 - j, -1,
+                                COLOUR_YELLOW, highlighted);
+                    }
+                    str += match_bytes;
+                }
+            }
 		}
 
-		/* Display header */
-		prt(format("Message recall (%d-%d of %d), offset %d",
-				   i, i + j - 1, n, q), 0, 0);
+        /* Bound both message-range header and footer by visible cells. */
+        {
+            char header[192], visible[192];
+            if (angdroid_zh_tw_enabled())
+                strnfmt(header, sizeof(header),
+                    "歷史訊息（%d–%d／%d），捲動 %d 欄",
+                    i, i + j - 1, n, q);
+            else
+                strnfmt(header, sizeof(header),
+                    "Message recall (%d-%d of %d), offset %d",
+                    i, i + j - 1, n, q);
+            angdroid_knowledge_clip_label(visible, sizeof(visible),
+                header, 0, wid, wid);
+            prt(visible, 0, 0);
+        }
 
-		/* Display prompt (not very informative) */
-		if (strlen(shower))
-			prt("[Movement keys to navigate, '-' for next, '=' to find]",
-				hgt - 1, 0);
-		else
-			prt("[Movement keys to navigate, '=' to find, or ESCAPE to exit]",
-				hgt - 1, 0);
-			
-		/* Get a command */
-		ke = inkey_ex();
+        {
+            const char *prompt = angdroid_game_ui_text(shower[0] ?
+                "[Movement keys to navigate, '-' for next, '=' to find]" :
+                "[Movement keys to navigate, '=' to find, or ESCAPE to exit]",
+                angdroid_zh_tw_enabled());
+            char visible[160];
+            /* Preserve the exit key in the footer on portrait phones. */
+            if (angdroid_utf8_display_columns(prompt) > (size_t)wid)
+                prompt = angdroid_zh_tw_enabled() ?
+                    "= 搜尋／Esc 離開" : "= find / Esc";
+            if (angdroid_utf8_display_columns(prompt) > (size_t)wid)
+                prompt = "Esc";
+            angdroid_knowledge_clip_label(visible, sizeof(visible),
+                prompt, 0, wid, wid);
+            prt(visible, hgt - 1, 0);
+        }
+
+        soft_kbd_flash("=-pn");
+        ke = inkey_ex();
+        soft_kbd_clear(true);
 
 		/* Scroll forwards or backwards using mouse clicks */
 		if (ke.type == EVT_MOUSE) {
@@ -3695,7 +4130,8 @@ void do_cmd_messages(void)
 				case '=':
 				{
 					/* Get the string to find */
-					prt("Find: ", hgt - 1, 0);
+					prt(angdroid_game_ui_text("Find: ",
+                        angdroid_zh_tw_enabled()), hgt - 1, 0);
 					if (!askfor_aux(shower, sizeof shower, NULL)) continue;
 		
 					/* Set to find */
@@ -3706,13 +4142,15 @@ void do_cmd_messages(void)
 				case ARROW_LEFT:
 				case '4':
 				case 'h':
-					q = (q >= wid / 2) ? (q - wid / 2) : 0;
+					q = (q >= MAX(1, wid / 2)) ?
+                        (q - MAX(1, wid / 2)) : 0;
 					break;
 
 				case ARROW_RIGHT:
 				case '6':
 				case 'l':
-					q = q + wid / 2;
+					if (q <= INT_MAX - MAX(1, wid / 2))
+                        q += MAX(1, wid / 2);
 					break;
 
 				case ARROW_UP:
@@ -3777,7 +4215,8 @@ void do_cmd_inven(void)
 	int ret = 3;
 
 	if (player->upkeep->inven[0] == NULL) {
-		msg("You have nothing in your inventory.");
+		msg("%s", angdroid_game_ui_text(
+            "You have nothing in your inventory.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -3790,7 +4229,8 @@ void do_cmd_inven(void)
 		screen_save();
 
 		/* Get an item to use a context command on (Display the inventory) */
-		if (get_item(&obj, "Select Item:",
+		if (get_item(&obj, angdroid_game_ui_text(
+            "Select Item:", angdroid_zh_tw_enabled()),
 				"Error in do_cmd_inven(), please report.",
 				CMD_NULL, NULL, GET_ITEM_PARAMS)) {
 			/* Load screen */
@@ -3823,7 +4263,8 @@ void do_cmd_equip(void)
 	int ret = 3;
 
 	if (!player->upkeep->equip_cnt) {
-		msg("You are not wielding or wearing anything.");
+		msg("%s", angdroid_game_ui_text(
+            "You are not wielding or wearing anything.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -3836,7 +4277,8 @@ void do_cmd_equip(void)
 		screen_save();
 
 		/* Get an item to use a context command on (Display the equipment) */
-		if (get_item(&obj, "Select Item:",
+		if (get_item(&obj, angdroid_game_ui_text(
+            "Select Item:", angdroid_zh_tw_enabled()),
 				"Error in do_cmd_equip(), please report.",
 				CMD_NULL, NULL, GET_ITEM_PARAMS)) {
 			/* Load screen */
@@ -3872,7 +4314,8 @@ void do_cmd_quiver(void)
 	int ret = 3;
 
 	if (player->upkeep->quiver_cnt == 0) {
-		msg("You have nothing in your quiver.");
+		msg("%s", angdroid_game_ui_text(
+            "You have nothing in your quiver.", angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -3885,7 +4328,8 @@ void do_cmd_quiver(void)
 		screen_save();
 
 		/* Get an item to use a context command on (Display the quiver) */
-		if (get_item(&obj, "Select Item:",
+		if (get_item(&obj, angdroid_game_ui_text(
+            "Select Item:", angdroid_zh_tw_enabled()),
 				"Error in do_cmd_quiver(), please report.",
 				CMD_NULL, NULL, GET_ITEM_PARAMS)) {
 			/* Load screen */
@@ -3920,7 +4364,8 @@ void do_cmd_look(void)
 	/* Look around */
 	if (target_set_interactive(TARGET_LOOK, -1, -1))
 	{
-		msg("Target Selected.");
+		msg("%s", angdroid_game_ui_text(
+            "Target Selected.", angdroid_zh_tw_enabled()));
 	}
 }
 
@@ -3961,34 +4406,66 @@ void do_cmd_locate(void)
 		int y2 = Term->offset_y;
 		int x2 = Term->offset_x;
 		
-		/* Describe the location */
-		if ((y2 == y1) && (x2 == x1)) {
-			tmp_val[0] = '\0';
-		} else {
-			strnfmt(tmp_val, sizeof(tmp_val), "%s%s of",
-			        ((y2 < y1) ? " north" : (y2 > y1) ? " south" : ""),
-			        ((x2 < x1) ? " west" : (x2 > x1) ? " east" : ""));
-		}
-
-		/* Prepare to ask which way to look */
-		strnfmt(out_val, sizeof(out_val),
-		        "Map sector [%d,%d], which is%s your sector.  Direction?",
-		        (2 * y2) / panel_hgt, (2 * x2) / panel_wid, tmp_val);
-
-		/* More detail */
-		if (OPT(player, center_player)) {
-			strnfmt(out_val, sizeof(out_val),
-		        	"Map sector [%d(%02d),%d(%02d)], which is%s your sector.  Direction?",
-					(2 * y2) / panel_hgt, (2 * y2) % panel_hgt,
-					(2 * x2) / panel_wid, (2 * x2) % panel_wid, tmp_val);
-		}
+        /* The terminal prompt is localized, not the panel offsets or
+         * movement controls. Relative direction is from the initial panel. */
+        if (angdroid_zh_tw_enabled()) {
+            const char *north_south =
+                (y2 < y1) ? "北" : (y2 > y1) ? "南" : "";
+            const char *east_west =
+                (x2 < x1) ? "西" : (x2 > x1) ? "東" : "";
+            if (y2 == y1 && x2 == x1)
+                my_strcpy(tmp_val, "起點", sizeof(tmp_val));
+            else
+                strnfmt(tmp_val, sizeof(tmp_val), "%s%s",
+                    north_south, east_west);
+            if (OPT(player, center_player)) {
+                strnfmt(out_val, sizeof(out_val),
+                    "地圖區域 [%d(%02d),%d(%02d)]（%s），方向？",
+                    (2 * y2) / panel_hgt, (2 * y2) % panel_hgt,
+                    (2 * x2) / panel_wid, (2 * x2) % panel_wid, tmp_val);
+            } else {
+                strnfmt(out_val, sizeof(out_val),
+                    "地圖區域 [%d,%d]（%s），方向？",
+                    (2 * y2) / panel_hgt, (2 * x2) / panel_wid, tmp_val);
+            }
+        } else {
+            /* Keep the original English status and direction wording. */
+            if ((y2 == y1) && (x2 == x1)) {
+                tmp_val[0] = '\0';
+            } else {
+                strnfmt(tmp_val, sizeof(tmp_val), "%s%s of",
+                    (y2 < y1) ? " north" : (y2 > y1) ? " south" : "",
+                    (x2 < x1) ? " west" : (x2 > x1) ? " east" : "");
+            }
+            strnfmt(out_val, sizeof(out_val),
+                "Map sector [%d,%d], which is%s your sector.  Direction?",
+                (2 * y2) / panel_hgt, (2 * x2) / panel_wid, tmp_val);
+            if (OPT(player, center_player)) {
+                strnfmt(out_val, sizeof(out_val),
+                    "Map sector [%d(%02d),%d(%02d)], which is%s your sector.  Direction?",
+                    (2 * y2) / panel_hgt, (2 * y2) % panel_hgt,
+                    (2 * x2) / panel_wid, (2 * x2) % panel_wid, tmp_val);
+            }
+        }
 
 		/* Get a direction */
 		while (!dir) {
 			struct keypress command = KEYPRESS_NULL;
 
-			/* Get a command (or Cancel) */
-			if (!get_com(out_val, (char *)&command.code)) break;
+            /* Unicode terminal columns, not bytes, determine what fits.
+             * Keep the essential direction prompt on narrow phones. */
+            {
+                char visible[sizeof(out_val)];
+                const char *prompt = out_val;
+                if (angdroid_zh_tw_enabled() && Term &&
+                    angdroid_utf8_display_columns(prompt) >
+                        (size_t)MAX(0, Term->wid - 1))
+                    prompt = "方向？";
+                angdroid_knowledge_clip_label(visible, sizeof(visible),
+                    prompt, 0, Term ? MAX(0, Term->wid - 1) : 0,
+                    Term ? Term->wid : 0);
+                if (!get_com(visible, (char *)&command.code)) break;
+            }
 
 			/* Extract direction */
 			dir = target_dir(command);
@@ -4087,7 +4564,13 @@ static void lookup_symbol(char sym, char *buf, size_t max)
 	 * associate a display character with each tval. */
 	for (i = 0; i < z_info->k_max; i++) {
 		if (char_matches_key(k_info[i].d_char, sym)) {
-			strnfmt(buf, max, "%c - %s.", sym, tval_find_name(k_info[i].tval));
+			{
+                const char *canonical = tval_find_name(k_info[i].tval);
+                angdroid_symbol_query_format(buf, max, sym, canonical,
+                    angdroid_symbol_tval_name(canonical,
+                        angdroid_zh_tw_enabled()),
+                    angdroid_zh_tw_enabled());
+            }
 			return;
 		}
 	}
@@ -4097,7 +4580,9 @@ static void lookup_symbol(char sym, char *buf, size_t max)
 	 * door, and '^' matches trap door (instead of the more generic "trap"). */
 	for (i = 1; i < z_info->f_max; i++) {
 		if (char_matches_key(f_info[i].d_char, sym)) {
-			strnfmt(buf, max, "%c - %s.", sym, f_info[i].name);
+			angdroid_symbol_query_format(buf, max, sym, f_info[i].name,
+                angdroid_terrain_name(f_info[i].name, angdroid_zh_tw_enabled()),
+                angdroid_zh_tw_enabled());
 			return;
 		}
 	}
@@ -4107,16 +4592,21 @@ static void lookup_symbol(char sym, char *buf, size_t max)
 		/* Slight hack - P appears twice */
 		if (streq(race->name, "Morgoth")) continue;
 		if (char_matches_key(race->d_char, sym)) {
-			strnfmt(buf, max, "%c - %s.", sym, race->text);
+			angdroid_symbol_query_format(buf, max, sym, race->text,
+                angdroid_symbol_monster_base_text(race->name, race->text,
+                    angdroid_zh_tw_enabled()), angdroid_zh_tw_enabled());
 			return;
 		}
 	}
 
 	/* No matches */
         if (isprint(sym)) {
-			strnfmt(buf, max, "%c - Unknown Symbol.", sym);
+			strnfmt(buf, max,
+                angdroid_zh_tw_enabled() ? "%c - 未知符號。" :
+                    "%c - Unknown Symbol.", sym);
         } else {
-			strnfmt(buf, max, "? - Unknown Symbol.");
+			my_strcpy(buf, angdroid_zh_tw_enabled() ?
+                "? - 未知符號。" : "? - Unknown Symbol.", max);
         }
 	
 	return;
@@ -4151,19 +4641,24 @@ void do_cmd_query_symbol(void)
 	uint16_t *who;
 
 	/* Get a character, or abort */
-	if (!get_com("Enter character to be identified, or control+[ANU]: ", &sym))
+	if (!get_com(angdroid_game_ui_text(
+        "Enter character to be identified, or control+[ANU]: ",
+        angdroid_zh_tw_enabled()), &sym))
 		return;
 
 	/* Describe */
 	if (sym == KTRL('A')) {
 		all = true;
-		my_strcpy(buf, "Full monster list.", sizeof(buf));
+		my_strcpy(buf, angdroid_game_ui_text("Full monster list.",
+            angdroid_zh_tw_enabled()), sizeof(buf));
 	} else if (sym == KTRL('U')) {
 		all = uniq = true;
-		my_strcpy(buf, "Unique monster list.", sizeof(buf));
+		my_strcpy(buf, angdroid_game_ui_text("Unique monster list.",
+            angdroid_zh_tw_enabled()), sizeof(buf));
 	} else if (sym == KTRL('N')) {
 		all = norm = true;
-		my_strcpy(buf, "Non-unique monster list.", sizeof(buf));
+		my_strcpy(buf, angdroid_game_ui_text("Non-unique monster list.",
+            angdroid_zh_tw_enabled()), sizeof(buf));
 	} else {
 		lookup_symbol(sym, buf, sizeof(buf));
 	}
@@ -4201,7 +4696,9 @@ void do_cmd_query_symbol(void)
 	}
 
 	/* Prompt */
-	put_str("Recall details? (y/k/n): ", 0, 40);
+	put_str(angdroid_zh_tw_enabled() ?
+        "查看詳情？(y/k/n)：" : "Recall details? (y/k/n): ",
+        0, (Term && Term->wid > 40) ? 40 : 0);
 
 	/* Query */
 	query = inkey();
@@ -4243,7 +4740,8 @@ void do_cmd_query_symbol(void)
 		tb = textblock_new();
 		lore_title(tb, race);
 
-		textblock_append(tb, " [(r)ecall, ESC]");
+		textblock_append(tb, "%s", angdroid_game_ui_text(
+            " [(r)ecall, ESC]", angdroid_zh_tw_enabled()));
 		textui_textblock_place(tb, SCREEN_REGION, NULL);
 		textblock_free(tb);
 

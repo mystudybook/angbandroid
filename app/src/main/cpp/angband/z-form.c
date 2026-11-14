@@ -16,6 +16,7 @@
  *    are included in all such copies.  Other copyrights may also apply.
  */
 #include "z-form.h"
+#include "zh-tw-format-utf8.h"
 #include "z-type.h"
 #include "z-util.h"
 #include "z-virt.h"
@@ -182,10 +183,130 @@
  * the given buffer to a length of zero, and return a "length" of zero.
  * The contents of "buf", except for "buf[0]", may then be undefined.
  */
-size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
+/* Before writing any prefix or earlier format field, inspect the original
+ * narrow %s arguments.  An argument may point inside 'buf', and writing
+ * even one literal byte can destroy it before the %s branch sees it.
+ *
+ * Match vstrnfmt's argument consumption, without formatting text or
+ * dereferencing string contents except when a potential overlap needs
+ * checking. Ordinary non-overlapping calls do not allocate memory. */
+static bool angdroid_vstrnfmt_has_aliased_source(
+	const char *fmt, const char *buf, size_t max, va_list vp)
+{
+	const char *cursor = fmt;
+	va_list args;
+	bool aliased = false;
+
+	/* Formatting with fmt itself inside buf also requires protection. */
+	if (angdroid_format_string_overlaps_output(fmt, buf, max))
+		return true;
+	if (!strchr(fmt, 's')) return false;
+
+	va_copy(args, vp);
+	while (*cursor) {
+		bool long_arg = false;
+		bool last_is_dot = false;
+		size_t directive_size = 1;
+		char conversion;
+
+		if (*cursor++ != '%') continue;
+		if (*cursor == '%') {
+			++cursor;
+			continue;
+		}
+		if (*cursor == 'n') {
+			(void)va_arg(args, size_t *);
+			++cursor;
+			continue;
+		}
+
+		/* Width and precision '*' arguments are consumed before the
+		 * conversion, including when their values are negative. */
+		while (*cursor) {
+			/* Match the real formatter's 100-character directive
+			 * limit. Otherwise this lookahead may read varargs after
+			 * the formatter would have stopped on an invalid format. */
+			if (directive_size > 100) goto finished;
+			if (*cursor == '*') {
+				int width = va_arg(args, int);
+				if (width < 0 && last_is_dot) {
+					/* Negative dynamic precision removes its dot. */
+					--directive_size;
+				} else {
+					int digits = snprintf(NULL, 0, "%d", width);
+					if (digits < 0) goto finished;
+					directive_size += (size_t)digits;
+				}
+				last_is_dot = false;
+				++cursor;
+			} else if (*cursor == 'l') {
+				/* The core parser rejects a second 'l' before it
+				 * reads the conversion argument. Do not read one
+				 * during alias preflight either. */
+				if (long_arg) goto finished;
+				long_arg = true;
+				last_is_dot = false;
+				++directive_size;
+				++cursor;
+			} else if (isalpha((unsigned char)*cursor)) {
+				break;
+			} else {
+				last_is_dot = (*cursor == '.');
+				++directive_size;
+				++cursor;
+			}
+		}
+		if (!*cursor) break;
+		conversion = *cursor++;
+		switch (conversion) {
+		case 's':
+			if (long_arg) {
+				(void)va_arg(args, const wchar_t *);
+			} else {
+				const char *value = va_arg(args, const char *);
+				if (angdroid_format_string_overlaps_output(
+						value, buf, max)) {
+					aliased = true;
+				}
+			}
+			break;
+		case 'c':
+		case 'd': case 'i':
+			if (long_arg && conversion != 'c')
+				(void)va_arg(args, long);
+			else
+				(void)va_arg(args, int);
+			break;
+		case 'u': case 'o': case 'x': case 'X':
+			if (long_arg) (void)va_arg(args, unsigned long);
+			else (void)va_arg(args, unsigned int);
+			break;
+		case 'f': case 'e': case 'E': case 'g': case 'G':
+			(void)va_arg(args, double);
+			break;
+		case 'p':
+			(void)va_arg(args, void *);
+			break;
+		default:
+			/* An invalid format makes the real formatter return an
+			 * error; no later argument can be formatted. */
+			cursor += strlen(cursor);
+			break;
+		}
+		/* No need to inspect later varargs once staging is required. */
+		if (aliased) break;
+	}
+	finished:
+	va_end(args);
+	return aliased;
+}
+
+/* The existing parser/formatter writes directly into its destination.
+ * Its caller supplies a non-aliasing scratch buffer when necessary. */
+static size_t angdroid_vstrnfmt_unaliased(char *buf, size_t max,
+	const char *fmt, va_list vp)
 {
 	const char *s;
-	int i = 0, len = 0;
 
 	/* The argument is "long" */
 	bool do_long;
@@ -199,8 +320,8 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 	/* Format sequence */
 	char aux[128];
 
-	/* Resulting string */
-	char tmp[1024];
+	/* Bytes produced by the current non-string format field. */
+	int formatted;
 
 	assert(max);
 	assert(fmt);
@@ -296,6 +417,14 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 			if (isalpha((unsigned char)*s)) {
 				/* Hack -- handle "long" request */
 				if (*s == 'l') {
+					/* Only one 'l' modifier is supported. With
+					 * multiple l's, the old parser could fetch long
+					 * instead of long long or hand a UTF-8 char *
+					 * to snprintf's wide-string conversion. */
+					if (do_long) {
+						buf[0] = '\0';
+						return 0;
+					}
 					/* Save the character */
 					aux[q++] = *s++;
 
@@ -316,11 +445,18 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					/* Get the next argument */
 					arg = va_arg(vp, int);
 
-					/* Hack -- append the "length" */
-					snprintf(aux + q, sizeof(aux) - q, "%d", arg);
-
-					/* Hack -- accept the "length" */
-					while (aux[q]) q++;
+					/* C99 treats a negative dynamic precision as if
+					 * there were no precision at all.  Previously
+					 * "%.*ls" with -1 became "%.-1ls", which is
+					 * not a valid printf conversion and could lose
+					 * the entire translated string.  Negative field
+					 * widths still retain their '-' alignment flag. */
+					if (arg < 0 && q > 0 && aux[q - 1] == '.') {
+						aux[--q] = '\0';
+					} else {
+						snprintf(aux + q, sizeof(aux) - q, "%d", arg);
+						while (aux[q]) q++;
+					}
 
 					/* Skip the "*" */
 					s++;
@@ -334,9 +470,6 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 		/* Terminate "aux" */
 		aux[q] = '\0';
 
-		/* Clear "tmp" */
-		tmp[0] = '\0';
-
 		/* Process the "format" symbol */
 		switch (aux[q - 1]) {
 			/* Simple Character -- standard format */
@@ -348,7 +481,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 				arg = va_arg(vp, int);
 
 				/* Format the argument */
-				snprintf(tmp, sizeof(tmp), aux, arg);
+				formatted = snprintf(buf + n, max - n, aux, arg);
 
 				/* Done */
 				break;
@@ -364,7 +497,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					arg = va_arg(vp, long);
 
 					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg);
+					formatted = snprintf(buf + n, max - n, aux, arg);
 				} else {
 					int arg;
 
@@ -372,7 +505,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					arg = va_arg(vp, int);
 
 					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg);
+					formatted = snprintf(buf + n, max - n, aux, arg);
 				}
 
 				/* Done */
@@ -389,7 +522,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					arg = va_arg(vp, unsigned long);
 
 					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg);
+					formatted = snprintf(buf + n, max - n, aux, arg);
 				} else {
 					unsigned int arg;
 
@@ -397,7 +530,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 					arg = va_arg(vp, unsigned int);
 
 					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg);
+					formatted = snprintf(buf + n, max - n, aux, arg);
 				}
 
 				/* Done */
@@ -415,7 +548,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 				arg = va_arg(vp, double);
 
 				/* Format the argument */
-				snprintf(tmp, sizeof(tmp), aux, arg);
+				formatted = snprintf(buf + n, max - n, aux, arg);
 
 				/* Done */
 				break;
@@ -430,7 +563,7 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 				arg = va_arg(vp, void*);
 
 				/* Format the argument */
-				snprintf(tmp, sizeof(tmp), aux, arg);
+				formatted = snprintf(buf + n, max - n, aux, arg);
 
 				/* Done */
 				break;
@@ -440,66 +573,162 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 			case 's':
 			{
 				if (do_long) {
-					const wchar_t *arg;
-					char arg2[1024];
+					const wchar_t *arg = va_arg(vp, const wchar_t *);
+					const char *dot;
+					size_t wide_len, max_chars, capacity, max_bytes;
+					int max_encoded_bytes;
+					size_t used = 0, index, precision = (size_t)-1;
+					char *utf8;
+					int bytes, converted, written;
+					size_t remaining;
 
-					/* XXX There is a big bug here: if one
-					 * passes "%.0s" to strnfmt, then really we
-					 * should not dereference the arg at all.
-					 * But it does.  See bug #666.
-					 */
-
-					/* Get the next argument */
-					arg = va_arg(vp, const wchar_t *);
-
-					/* Hack -- convert NULL to EMPTY */
 					if (!arg) arg = L"";
 
-					/* Prevent buffer overflows and convert string to char */
-					/* this really should use a wcstombs type function */
-					len = text_wcslen(arg);
-					if (len >= 768) {
-						len = 767;
+					/* The Android Unicode hook supplies a real UTF-8
+					 * encoder. Casting wchar_t to char discarded every
+					 * non-ASCII character, and the old fixed buffer
+					 * silently clipped any name longer than 767 chars. */
+					max_encoded_bytes = text_wcsz();
+					if (max_encoded_bytes <= 0) {
+						buf[0] = '\0';
+						return 0;
 					}
-					for (i = 0; i < len; ++i) {
-						arg2[i] = (char)arg[i];
-					}
-					arg2[len] = '\0';
+					max_bytes = (size_t)max_encoded_bytes;
 
-					/* Remove the l from aux, since we no longer have wchar_t
-					 * as input */
+					/* printf precision on a string is measured in
+					 * bytes. Never emit only part of a UTF-8 scalar,
+					 * including when the format contains a '*' width
+					 * or precision already expanded into aux. */
+					dot = strchr(aux, '.');
+					if (dot) {
+						unsigned digit;
+						precision = 0;
+						for (++dot; *dot >= '0' && *dot <= '9'; ++dot) {
+							digit = (unsigned)(*dot - '0');
+							if (precision > ((size_t)-1 - digit) / 10) {
+								precision = (size_t)-1;
+								break;
+							}
+							precision = precision * 10 + digit;
+						}
+					}
+
+					wide_len = text_wcslen(arg);
+					max_chars = wide_len;
+					if (max_chars > precision) max_chars = precision;
+					if (max_chars > ((size_t)-1 - 1) / max_bytes) {
+						buf[0] = '\0';
+						return 0;
+					}
+					capacity = max_chars * max_bytes + 1;
+					utf8 = mem_alloc(capacity);
+					for (index = 0; index < max_chars; ++index) {
+						converted = text_wctomb(utf8 + used, arg[index]);
+						if (converted <= 0) {
+							utf8[used++] = '?';
+							continue;
+						}
+						bytes = converted;
+						if ((size_t)bytes > capacity - used - 1 ||
+							(size_t)bytes > precision - used)
+							break;
+						used += (size_t)bytes;
+					}
+					utf8[used] = '\0';
+
+					/* Keep width/alignment/precision semantics from the
+					 * original narrow %s formatting route. */
 					aux[q-2] = 's';
 					aux[q-1] = '\0';
-
-					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg2);
-
-					/* Done */
-					break;
+					remaining = max - n;
+					written = snprintf(buf + n, remaining, aux, utf8);
+					mem_free(utf8);
+					if (written < 0) {
+						buf[0] = '\0';
+						return 0;
+					}
+					if ((size_t)written >= remaining) {
+						n = max - 1;
+						buf[n] = '\0';
+						angdroid_utf8_repair_truncated_tail(buf, n);
+						return n;
+					}
+					n += (size_t)written;
+					continue;
 				} else {
 					const char *arg;
-					char arg2[1024];
+					const char *formatted;
+					const char *dot;
+					char *safe_copy = NULL;
+					char *overlap_copy = NULL;
+					size_t precision = (size_t)-1;
+					size_t remaining;
+					int written;
 
-					/* XXX There is a big bug here: if one
-					 * passes "%.0s" to strnfmt, then really we
-					 * should not dereference the arg at all.
-					 * But it does.  See bug #666.
-					 */
-
-					/* Get the next argument */
+					/* Never split a multibyte glyph when printf applies
+					 * a byte-based %.Ns precision to translated prose.
+					 * The ordinary printf flags and column padding
+					 * remain in charge after selecting a safe prefix. */
 					arg = va_arg(vp, const char *);
-
-					/* Hack -- convert NULL to EMPTY */
 					if (!arg) arg = "";
+					formatted = arg;
+					dot = strchr(aux, '.');
+					if (dot) {
+						const char *digit = dot + 1;
+						precision = 0;
+						while (*digit >= '0' && *digit <= '9') {
+							unsigned value = (unsigned)(*digit - '0');
+							if (precision > ((size_t)-1 - value) / 10) {
+								precision = (size_t)-1;
+								break;
+							}
+							precision = precision * 10 + value;
+							++digit;
+						}
+						if (precision != (size_t)-1) {
+							size_t safe_bytes =
+								angdroid_utf8_precision_prefix_bytes(
+									arg, precision);
+							if ((safe_bytes < precision && arg[safe_bytes]) ||
+								angdroid_utf8_prefix_contains_invalid(
+									arg, safe_bytes)) {
+								safe_copy = mem_alloc(safe_bytes + 1);
+								angdroid_utf8_copy_sanitized_prefix(
+									safe_copy, arg, safe_bytes);
+								formatted = safe_copy;
+							}
+						}
+					}
 
-					/* Prevent buffer overflows */
-					(void)my_strcpy(arg2, arg, sizeof(arg2));
-
-					/* Format the argument */
-					snprintf(tmp, sizeof(tmp), aux, arg2);
-
-					/* Done */
-					break;
+					/* Write directly to the caller's output buffer,
+					 * rather than its former fixed 1024-byte staging
+					 * buffer. The caller can retry with more space. */
+					remaining = max - n;
+					if (angdroid_format_string_overlaps_output(
+							formatted, buf + n, remaining)) {
+						/* A direct snprintf() from buf (or from its
+						 * existing prefix in strnfcat()) is undefined.
+						 * Preserve the source before overwriting it. */
+						size_t copy_length = strlen(formatted) + 1;
+						overlap_copy = mem_alloc(copy_length);
+						memcpy(overlap_copy, formatted, copy_length);
+						formatted = overlap_copy;
+					}
+					written = snprintf(buf + n, remaining, aux, formatted);
+					mem_free(overlap_copy);
+					mem_free(safe_copy);
+					if (written < 0) {
+						buf[0] = '\0';
+						return 0;
+					}
+					if ((size_t)written >= remaining) {
+						n = max - 1;
+						buf[n] = '\0';
+						angdroid_utf8_repair_truncated_tail(buf, n);
+						return n;
+					}
+					n += (size_t)written;
+					continue;
 				}
 			}
 
@@ -514,24 +743,58 @@ size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
 			}
 		}
 
-		/* Now append "tmp" to "buf" */
-		for (q = 0; tmp[q]; q++) {
-			/* Check total length */
-			if (n == max-1) break;
-
-			/* Save the character */
-			buf[n++] = tmp[q];
+		/* Numeric, character, float and pointer conversions must also
+		 * use the caller's buffer. A fixed 1024-byte staging area silently
+		 * truncated wide numeric fields and defeated vformat() retries. */
+		if (formatted < 0) {
+			buf[0] = '\0';
+			return 0;
 		}
+		if ((size_t)formatted >= max - n) {
+			n = max - 1;
+			buf[n] = '\0';
+			angdroid_utf8_repair_truncated_tail(buf, n);
+			return n;
+		}
+		n += (size_t)formatted;
 	}
 
 
-	/* Terminate buffer */
+	/* Keep fixed-size translated text valid even when the final
+	 * UTF-8 scalar crosses the caller's byte limit. The byte count
+	 * remains unchanged so dynamic-buffer callers still retry. */
 	buf[n] = '\0';
+	if (n == max - 1)
+		angdroid_utf8_repair_truncated_tail(buf, n);
 
 	/* Return length */
 	return (n);
 }
 
+
+/* Keep the legacy bounded length contract.  Allocate only when an input
+ * string or the format itself aliases the output buffer: %s may be preceded
+ * by literal text, padding, or numeric fields that would destroy its source
+ * before the conversion is reached. */
+size_t vstrnfmt(char *buf, size_t max, const char *fmt, va_list vp)
+{
+	char *scratch;
+	size_t result;
+	va_list args;
+
+	assert(max);
+	assert(fmt);
+	if (!angdroid_vstrnfmt_has_aliased_source(fmt, buf, max, vp))
+		return angdroid_vstrnfmt_unaliased(buf, max, fmt, vp);
+
+	scratch = mem_alloc(max);
+	va_copy(args, vp);
+	result = angdroid_vstrnfmt_unaliased(scratch, max, fmt, args);
+	va_end(args);
+	memcpy(buf, scratch, result + 1);
+	mem_free(scratch);
+	return result;
+}
 
 /**
  * Add a formatted string to the end of a string
@@ -579,31 +842,60 @@ char *vformat(const char *fmt, va_list vp)
 	/* Null format yields last result */
 	if (!fmt) return (format_buf);
 
-	/* Keep going until successful */
-	while (1) {
-		va_list	args;
-		size_t len;
+	/* Do not inspect alias ranges or allocate a scratch buffer with an
+	 * impossible capacity. A corrupted or synthetic near-SIZE_MAX
+	 * capacity must fail before any further pointer arithmetic. */
+	if (format_len > ((size_t)-1) / 2)
+		quit("Formatted string exceeds addressable memory");
 
-		/* Build the string */
-		va_copy(args, vp);
-		len = vstrnfmt(format_buf, format_len, fmt, args);
-		va_end(args);
+	/* If a format string or a narrow %s source points into the cached
+	 * buffer, do not overwrite or reallocate that source while retrying.
+	 * Reallocating can move it, invalidating the original va_list
+	 * pointers before the next formatting attempt. */
+	{
+		bool aliased = angdroid_vstrnfmt_has_aliased_source(
+			fmt, format_buf, format_len, vp);
+		size_t capacity = format_len;
+		char *output = aliased ? mem_alloc(capacity) : format_buf;
 
-		/* Success */
-		if (len < format_len-1) break;
+		/* Keep going until successful */
+		while (1) {
+			va_list args;
+			size_t len;
 
-		/* Grow the buffer */
-		format_len = format_len * 2;
-		format_buf = mem_realloc(format_buf, format_len);
+			va_copy(args, vp);
+			len = vstrnfmt(output, capacity, fmt, args);
+			va_end(args);
+			if (len < capacity - 1) break;
+
+			/* A saturated buffer must grow. Guard against overflow
+			 * rather than letting mem_realloc receive size zero. */
+			if (capacity > ((size_t)-1) / 2)
+				quit("Formatted string exceeds addressable memory");
+			capacity *= 2;
+			output = mem_realloc(output, capacity);
+			if (!aliased) format_buf = output;
+		}
+
+		/* Do not free any aliased source until all retries finish.
+		 * Regular non-aliased formatting still reuses the buffer. */
+		if (aliased) {
+			mem_free(format_buf);
+			format_buf = output;
+		}
+		format_len = capacity;
 	}
-
-	/* Return the new buffer */
-	return (format_buf);
+	return format_buf;
 }
 
 void vformat_kill(void)
 {
+	/* Angband's mem_free() is a plain free(); reset the cached
+	 * pointer and capacity so repeated shutdown or a later format()
+	 * starts with a fresh allocation, rather than using freed memory. */
 	mem_free(format_buf);
+	format_buf = NULL;
+	format_len = 0;
 }
 
 

@@ -45,6 +45,53 @@ int main(void)
     assert(angdroid_item_selection_footer_row(1, 0, 22, 0) == -1);
     assert(angdroid_item_selection_footer_row(1, 10, 22, -1) == -1);
 
+    /* A source with zero selectable objects is still navigable when
+     * another inventory/equipment/quiver/floor tab can be opened.
+     * The placeholder viewport row is not a real item: the actual menu
+     * count remains zero, so touch and Enter cannot select an object. */
+    assert(angdroid_item_selection_viewport_count(0, false) == 0);
+    assert(angdroid_item_selection_viewport_count(0, true) == 1);
+    assert(angdroid_item_selection_viewport_count(-1, false) == 0);
+    assert(angdroid_item_selection_viewport_count(-1, true) == 1);
+    assert(angdroid_item_selection_viewport_count(1, false) == 1);
+    assert(angdroid_item_selection_viewport_count(23, true) == 23);
+    assert(angdroid_item_selection_viewport_count(INT_MAX, true) == INT_MAX);
+    assert(angdroid_item_selection_region(22, 12, 16, 42, 25, 9,
+        angdroid_item_selection_viewport_count(0, true), false, &l));
+    assert(l.page_rows == 1);
+    assert(angdroid_menu_scrolling_hit(
+        l.row, l.row, l.page_rows, 0, 0) == -1);
+    assert(!angdroid_item_selection_region(22, 12, 16, 42, 25, 9,
+        angdroid_item_selection_viewport_count(0, false), false, &l));
+
+    /* An empty bag can reserve a quiver footer after the one virtual
+     * viewport row; the row remains outside every selectable touch hit. */
+    assert(angdroid_item_selection_region(22, 12, 16, 42, 25, 9,
+        angdroid_item_selection_viewport_count(0, true), true, &l));
+    assert(l.page_rows == 1);
+    assert(angdroid_item_selection_footer_row(l.row, l.page_rows, 12, 0) == 2);
+    assert(angdroid_menu_scrolling_hit(
+        2, l.row, l.page_rows, 0, 0) == -1);
+
+    /* Compare the production pure-C helper against an independent
+     * int64_t ceil division (which cannot overflow on any int input). */
+    for (count = -2; count <= 256; ++count) {
+        int slot;
+        for (slot = -2; slot <= 64; ++slot) {
+            int expected = (count <= 0 || slot <= 0) ? 0 :
+                (int)(((int64_t)count + slot - 1) / slot);
+            assert(angdroid_item_quiver_footer_slots(count, slot) ==
+                expected);
+        }
+    }
+    assert(angdroid_item_quiver_footer_slots(INT_MAX, 1) == INT_MAX);
+    assert(angdroid_item_quiver_footer_slots(INT_MAX, 2) ==
+        (INT_MAX / 2 + 1));
+    assert(angdroid_item_quiver_footer_slots(INT_MAX, INT_MAX) == 1);
+    assert(angdroid_item_quiver_footer_slots(1, INT_MAX) == 1);
+    assert(angdroid_item_quiver_footer_slots(1, 0) == 0);
+    assert(angdroid_item_quiver_footer_slots(-1, 1) == 0);
+
     for (w = 0; w <= 160; ++w) {
         for (h = 0; h <= 40; ++h) {
             for (count = 0; count <= 55; count += 5) {

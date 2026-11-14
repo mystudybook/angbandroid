@@ -30,6 +30,21 @@ for label, body in (("keypress selection", selection), ("soft keyboard hints", h
         if expression not in body:
             raise SystemExit(f"FAIL: {label} lacks {expression}")
 
+# Only an actually drawn relative label can activate a row. A hidden
+# row keeps its explicit (absolute) tag, but is absent from the soft keyboard
+# and cannot be invoked by a relative shortcut.
+relative = selection.split("} else if (menu->flags & MN_REL_TAGS) {", 1)[1].split(
+    "} else if (!(menu->flags & MN_PVT_TAGS)", 1
+)[0]
+if "if (!menu_navigation_is_valid(menu, i))" not in relative:
+    raise SystemExit("FAIL: a hidden relative tag can trigger an action")
+if relative.index("if (!menu_navigation_is_valid(menu, i))") > relative.index(
+    "c = menu->skin->get_tag(menu, i);"
+):
+    raise SystemExit("FAIL: relative key was read before the visibility check")
+if "menu->inscriptions &&" not in selection:
+    raise SystemExit("FAIL: digit alias lookup can dereference a missing map")
+
 if "return i + menu->top;" in selection:
     raise SystemExit("FAIL: relative selection incorrectly adds page offset twice")
 if "for (i = 0; menu->selections[i]; i++)" in selection:

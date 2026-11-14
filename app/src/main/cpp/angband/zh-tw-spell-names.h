@@ -1,10 +1,11 @@
-/* All original Angband class.txt spell names. Display only.
+/* Standard Angband spell names and FAangband display-only supplements.
  * Spell identifiers, game-data records and saved character spells stay English.
  */
 #ifndef ANGDROID_ZH_TW_SPELL_NAMES_H
 #define ANGDROID_ZH_TW_SPELL_NAMES_H
 #include <stddef.h>
 #include <string.h>
+#include "zh-tw-faangband-spells.h"
 struct angdroid_spell_name_pair { const char *en; const char *zh; };
 static inline const char *angdroid_zh_tw_spell_name(const char *en, int zh_tw)
 {
@@ -147,6 +148,9 @@ static inline const char *angdroid_zh_tw_spell_name(const char *en, int zh_tw)
     if (!en || !zh_tw) return en;
     for (i = 0; i < sizeof(map)/sizeof(map[0]); ++i)
         if (strcmp(en, map[i].en) == 0) return map[i].zh;
-    return en;
+    {
+        const char *fa_name = angdroid_zh_tw_faangband_spell_name(en);
+        return fa_name ? fa_name : en;
+    }
 }
 #endif

@@ -38,6 +38,7 @@
 #include "z-textblock.h"
 #include "droid.h"
 #include "zh-tw-lore.h"
+#include "zh-tw-faangband-monster-flavor.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-mon-lore-terms.h"
 
@@ -1022,8 +1023,12 @@ void lore_append_flavor(textblock *tb, const struct monster_race *race)
 	assert(tb && race);
 
     /* Flavor localization is display-only and never changes monster records. */
-    const char *localized = angdroid_zh_tw_enabled() ?
-        angdroid_zh_tw_monster_flavor(race->name) : NULL;
+    const char *localized = NULL;
+    if (angdroid_zh_tw_enabled()) {
+        localized = angdroid_faangband_monster_flavor(race->name, race->text);
+        if (!localized)
+            localized = angdroid_zh_tw_monster_flavor(race->name);
+    }
     textblock_append(tb, "%s\n", localized ? localized : race->text);
 }
 

@@ -11,9 +11,11 @@ menu = (ROOT / "app/src/main/cpp/angband/ui-menu.c").read_text(encoding="utf-8")
 menu_h = (ROOT / "app/src/main/cpp/angband/ui-menu.h").read_text(encoding="utf-8")
 store = (ROOT / "app/src/main/cpp/angband/ui-store.c").read_text(encoding="utf-8")
 
+if "MN_MOUSE_ROW_ACTION = 0x100" not in menu_h:
+    raise SystemExit("FAIL: store row mouse callback flag missing")
 if "MN_ALLOW_EMPTY_INPUT = 0x80" not in menu_h:
     raise SystemExit("FAIL: missing explicit empty-menu command opt-in")
-if "menu->flags |= MN_ALLOW_EMPTY_INPUT;" not in store:
+if "menu->flags |= MN_ALLOW_EMPTY_INPUT | MN_MOUSE_ROW_ACTION;" not in store:
     raise SystemExit("FAIL: empty shop cannot opt into Sell/Help command dispatch")
 
 dispatch = menu.split("static bool menu_handle_action(", 1)[1].split(
@@ -53,6 +55,21 @@ if handler.index("region_inside(&m->active, event) &&") > handler.index(
     raise SystemExit("FAIL: stock mouse row must validate its active bounds")
 if "if ((event->mouse.y == 0) || (event->mouse.y == 1))" not in handler:
     raise SystemExit("FAIL: header touch no longer opens the store command popup")
+
+# The popup restores a saved screen even on Cancel/Examine; the shop frame
+# must be redrawn after every valid popup, not only after a purchase.
+popup_select = handler.split("if (event->type == EVT_SELECT) {", 1)[1].split(
+    "} else if (event->type == EVT_MOUSE)", 1
+)[0]
+if "(void)context_menu_store_item(ctx, oid, 1, popup_row);" not in popup_select:
+    raise SystemExit("FAIL: item popup is not dispatched through the guarded selection")
+if "if (purchased)" in popup_select:
+    raise SystemExit("FAIL: canceled/examined popup leaves stale shop frame")
+for item in ("store_display_recalc(ctx);", "store_menu_recalc(m);", "store_redraw(ctx);"):
+    if item not in popup_select:
+        raise SystemExit(f"FAIL: missing shop repaint after popup: {item}")
+if popup_select.index("cmdq_pop(CTX_STORE);") > popup_select.index("store_display_recalc(ctx);"):
+    raise SystemExit("FAIL: redraw occurred before stock mutation callbacks")
 
 if "ctx->stock_changed = false;" not in handler:
     raise SystemExit("FAIL: a fresh action never acknowledges the new stock list")

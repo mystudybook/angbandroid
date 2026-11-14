@@ -18,6 +18,7 @@
  */
 
 #include "angband.h"
+#include <limits.h>
 #include "game-input.h"
 #include "player-properties.h"
 #include "ui-input.h"
@@ -25,59 +26,220 @@
 #include "ui-player-properties.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/zh-tw-player-ability.h"
+#include "../angband/menu-text-fit.h"
+#include "ui-birth-abilities-zh-tw.h"
+#include "ui-birth-elements-zh-tw.h"
+#include "ui-birth-history-utf8.h"
+#include "ui-ability-compact-layout.h"
 
 /**
  * ------------------------------------------------------------------------
  * Code for viewing race and class abilities
  * ------------------------------------------------------------------------ */
 
+/* The two ability menus share a bounded list and a separately paged
+ * description. Resize happens inside menu_select(), not only on entry. */
+static int fa_ability_detail_page;
+static int fa_ability_detail_pages;
+static int fa_ability_detail_oid = -1;
+
+static void fa_ability_layout_menu(struct menu *m)
+{
+    struct angdroid_fa_ability_layout plan;
+    region bounds;
+    int width = Term ? Term->wid : 0;
+    int height = Term ? Term->hgt : 0;
+
+    if (angdroid_fa_ability_plan(width, height, m->title != NULL,
+            &plan)) {
+        bounds = (region){ 0, 0, plan.width, plan.menu_rows };
+    } else {
+        /* A region outside the terminal makes menu_select() cancel
+         * safely instead of treating a zero size as 'fill remainder'. */
+        bounds = (region){ width, height, 1, 1 };
+    }
+    menu_layout(m, &bounds);
+}
+
+static void fa_ability_resize_menu(struct menu *m)
+{
+    if (!m) return;
+    fa_ability_detail_page = 0;
+    fa_ability_detail_oid = -1;
+    fa_ability_layout_menu(m);
+}
+
+static void fa_ability_draw_description(const char *description,
+    const region *loc, int oid, uint8_t attr)
+{
+    size_t *starts, *lengths, count, index, capacity;
+    char raw[512], visible[512], footer[128];
+    int row, first, content_rows, width, page, total_pages;
+    const char *text = description ? description : "";
+    int i;
+
+    if (!Term || !loc) return;
+    first = loc->row + loc->page_rows + 1;
+    content_rows = Term->hgt - first - 1;
+    width = MIN(Term->wid, 80);
+    if (width < 16 || content_rows < 1 || first < 0) return;
+
+    if (fa_ability_detail_oid != oid) {
+        fa_ability_detail_oid = oid;
+        fa_ability_detail_page = 0;
+    }
+    capacity = angdroid_fa_ability_line_capacity(strlen(text));
+    if (!capacity) return;
+    starts = mem_alloc(capacity * sizeof(*starts));
+    lengths = mem_alloc(capacity * sizeof(*lengths));
+    count = angdroid_fa_history_wrap(text, (size_t)width,
+        starts, lengths, capacity);
+    {
+        size_t pages = 1 + (count ? count - 1 : 0) /
+            (size_t)content_rows;
+        total_pages = pages > (size_t)INT_MAX ? INT_MAX : (int)pages;
+    }
+    page = angdroid_fa_ability_page_clamp(
+        fa_ability_detail_page, count, content_rows);
+    fa_ability_detail_page = page;
+    fa_ability_detail_pages = total_pages;
+
+    /* Repaint the separator and detail region, never the selectable
+     * list. After rotation, old rows must not linger in the gap. */
+    if (first > 0) Term_erase(0, first - 1, Term->wid);
+    for (row = first; row < Term->hgt; ++row)
+        Term_erase(0, row, Term->wid);
+    for (i = 0; i < content_rows; ++i) {
+        index = (size_t)page * (size_t)content_rows + (size_t)i;
+        if (index >= count) break;
+        angdroid_fa_history_copy_line(raw, sizeof(raw), text,
+            starts[index], lengths[index]);
+        angdroid_menu_copy_columns(visible, sizeof(visible), raw,
+            (size_t)width);
+        if (visible[0])
+            c_put_str(attr, visible, first + i, 0);
+    }
+
+    if (total_pages > 1) {
+        strnfmt(footer, sizeof(footer), angdroid_zh_tw_enabled() ?
+            "說明 %d/%d  [ 上一頁  ] 下一頁" :
+            "Description %d/%d  [ prev  ] next",
+            page + 1, total_pages);
+    } else {
+        my_strcpy(footer, angdroid_zh_tw_enabled() ?
+            "Esc 返回／方向鍵選擇能力" : "Esc back / arrows select",
+            sizeof(footer));
+    }
+    angdroid_menu_copy_columns(visible, sizeof(visible), footer,
+        (size_t)width);
+    c_put_str(COLOUR_WHITE, visible, Term->hgt - 1, 0);
+    mem_free(lengths);
+    mem_free(starts);
+}
+
+static bool fa_ability_handle_page(struct menu *m,
+    const ui_event *event, int oid)
+{
+    int direction;
+    (void)m;
+    (void)oid;
+    if (!event || event->type != EVT_KBRD) return false;
+    if (event->key.code == '[') direction = -1;
+    else if (event->key.code == ']') direction = 1;
+    else return false;
+    fa_ability_detail_page += direction;
+    if (fa_ability_detail_page < 0) fa_ability_detail_page = 0;
+    if (fa_ability_detail_page >= fa_ability_detail_pages)
+        fa_ability_detail_page = MAX(0, fa_ability_detail_pages - 1);
+    return true;
+}
+
+/* The status row is outside the menu list. Its two halves also act
+ * as previous/next buttons on a touchscreen. */
+static bool fa_ability_page_touch(struct menu *m,
+    const ui_event *event, ui_event *out)
+{
+    ui_event key = EVENT_EMPTY;
+    (void)out;
+    if (!m || !Term || !event || event->type != EVT_MOUSE ||
+        event->mouse.y != Term->hgt - 1 ||
+        event->mouse.x < 0 || event->mouse.x >= MIN(Term->wid, 80) ||
+        fa_ability_detail_pages < 2) return false;
+    key.type = EVT_KBRD;
+    key.key.code = event->mouse.x < MIN(Term->wid, 80) / 2 ? '[' : ']';
+    return fa_ability_handle_page(m, &key, m->cursor);
+}
+
+
+/* Browsing does not choose a specialty. A second tap on the same
+ * row should keep this screen open; Esc is the explicit exit. */
+static bool fa_ability_view_action(struct menu *m,
+    const ui_event *event, int oid)
+{
+    if (event && event->type == EVT_SELECT) return true;
+    return fa_ability_handle_page(m, event, oid);
+}
+
 static char view_ability_tag(struct menu *menu, int oid)
 {
-	return all_letters_nohjkl[oid];
+    /* Long race/class lists remain scrollable without reading past tags. */
+    return oid >= 0 && (size_t)oid < strlen(all_letters_nohjkl) ?
+        all_letters_nohjkl[oid] : 0;
 }
 
 /**
  * Display an entry on the gain ability menu
  */
 static void view_ability_display(struct menu *menu, int oid, bool cursor,
-	int row, int col, int width)
+    int row, int col, int width)
 {
-	char buf[80];
-	uint8_t color;
-	struct player_ability *choices = menu->menu_data;
+    char buf[256], visible[256];
+    uint8_t color;
+    bool zh = angdroid_zh_tw_enabled();
+    const struct player_ability *choices = menu->menu_data;
+    const char *name = angdroid_fa_birth_ability_name(
+        choices[oid].name, choices[oid].type, choices[oid].index, zh);
+    if (!name) name = zh ? "未知能力" : "Unknown ability";
 
-	switch (choices[oid].group) {
-	case PLAYER_FLAG_SPECIAL:
-		{
-			strnfmt(buf, sizeof(buf), "Specialty Ability: %s",
-				choices[oid].name);
-			color = COLOUR_GREEN;
-			break;
-		}
-	case PLAYER_FLAG_CLASS:
-		{
-			strnfmt(buf, sizeof(buf), "Class: %s",
-				choices[oid].name);
-			color = COLOUR_UMBER;
-			break;
-		}
-	case PLAYER_FLAG_RACE:
-		{
-			strnfmt(buf, sizeof(buf), "Racial: %s",
-				choices[oid].name);
-			color = COLOUR_ORANGE;
-			break;
-		}
-	default:
-		{
-			my_strcpy(buf, "Mysterious", sizeof(buf));
-			color = COLOUR_PURPLE;
-		}
-	}
+    /* Race abilities may be element records, not PF or OF flags.
+     * Translate using the native damage percentage, never the English
+     * source name; all neutral/unknown values keep the source label. */
+    if (zh && choices[oid].type && streq(choices[oid].type, "element")) {
+        const char *element = angdroid_fa_birth_element_name(choices[oid].index);
+        int tier = angdroid_fa_birth_element_resistance(choices[oid].value);
+        if (element) {
+            if (tier == 2) name = format("免疫：%s", element);
+            else if (tier == 1) name = format("抗性：%s", element);
+            else if (tier == -1) name = format("弱點：%s", element);
+        }
+    }
 
-	/* Print it */
-	c_put_str(cursor ? COLOUR_WHITE : color, buf, row, col);
+    switch (choices[oid].group) {
+    case PLAYER_FLAG_SPECIAL:
+        strnfmt(buf, sizeof(buf), zh ? "特殊能力：%s" :
+            "Specialty Ability: %s", name);
+        color = COLOUR_GREEN;
+        break;
+    case PLAYER_FLAG_CLASS:
+        strnfmt(buf, sizeof(buf), zh ? "職業能力：%s" : "Class: %s", name);
+        color = COLOUR_UMBER;
+        break;
+    case PLAYER_FLAG_RACE:
+        strnfmt(buf, sizeof(buf), zh ? "種族能力：%s" : "Racial: %s", name);
+        color = COLOUR_ORANGE;
+        break;
+    default:
+        my_strcpy(buf, zh ? "神祕能力" : "Mysterious", sizeof(buf));
+        color = COLOUR_PURPLE;
+        break;
+    }
 
+    /* Do not clip a multi-byte name in the middle of a Chinese glyph. */
+    angdroid_menu_copy_columns(visible, sizeof(visible), buf,
+        width > 0 ? (size_t)width : 0);
+    c_put_str(cursor ? COLOUR_WHITE : color, visible, row, col);
 }
 
 
@@ -88,20 +250,10 @@ static void view_ability_menu_browser(int oid, void *data, const region *loc)
 {
 	struct player_ability *choices = data;
 
-	/* Redirect output to the screen */
-	text_out_hook = text_out_to_screen;
-	text_out_wrap = 60;
-	text_out_indent = loc->col - 1;
-	text_out_pad = 1;
-
-	clear_from(loc->row + loc->page_rows);
-	Term_gotoxy(loc->col, loc->row + loc->page_rows);
-	text_out_c(COLOUR_L_BLUE, "\n%s\n", (char *) choices[oid].desc);
-
-	/* XXX */
-	text_out_pad = 0;
-	text_out_indent = 0;
-	text_out_wrap = 0;
+    fa_ability_draw_description(
+        angdroid_ability_description(choices[oid].desc,
+            angdroid_zh_tw_enabled()),
+        loc, oid, COLOUR_L_BLUE);
 }
 
 /**
@@ -111,29 +263,47 @@ void textui_view_ability_menu(struct player_ability *ability_list,
 							  int num_abilities)
 {
 	struct menu menu;
-	menu_iter menu_f = { view_ability_tag, 0, view_ability_display, 0, 0 };
-	region loc = { 0, 0, 70, -99 };
-	char buf[80];
+	menu_iter menu_f = { view_ability_tag, 0, view_ability_display,
+        fa_ability_view_action, fa_ability_resize_menu };
+	char buf[160];
+    int last_shortcut;
+
+    if (!ability_list || num_abilities <= 0 || !Term ||
+        !all_letters_nohjkl[0] || Term->wid < 16 || Term->hgt < 12) return;
+    fa_ability_detail_page = 0;
+    fa_ability_detail_pages = 0;
+    fa_ability_detail_oid = -1;
+    last_shortcut = MIN(num_abilities,
+        (int)strlen(all_letters_nohjkl)) - 1;
 
 	/* Save the screen and clear it */
 	screen_save();
 
 	/* Prompt choices */
-	strnfmt(buf, sizeof(buf),
-		"Race and class abilities (%c-%c, ESC=exit): ",
-		all_letters_nohjkl[0], all_letters_nohjkl[num_abilities - 1]);
+    strnfmt(buf, sizeof(buf),
+        angdroid_zh_tw_enabled() ?
+            "種族與職業能力（%c-%c，Esc 離開）：" :
+            "Race and class abilities (%c-%c, ESC=exit): ",
+        all_letters_nohjkl[0], all_letters_nohjkl[last_shortcut]);
 
 	/* Set up the menu */
 	menu_init(&menu, MN_SKIN_SCROLL, &menu_f);
 	menu.header = buf;
 	menu_setpriv(&menu, num_abilities, ability_list);
-	loc.page_rows = num_abilities + 1;
+
 	menu.flags = MN_DBL_TAP;
 	menu.browse_hook = view_ability_menu_browser;
-	region_erase_bordered(&loc);
-	menu_layout(&menu, &loc);
+    menu.cmd_keys = "[]";
+    menu.context_hook = fa_ability_page_touch;
+    fa_ability_layout_menu(&menu);
+    clear_from(0);
 
 	menu_select(&menu, 0, false);
+
+    /* menu_select() refreshes Android's hint ribbon for non-object menus,
+     * but does not clear it on exit. No ability shortcuts may outlive the
+     * read-only viewer, including after Esc or an invalid resize. */
+    soft_kbd_replace("");
 
 	/* Load screen */
 	screen_load();
@@ -159,6 +329,12 @@ struct spec_menu_data {
  */
 static bool check_specialty_gain(int specialty)
 {
+    struct player_ability *ability;
+    /* A malformed or absent player_property record must never become
+     * a selectable row or reach the history/game-state mutation path. */
+    if (specialty <= PF_NONE || specialty >= PF_MAX) return false;
+    ability = lookup_ability("player", specialty, 0);
+    if (!ability || !ability->name) return false;
 	/* Can't learn it if we already know it */
 	if (pf_has(player->specialties, specialty)) {
 		return false;
@@ -178,38 +354,55 @@ static bool check_specialty_gain(int specialty)
 
 static char gain_spec_tag(struct menu *menu, int oid)
 {
-	return I2A(oid);
+    return oid >= 0 && (size_t)oid < strlen(lower_case) ?
+        I2A(oid) : 0;
 }
 
 /**
  * Display an entry on the gain specialty menu
  */
 static void gain_spec_display(struct menu *menu, int oid, bool cursor, int row,
-					   int col, int width)
+    int col, int width)
 {
-	struct spec_menu_data *d = menu_priv(menu);
-	int idx = d->specialties[oid];
-	uint8_t attr = (cursor ? COLOUR_L_GREEN : COLOUR_GREEN);
-	struct player_ability *ability = lookup_ability("player", idx, 0);
+    struct spec_menu_data *d = menu_priv(menu);
+    int idx = d->specialties[oid];
+    struct player_ability *ability = lookup_ability("player", idx, 0);
+    uint8_t attr = cursor ? COLOUR_L_GREEN : COLOUR_GREEN;
+    char visible[256];
+    const char *name;
 
-	/* Print it */
-	c_put_str(attr, ability->name, row, col);
-
+    if (!ability) return;
+    name = angdroid_fa_birth_ability_name(ability->name,
+        ability->type, ability->index, angdroid_zh_tw_enabled());
+    angdroid_menu_copy_columns(visible, sizeof(visible), name,
+        width > 0 ? (size_t)width : 0);
+    c_put_str(attr, visible, row, col);
 }
+
 
 /**
  * Deal with events on the gain specialty menu
  */
 static bool gain_spec_action(struct menu *menu, const ui_event *e, int oid)
 {
-	struct spec_menu_data *d = menu_priv(menu);
+    struct spec_menu_data *d = menu_priv(menu);
 
-	if (e->type == EVT_SELECT) {
-		d->selected_spec = d->specialties[oid];
-		return false;
-	}
+    if (!e || !d) return false;
+    if (fa_ability_handle_page(menu, e, oid)) return true;
+    if (e->type == EVT_SELECT) {
+        /* A list can change between drawing and double-tap. Do not
+         * open a confirmation for stale or unavailable abilities. */
+        if (oid < 0 || oid >= d->spec_known ||
+            !check_specialty_gain(d->specialties[oid]))
+            return true;
+        d->selected_spec = d->specialties[oid];
+        return false;
+    }
 
-	return true;
+    /* menu_select() dispatches outside-row mouse events here before
+     * calling context_hook. Claiming those events makes the page-footer
+     * left/right touch targets unreachable in the gain-specialty menu. */
+    return e->type != EVT_MOUSE;
 }
 
 
@@ -222,21 +415,12 @@ static void gain_spec_menu_browser(int oid, void *data, const region *loc)
 	int idx = d->specialties[oid];
 	struct player_ability *ability = lookup_ability("player", idx, 0);
 
-	/* Redirect output to the screen */
-	text_out_hook = text_out_to_screen;
-	text_out_wrap = 60;
-	text_out_indent = loc->col - 1;
-	text_out_pad = 1;
+	if (!ability) return;
 
-
-	clear_from(loc->row + loc->page_rows);
-	Term_gotoxy(loc->col, loc->row + loc->page_rows + 1);
-	text_out_to_screen(COLOUR_DEEP_L_BLUE, (char *) ability->desc);
-
-	/* Reset */
-	text_out_pad = 0;
-	text_out_indent = 0;
-	text_out_wrap = 0;
+    fa_ability_draw_description(
+        angdroid_ability_description(ability->desc,
+            angdroid_zh_tw_enabled()),
+        loc, oid, COLOUR_DEEP_L_BLUE);
 }
 
 /**
@@ -246,15 +430,21 @@ bool textui_gain_spec_menu(int *pick)
 {
 	struct menu menu;
 	menu_iter menu_f = { gain_spec_tag, 0, gain_spec_display,
-		gain_spec_action, 0
-	};
+        gain_spec_action, fa_ability_resize_menu };
 	ui_event evt = { 0 };
+    bool accepted = false;
 	struct spec_menu_data *d = mem_alloc(sizeof *d);
-	region loc = { 0, 0, 70, -99 };
-
 	size_t i;
 
-	char buf[80];
+	char buf[192];
+
+    if (!Term || Term->wid < 16 || Term->hgt < 12 || !pick) {
+        mem_free(d);
+        return false;
+    }
+    fa_ability_detail_page = 0;
+    fa_ability_detail_pages = 0;
+    fa_ability_detail_oid = -1;
 
 	/* Count the learnable specialties */
 	d->spec_known = 0;
@@ -266,8 +456,9 @@ bool textui_gain_spec_menu(int *pick)
 
 	/* We are out of specialties - should never happen */
 	if (!d->spec_known) {
-		msg("No specialties available.");
-		screen_load();
+		msg("%s", angdroid_zh_tw_enabled() ?
+            "沒有可學習的專精能力。" : "No specialties available.");
+        mem_free(d);
 		return false;
 	}
 
@@ -287,45 +478,78 @@ bool textui_gain_spec_menu(int *pick)
 	clear_from(0);
 
 	/* Prompt choices */
-	strnfmt(buf, sizeof(buf),
-			"(Specialties: %c-%c, ESC=exit) Gain which specialty (%d available)? ",
-			I2A(0), I2A(d->spec_known - 1), player->upkeep->new_specialties);
+    strnfmt(buf, sizeof(buf), angdroid_zh_tw_enabled() ?
+            "學習哪項專精（%c-%c，Esc 離開，剩餘 %d 次）？" :
+            "(Specialties: %c-%c, ESC=exit) Gain which specialty (%d available)? ",
+            I2A(0), I2A(MIN(d->spec_known,
+                (int)strlen(lower_case)) - 1),
+            player->upkeep->new_specialties);
 
 	/* Set up the menu */
 	menu_init(&menu, MN_SKIN_SCROLL, &menu_f);
 	menu.title = buf;
 	menu_setpriv(&menu, d->spec_known, d);
-	loc.page_rows = d->spec_known + 2;
+
 	menu.browse_hook = gain_spec_menu_browser;
 	menu.flags = MN_DBL_TAP;
-	region_erase_bordered(&loc);
-	menu_layout(&menu, &loc);
+    menu.cmd_keys = "[]";
+    menu.context_hook = fa_ability_page_touch;
+    fa_ability_layout_menu(&menu);
 
 	while (1) {
+        const char *visible_name;
 		evt = menu_select(&menu, EVT_SELECT, true);
-		if (evt.type == EVT_ESCAPE) {
-			break;
-		}
-		if (d->selected_spec) {
-			int idx = d->selected_spec;
-			struct player_ability *ability = lookup_ability("player", idx, 0);
-			region_erase_bordered(&loc);
-			menu_layout(&menu, &loc);
-			if (get_check(format("Definitely choose %s? ",
-					ability->name))) {
-				break;
-			}
-			d->selected_spec = 0;
-		}
+        if (evt.type != EVT_SELECT) break;
+        if (!d->selected_spec) continue;
+
+        {
+            int idx = d->selected_spec;
+            struct player_ability *ability = lookup_ability("player", idx, 0);
+            fa_ability_layout_menu(&menu);
+            menu_refresh(&menu, false);
+            /* get_check() calls soft_kbd_flash("${yes_no}"), which
+             * appends to the previous menu hints. Clear the list tags
+             * before offering a Yes/No prompt, even if the original
+             * selected item has since become invalid. */
+            soft_kbd_replace("");
+            if (ability && ability->name && check_specialty_gain(idx)) {
+                visible_name = angdroid_fa_birth_ability_name(ability->name,
+                    ability->type, ability->index, angdroid_zh_tw_enabled());
+                if (!visible_name) visible_name = ability->name;
+                /* On a narrow phone reserve the leading cells for the
+                 * selected ability name rather than a long fixed prefix.
+                 * The Yes/No prompt keeps its own [y/n] cells visible. */
+                if (get_check(format(
+                        angdroid_zh_tw_enabled() ? "%s，確定學習？" :
+                            "%s: learn this specialty? ", visible_name))) {
+                    accepted = true;
+                    break;
+                }
+            }
+        }
+        /* Cancelled confirmation or an invalidated item: discard only
+         * the pending choice, not the whole specialty menu. Recalculate
+         * after get_check(), which may itself have consumed a resize. */
+        d->selected_spec = 0;
+        soft_kbd_replace("");
+        clear_from(0);
+        fa_ability_layout_menu(&menu);
 	}
 
-	if (evt.type != EVT_ESCAPE)
-		*pick = d->selected_spec;
+    if (accepted)
+        *pick = d->selected_spec;
+
+    /* Confirmed, cancelled, Esc and resize exits all release the
+     * specialty menu's temporary soft keyboard keys. The next game
+     * command or modal can install its own hints without inherited tags. */
+    soft_kbd_replace("");
 
 	/* Load screen */
 	screen_load();
+    mem_free(d->specialties);
+    mem_free(d);
 
-	return (evt.type != EVT_ESCAPE);
+	return accepted;
 }
 
 /**
@@ -344,7 +568,9 @@ void textui_interact_with_specialties(void)
 
 	/* Interact and choose. */
 	while (get_com_ex
-		   ("View abilities or Learn specialty (l/v/ESC)?", &answer)) {
+		   (angdroid_zh_tw_enabled() ?
+            "學習專精或檢視能力（l/v/Esc）？" :
+            "View abilities or Learn specialty (l/v/ESC)?", &answer)) {
 		/* New ability */
 		if ((answer.key.code == 'L') || (answer.key.code == 'l')) {
 			gain_specialty();
@@ -363,4 +589,8 @@ void textui_interact_with_specialties(void)
 
 		soft_kbd_flash("lv");
 	}
+
+    /* The one-shot l/v prompt must not leave either shortcut visible
+     * when the player returns to the normal game command screen. */
+    soft_kbd_replace("");
 }

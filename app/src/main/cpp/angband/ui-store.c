@@ -143,6 +143,8 @@ struct store_context {
 	bool inspect_only;		/* Only allow looking */
 	/* A changed stock list invalidates a previous row's identity. */
 	bool stock_changed;
+	/* Explicit Exit in the shopkeeper popup is not a cancel or a tap-Back. */
+	bool exit_requested;
 
 	/* Places for the various things displayed onscreen */
 	unsigned int scr_places_x[LOC_MAX];
@@ -808,6 +810,13 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		if (amt <= 0) return false;
 	}
 
+	/* A quantity dialog can outlive the row from which it started. */
+	if (ctx->stock_changed || !ctx->list ||
+		!angdroid_store_stock_index_valid(
+			item, store->stock_num, z_info->store_inven_max) ||
+		ctx->list[item] != obj)
+		return false;
+
 	/* Get desired object */
 	dummy = object_new();
 	object_copy_amt(dummy, obj, amt);
@@ -853,6 +862,16 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		/* The temporary stack exists even if the player rejects the
 		 * final price. Release it before returning from cancellation. */
 		if (!response) {
+			object_delete(NULL, NULL, &dummy);
+			return false;
+		}
+
+		/* Revalidate after the confirmation screen before queueing a
+		 * command that otherwise might retain a dangling stock pointer. */
+		if (ctx->stock_changed || !ctx->list ||
+			!angdroid_store_stock_index_valid(
+				item, store->stock_num, z_info->store_inven_max) ||
+			ctx->list[item] != obj) {
 			object_delete(NULL, NULL, &dummy);
 			return false;
 		}
@@ -1027,7 +1046,7 @@ static int store_get_stock(struct menu *m)
 	selected = angdroid_store_selected_index(
 		e.type == EVT_SELECT, m->cursor, ctx->store->stock_num,
 		z_info->store_inven_max);
-	if (selected < 0 || !ctx->list[selected])
+	if (ctx->stock_changed || selected < 0 || !ctx->list[selected])
 		return -1;
 	return selected;
 }
@@ -1089,6 +1108,8 @@ static int context_menu_store(struct store_context *ctx, const int oid, int mx, 
 			textui_obj_examine();
 			break;
 		case ACT_EXIT:
+			/* Let menu_handle_mouse turn this header action into Escape. */
+			ctx->exit_requested = true;
 			return false;
 	}
 
@@ -1159,6 +1180,15 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 
 	screen_load();
 
+	/* Even an unchanged index can now refer to another product after a
+	 * store refresh while the native popup was open. Reject that result
+	 * before Examine/Buy receives a stale or freed object pointer. */
+	if (ctx->stock_changed || !ctx->list ||
+		!angdroid_store_stock_index_valid(
+			oid, store->stock_num, z_info->store_inven_max) ||
+		ctx->list[oid] != obj)
+		return false;
+
 	switch (selected) {
 		case ACT_EXAMINE:
 			store_examine(ctx, oid);
@@ -1189,14 +1219,13 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 		 * visible page. Never put a popup outside the current list. */
 		int popup_row = angdroid_store_menu_screen_row(
 			oid, m->top, m->active.row, m->active.page_rows);
-		bool purchased;
 
 		if (!ctx->list || !angdroid_store_stock_index_valid(
 			oid, store->stock_num, z_info->store_inven_max) ||
 			!ctx->list[oid] || popup_row < 0)
 			return false;
 
-		purchased = context_menu_store_item(ctx, oid, 1, popup_row);
+		(void)context_menu_store_item(ctx, oid, 1, popup_row);
 		ctx->flags |= (STORE_FRAME_CHANGE | STORE_GOLD_CHANGE);
 
 		/* Let the game handle any core commands (equipping, etc) */
@@ -1206,13 +1235,13 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 		notice_stuff(player);
 		handle_stuff(player);
 
-		if (purchased) {
-			/* Display the store */
-			store_display_recalc(ctx);
-			store_menu_recalc(m);
-			store_redraw(ctx);
-		}
-
+		/* A modal popup restores its previous screen even after Cancel or
+		 * Examine. Always redraw against the current stock generation so
+		 * an intervening stock refresh cannot leave stale header/gold data.
+		 * menu_select() redraws the item rows when control returns. */
+		store_display_recalc(ctx);
+		store_menu_recalc(m);
+		store_redraw(ctx);
 		return true;
 	} else if (event->type == EVT_MOUSE) {
 		if (event->mouse.button == 2) {
@@ -1347,6 +1376,21 @@ static void store_menu_resize(struct menu *m)
 	store_redraw(ctx);
 }
 
+/* The shopkeeper menu is above the item list, so a deliberate Exit
+ * must work at every header X coordinate without misclassifying Cancel
+ * or a tap on the first column as a generic Back gesture. */
+static bool store_menu_context_exit(struct menu *m,
+	const ui_event *in, ui_event *out)
+{
+	struct store_context *ctx = menu_priv(m);
+
+	if (!ctx || !ctx->exit_requested || in->type != EVT_MOUSE)
+		return false;
+	ctx->exit_requested = false;
+	out->type = EVT_ESCAPE;
+	return true;
+}
+
 static region store_menu_region = { 1, 4, -1, -2 };
 static const menu_iter store_menu =
 {
@@ -1368,14 +1412,18 @@ static void store_menu_init(struct store_context *ctx, struct store *store, bool
 	ctx->flags = STORE_INIT_CHANGE;
 	ctx->inspect_only = inspect_only;
 	ctx->stock_changed = false;
+	ctx->exit_requested = false;
 	ctx->list = mem_zalloc(sizeof(struct object *) * z_info->store_inven_max);
 
 	store_stock_list(ctx->store, ctx->list, z_info->store_inven_max);
 
 	/* Init the menu structure */
 	menu_init(menu, MN_SKIN_SCROLL, &store_menu);
+	menu->context_hook = store_menu_context_exit;
 	/* A store can have no stock and still support Sell/Help/Exit. */
-	menu->flags |= MN_ALLOW_EMPTY_INPUT;
+	/* Store stock rows use EVT_MOUSE coordinates for their context
+	 * popups; generic item pickers use EVT_SELECT instead. */
+	menu->flags |= MN_ALLOW_EMPTY_INPUT | MN_MOUSE_ROW_ACTION;
 	menu_setpriv(menu, 0, ctx);
 
 	/* Calculate the positions of things and draw */

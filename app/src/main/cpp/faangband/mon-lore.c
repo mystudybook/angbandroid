@@ -37,6 +37,9 @@
 #include "player-util.h"
 #include "project.h"
 #include "z-textblock.h"
+#include "../angband/zh-tw-ui.h"
+#include "mon-lore-display.h"
+#include "mon-lore-terms.h"
 
 /**
  * Monster genders
@@ -639,12 +642,21 @@ static const char *lore_describe_speed(uint8_t speed)
  */
 static void lore_adjective_speed(textblock *tb, const struct monster_race *race)
 {
-	/* "at" is separate from the normal speed description in order to use the
-	 * normal text colour */
+	/* The English adverb table and speed thresholds stay unchanged. */
+	if (angdroid_zh_tw_enabled()) {
+		if (race->speed == 110) {
+			textblock_append(tb, "以一般速度移動");
+		} else {
+			textblock_append(tb, "移動得");
+			textblock_append_c(tb, COLOUR_GREEN, "%s",
+				angdroid_game_ui_text(lore_describe_speed(race->speed), true));
+		}
+		return;
+	}
 	if (race->speed == 110)
 		textblock_append(tb, "at ");
-
-	textblock_append_c(tb, COLOUR_GREEN, "%s", lore_describe_speed(race->speed));
+	textblock_append_c(tb, COLOUR_GREEN, "%s",
+		lore_describe_speed(race->speed));
 }
 
 /**
@@ -656,7 +668,8 @@ static void lore_adjective_speed(textblock *tb, const struct monster_race *race)
 static void lore_multiplier_speed(textblock *tb, const struct monster_race *race)
 {
 	// moves at 2.3x normal speed (0.9x your current speed)
-	textblock_append(tb, "at ");
+	const bool zh_tw = angdroid_zh_tw_enabled();
+	textblock_append(tb, zh_tw ? "以正常速度的 " : "at ");
 
 	char buf[8] = "";
 	int multiplier = 10 * extract_energy[race->speed] / extract_energy[110];
@@ -667,7 +680,8 @@ static void lore_multiplier_speed(textblock *tb, const struct monster_race *race
 	strnfmt(buf, sizeof(buf), "%d.%dx", int_mul, dec_mul);
 	textblock_append_c(tb, COLOUR_L_BLUE, "%s", buf);
 
-	textblock_append(tb, " normal speed, which is ");
+	textblock_append(tb, zh_tw ? " 移動，相當於" :
+		" normal speed, which is ");
 	multiplier = 100 * extract_energy[race->speed]
 		/ extract_energy[player->state.speed];
 	int_mul = multiplier / 100;
@@ -686,10 +700,11 @@ static void lore_multiplier_speed(textblock *tb, const struct monster_race *race
 		attr = COLOUR_RED;
 	}
 	if (player->state.speed == race->speed) {
-		textblock_append(tb, "the same as you");
+		textblock_append(tb, zh_tw ? "你的速度" : "the same as you");
 	} else {
+		if (zh_tw) textblock_append(tb, "你速度的 ");
 		textblock_append_c(tb, attr, "%s", buf);
-		textblock_append(tb, " your speed");
+		if (!zh_tw) textblock_append(tb, " your speed");
 	}
 }
 
@@ -784,26 +799,31 @@ static void lore_append_clause(textblock *tb, bitflag *f, uint8_t attr,
 {
 	int count = rf_count(f);
 	bool comma = count > 2;
+	bool zh_tw = angdroid_zh_tw_enabled();
+	int emitted = 0;
 
 	if (count) {
 		int flag;
 		textblock_append(tb, "%s", start);
 		for (flag = rf_next(f, FLAG_START); flag; flag = rf_next(f, flag + 1)) {
-			/* First entry starts immediately */
-			if (flag != rf_next(f, FLAG_START)) {
-				if (comma) {
-					textblock_append(tb, ",");
-				}
-				/* Last entry */
+			if (zh_tw) {
+				/* Chinese list separators have no intervening English spaces. */
+				textblock_append(tb, "%s", angdroid_fa_lore_separator(
+					emitted, count, streq(conjunction, "or")));
+			} else if (flag != rf_next(f, FLAG_START)) {
+				if (comma) textblock_append(tb, ",");
 				if (rf_next(f, flag + 1) == FLAG_END) {
 					textblock_append(tb, " ");
 					textblock_append(tb, "%s", conjunction);
 				}
 				textblock_append(tb, " ");
 			}
-			textblock_append_c(tb, attr, "%s", describe_race_flag(flag));
+			textblock_append_c(tb, attr, "%s",
+				angdroid_game_ui_text(describe_race_flag(flag), zh_tw));
+			emitted++;
 		}
-		textblock_append(tb, "%s", end);
+		textblock_append(tb, "%s",
+			angdroid_fa_lore_sentence_end(end, zh_tw));
 	}
 }
 
@@ -827,6 +847,8 @@ static void lore_append_spell_clause(textblock *tb, bitflag *f, bool know_hp,
 {
 	int count = rsf_count(f);
 	bool comma = count > 2;
+	bool zh_tw = angdroid_zh_tw_enabled();
+	int emitted = 0;
 
 	if (count) {
 		int spell;
@@ -835,12 +857,13 @@ static void lore_append_spell_clause(textblock *tb, bitflag *f, bool know_hp,
 			int color = spell_color(player, race, spell);
 			int damage = mon_spell_lore_damage(spell, race, know_hp);
 
-			/* First entry starts immediately */
-			if (spell != rsf_next(f, FLAG_START)) {
-				if (comma) {
-					textblock_append(tb, ",");
-				}
-				/* Last entry */
+			/* Localize only descriptions already admitted by lore->spell_flags.
+			 * Damage still depends on know_hp and uses the original formula. */
+			if (zh_tw) {
+				textblock_append(tb, "%s", angdroid_fa_lore_separator(
+					emitted, count, streq(conjunction, "or")));
+			} else if (spell != rsf_next(f, FLAG_START)) {
+				if (comma) textblock_append(tb, ",");
 				if (rsf_next(f, spell + 1) == FLAG_END) {
 					textblock_append(tb, " ");
 					textblock_append(tb, "%s", conjunction);
@@ -848,12 +871,15 @@ static void lore_append_spell_clause(textblock *tb, bitflag *f, bool know_hp,
 				textblock_append(tb, " ");
 			}
 			textblock_append_c(tb, color, "%s",
-							   mon_spell_lore_description(spell, race));
-			if (damage > 0) {
-				textblock_append_c(tb, color, " (%d)", damage);
-			}
+				angdroid_fa_lore_term(
+					mon_spell_lore_description(spell, race), zh_tw));
+			if (damage > 0)
+				textblock_append_c(tb, color,
+					zh_tw ? "（%d）" : " (%d)", damage);
+			emitted++;
 		}
-		textblock_append(tb, "%s", end);
+		textblock_append(tb, "%s",
+			angdroid_fa_lore_sentence_end(end, zh_tw));
 	}
 }
 
@@ -879,6 +905,47 @@ void lore_append_kills(textblock *tb, const struct monster_race *race,
 
 	/* Extract a gender (if applicable) */
 	msex = lore_monster_sex(race);
+
+	/* The records and unique-death conditions are unchanged. Chinese is
+	 * composed as a complete sentence rather than English word fragments. */
+	if (angdroid_zh_tw_enabled()) {
+		if (rf_has(known_flags, RF_UNIQUE)) {
+			bool dead = (race->max_num == 0);
+			if (lore->deaths) {
+				textblock_append(tb, "牠曾殺害你的 %d 位祖先", lore->deaths);
+				if (dead)
+					textblock_append(tb, "，但你已經報仇！  ");
+				else
+					textblock_append(tb, "，至今仍未討回公道。  ");
+			} else if (dead) {
+				textblock_append(tb, "你已經擊敗這名強敵。  ");
+			} else {
+				out = false;
+			}
+		} else if (lore->deaths) {
+			textblock_append(tb, "你的 %d 位祖先曾被這種怪物殺害，",
+				lore->deaths);
+			if (lore->pkills)
+				textblock_append(tb, "而你已至少擊敗 %d 隻。  ",
+					lore->pkills);
+			else if (lore->tkills)
+				textblock_append(tb, "而你的祖先已至少擊敗 %d 隻。  ",
+					lore->tkills);
+			else
+				textblock_append_c(tb, COLOUR_RED,
+					"至今沒有擊敗這種怪物的紀錄。  ");
+		} else if (lore->pkills) {
+			textblock_append(tb, "你已至少擊敗 %d 隻這種怪物。  ",
+				lore->pkills);
+		} else if (lore->tkills) {
+			textblock_append(tb, "你的祖先已至少擊敗 %d 隻這種怪物。  ",
+				lore->tkills);
+		} else {
+			textblock_append(tb, "沒有與這種怪物決一死戰的紀錄。  ");
+		}
+		if (out) textblock_append(tb, "\n");
+		return;
+	}
 
 	/* Treat by whether unique, then by whether they have any player kills */
 	if (rf_has(known_flags, RF_UNIQUE)) {
@@ -970,6 +1037,56 @@ void lore_append_movement(textblock *tb, const struct monster_race *race,
 	bitflag flags[RF_SIZE];
 
 	assert(tb && race && lore);
+
+	/* Display-only Chinese sentence composition. The same source flags
+	 * and known-flags gates as the English path remain authoritative. */
+	if (angdroid_zh_tw_enabled()) {
+		textblock_append(tb, "這隻");
+		create_mon_flag_mask(flags, RFT_RACE_A, RFT_MAX);
+		rf_inter(flags, race->flags);
+		for (f = rf_next(flags, FLAG_START); f; f = rf_next(flags, f + 1)) {
+			textblock_append_c(tb, COLOUR_L_BLUE, "%s",
+				angdroid_game_ui_text(describe_race_flag(f), true));
+		}
+		create_mon_flag_mask(flags, RFT_RACE_N, RFT_MAX);
+		rf_inter(flags, race->flags);
+		f = rf_next(flags, FLAG_START);
+		if (f) {
+			textblock_append_c(tb, COLOUR_L_BLUE, "%s",
+				angdroid_game_ui_text(describe_race_flag(f), true));
+		} else {
+			textblock_append_c(tb, COLOUR_L_BLUE, "生物");
+		}
+		if (race->level == 0) {
+			textblock_append(tb, "居住在城鎮中");
+		} else {
+			uint8_t colour = (race->level > player->max_depth) ?
+				COLOUR_RED : COLOUR_L_BLUE;
+			textblock_append(tb, rf_has(known_flags, RF_FORCE_DEPTH) ?
+				"固定出沒於危險等級 " : "通常出沒於危險等級 ");
+			textblock_append_c(tb, colour, "%d", race->level);
+		}
+		textblock_append(tb, "，");
+		if (flags_test(known_flags, RF_SIZE, RF_RAND_50, RF_RAND_25,
+				FLAG_END)) {
+			if (rf_has(known_flags, RF_RAND_50) &&
+				rf_has(known_flags, RF_RAND_25))
+				textblock_append(tb, "行動極度不規則，");
+			else if (rf_has(known_flags, RF_RAND_50))
+				textblock_append(tb, "行動有些不規則，");
+			else if (rf_has(known_flags, RF_RAND_25))
+				textblock_append(tb, "行動稍微不規則，");
+		}
+		if (OPT(player, effective_speed))
+			lore_multiplier_speed(tb, race);
+		else
+			lore_adjective_speed(tb, race);
+		if (rf_has(known_flags, RF_NEVER_MOVE))
+			textblock_append_c(tb, COLOUR_L_GREEN,
+				"，但不會追趕入侵者");
+		textblock_append(tb, "。  ");
+		return;
+	}
 
 	textblock_append(tb, "This");
 
@@ -1067,6 +1184,25 @@ void lore_append_toughness(textblock *tb, const struct monster_race *race,
 	/* Extract a gender (if applicable) */
 	msex = lore_monster_sex(race);
 
+	/* Known HP/AC and hit-chance gating are identical to the English
+	 * path; keep the original hit_chance() calculation and colour. */
+	if (lore->armour_known && angdroid_zh_tw_enabled()) {
+		random_chance c;
+		int percent;
+		textblock_append(tb, rf_has(known_flags, RF_UNIQUE) ?
+			"牠的生命值為 " : "牠的平均生命值為 ");
+		textblock_append_c(tb, COLOUR_L_BLUE, "%d", race->avg_hp);
+		textblock_append(tb, "，護甲值為 ");
+		textblock_append_c(tb, COLOUR_L_BLUE, "%d", race->ac);
+		textblock_append(tb, "。  ");
+		hit_chance(&c, chance_of_melee_hit_base(player, weapon), race->ac);
+		percent = random_chance_scaled(c, 100);
+		textblock_append(tb, "在看得見牠的情況下，你的近戰命中率為 ");
+		textblock_append_c(tb, COLOUR_L_BLUE, "%d", percent);
+		textblock_append(tb, "%%。  ");
+		return;
+	}
+
 	/* Describe monster "toughness" */
 	if (lore->armour_known) {
 		/* Hitpoints */
@@ -1120,13 +1256,17 @@ void lore_append_exp(textblock *tb, const struct monster_race *race,
 	assert(tb && race && lore);
 	if (!race->rarity) return;
 
-	/* Introduction */
-	if (rf_has(known_flags, RF_UNIQUE))
-		textblock_append(tb, "Killing");
-	else
-		textblock_append(tb, "A kill of");
-
-	textblock_append(tb, " this creature");
+	const bool zh_tw = angdroid_zh_tw_enabled();
+	/* English article and unique grammar only apply in English mode. */
+	if (zh_tw) {
+		textblock_append(tb, "擊敗這隻怪物");
+	} else {
+		if (rf_has(known_flags, RF_UNIQUE))
+			textblock_append(tb, "Killing");
+		else
+			textblock_append(tb, "A kill of");
+		textblock_append(tb, " this creature");
+	}
 
 	/* calculate the integer exp part */
 	exp_integer = (long)race->mexp * race->level / player->lev;
@@ -1141,7 +1281,14 @@ void lore_append_exp(textblock *tb, const struct monster_race *race,
 	if (exp_fraction)
 		my_strcat(buf, format(".%02ld", exp_fraction), sizeof(buf));
 
-	/* Mention the experience */
+	/* The original integer/fractional experience calculations are shared. */
+	if (zh_tw) {
+		textblock_append(tb, "可獲得 ");
+		textblock_append_c(tb, COLOUR_BLUE, "%s 點經驗值", buf);
+		textblock_append(tb, "（以 %u 級角色計算）。  ",
+			(unsigned int)player->lev);
+		return;
+	}
 	textblock_append(tb, " is worth ");
 	textblock_append_c(tb, COLOUR_BLUE, "%s point%s", buf,
 		PLURAL((exp_integer == 1) && (exp_fraction == 0)));
@@ -1190,6 +1337,52 @@ void lore_append_drop(textblock *tb, const struct monster_race *race,
 
 	/* Count maximum drop */
 	n = mon_create_drop_count(race, true, false, &nspec);
+
+	/* Translate only the displayed drop quantity/quality grammar.
+	 * No extra information is exposed without drop_known. */
+	if (angdroid_zh_tw_enabled()) {
+		if (n > 0 || nspec > 0) {
+			textblock_append(tb, "牠可能攜帶");
+			if (n > 0) {
+				bool only_item = rf_has(known_flags, RF_ONLY_ITEM);
+				bool only_gold = rf_has(known_flags, RF_ONLY_GOLD);
+				if (n == 1) {
+					textblock_append_c(tb, COLOUR_BLUE, " 1 件");
+				} else if (n == 2) {
+					textblock_append_c(tb, COLOUR_BLUE, " 1 至 2 件");
+				} else {
+					textblock_append(tb, "最多 ");
+					textblock_append_c(tb, COLOUR_BLUE, "%d 件", n);
+				}
+				if (rf_has(known_flags, RF_DROP_GREAT))
+					textblock_append_c(tb, COLOUR_BLUE, "極品");
+				else if (rf_has(known_flags, RF_DROP_GOOD))
+					textblock_append_c(tb, COLOUR_BLUE, "優質");
+				if (only_item && only_gold)
+					textblock_append_c(tb, COLOUR_BLUE, "（掉落類型有誤）");
+				else if (only_item)
+					textblock_append_c(tb, COLOUR_BLUE, "物品");
+				else if (only_gold)
+					textblock_append_c(tb, COLOUR_BLUE, "財寶");
+				else
+					textblock_append_c(tb, COLOUR_BLUE, "物品或財寶");
+			}
+			if (nspec > 0) {
+				if (n > 0) textblock_append(tb, "，以及");
+				if (nspec == 1)
+					textblock_append(tb, " 1 件特定物品");
+				else if (nspec == 2)
+					textblock_append(tb, " 1 至 2 件特定物品");
+				else {
+					textblock_append(tb, "最多 ");
+					textblock_append_c(tb, COLOUR_BLUE, "%d", nspec);
+					textblock_append(tb, " 件特定物品");
+				}
+			}
+			textblock_append(tb, "。  ");
+		}
+		return;
+	}
 
 	/* Drops gold and/or items */
 	if (n > 0 || nspec > 0) {
@@ -1282,9 +1475,10 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 						   bitflag known_flags[RF_SIZE])
 {
 	int flag;
-	char start[40];
+	char start[96];
 	const char *initial_pronoun;
 	bool prev = false;
+	const bool zh_tw = angdroid_zh_tw_enabled();
 	bitflag current_flags[RF_SIZE], test_flags[RF_SIZE];
 	monster_sex_t msex = MON_SEX_NEUTER;
 
@@ -1298,47 +1492,88 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 	/* Describe environment-shaping abilities. */
 	create_mon_flag_mask(current_flags, RFT_ALTER, RFT_MAX);
 	rf_inter(current_flags, known_flags);
-	strnfmt(start, sizeof(start), "%s can ", initial_pronoun);
+	if (zh_tw)
+		my_strcpy(start, "牠能", sizeof(start));
+	else
+		strnfmt(start, sizeof(start), "%s can ", initial_pronoun);
 	lore_append_clause(tb, current_flags, COLOUR_WHITE, start, "and", ".  ");
 
 	/* Describe detection traits */
 	create_mon_flag_mask(current_flags, RFT_DET, RFT_MAX);
 	rf_inter(current_flags, known_flags);
-	strnfmt(start, sizeof(start), "%s is ", initial_pronoun);
+	if (zh_tw)
+		my_strcpy(start, "牠具有以下特徵：", sizeof(start));
+	else
+		strnfmt(start, sizeof(start), "%s is ", initial_pronoun);
 	lore_append_clause(tb, current_flags, COLOUR_WHITE, start, "and", ".  ");
 
 	/* Describe special things */
-	if (rf_has(known_flags, RF_UNAWARE))
-		textblock_append(tb, "%s disguises itself as something else.  ",
+	if (rf_has(known_flags, RF_UNAWARE)) {
+		if (zh_tw)
+			textblock_append(tb, "牠能偽裝成其他事物。  ");
+		else
+			textblock_append(tb, "%s disguises itself as something else.  ",
 						 initial_pronoun);
-	if (rf_has(known_flags, RF_MULTIPLY))
-		textblock_append_c(tb, COLOUR_ORANGE, "%s breeds explosively.  ",
+	}
+	if (rf_has(known_flags, RF_MULTIPLY)) {
+		if (zh_tw)
+			textblock_append_c(tb, COLOUR_ORANGE, "牠能快速繁殖。  ");
+		else
+			textblock_append_c(tb, COLOUR_ORANGE, "%s breeds explosively.  ",
 						   initial_pronoun);
-	if (rf_has(known_flags, RF_REGENERATE))
-		textblock_append(tb, "%s regenerates quickly.  ", initial_pronoun);
-	if (rf_has(known_flags, RF_FLYING))
-		textblock_append(tb, "%s can fly.  ", initial_pronoun);
-	if (rf_has(known_flags, RF_TERRITORIAL))
-		textblock_append(tb, "%s is more aggressive in %s own territory.  ",
+	}
+	if (rf_has(known_flags, RF_REGENERATE)) {
+		if (zh_tw)
+			textblock_append(tb, "牠能快速恢復生命。  ");
+		else
+			textblock_append(tb, "%s regenerates quickly.  ", initial_pronoun);
+	}
+	if (rf_has(known_flags, RF_FLYING)) {
+		if (zh_tw)
+			textblock_append(tb, "牠能飛行。  ");
+		else
+			textblock_append(tb, "%s can fly.  ", initial_pronoun);
+	}
+	if (rf_has(known_flags, RF_TERRITORIAL)) {
+		if (zh_tw)
+			textblock_append(tb, "牠在自己的領地上更具攻擊性。  ");
+		else
+			textblock_append(tb, "%s is more aggressive in %s own territory.  ",
 						 initial_pronoun, lore_pronoun_possessive(msex, false));
+	}
 
 	/* Describe light */
 	if (race->light > 1) {
-		textblock_append(tb, "%s illuminates %s surroundings.  ",
-						 initial_pronoun, lore_pronoun_possessive(msex, false));
+		if (zh_tw)
+			textblock_append(tb, "牠能照亮四周。  ");
+		else
+			textblock_append(tb, "%s illuminates %s surroundings.  ",
+				initial_pronoun, lore_pronoun_possessive(msex, false));
 	} else if (race->light == 1) {
-		textblock_append(tb, "%s is illuminated.  ", initial_pronoun);
+		if (zh_tw)
+			textblock_append(tb, "牠全身散發光芒。  ");
+		else
+			textblock_append(tb, "%s is illuminated.  ", initial_pronoun);
 	} else if (race->light == -1) {
-		textblock_append(tb, "%s is darkened.  ", initial_pronoun);
+		if (zh_tw)
+			textblock_append(tb, "牠的身影籠罩在黑暗中。  ");
+		else
+			textblock_append(tb, "%s is darkened.  ", initial_pronoun);
 	} else if (race->light < -1) {
-		textblock_append(tb, "%s shrouds %s surroundings in darkness.  ",
-						 initial_pronoun, lore_pronoun_possessive(msex, false));
+		if (zh_tw)
+			textblock_append(tb, "牠使四周籠罩在黑暗中。  ");
+		else
+			textblock_append(tb, "%s shrouds %s surroundings in darkness.  ",
+				initial_pronoun, lore_pronoun_possessive(msex, false));
 	}
 
 	/* Collect susceptibilities */
 	create_mon_flag_mask(current_flags, RFT_VULN, RFT_VULN_I, RFT_MAX);
 	rf_inter(current_flags, known_flags);
-	strnfmt(start, sizeof(start), "%s is hurt by ", initial_pronoun);
+	if (zh_tw)
+		my_strcpy(start, "牠容易受到", sizeof(start));
+	else
+		strnfmt(start, sizeof(start), "%s is hurt by ", initial_pronoun);
 	lore_append_clause(tb, current_flags, COLOUR_VIOLET, start, "and", "");
 	if (!rf_is_empty(current_flags)) {
 		prev = true;
@@ -1357,9 +1592,14 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 		}
 	}
 	if (prev) {
-		my_strcpy(start, ", but resists ", sizeof(start));
+		my_strcpy(start, zh_tw ? "，但能抵抗" : ", but resists ",
+			sizeof(start));
 	} else {
-		strnfmt(start, sizeof(start), "%s resists ", initial_pronoun);
+		if (zh_tw)
+			my_strcpy(start, "牠能抵抗", sizeof(start));
+		else
+			strnfmt(start, sizeof(start), "%s resists ",
+				initial_pronoun);
 	}
 	lore_append_clause(tb, current_flags, COLOUR_L_UMBER, start, "and", "");
 	if (!rf_is_empty(current_flags)) {
@@ -1389,10 +1629,14 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 		}
 	}
 	if (prev) {
-		my_strcpy(start, ", and does not resist ", sizeof(start));
+		my_strcpy(start, zh_tw ? "，但無法抵抗" :
+			", and does not resist ", sizeof(start));
 	} else {
-		strnfmt(start, sizeof(start), "%s does not resist ",
-			initial_pronoun);
+		if (zh_tw)
+			my_strcpy(start, "牠無法抵抗", sizeof(start));
+		else
+			strnfmt(start, sizeof(start), "%s does not resist ",
+				initial_pronoun);
 	}
 
 	/* Special case for undead */
@@ -1409,9 +1653,14 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 	create_mon_flag_mask(current_flags, RFT_PROT, RFT_MAX);
 	rf_inter(current_flags, known_flags);
 	if (prev) {
-		my_strcpy(start, ", and cannot be ", sizeof(start));
+		my_strcpy(start, zh_tw ? "，且不會陷入" : ", and cannot be ",
+			sizeof(start));
 	} else {
-		strnfmt(start, sizeof(start), "%s cannot be ", initial_pronoun);
+		if (zh_tw)
+			my_strcpy(start, "牠不會陷入", sizeof(start));
+		else
+			strnfmt(start, sizeof(start), "%s cannot be ",
+				initial_pronoun);
 	}
 	lore_append_clause(tb, current_flags, COLOUR_L_UMBER, start, "or", "");
 	if (!rf_is_empty(current_flags)) {
@@ -1419,7 +1668,7 @@ void lore_append_abilities(textblock *tb, const struct monster_race *race,
 	}
 
 	if (prev)
-		textblock_append(tb, ".  ");
+		textblock_append(tb, zh_tw ? "。  " : ".  ");
 }
 
 /**
@@ -1446,6 +1695,14 @@ void lore_append_awareness(textblock *tb, const struct monster_race *race,
 	if (lore->sleep_known)
 	{
 		const char *aware = lore_describe_awareness(race->sleep);
+		if (angdroid_zh_tw_enabled()) {
+			textblock_append(tb, "牠%s入侵者，可能在 ",
+				angdroid_game_ui_text(aware, true));
+			textblock_append_c(tb, COLOUR_L_BLUE, "%d",
+				10 * race->hearing);
+			textblock_append(tb, " 英尺外察覺動靜。  ");
+			return;
+		}
 		textblock_append(tb, "%s %s intruders, which %s may notice from ",
 						 lore_pronoun_nominative(msex, true), aware,
 						 lore_pronoun_nominative(msex, false));
@@ -1475,8 +1732,15 @@ void lore_append_friends(textblock *tb, const struct monster_race *race,
 	/* Extract a gender (if applicable) */
 	msex = lore_monster_sex(race);
 
-	/* Describe friends */
+	/* Describe friends. The same existing group condition applies. */
 	if (race->friends || race->friends_base) {
+		if (angdroid_zh_tw_enabled()) {
+			textblock_append(tb, "牠可能與其他怪物一同出現");
+			if (rf_has(known_flags, RF_GROUP_AI))
+				textblock_append(tb, "，並且成群狩獵");
+			textblock_append(tb, "。  ");
+			return;
+		}
 		textblock_append(tb, "%s may appear with other monsters",
 						 lore_pronoun_nominative(msex, true));
 		if (rf_has(known_flags, RF_GROUP_AI))
@@ -1497,6 +1761,27 @@ void lore_append_friends(textblock *tb, const struct monster_race *race,
  * \param known_flags is the preprocessed bitfield of race flags known to the
  *        player.
  */
+/*
+ * Keep the exact known/estimated spell-frequency denominators and source
+ * colors; only the order of the displayed fraction changes in Chinese.
+ */
+static void lore_append_spell_frequency(textblock *tb, int interval,
+		bool approximate)
+{
+	if (angdroid_zh_tw_enabled()) {
+		textblock_append(tb, approximate ? "；約每 " : "；每 ");
+		textblock_append_c(tb, COLOUR_L_GREEN, "%d", interval);
+		textblock_append(tb, " 次施放 ");
+		textblock_append_c(tb, COLOUR_L_GREEN, "1");
+		textblock_append(tb, " 次");
+	} else {
+		textblock_append(tb, approximate ? "; about " : "; ");
+		textblock_append_c(tb, COLOUR_L_GREEN, "1");
+		textblock_append(tb, " time in ");
+		textblock_append_c(tb, COLOUR_L_GREEN, "%d", interval);
+	}
+}
+
 void lore_append_spells(textblock *tb, const struct monster_race *race,
 						const struct monster_lore *lore,
 						bitflag known_flags[RF_SIZE])
@@ -1508,6 +1793,7 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 	bool know_hp;
 	bitflag current_flags[RSF_SIZE], test_flags[RSF_SIZE];
 	const struct monster_race *old_ref;
+	const bool zh_tw = angdroid_zh_tw_enabled();
 
 	assert(tb && race && lore);
 
@@ -1528,7 +1814,10 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 	create_mon_spell_mask(test_flags, RST_BREATH, RST_NONE);
 	rsf_diff(current_flags, test_flags);
 	if (!rsf_is_empty(current_flags)) {
-		textblock_append(tb, "%s may ", initial_pronoun);
+		if (zh_tw)
+			textblock_append(tb, "牠可能");
+		else
+			textblock_append(tb, "%s may ", initial_pronoun);
 		lore_append_spell_clause(tb, current_flags, know_hp, race, "or", "");
 		innate = true;
 	}
@@ -1538,11 +1827,15 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 	rsf_inter(current_flags, lore->spell_flags);
 	if (!rsf_is_empty(current_flags)) {
 		if (innate) {
-			textblock_append(tb, ", and may ");
+			textblock_append(tb, zh_tw ? "，也可能" : ", and may ");
 		} else {
-			textblock_append(tb, "%s may ", initial_pronoun);
+			if (zh_tw)
+				textblock_append(tb, "牠可能");
+			else
+				textblock_append(tb, "%s may ", initial_pronoun);
 		}
-		textblock_append_c(tb, COLOUR_L_RED, "breathe ");
+		textblock_append_c(tb, COLOUR_L_RED, "%s",
+			zh_tw ? "吐出" : "breathe ");
 		lore_append_spell_clause(tb, current_flags, know_hp, race, "or", "");
 		breath = true;
 	}
@@ -1550,23 +1843,21 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 	/* End the sentence about innate spells and breaths */
 	if ((innate || breath) && race->freq_innate) {
 		if (lore->innate_freq_known) {
-			/* Describe the spell frequency */
-			textblock_append(tb, "; ");
-			textblock_append_c(tb, COLOUR_L_GREEN, "1");
-			textblock_append(tb, " time in ");
-			textblock_append_c(tb, COLOUR_L_GREEN, "%d",
-							   100 / race->freq_innate);
+			/* Same exact frequency, displayed with Chinese word order. */
+			lore_append_spell_frequency(tb, 100 / race->freq_innate,
+				false);
 		} else if (lore->cast_innate) {
 			/* Guess at the frequency */
 			int approx_frequency = MAX(((race->freq_innate + 9) / 10) * 10, 1);
-			textblock_append(tb, "; about ");
-			textblock_append_c(tb, COLOUR_L_GREEN, "1");
-			textblock_append(tb, " time in ");
-			textblock_append_c(tb, COLOUR_L_GREEN, "%d",
-							   100 / approx_frequency);
+			lore_append_spell_frequency(tb, 100 / approx_frequency,
+				true);
 		}
 
-		textblock_append(tb, ".  ");
+		textblock_append(tb, zh_tw ? "。  " : ".  ");
+	} else if (zh_tw && (innate || breath)) {
+		/* No frequency was recorded: keep Chinese sentences separate
+		 * without changing the historic English layout or knowledge. */
+		textblock_append(tb, "。  ");
 	}
 
 	/* Collect spell information */
@@ -1575,41 +1866,39 @@ void lore_append_spells(textblock *tb, const struct monster_race *race,
 	rsf_diff(current_flags, test_flags);
 	if (!rsf_is_empty(current_flags)) {
 		/* Intro */
-		textblock_append(tb, "%s may ", initial_pronoun);
+		if (zh_tw)
+			textblock_append(tb, "牠可能");
+		else
+			textblock_append(tb, "%s may ", initial_pronoun);
 
 		/* Verb Phrase */
-		textblock_append_c(tb, COLOUR_L_RED, "cast spells");
+		textblock_append_c(tb, COLOUR_L_RED, "%s",
+			zh_tw ? "施放法術" : "cast spells");
 
 		/* Adverb */
 		if (rf_has(known_flags, RF_SMART))
-			textblock_append(tb, " intelligently");
+			textblock_append(tb, zh_tw ? "（會運用策略）" : " intelligently");
 
 		/* List */
-		textblock_append(tb, " which ");
+		textblock_append(tb, zh_tw ? "，包括" : " which ");
 		lore_append_spell_clause(tb, current_flags, know_hp, race, "or", "");
 
 		/* End the sentence about innate/other spells */
 		if (race->freq_spell) {
 			if (lore->spell_freq_known) {
 				/* Describe the spell frequency */
-				textblock_append(tb, "; ");
-				textblock_append_c(tb, COLOUR_L_GREEN, "1");
-				textblock_append(tb, " time in ");
-				textblock_append_c(tb, COLOUR_L_GREEN, "%d",
-								   100 / race->freq_spell);
+				lore_append_spell_frequency(tb, 100 / race->freq_spell,
+					false);
 			} else if (lore->cast_spell) {
 				/* Guess at the frequency */
 				int approx_frequency = MAX(((race->freq_spell + 9) / 10) * 10,
 										   1);
-				textblock_append(tb, "; about ");
-				textblock_append_c(tb, COLOUR_L_GREEN, "1");
-				textblock_append(tb, " time in ");
-				textblock_append_c(tb, COLOUR_L_GREEN, "%d",
-								   100 / approx_frequency);
+				lore_append_spell_frequency(tb, 100 / approx_frequency,
+					true);
 			}
 		}
 
-		textblock_append(tb, ".  ");
+		textblock_append(tb, zh_tw ? "。  " : ".  ");
 	}
 
 	/* Restore the previous reference. */
@@ -1635,6 +1924,7 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 {
 	int i, known_attacks, total_attacks, described_count, total_centidamage;
 	monster_sex_t msex = MON_SEX_NEUTER;
+	const bool zh_tw = angdroid_zh_tw_enabled();
 
 	assert(tb && race && lore);
 
@@ -1643,8 +1933,11 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 
 	/* Notice lack of attacks */
 	if (rf_has(known_flags, RF_NEVER_BLOW)) {
-		textblock_append(tb, "%s has no physical attacks.  ",
-						 lore_pronoun_nominative(msex, true));
+		if (zh_tw)
+			textblock_append(tb, "牠沒有物理攻擊。  ");
+		else
+			textblock_append(tb, "%s has no physical attacks.  ",
+				lore_pronoun_nominative(msex, true));
 		return;
 	}
 
@@ -1663,8 +1956,13 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 
 	/* Describe the lack of knowledge */
 	if (known_attacks == 0) {
-		textblock_append_c(tb, COLOUR_ORANGE, "Nothing is known about %s attack.  ",
-						 lore_pronoun_possessive(msex, false));
+		if (zh_tw)
+			textblock_append_c(tb, COLOUR_ORANGE,
+				"目前對牠的攻擊方式一無所知。  ");
+		else
+			textblock_append_c(tb, COLOUR_ORANGE,
+					"Nothing is known about %s attack.  ",
+					lore_pronoun_possessive(msex, false));
 		return;
 	}
 
@@ -1683,26 +1981,29 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 		dice = race->blow[i].dice;
 		effect_str = race->blow[i].effect->desc;
 
-		/* Introduce the attack description */
-		if (described_count == 0)
-			textblock_append(tb, "%s can ",
-							 lore_pronoun_nominative(msex, true));
-		else if (described_count < known_attacks - 1)
-			textblock_append(tb, ", ");
-		else
-			textblock_append(tb, ", and ");
-
-		/* Describe the method */
-		textblock_append(tb, "%s", race->blow[i].method->desc);
+		/* Only already-known attacks are shown. */
+		if (described_count == 0) {
+			if (zh_tw)
+				textblock_append(tb, "牠能");
+			else
+				textblock_append(tb, "%s can ",
+					lore_pronoun_nominative(msex, true));
+		} else if (described_count < known_attacks - 1) {
+			textblock_append(tb, zh_tw ? "、" : ", ");
+		} else {
+			textblock_append(tb, zh_tw ? "與" : ", and ");
+		}
+		textblock_append(tb, "%s", angdroid_fa_lore_term(
+			race->blow[i].method->desc, zh_tw));
 
 		/* Describe the effect (if any) */
 		if (effect_str && strlen(effect_str) > 0) {
 			int index = blow_index(race->blow[i].effect->name);
 			/* Describe the attack type */
-			textblock_append(tb, " to ");
-			textblock_append_c(tb, blow_color(player, index), "%s", effect_str);
-
-			textblock_append(tb, " (");
+			textblock_append(tb, zh_tw ? "，效果為" : " to ");
+			textblock_append_c(tb, blow_color(player, index), "%s",
+				angdroid_fa_lore_term(effect_str, zh_tw));
+			textblock_append(tb, zh_tw ? "（" : " (");
 			/* Describe damage (if known) */
 			if (dice.base || (dice.dice && dice.sides) || dice.m_bonus) {
 				if (dice.base)
@@ -1714,7 +2015,7 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 				if (dice.m_bonus)
 					textblock_append_c(tb, COLOUR_L_GREEN, "M%d", dice.m_bonus);
 
-				textblock_append(tb, ", ");
+				textblock_append(tb, zh_tw ? "，" : ", ");
 			}
 
 			/* Describe hit chances */
@@ -1723,7 +2024,7 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 				player->state.ac + player->state.to_a);
 			int percent = random_chance_scaled(c, 100);
 			textblock_append_c(tb, COLOUR_L_BLUE, "%d", percent);
-			textblock_append(tb, "%%)");
+			textblock_append(tb, zh_tw ? "%%）" : "%%)");
 
 			total_centidamage += (percent * randcalc(dice, 0, AVERAGE));
 		}
@@ -1731,13 +2032,20 @@ void lore_append_attack(textblock *tb, const struct monster_race *race,
 		described_count++;
 	}
 
-	textblock_append(tb, ", averaging");
+	textblock_append(tb, zh_tw ? "；每回合平均" : ", averaging");
 	if (known_attacks < total_attacks) {
-		textblock_append_c(tb, COLOUR_ORANGE, " at least");
+		textblock_append_c(tb, COLOUR_ORANGE,
+			zh_tw ? "至少造成" : " at least");
+	} else if (zh_tw) {
+		textblock_append(tb, "造成");
 	}
-	textblock_append_c(tb, COLOUR_L_GREEN, " %d", total_centidamage/100);
-	textblock_append(tb, " damage on each of %s turns.  ",
-					 lore_pronoun_possessive(msex, false));
+	textblock_append_c(tb, COLOUR_L_GREEN,
+		zh_tw ? "%d" : " %d", total_centidamage / 100);
+	if (zh_tw)
+		textblock_append(tb, " 點傷害。  ");
+	else
+		textblock_append(tb, " damage on each of %s turns.  ",
+			lore_pronoun_possessive(msex, false));
 }
 
 /**
