@@ -10,6 +10,7 @@ def read(path):
     return (ROOT / path).read_text(encoding="utf-8")
 
 SOURCE = read("app/src/main/cpp/faangband/mon-msg.c")
+HELPER = read("app/src/main/cpp/faangband/mon-msg-utf8.h")
 LIST = read("app/src/main/cpp/faangband/list-mon-message.h")
 PAIN = read("variant_lib/faangband/gamedata/pain.txt")
 DICT = read("app/src/main/cpp/angband/zh-tw-ui.h")
@@ -91,9 +92,13 @@ assert "char subject[256]" in SOURCE
 assert "char body[256]" in SOURCE
 
 # Locale handling does not bypass visibility, message stacking, or sound type.
-assert 'my_strcpy(buf, "牠", buflen);' in SOURCE
-assert 'strnfmt(buf, buflen, "%d 隻怪物", count);' in SOURCE
-assert 'my_strcat(buf, "（畫面外）", buflen);' in SOURCE
+assert "angdroid_fa_mon_msg_chinese_subject(buf, buflen," in SOURCE
+assert 'angdroid_utf8_copy_complete(dst, base_capacity, "牠")' in HELPER
+assert 'snprintf(number, sizeof(number), "%d 隻怪物", count)' in HELPER
+assert 'static const char suffix[] = "（畫面外）";' in HELPER
+assert "base_capacity = suffix_fits ? capacity - (sizeof(suffix) - 1) :" in HELPER
+assert "angdroid_utf8_append_complete(dst, capacity, used, suffix)" in HELPER
+assert "mon_msg[size_mon_msg].p_race = mon->player_race;" in SOURCE
 assert 'my_strcat(buf, " (offscreen)", buflen);' in SOURCE
 assert 'my_strcat(buf, " ", buflen);' in SOURCE
 assert "monster_is_obvious(mon)" in SOURCE
