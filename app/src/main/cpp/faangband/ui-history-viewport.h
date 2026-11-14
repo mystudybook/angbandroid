@@ -26,4 +26,13 @@ static inline size_t angdroid_fa_history_step(size_t top,
     return (size_t)steps >= top ? 0 : top - (size_t)steps;
 }
 
+/* Reserve enough room for event text on 20-40 column terminals. */
+static inline int angdroid_fa_history_place_columns(int width)
+{
+    if (width < 30) return 0;
+    if (width < 40) return 6;
+    if (width < 60) return 10;
+    return 20;
+}
+
 #endif /* ANGDROID_FA_HISTORY_VIEWPORT_H */

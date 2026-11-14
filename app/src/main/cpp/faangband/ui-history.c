@@ -70,8 +70,7 @@ static void fa_history_screen_row(const struct history_info *event,
     const char *place = level_name(&world->levels[event->place]);
     size_t used = 0;
     size_t limit = (size_t)width;
-    size_t place_width = width >= 60 ? 20 :
-        (width >= 30 ? 12 : 6);
+    size_t place_width = (size_t)angdroid_fa_history_place_columns(width);
     size_t place_cells = place ?
         angdroid_utf8_display_columns(place) : 0;
 
@@ -89,12 +88,20 @@ static void fa_history_screen_row(const struct history_info *event,
         fa_history_append(visible, sizeof(visible), &used, limit, padding);
     }
 
-    /* Short screens reserve space for the event, not just the location. */
-    fa_history_append(visible, sizeof(visible), &used,
-        MIN(limit, used + place_width), place ? place : "");
-    fa_history_append(visible, sizeof(visible), &used, limit, "'  ");
+    /* A 20-29-column screen prioritizes the event, omitting location.
+     * At 30-39 columns, retain a short place hint.  Show an artifact-loss
+     * marker before the event on narrow screens so it cannot be clipped
+     * away after an otherwise lengthy history message. */
+    if (place_width > 0) {
+        fa_history_append(visible, sizeof(visible), &used,
+            MIN(limit, used + place_width), place ? place : "");
+        fa_history_append(visible, sizeof(visible), &used, limit, "'  ");
+    }
+    if (hist_has(event->type, HIST_ARTIFACT_LOST) && width < 40)
+        fa_history_append(visible, sizeof(visible), &used, limit,
+            angdroid_zh_tw_enabled() ? "遺失：" : "LOST: ");
     fa_history_append(visible, sizeof(visible), &used, limit, event->event);
-    if (hist_has(event->type, HIST_ARTIFACT_LOST))
+    if (hist_has(event->type, HIST_ARTIFACT_LOST) && width >= 40)
         fa_history_append(visible, sizeof(visible), &used, limit,
             angdroid_zh_tw_enabled() ? "（遺失）" : " (LOST)");
     fa_history_put_clipped(COLOUR_WHITE, visible, row, 0);

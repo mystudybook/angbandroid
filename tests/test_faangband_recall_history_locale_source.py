@@ -65,6 +65,12 @@ has(display,
     "first_item = angdroid_fa_history_step(first_item,",
     "row < page_size && i < max_item",
     "fa_history_screen_row(&history_list_local[i], row + 2, wid);",
+    "angdroid_fa_history_place_columns(width)",
+    "if (place_width > 0)",
+    "width < 40",
+    "width >= 40",
+    '"遺失：" : "LOST: "',
+    '"（遺失）" : " (LOST)"',
     "fa_history_put_clipped(COLOUR_WHITE,",
     "if (hgt > 1)",
     "if (Term) screen_load();",
@@ -82,7 +88,8 @@ NATIVE = (ROOT / "tests/native/test_fa_history_viewport.c").read_text(
     encoding="utf-8")
 for token in ("static inline int angdroid_fa_history_page_rows(",
               "static inline size_t angdroid_fa_history_clamp_top(",
-              "static inline size_t angdroid_fa_history_step("):
+              "static inline size_t angdroid_fa_history_step(",
+              "static inline int angdroid_fa_history_place_columns("):
     assert token in VIEWPORT and token in NATIVE, token
 has(dump, 'file_putf(file, "[Player history]\\n");',
     'file_putf(file, "      Turn   Place               Note\\n");',

@@ -21,6 +21,14 @@ int main(void)
     CHECK(angdroid_fa_history_page_rows(4) == 1);
     CHECK(angdroid_fa_history_page_rows(24) == 21);
     CHECK(angdroid_fa_history_page_rows(INT_MAX) == INT_MAX - 3);
+    CHECK(angdroid_fa_history_place_columns(-1) == 0);
+    CHECK(angdroid_fa_history_place_columns(20) == 0);
+    CHECK(angdroid_fa_history_place_columns(29) == 0);
+    CHECK(angdroid_fa_history_place_columns(30) == 6);
+    CHECK(angdroid_fa_history_place_columns(39) == 6);
+    CHECK(angdroid_fa_history_place_columns(40) == 10);
+    CHECK(angdroid_fa_history_place_columns(59) == 10);
+    CHECK(angdroid_fa_history_place_columns(60) == 20);
     CHECK(angdroid_fa_history_clamp_top(SIZE_MAX, 0) == 0);
     CHECK(angdroid_fa_history_clamp_top(SIZE_MAX, 2) == 1);
     CHECK(angdroid_fa_history_clamp_top(0, 20) == 0);
@@ -34,6 +42,9 @@ int main(void)
     CHECK(angdroid_fa_history_step(0, SIZE_MAX, INT_MAX, 0) == 0);
 
     for (height = 0; height <= 128; ++height) {
+        CHECK(angdroid_fa_history_place_columns(height) ==
+            (height < 30 ? 0 : (height < 40 ? 6 :
+                (height < 60 ? 10 : 20))));
         rows = angdroid_fa_history_page_rows(height);
         CHECK(rows == (height > 3 ? height - 3 : 0));
         if (rows > 0) CHECK(2 + rows - 1 < height - 1);
