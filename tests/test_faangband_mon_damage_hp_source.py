@@ -43,8 +43,8 @@ project_attack = PROJECTION.split(
 self_heal = ATTACK.split("bool effect_handler_MON_HEAL_HP(", 1)[1].split(
     "bool effect_handler_MON_HEAL_KIN(", 1)[0]
 kin_heal = ATTACK.split("bool effect_handler_MON_HEAL_KIN(", 1)[1].split(
-    "/* Cast a bolt spell", 1)[0]
-quake = ATTACK.split("/* Apply damage directly */", 1)[1].split(
+    " * Cast a bolt spell", 1)[0]
+quake = ATTACK.split("/* Preserve lethal quake damage before storing int16 HP. */", 1)[1].split(
     "if (mon->hp < 0)", 1)[0]
 mana = GENERAL.split("/* Heal the monster */", 1)[1].split(
     "/* Redraw mana */", 1)[0]
