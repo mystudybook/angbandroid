@@ -86,6 +86,26 @@ int main(void)
         }
     }
 
+    /* Generated HP must never wrap before being range-checked. */
+    CHECK(angdroid_fa_mon_maxhp_from_roll(INT_MIN) == 1);
+    CHECK(angdroid_fa_mon_maxhp_from_roll(-1) == 1);
+    CHECK(angdroid_fa_mon_maxhp_from_roll(0) == 1);
+    CHECK(angdroid_fa_mon_maxhp_from_roll(1) == 1);
+    CHECK(angdroid_fa_mon_maxhp_from_roll(11256) == 11256);
+    CHECK(angdroid_fa_mon_maxhp_from_roll(20000) == 20000);
+    CHECK(angdroid_fa_mon_maxhp_from_roll(INT16_MAX) == INT16_MAX);
+    CHECK(angdroid_fa_mon_maxhp_from_roll(32768) == INT16_MAX);
+    CHECK(angdroid_fa_mon_maxhp_from_roll(65536) == INT16_MAX);
+    CHECK(angdroid_fa_mon_maxhp_from_roll(INT_MAX) == INT16_MAX);
+    {
+        int roll;
+        for (roll = -50000; roll <= 50000; roll += 97) {
+            int expected = roll < 1 ? 1 :
+                (roll > INT16_MAX ? INT16_MAX : roll);
+            CHECK(angdroid_fa_mon_maxhp_from_roll(roll) == expected);
+        }
+    }
+
     printf("PASS: %u FAangband monster HP damage checks\n", checks);
     return 0;
 }

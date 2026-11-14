@@ -29,4 +29,13 @@ static inline int16_t angdroid_fa_mon_hp_after_healing(int16_t hp,
     return (int16_t)((int64_t)hp + amount);
 }
 
+/* Clamp generated int HP before narrowing to int16_t.  Ordinary rolls
+ * remain unchanged, including the unique-monster fixed HP path. */
+static inline int16_t angdroid_fa_mon_maxhp_from_roll(int rolled_hp)
+{
+    if (rolled_hp < 1) return 1;
+    if (rolled_hp > INT16_MAX) return INT16_MAX;
+    return (int16_t)rolled_hp;
+}
+
 #endif /* ANGDROID_FA_MON_DAMAGE_HP_H */
