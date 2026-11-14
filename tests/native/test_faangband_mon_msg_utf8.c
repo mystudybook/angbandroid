@@ -95,7 +95,35 @@ int main(void)
     angdroid_fa_mon_msg_chinese_subject(subject, sizeof subject,
         "獸人", NULL, NULL, NULL, 1,
         false, true, false, true);
-    CHECK(strcmp(subject, "這隻獸人，（畫面外）") == 0);
+    CHECK(strcmp(subject, "這隻獸人（畫面外），") == 0);
+
+    /* In translated Chinese grammar the offscreen location is part of
+     * the noun phrase, and must precede its RF_NAME_COMMA punctuation. */
+    angdroid_fa_mon_msg_chinese_subject(narrow, sizeof narrow,
+        "獸人", NULL, "半精靈", NULL, 1,
+        false, true, false, true);
+    CHECK(strcmp(narrow, "這隻獸人（畫面外），") == 0);
+    CHECK(valid_utf8(narrow));
+
+    /* Long player-race qualifiers must not crowd the actual monster
+     * species out of a narrow display buffer. */
+    angdroid_fa_mon_msg_chinese_subject(narrow, sizeof narrow,
+        "獸人", NULL, "非常非常漫長的玩家種族前綴", NULL, 1,
+        false, false, false, false);
+    CHECK(strcmp(narrow, "這隻獸人") == 0);
+    CHECK(valid_utf8(narrow));
+
+    angdroid_fa_mon_msg_chinese_subject(narrow, sizeof narrow,
+        "獸人", NULL, "半精靈", NULL, 1,
+        false, true, false, false);
+    CHECK(strcmp(narrow, "這隻獸人（畫面外）") == 0);
+
+    /* With enough space, preserve both the qualifier and the species. */
+    angdroid_fa_mon_msg_chinese_subject(subject, sizeof subject,
+        "獸人", NULL, "半精靈", NULL, 1,
+        false, true, false, true);
+    CHECK(strcmp(subject, "這隻半精靈 獸人（畫面外），") == 0);
+    CHECK(valid_utf8(subject));
 
     /* Keep the complete offscreen marker when the race name is huge.
      * Prefix truncation must not introduce any partial Han glyph. */
