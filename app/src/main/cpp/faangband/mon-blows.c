@@ -276,7 +276,7 @@ static void display_blow_message_vs_player(const struct blow_method *method,
 			fullstop = "";
 		}
 		if (damage > 0 && OPT(p, show_damage)) {
-			msgt(method->msgt, translated ? "%s%s%s (%d)" :
+			msgt(method->msgt, translated ? "%s%s%s（%d）" :
 				"%s %s%s (%d)", shown, act, fullstop, damage);
 		} else {
 			msgt(method->msgt, translated ? "%s%s%s" :
