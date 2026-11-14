@@ -70,6 +70,7 @@ run_check "FAangband object/rune/terrain/trap knowledge display locale" python3 
 run_check "FAangband daily commands, store, input and options bilingual UI" python3 "$ROOT/tests/test_faangband_daily_ui_locale_source.py"
 run_check "FAangband recall and player history screen-only zh-TW" python3 "$ROOT/tests/test_faangband_recall_history_locale_source.py"
 run_check "FAangband recall layout and cancel safety C99" sh "$ROOT/scripts/test-fa-recall-viewport.sh"
+run_check "FAangband spoiler generator menu zh-TW and command safety" python3 "$ROOT/tests/test_faangband_spoiler_menu_locale_source.py"
 run_check "FAangband history viewport paging C99" sh "$ROOT/scripts/test-fa-history-viewport.sh"
 run_check "FAangband curse and Hall of Fame screen zh-TW" python3 "$ROOT/tests/test_faangband_curse_score_locale_source.py"
 run_check "FAangband item commands bilingual dictionary C99" sh "$ROOT/scripts/test-fa-item-command-translation.sh"
