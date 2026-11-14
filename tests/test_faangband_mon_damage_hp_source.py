@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Guard production FAangband int16_t monster HP updates against overflow."""
 from pathlib import Path
+import re
 
 ROOT = Path(__file__).resolve().parents[1]
 def read(path):
@@ -14,6 +15,7 @@ ATTACK = read("app/src/main/cpp/faangband/effect-handler-attack.c")
 GENERAL = read("app/src/main/cpp/faangband/effect-handler-general.c")
 MON_MAKE = read("app/src/main/cpp/faangband/mon-make.c")
 MON_DATA = read("variant_lib/faangband/gamedata/monster.txt")
+PARSER = read("app/src/main/cpp/faangband/parser.c")
 GHOST_DATA = read("variant_lib/faangband/gamedata/ghost.txt")
 NATIVE = read("tests/native/test_fa_mon_damage_hp.c")
 RUNNER = read("scripts/test-fa-mon-damage-hp.sh")
@@ -54,12 +56,21 @@ for line in MON_DATA.splitlines():
         entry = {"name": line[5:], "hp": None, "flags": ""}
         races.append(entry)
     elif entry is not None and line.startswith("hit-points:"):
-        entry["hp"] = int(line.partition(":")[2])
+        # Match the game's parser_getint(): strtol() reads an integer
+        # prefix even when legacy lines contain "6d9"/"4d9"/"10d20".
+        raw = line.partition(":")[2]
+        match = re.match(r"^[+-]?\d+", raw)
+        assert match is not None, (entry["name"], raw)
+        entry["hp"] = int(match.group())
     elif entry is not None and line.startswith("flags:"):
         entry["flags"] += " " + line.partition(":")[2]
 defined = [r for r in races if r["hp"] is not None]
 assert len(races) == 624
 assert len(defined) >= 610
+assert "v->u.ival = strtol(tok, &z, 0);" in PARSER
+legacy_hp = sorted(re.findall(
+    r"^hit-points:(\d+d\d+)$", MON_DATA, re.MULTILINE))
+assert legacy_hp == ["10d20", "4d9", "6d9"]
 assert all(r["hp"] > 0 for r in defined)
 assert max(r["hp"] for r in defined) == 20000
 nonunique = [r for r in defined if "UNIQUE" not in
@@ -74,7 +85,6 @@ def max_possible_hp(hp):
 
 assert max(max_possible_hp(r["hp"]) for r in nonunique) == 11256
 
-import re
 modifiers = [(int(a), int(b)) for a, b in re.findall(
     r'^hit-points:(\d+):(\d+)
 
