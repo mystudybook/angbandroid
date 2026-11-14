@@ -96,7 +96,9 @@ assert "angdroid_fa_mon_msg_chinese_subject(buf, buflen," in SOURCE
 assert 'angdroid_utf8_copy_complete(dst, base_capacity, "牠")' in HELPER
 assert 'snprintf(number, sizeof(number), "%d 隻怪物", count)' in HELPER
 assert 'static const char suffix[] = "（畫面外）";' in HELPER
-assert "base_capacity = suffix_fits ? capacity - (sizeof(suffix) - 1) :" in HELPER
+assert "base_capacity = capacity - reserved_bytes;" in HELPER
+assert "comma_fits = !invisible && comma;" in HELPER
+assert 'angdroid_utf8_append_complete(dst, capacity, used, "，");' in HELPER
 assert "angdroid_utf8_append_complete(dst, capacity, used, suffix)" in HELPER
 assert "mon_msg[size_mon_msg].p_race = mon->player_race;" in SOURCE
 assert 'my_strcat(buf, " (offscreen)", buflen);' in SOURCE
