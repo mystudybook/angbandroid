@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "app/src/main/cpp/faangband/mon-msg-utf8.h"
+#include "app/src/main/cpp/faangband/mon-msg-pain.h"
 
 static unsigned checks;
 #define CHECK(x) do { if (!(x)) { \
@@ -299,6 +300,40 @@ int main(void)
                     (sum < INT_MIN ? INT_MIN : (int)sum);
                 CHECK(angdroid_fa_mon_msg_add_damage(values[i],
                     values[j]) == expected);
+            }
+        }
+    }
+
+    /* Batch 263: 32-bit-safe pain grade percentages.  Normal integer
+     * truncation and all original grade boundaries are preserved. */
+    CHECK(angdroid_fa_mon_msg_pain_percentage(96, 4) == 96);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(95, 5) == 95);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(76, 24) == 76);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(75, 25) == 75);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(51, 49) == 51);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(50, 50) == 50);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(36, 64) == 36);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(35, 65) == 35);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(21, 79) == 21);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(20, 80) == 20);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(11, 89) == 11);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(10, 90) == 10);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(0, 20) == 0);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(-1, 1) == 0);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(-32768, 32768) == 0);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(INT_MAX, INT_MAX) == 50);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(32767, INT_MAX) == 0);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(INT_MAX, 1) == 99);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(1, 0) == 0);
+    CHECK(angdroid_fa_mon_msg_pain_percentage(1, -1) == 0);
+    {
+        int hp, d;
+        for (hp = 0; hp <= 32767; hp += 131) {
+            for (d = 1; d <= 32767; d += 173) {
+                int expect = (int)(((int64_t)hp * 100) /
+                    ((int64_t)hp + d));
+                CHECK(angdroid_fa_mon_msg_pain_percentage(hp, d)
+                    == expect);
             }
         }
     }

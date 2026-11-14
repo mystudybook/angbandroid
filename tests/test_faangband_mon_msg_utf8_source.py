@@ -12,6 +12,7 @@ def read(path):
 
 SOURCE = read("app/src/main/cpp/faangband/mon-msg.c")
 HELPER = read("app/src/main/cpp/faangband/mon-msg-utf8.h")
+PAIN_HELPER = read("app/src/main/cpp/faangband/mon-msg-pain.h")
 NATIVE = read("tests/native/test_faangband_mon_msg_utf8.c")
 RUNNER = read("scripts/test-fa-mon-msg-utf8.sh")
 VERIFY = read("scripts/verify-zh-tw.sh")
@@ -32,6 +33,22 @@ parser = SOURCE.split("static bool get_message_text(", 1)[1].split(
     "#undef MSG_PARSE_NORMAL", 1)[0]
 show = SOURCE.split("static void show_message(", 1)[1].split(
     "void show_monster_messages(", 1)[0]
+
+# The pain-grade message classification remains the same: only the
+# intermediate HP arithmetic is made wide and the invalid divisor guarded.
+pain_logic = SOURCE.split("static int get_pain_msg_code(", 1)[1].split(
+    "void message_pain(", 1)[0]
+assert '#include "mon-msg-pain.h"' in SOURCE
+assert "angdroid_fa_mon_msg_pain_percentage(" in pain_logic
+assert "mon->hp, dam);" in pain_logic
+assert "long newhp" not in pain_logic
+for threshold in ("95", "75", "50", "35", "20", "10"):
+    assert f"percentage > {threshold}" in pain_logic, threshold
+assert "#include <stdint.h>" in PAIN_HELPER
+assert "int64_t previous_hp;" in PAIN_HELPER
+assert "damage <= 0 || remaining_hp <= 0" in PAIN_HELPER
+assert "(int64_t)remaining_hp + (int64_t)damage" in PAIN_HELPER
+assert "(int64_t)remaining_hp * 100" in PAIN_HELPER
 
 # p_race is part of the existing stack identity. It must be assigned in
 # both fresh-entry constructors, including damage notifications.
@@ -206,6 +223,10 @@ for token in (
 
 ):
     assert token in NATIVE, token
+assert "angdroid_fa_mon_msg_pain_percentage(32767, INT_MAX)" in NATIVE
+assert "angdroid_fa_mon_msg_pain_percentage(INT_MAX, INT_MAX)" in NATIVE
+assert "for (hp = 0; hp <= 32767; hp += 131)" in NATIVE
+assert '#include "app/src/main/cpp/faangband/mon-msg-pain.h"' in NATIVE
 assert "-std=c99 -Wall -Wextra -Werror -pedantic" in RUNNER
 assert "test_faangband_mon_msg_utf8.c" in RUNNER
 assert "test-fa-mon-msg-utf8.sh" in VERIFY

@@ -19,6 +19,7 @@
 #include "angband.h"
 #include "mon-desc.h"
 #include "mon-msg-utf8.h"
+#include "mon-msg-pain.h"
 #include "mon-msg.h"
 #include "mon-predicate.h"
 #include "mon-util.h"
@@ -102,11 +103,10 @@ static int get_pain_msg_code(struct monster *mon, int dam)
 
 	/* Calculate damage levels */
 	if (dam > 0) {
-		/* Note -- subtle fix -CFT */
-		long newhp = (long)(mon->hp);
-		long oldhp = newhp + (long)(dam);
-		long tmp = (newhp * 100L) / oldhp;
-		int percentage = (int)(tmp);
+		/* Original integer thresholds, with a wide previous-HP sum and
+		 * a zero-divisor guard for abnormal damage notifications. */
+		int percentage = angdroid_fa_mon_msg_pain_percentage(
+			mon->hp, dam);
 
 		if (percentage > 95)		msg_code = MON_MSG_95;
 		else if (percentage > 75)	msg_code = MON_MSG_75;
