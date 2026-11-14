@@ -176,7 +176,8 @@ void history_display(void)
         }
     }
 
-    screen_load();
+    /* A rotation may temporarily invalidate the active terminal. */
+    if (Term) screen_load();
 }
 
 /**
