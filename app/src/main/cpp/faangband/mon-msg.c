@@ -544,9 +544,8 @@ static void show_message(struct monster_race_message *msg)
 		} else {
 			msgt(msg_type, localized ? "%s%s（平均 %d）" :
 				"%s%s (average %d)", subject, body,
-				msg->damage / msg->count
-				+ (msg->damage % msg->count
-				>= (msg->count + 1) / 2 ? 1 : 0));
+				angdroid_fa_mon_msg_average_damage(
+					msg->damage, msg->count));
 		}
 	} else {
 		msgt(msg_type, "%s%s", subject, body);
