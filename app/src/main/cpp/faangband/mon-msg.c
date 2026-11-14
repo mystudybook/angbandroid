@@ -18,6 +18,7 @@
 
 #include "angband.h"
 #include "mon-desc.h"
+#include "mon-msg-utf8.h"
 #include "mon-msg.h"
 #include "mon-predicate.h"
 #include "mon-util.h"
@@ -301,6 +302,8 @@ bool add_monster_message_show_damage(struct monster *mon, int msg_code,
 			!stack_message(mon, msg_code, flags, damage) &&
 			size_mon_msg < MAX_STORED_MON_MSG) {
 		mon_msg[size_mon_msg].race = mon->race;
+		/* The damage path needs the same race metadata for stacking. */
+		mon_msg[size_mon_msg].p_race = mon->player_race;
 		mon_msg[size_mon_msg].flags = flags;
 		mon_msg[size_mon_msg].msg_code = msg_code;
 		mon_msg[size_mon_msg].count = 1;
@@ -330,31 +333,15 @@ static void get_subject(char *buf, size_t buflen,
 		bool localized)
 {
 	if (localized) {
-		/* Names and visibility stay as selected by the message pipeline.
-		 * Chinese subjects have no trailing English word separator. */
-		if (invisible) {
-			if (count == 1) {
-				my_strcpy(buf, "牠", buflen);
-			} else {
-				strnfmt(buf, buflen, "%d 隻怪物", count);
-			}
-		} else {
-			const char *p_name = p_race ? format("%s ", p_race->name) : "";
-			if (rf_has(race->flags, RF_PLAYER_GHOST)) {
-				strnfmt(buf, buflen, "%s（%s）",
-					cave->ghost->name, race->name);
-			} else if (rf_has(race->flags, RF_UNIQUE)) {
-				my_strcpy(buf, race->name, buflen);
-			} else if (count == 1) {
-				strnfmt(buf, buflen, "這隻%s%s", p_name, race->name);
-			} else {
-				strnfmt(buf, buflen, "%d 隻%s%s", count, p_name,
-					race->plural ? race->plural : race->name);
-			}
-			if (rf_has(race->flags, RF_NAME_COMMA))
-				my_strcat(buf, "，", buflen);
-		}
-		if (offscreen) my_strcat(buf, "（畫面外）", buflen);
+		/* The original race/visibility flags have already been selected;
+		 * reserve room for CJK suffixes and never cut an UTF-8 glyph. */
+		angdroid_fa_mon_msg_chinese_subject(buf, buflen,
+			race->name, race->plural, p_race ? p_race->name : NULL,
+			(rf_has(race->flags, RF_PLAYER_GHOST) && cave->ghost)
+				? cave->ghost->name : NULL,
+			count, invisible, offscreen,
+			rf_has(race->flags, RF_UNIQUE),
+			rf_has(race->flags, RF_NAME_COMMA));
 		return;
 	}
 	if (invisible) {
@@ -438,35 +425,51 @@ static bool get_message_text(char *buf, size_t buflen,
 	int state = MSG_PARSE_NORMAL;
 	size_t maxlen = strlen(source);
 	size_t pos = 0;
+	bool writable = true;
 
-	/* Put the message characters in the buffer */
-	/* XXX This logic should be used everywhere for pluralising strings */
-	for (size_t i = 0; i < maxlen && pos < buflen - 1; i++) {
+	/* Parse the entire template even after the output buffer is full, so
+	 * singular/plural markers retain their original state transitions.
+	 * A Chinese scalar must be copied as one unit, never byte-by-byte. */
+	if (!buf || buflen == 0) return translated;
+	for (size_t i = 0; i < maxlen; i++) {
 		char cur = source[i];
 
-		/*
-		 * The characters '[|]' switch parsing mode and are never output.
-		 * The syntax is [singular|plural]
-		 */
-		if (state == MSG_PARSE_NORMAL        && cur == '[') {
+		if (state == MSG_PARSE_NORMAL && cur == '[') {
 			state = MSG_PARSE_SINGLE;
 		} else if (state == MSG_PARSE_SINGLE && cur == '|') {
 			state = MSG_PARSE_PLURAL;
 		} else if (state != MSG_PARSE_NORMAL && cur == ']') {
 			state = MSG_PARSE_NORMAL;
 		} else if (state == MSG_PARSE_NORMAL ||
-				(state == MSG_PARSE_SINGLE && do_plural == false) ||
-				(state == MSG_PARSE_PLURAL && do_plural == true)) {
-			/* Copy the characters according to the mode */
-			buf[pos++] = cur;
+				(state == MSG_PARSE_SINGLE && !do_plural) ||
+				(state == MSG_PARSE_PLURAL && do_plural)) {
+			if (!writable) continue;
+			if (translated) {
+				uint32_t cp;
+				size_t n = angdroid_utf8_next_scalar(source + i, &cp);
+				if (!n) break;
+				if (n > buflen - pos - 1) {
+					writable = false;
+				} else if (n == 1 && cp == 0xFFFDu &&
+						(unsigned char)cur >= 0x80u) {
+					buf[pos++] = '?';
+				} else {
+					memcpy(buf + pos, source + i, n);
+					pos += n;
+				}
+				i += n - 1;
+			} else if (pos < buflen - 1) {
+				/* English format, unchanged byte-for-byte. */
+				buf[pos++] = cur;
+			} else {
+				writable = false;
+			}
 		}
 	}
 
-	/* We should always return to the normal state */
+	/* The parser must finish, even when only a display prefix fits. */
 	assert(state == MSG_PARSE_NORMAL);
-
-	/* Terminate the buffer */
-	buf[pos] = 0;
+	buf[pos] = '\0';
 	return translated;
 }
 
@@ -536,7 +539,8 @@ static void show_message(struct monster_race_message *msg)
 	/* Show the message */
 	if (msg->flags & MON_MSG_FLAG_DAMAGE) {
 		if (msg->count <= 1) {
-			msgt(msg_type, "%s%s (%d)", subject, body, msg->damage);
+			msgt(msg_type, localized ? "%s%s（%d）" :
+				"%s%s (%d)", subject, body, msg->damage);
 		} else {
 			msgt(msg_type, localized ? "%s%s（平均 %d）" :
 				"%s%s (average %d)", subject, body,
