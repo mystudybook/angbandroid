@@ -148,7 +148,7 @@ int textui_get_recall_point(bool inward, int num_points, int num_poss)
 
     /* Re-check both the event and selected index after every menu event.
      * Escape and the no-replace choice must not dereference recall[]. */
-    while (angdroid_fa_recall_can_confirm(inward,
+    while (Term && angdroid_fa_recall_can_confirm(inward,
             evt.type == EVT_SELECT, selection, num_entries) &&
             player->recall[selection] != player->place) {
         int locality = world->levels[player->recall[selection]].locality;
