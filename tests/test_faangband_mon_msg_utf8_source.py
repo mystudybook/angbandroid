@@ -206,7 +206,7 @@ assert "MON_MSG(DIE," in REPOSITORY
 import json
 import re
 pattern = re.compile(
-    r'^\s*\{\s*("(?:\\.|[^"\\])*"),\s*("(?:\\.|[^"\\])*")\s*\},',
+    r'^\s*\{\s*("(?:\\.|[^"\\])*")\s*,\s*("(?:\\.|[^"\\])*")\s*\},',
     re.MULTILINE)
 dictionary = {json.loads(en): json.loads(zh)
               for en, zh in pattern.findall(DICT)}
