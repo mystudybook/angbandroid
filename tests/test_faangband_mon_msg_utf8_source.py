@@ -112,7 +112,12 @@ for token in (
     "static inline bool angdroid_fa_mon_msg_can_append(",
     "static inline size_t angdroid_fa_mon_msg_append(",
     "static inline size_t angdroid_fa_mon_msg_generic(",
-    "strlen(component) <= capacity - used - 1;",
+    "strlen(component) <= capacity - used - 1 &&",
+    "static inline bool angdroid_fa_mon_msg_valid_utf8(",
+    "angdroid_utf8_next_scalar(name + offset, &scalar)",
+    "len == 1 && scalar == 0xFFFDu",
+    "angdroid_fa_mon_msg_valid_utf8(component);",
+    "!angdroid_fa_mon_msg_valid_utf8(plural)",
     'const char *fallback = plural ? "怪物" : "牠";',
     'static const char suffix[] = "（畫面外）";',
     "suffix_fits = offscreen &&",
@@ -161,8 +166,13 @@ assert 'localized ? "%s%s（%d）" :' in show
 assert '"%s%s (%d)"' in show
 assert 'localized ? "%s%s（平均 %d）" :' in show
 assert '"%s%s (average %d)"' in show
-assert "msg->damage / msg->count" in show
-assert "msg->damage % msg->count" in show
+assert "angdroid_fa_mon_msg_average_damage(" in show
+assert "msg->damage, msg->count)" in show
+assert "static inline int angdroid_fa_mon_msg_average_damage(" in HELPER
+assert "if (count <= 0) return 0;" in HELPER
+assert "total_damage / count +" in HELPER
+assert "total_damage % count >= count / 2 + count % 2" in HELPER
+assert "(msg->count + 1)" not in show
 assert 'msgt(msg_type, "%s%s", subject, body);' in show
 
 for token in (
@@ -173,6 +183,9 @@ for token in (
     "4 隻怪物", "牠（畫面外）", "這隻獸人，",
     "超級無敵漫長的獸人種族名稱", "valid_utf8(narrow)",
     "ends_with(narrow, offscreen)", "char one[1]",
+    "malformed_race", "malformed_ghost", "malformed_plural",
+    "malformed_qualifier", "angdroid_fa_mon_msg_valid_utf8(",
+    "angdroid_fa_mon_msg_average_damage(", "INT_MAX",
     "for (size_t cap = 1; cap <= sizeof narrow; ++cap)",
     "strcmp(narrow, offscreen) != 0",
     'strcmp(narrow, "（畫面外），") != 0',
@@ -193,14 +206,14 @@ assert "MON_MSG(DIE," in REPOSITORY
 import json
 import re
 pattern = re.compile(
-    r'^\\s*\\{\\s*("(?:\\\\.|[^"\\\\])*"),\\s*("(?:\\\\.|[^"\\\\])*")\\s*\\},',
+    r'^\s*\{\s*("(?:\\.|[^"\\])*"),\s*("(?:\\.|[^"\\])*")\s*\},',
     re.MULTILINE)
 dictionary = {json.loads(en): json.loads(zh)
               for en, zh in pattern.findall(DICT)}
 list_keys = []
 for line in REPOSITORY.splitlines():
     if line.startswith("MON_MSG("):
-        quoted = re.findall(r'"(?:\\\\.|[^"\\\\])*"', line)
+        quoted = re.findall(r'"(?:\\.|[^"\\])*"', line)
         if quoted:
             value = json.loads(quoted[-1])
             if value:
