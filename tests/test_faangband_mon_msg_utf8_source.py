@@ -110,14 +110,23 @@ for token in (
     'snprintf(number, sizeof(number), "%d 隻怪物", count)',
     'snprintf(number, sizeof(number), "%d 隻", count)',
     "suffix_fits = offscreen && capacity > sizeof(suffix);",
-    "base_capacity = suffix_fits ? capacity - (sizeof(suffix) - 1) :",
+    "if (suffix_fits) reserved_bytes = sizeof(suffix) - 1;",
+    "base_capacity = capacity - reserved_bytes;",
+    'if (comma_fits)',
+    'reserved_bytes += sizeof("，") - 1;',
+    '"angdroid_utf8_append_complete(dst, capacity, used, suffix)"',
     "if (invisible)",
     "else if (ghost_name)",
     "else if (unique)",
     "if (name_bytes < base_capacity", # boundary gate can be combined
     "angdroid_utf8_append_complete(",
-    "if (!invisible && comma)",
+    "comma_fits = !invisible && comma;",
     'angdroid_utf8_append_complete(dst, capacity, used, suffix);',
+    'angdroid_utf8_append_complete(dst, capacity, used, "，");',
+    "const char *visible_race =",
+    "if (qualifier_len < remaining &&",
+    "race_len <= remaining - qualifier_len - 1",
+    "count == 1 || !plural ? race_name : plural",
 ):
     if token == "if (name_bytes < base_capacity":
         assert "name_bytes < base_capacity" in HELPER
@@ -147,6 +156,8 @@ assert 'msgt(msg_type, "%s%s", subject, body);' in show
 
 for token in (
     "這隻獸人", "3 隻獸人們", "這隻半精靈 獸人",
+    "這隻獸人（畫面外），", "這隻半精靈 獸人（畫面外），",
+    "非常非常漫長的玩家種族前綴",
     "艾莉絲（幽靈戰士）", "艾莉絲（幽靈戰士）（畫面外）",
     "4 隻怪物", "牠（畫面外）", "這隻獸人，",
     "超級無敵漫長的獸人種族名稱", "valid_utf8(narrow)",
