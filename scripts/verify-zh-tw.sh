@@ -68,6 +68,7 @@ run_check "FAangband item examine/ignore zh-TW labels" python3 "$ROOT/tests/test
 run_check "FAangband knowledge category/Ego labels and nested ignore popup keys" python3 "$ROOT/tests/test_faangband_knowledge_ego_locale_source.py"
 run_check "FAangband object/rune/terrain/trap knowledge display locale" python3 "$ROOT/tests/test_faangband_knowledge_detail_locale_source.py"
 run_check "FAangband daily commands, store, input and options bilingual UI" python3 "$ROOT/tests/test_faangband_daily_ui_locale_source.py"
+run_check "FAangband recall and player history screen-only zh-TW" python3 "$ROOT/tests/test_faangband_recall_history_locale_source.py"
 run_check "FAangband item commands bilingual dictionary C99" sh "$ROOT/scripts/test-fa-item-command-translation.sh"
 run_check "FAangband item commands prompts and formatted message locale contracts" python3 "$ROOT/tests/test_faangband_item_command_messages_locale_source.py"
 run_check "FAangband town, wilderness, stairs and trap event translations" python3 "$ROOT/tests/test_faangband_exploration_command_locale_source.py"

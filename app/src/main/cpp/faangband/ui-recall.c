@@ -24,6 +24,8 @@
 #include "ui-menu.h"
 #include "ui-output.h"
 #include "ui-recall.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
 
 /**
  * Choice of recall point (or nowhere)
@@ -48,7 +50,8 @@ static void recall_display(struct menu *menu, int oid, bool cursor, int row,
 {
 	const uint16_t *choice = menu_priv(menu);
 	int idx = choice[oid];
-	char place[30];
+	char place[96];
+	char visible[96];
 
 	uint8_t attr = (cursor ? COLOUR_L_BLUE : COLOUR_WHITE);
 
@@ -61,17 +64,22 @@ static void recall_display(struct menu *menu, int oid, bool cursor, int row,
 			my_strcpy(place, format("%s %d   ", locality_name(locality), level),
 					  sizeof(place));
 		} else if (locality != LOC_ARENA) {
-			my_strcpy(place, format("%s Town   ", locality_name(locality)),
+			my_strcpy(place, format("%s %s   ", locality_name(locality),
+						angdroid_zh_tw_enabled() ? "城鎮" : "Town"),
 					  sizeof(place));
 		} else {
-		    my_strcpy(place, "No location set     ", sizeof(place));
+		    my_strcpy(place, angdroid_zh_tw_enabled() ?
+				"尚未設定地點" : "No location set     ", sizeof(place));
 		}
 	} else {
-		my_strcpy(place, "Don't replace     ", sizeof(place));
+		my_strcpy(place, angdroid_zh_tw_enabled() ?
+			"不取代傳送點" : "Don't replace     ", sizeof(place));
 	}
 
-	/* Print it */
-	c_put_str(attr, format("%s", place), row, col);
+	/* Clip by terminal columns without splitting a CJK character. */
+	angdroid_menu_copy_columns(visible, sizeof(visible), place,
+		width > 0 ? (size_t)width : 0);
+	c_put_str(attr, visible, row, col);
 }
 
 /**
@@ -134,9 +142,13 @@ int textui_get_recall_point(bool inward, int num_points, int num_poss)
 
 	/* Set up the menu */
 	if (inward) {
-		m->title = "Which recall point will you replace (or ESC):";
+		m->title = angdroid_zh_tw_enabled() ?
+			"要取代哪個傳送點？（ESC 取消）" :
+			"Which recall point will you replace (or ESC):";
 	} else {
-		m->title = "Which recall point do you want to go to?";
+		m->title = angdroid_zh_tw_enabled() ?
+			"要前往哪個傳送點？" :
+			"Which recall point do you want to go to?";
 	}
 	menu_setpriv(m, num_entries, choice);
 	menu_layout(m, &area);
@@ -152,8 +164,11 @@ int textui_get_recall_point(bool inward, int num_points, int num_poss)
 		int level = world->levels[player->recall[selection]].depth;
 		my_strcpy(place, format("%s %d   ", locality_name(locality), level),
 				  sizeof(place));
-		if (get_check(format("Really replace recall point %s", place))) break;
-		if (get_check("Cancel recall? ")) {
+		if (get_check(angdroid_zh_tw_enabled() ?
+				format("確定要取代傳送點 %s？", place) :
+				format("Really replace recall point %s", place))) break;
+		if (get_check(angdroid_zh_tw_enabled() ?
+				"取消傳送？" : "Cancel recall? ")) {
 			evt.type = EVT_ESCAPE;
 			break;
 		}

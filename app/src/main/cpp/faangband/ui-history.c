@@ -22,14 +22,18 @@
 #include "ui-history.h"
 #include "ui-input.h"
 #include "ui-output.h"
+#include "../angband/zh-tw-ui.h"
 
 /**
  * Print the header for the history display
  */
 static void print_history_header(void)
 {
-	c_put_str(COLOUR_WHITE, "[Player history]", 0, 0);
-	c_put_str(COLOUR_L_BLUE, "      Turn   Place               Note", 1, 0);
+	c_put_str(COLOUR_WHITE, angdroid_zh_tw_enabled() ?
+		"[角色歷史紀錄]" : "[Player history]", 0, 0);
+	c_put_str(COLOUR_L_BLUE, angdroid_zh_tw_enabled() ?
+		"      回合   地點               事件" :
+		"      Turn   Place               Note", 1, 0);
 }
 
 
@@ -71,13 +75,17 @@ void history_display(void)
 					history_list_local[i].event);
 
 			if (hist_has(history_list_local[i].type, HIST_ARTIFACT_LOST))
-				my_strcat(buf, " (LOST)", sizeof(buf));
+				my_strcat(buf, angdroid_zh_tw_enabled() ?
+				"（遺失）" : " (LOST)", sizeof(buf));
 
 			/* Size of header = 3 lines */
 			prt(buf, row + 2, 0);
 			row++;
 		}
-		prt("[Arrow keys scroll, p/PgUp for previous page, n/PgDn for next page, ESC to exit.]", hgt - 1, 0);
+		prt(angdroid_zh_tw_enabled() ?
+			"[方向鍵捲動，p/PgUp 上頁，n/PgDn 下頁，ESC 離開]" :
+			"[Arrow keys scroll, p/PgUp for previous page, n/PgDn for next page, ESC to exit.]",
+			hgt - 1, 0);
 
 		ch = inkey();
 
