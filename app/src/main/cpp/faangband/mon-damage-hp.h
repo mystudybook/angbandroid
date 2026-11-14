@@ -17,4 +17,16 @@ static inline int16_t angdroid_fa_mon_hp_after_damage(int16_t hp, int damage)
     return (int16_t)remaining;
 }
 
+/* Treat this operation as healing only.  Reject zero/negative healing
+ * and invalid maximum HP rather than allowing a healing event to damage the
+ * monster.  Compare against remaining capacity before adding, so even
+ * INT64_MAX healing does not overflow or pass through an int16_t wrap. */
+static inline int16_t angdroid_fa_mon_hp_after_healing(int16_t hp,
+    int16_t maxhp, int64_t amount)
+{
+    if (amount <= 0 || maxhp <= 0) return hp;
+    if (amount >= (int64_t)maxhp - (int64_t)hp) return maxhp;
+    return (int16_t)((int64_t)hp + amount);
+}
+
 #endif /* ANGDROID_FA_MON_DAMAGE_HP_H */

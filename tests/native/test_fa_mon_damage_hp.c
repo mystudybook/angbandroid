@@ -48,6 +48,44 @@ int main(void)
         }
     }
 
+    /* Batch 266: healing cannot wrap around before the maxhp clamp. */
+    CHECK(angdroid_fa_mon_hp_after_healing(100, 200, 30) == 130);
+    CHECK(angdroid_fa_mon_hp_after_healing(100, 200, 100) == 200);
+    CHECK(angdroid_fa_mon_hp_after_healing(100, 200, 100000) == 200);
+    CHECK(angdroid_fa_mon_hp_after_healing(100, 200, INT64_MAX) == 200);
+    CHECK(angdroid_fa_mon_hp_after_healing(100, 200, INT64_MIN) == 100);
+    CHECK(angdroid_fa_mon_hp_after_healing(100, 200, -50) == 100);
+    CHECK(angdroid_fa_mon_hp_after_healing(100, 200, 0) == 100);
+    CHECK(angdroid_fa_mon_hp_after_healing(100, 0, 50) == 100);
+    CHECK(angdroid_fa_mon_hp_after_healing(100, -1, 50) == 100);
+    CHECK(angdroid_fa_mon_hp_after_healing(INT16_MAX, INT16_MAX,
+        INT64_MAX) == INT16_MAX);
+    CHECK(angdroid_fa_mon_hp_after_healing(INT16_MIN, INT16_MAX,
+        INT64_MAX) == INT16_MAX);
+    CHECK(angdroid_fa_mon_hp_after_healing(INT16_MIN, INT16_MAX, 1)
+        == INT16_MIN + 1);
+    CHECK(angdroid_fa_mon_hp_after_healing(300, 200, 1) == 200);
+    {
+        static const int64_t amounts[] = {
+            INT64_MIN, -100000, -1, 0, 1, 100, 32768,
+            100000, (int64_t)INT_MAX * 6, INT64_MAX
+        };
+        int maxhp;
+        size_t k;
+        for (hp = INT16_MIN; hp <= INT16_MAX; hp += 131) {
+            for (maxhp = 1; maxhp <= INT16_MAX; maxhp += 173) {
+                for (k = 0; k < sizeof amounts / sizeof amounts[0]; ++k) {
+                    int64_t heal = amounts[k];
+                    int16_t expect = heal <= 0 ? (int16_t)hp :
+                        (heal >= (int64_t)maxhp - hp ? (int16_t)maxhp :
+                        (int16_t)((int64_t)hp + heal));
+                    CHECK(angdroid_fa_mon_hp_after_healing(
+                        (int16_t)hp, (int16_t)maxhp, heal) == expect);
+                }
+            }
+        }
+    }
+
     printf("PASS: %u FAangband monster HP damage checks\n", checks);
     return 0;
 }
