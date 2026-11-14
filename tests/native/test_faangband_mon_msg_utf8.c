@@ -190,7 +190,7 @@ int main(void)
     angdroid_fa_mon_msg_chinese_subject(narrow, 17,
         "獸人", NULL, NULL, NULL, 1,
         false, true, false, true);
-    CHECK(strcmp(narrow, "這隻獸人") == 0);
+    CHECK(strcmp(narrow, "這隻獸人，") == 0);
     angdroid_fa_mon_msg_chinese_subject(narrow, 19,
         "獸人", NULL, NULL, NULL, 1,
         true, true, false, false);
@@ -200,6 +200,10 @@ int main(void)
         false, true, true, true);
     CHECK(strcmp(narrow, "牠（畫面外），") == 0);
     angdroid_fa_mon_msg_chinese_subject(narrow, 25,
+        "獸人", NULL, NULL, NULL, 1,
+        false, true, false, true);
+    CHECK(strcmp(narrow, "獸人（畫面外），") == 0);
+    angdroid_fa_mon_msg_chinese_subject(narrow, 31,
         "獸人", NULL, NULL, NULL, 1,
         false, true, false, true);
     CHECK(strcmp(narrow, "這隻獸人（畫面外），") == 0);
