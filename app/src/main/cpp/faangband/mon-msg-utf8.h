@@ -171,7 +171,9 @@ static inline void angdroid_fa_mon_msg_chinese_subject(
                 dst, base_capacity, false);
     } else {
         const char *visible_race =
-            count <= 1 || !plural || !plural[0] ? race_name : plural;
+            count <= 1 || !plural || !plural[0] ||
+            !angdroid_fa_mon_msg_valid_utf8(plural)
+                ? race_name : plural;
         if (count <= 1) {
             (void)snprintf(number, sizeof(number), "%s", "這隻");
         } else {
