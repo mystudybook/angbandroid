@@ -169,8 +169,9 @@ static int curse_menu(struct object *obj, char *dice_string)
 	selection = 0;
 
 	/* Set up the menu region */
-	/* Leave room for title/header; menu_layout() handles scrolling. */
-	area.page_rows = MIN(m->count + 2, MAX(1, Term->hgt - area.row));
+	/* Reserve a bottom row for curse descriptions.  A long list scrolls
+	 * inside the remaining space rather than hiding its browse text. */
+	area.page_rows = MIN(m->count + 2, MAX(1, Term->hgt - area.row - 1));
 	area.row = 1;
 	header_columns = angdroid_utf8_display_columns(header);
 	requested_width = MAX(length + 1, header_columns);

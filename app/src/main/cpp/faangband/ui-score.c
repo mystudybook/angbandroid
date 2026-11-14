@@ -173,16 +173,6 @@ static void display_scores_aux(const struct high_score scores[], int from,
 	int page_entries;
 
 	if (!Term || Term->wid <= 0 || Term->hgt <= 0) return;
-	page_entries = fa_score_page_entries(Term->hgt);
-	if (page_entries == 0) {
-		/* No complete score card fits.  Do not loop over hidden rows. */
-		Term_clear();
-		fa_score_put_clipped(COLOUR_WHITE,
-			angdroid_zh_tw_enabled() ? "畫面高度不足，按任意鍵返回。" :
-			"Screen too short; press any key to return.", 0, 0);
-		(void)inkey();
-		return;
-	}
 
 	/* Assume we will show the first 10 */
 	if (from < 0) from = 0;
@@ -203,6 +193,19 @@ static void display_scores_aux(const struct high_score scores[], int from,
 	 */
 	k = from;
 	while (1) {
+		/* Recompute after rotations: the available rows can change while
+		 * the user is selecting the next score page. */
+		if (!Term || Term->wid <= 0 || Term->hgt <= 0) return;
+		page_entries = fa_score_page_entries(Term->hgt);
+		if (page_entries == 0) {
+			Term_clear();
+			fa_score_put_clipped(COLOUR_WHITE,
+				angdroid_zh_tw_enabled() ? "畫面高度不足，按任意鍵返回。" :
+				"Screen too short; press any key to return.", 0, 0);
+			(void)inkey();
+			return;
+		}
+
 		/* Clear screen */
 		Term_clear();
 
@@ -246,7 +249,8 @@ static void display_scores_aux(const struct high_score scores[], int from,
 					"[Press ESC to exit, any other key to page forward till done.]",
 					footer_row, footer_col);
 			ch = inkey();
-			if (footer_row >= 0) prt("", footer_row, 0);
+			if (Term && footer_row >= 0 && footer_row < Term->hgt)
+				prt("", footer_row, 0);
 		}
 
 		if (ch.code == ESCAPE) {
