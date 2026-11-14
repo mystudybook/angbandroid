@@ -48,6 +48,8 @@ has(render,
 
 has(HISTORY,
     '#include "../angband/zh-tw-ui.h"',
+    '#include "../angband/menu-text-fit.h"',
+    '#include "ui-history-viewport.h"',
     '"[角色歷史紀錄]"',
     '"      回合   地點               事件"',
     '"（遺失）"',
@@ -57,8 +59,29 @@ has(HISTORY,
 display = HISTORY.split("void history_display(void)", 1)[1].split(
     "void dump_history(", 1)[0]
 dump = HISTORY.split("void dump_history(", 1)[1]
-has(display, "my_strcat(buf, angdroid_zh_tw_enabled() ?",
+has(display,
+    "page_size = angdroid_fa_history_page_rows(hgt);",
+    "first_item = angdroid_fa_history_clamp_top(first_item, max_item);",
+    "first_item = angdroid_fa_history_step(first_item,",
+    "row < page_size && i < max_item",
+    "fa_history_screen_row(&history_list_local[i], row + 2, wid);",
+    "fa_history_put_clipped(COLOUR_WHITE,",
     "case KC_PGDOWN:", "case KC_PGUP:", "case ESCAPE:")
+assert "page_size = hgt - 5" not in display
+assert "row <= page_size" not in display
+assert "int scroll_to = first_item -" not in display
+assert "strnfmt(buf, sizeof(buf), \"%10ld%20s" not in display
+assert "angdroid_menu_copy_columns(dest + bytes," in HISTORY
+assert "angdroid_utf8_display_columns(place)" in HISTORY
+assert "test-fa-history-viewport.sh" in VERIFY
+VIEWPORT = (ROOT / "app/src/main/cpp/faangband/ui-history-viewport.h").read_text(
+    encoding="utf-8")
+NATIVE = (ROOT / "tests/native/test_fa_history_viewport.c").read_text(
+    encoding="utf-8")
+for token in ("static inline int angdroid_fa_history_page_rows(",
+              "static inline size_t angdroid_fa_history_clamp_top(",
+              "static inline size_t angdroid_fa_history_step("):
+    assert token in VIEWPORT and token in NATIVE, token
 has(dump, 'file_putf(file, "[Player history]\\n");',
     'file_putf(file, "      Turn   Place               Note\\n");',
     'my_strcat(buf, " (LOST)", sizeof(buf));')
