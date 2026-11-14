@@ -23,113 +23,159 @@
 #include "ui-input.h"
 #include "ui-output.h"
 #include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
+#include "ui-history-viewport.h"
 
-/**
- * Print the header for the history display
- */
+/* All new output stays on-screen: dump_history() keeps its existing
+ * English, byte-for-byte export format. */
+static void fa_history_put_clipped(uint8_t color, const char *message,
+    int row, int col)
+{
+    char visible[512];
+    if (!Term || !message || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid) return;
+    angdroid_menu_copy_columns(visible, sizeof(visible), message,
+        (size_t)(Term->wid - col));
+    if (visible[0]) c_put_str(color, visible, row, col);
+}
+
+/* Append full UTF-8 scalars only.  Never cut a dynamic event or place
+ * half-way through an encoded Chinese character. */
+static void fa_history_append(char *dest, size_t cap, size_t *used_columns,
+    size_t until_column, const char *text)
+{
+    size_t bytes;
+    if (!text || !dest || !used_columns || *used_columns >= until_column)
+        return;
+    bytes = strlen(dest);
+    if (bytes >= cap) return;
+    *used_columns += angdroid_menu_copy_columns(dest + bytes,
+        cap - bytes, text, until_column - *used_columns);
+}
+
 static void print_history_header(void)
 {
-	c_put_str(COLOUR_WHITE, angdroid_zh_tw_enabled() ?
-		"[角色歷史紀錄]" : "[Player history]", 0, 0);
-	c_put_str(COLOUR_L_BLUE, angdroid_zh_tw_enabled() ?
-		"      回合   地點               事件" :
-		"      Turn   Place               Note", 1, 0);
+    fa_history_put_clipped(COLOUR_WHITE, angdroid_zh_tw_enabled() ?
+        "[角色歷史紀錄]" : "[Player history]", 0, 0);
+    fa_history_put_clipped(COLOUR_L_BLUE, angdroid_zh_tw_enabled() ?
+        "      回合   地點               事件" :
+        "      Turn   Place               Note", 1, 0);
 }
 
+static void fa_history_screen_row(const struct history_info *event,
+    int row, int width)
+{
+    char visible[512] = { 0 };
+    char turn_text[48], padding[21];
+    const char *place = level_name(&world->levels[event->place]);
+    size_t used = 0;
+    size_t limit = (size_t)width;
+    size_t place_width = width >= 60 ? 20 :
+        (width >= 30 ? 12 : 6);
+    size_t place_cells = place ?
+        angdroid_utf8_display_columns(place) : 0;
 
-/**
- * Handles all of the display functionality for the history list.
- */
+    if (width < 60)
+        strnfmt(turn_text, sizeof(turn_text), "%ld ",
+            (long)event->turn);
+    else
+        strnfmt(turn_text, sizeof(turn_text), "%10ld",
+            (long)event->turn);
+    fa_history_append(visible, sizeof(visible), &used, limit, turn_text);
+    if (width >= 60 && place_cells < 20) {
+        size_t spaces = 20 - place_cells;
+        memset(padding, ' ', spaces);
+        padding[spaces] = '\0';
+        fa_history_append(visible, sizeof(visible), &used, limit, padding);
+    }
+
+    /* Short screens reserve space for the event, not just the location. */
+    fa_history_append(visible, sizeof(visible), &used,
+        MIN(limit, used + place_width), place ? place : "");
+    fa_history_append(visible, sizeof(visible), &used, limit, "'  ");
+    fa_history_append(visible, sizeof(visible), &used, limit, event->event);
+    if (hist_has(event->type, HIST_ARTIFACT_LOST))
+        fa_history_append(visible, sizeof(visible), &used, limit,
+            angdroid_zh_tw_enabled() ? "（遺失）" : " (LOST)");
+    fa_history_put_clipped(COLOUR_WHITE, visible, row, 0);
+}
+
 void history_display(void)
 {
-	struct history_info *history_list_local = NULL;
-	size_t max_item = history_get_list(player, &history_list_local);
-	int row, wid, hgt, page_size;
-	char buf[120];
-	static size_t first_item = 0;
-	size_t i;
-	bool active = true;
+    struct history_info *history_list_local = NULL;
+    size_t max_item = history_get_list(player, &history_list_local);
+    static size_t first_item = 0;
+    bool active = true;
+    int wid, hgt;
 
-	Term_get_size(&wid, &hgt);
+    if (!Term) return;
+    Term_get_size(&wid, &hgt);
+    if (wid <= 0 || hgt <= 0) return;
+    screen_save();
 
-	/* Five lines provide space for the header and footer */
-	page_size = hgt - 5;
+    while (active) {
+        struct keypress ch;
+        int page_size;
+        int row;
+        size_t i;
 
-	screen_save();
+        /* Recalculate after every keypress or screen rotation. */
+        if (!Term) break;
+        Term_get_size(&wid, &hgt);
+        if (wid <= 0 || hgt <= 0) break;
+        page_size = angdroid_fa_history_page_rows(hgt);
+        first_item = angdroid_fa_history_clamp_top(first_item, max_item);
 
-	while (active)
-	{
-		struct keypress ch;
+        Term_clear();
+        if (page_size > 0) {
+            print_history_header();
+            for (row = 0, i = first_item;
+                 row < page_size && i < max_item; ++row, ++i) {
+                fa_history_screen_row(&history_list_local[i], row + 2, wid);
+            }
+        } else {
+            fa_history_put_clipped(COLOUR_WHITE,
+                angdroid_zh_tw_enabled() ?
+                "視窗高度不足，請旋轉螢幕。" :
+                "Screen too short; rotate the device.", 0, 0);
+        }
+        fa_history_put_clipped(COLOUR_WHITE,
+            angdroid_zh_tw_enabled() ?
+            "[方向鍵捲動，p/PgUp 上頁，n/PgDn 下頁，ESC 離開]" :
+            "[Arrow keys scroll, p/PgUp for previous page, n/PgDn for next page, ESC to exit.]",
+            hgt - 1, 0);
 
-		Term_clear();
+        ch = inkey();
+        switch (ch.code) {
+            case 'n':
+            case ' ':
+            case KC_PGDOWN:
+                first_item = angdroid_fa_history_step(first_item,
+                    max_item, page_size, 1);
+                break;
+            case 'p':
+            case KC_PGUP:
+                first_item = angdroid_fa_history_step(first_item,
+                    max_item, page_size, 0);
+                break;
+            case 'j':
+            case ARROW_DOWN:
+                first_item = angdroid_fa_history_step(first_item,
+                    max_item, 1, 1);
+                break;
+            case 'k':
+            case ARROW_UP:
+                first_item = angdroid_fa_history_step(first_item,
+                    max_item, 1, 0);
+                break;
+            case ESCAPE:
+                active = false;
+                break;
+        }
+    }
 
-		/* Print everything to screen */
-		print_history_header();
-
-		row = 0;
-		for (i = first_item; row <= page_size && i < max_item; i++)
-		{
-			strnfmt(buf, sizeof(buf), "%10ld%20s\'  %s",
-					(long)history_list_local[i].turn,
-					level_name(&world->levels[history_list_local[i].place]),
-					history_list_local[i].event);
-
-			if (hist_has(history_list_local[i].type, HIST_ARTIFACT_LOST))
-				my_strcat(buf, angdroid_zh_tw_enabled() ?
-				"（遺失）" : " (LOST)", sizeof(buf));
-
-			/* Size of header = 3 lines */
-			prt(buf, row + 2, 0);
-			row++;
-		}
-		prt(angdroid_zh_tw_enabled() ?
-			"[方向鍵捲動，p/PgUp 上頁，n/PgDn 下頁，ESC 離開]" :
-			"[Arrow keys scroll, p/PgUp for previous page, n/PgDn for next page, ESC to exit.]",
-			hgt - 1, 0);
-
-		ch = inkey();
-
-		switch (ch.code) {
-			case 'n':
-			case ' ':
-			case KC_PGDOWN: {
-				size_t scroll_to = first_item + page_size;
-				first_item = (scroll_to < max_item ? scroll_to : max_item);
-				break;
-			}
-
-			case 'p':
-			case KC_PGUP: {
-				int scroll_to = first_item - page_size;
-				first_item = (scroll_to >= 0 ? scroll_to : 0);
-				break;
-			}
-
-			case 'j':
-			case ARROW_DOWN: {
-				size_t scroll_to = first_item + 1;
-				first_item = (scroll_to < max_item ? scroll_to : max_item);
-				break;
-			}
-
-			case 'k':
-			case ARROW_UP: {
-				int scroll_to = first_item - 1;
-				first_item = (scroll_to >= 0 ? scroll_to : 0);
-				break;
-			}
-
-			case ESCAPE:
-				active = false;
-				break;
-		}
-	}
-
-	screen_load();
-
-	return;
+    screen_load();
 }
-
 
 /**
  * Dump character history to a file, which we assume is already open.
