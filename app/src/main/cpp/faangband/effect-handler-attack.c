@@ -24,6 +24,7 @@
 #include "mon-make.h"
 #include "mon-spell.h"
 #include "mon-util.h"
+#include "mon-damage-hp.h"
 #include "obj-desc.h"
 #include "obj-knowledge.h"
 #include "obj-util.h"
@@ -285,8 +286,9 @@ bool effect_handler_MON_HEAL_HP(effect_handler_context_t *context)
 
 	seen = (!player->timed[TMD_BLIND] && monster_is_visible(mon));
 
-	/* Heal some */
-	mon->hp += amount;
+	/* Heal safely before checking for a fully recovered monster. */
+	mon->hp = angdroid_fa_mon_hp_after_healing(
+		mon->hp, mon->maxhp, amount);
 
 	/* Fully healed */
 	if (mon->hp >= mon->maxhp) {
@@ -345,8 +347,9 @@ bool effect_handler_MON_HEAL_KIN(effect_handler_context_t *context)
 
 	seen = (!player->timed[TMD_BLIND] && monster_is_visible(mon));
 
-	/* Heal some */
-	mon->hp = MIN(mon->hp + amount, mon->maxhp);
+	/* Keep large kin-healing values from overflowing signed HP. */
+	mon->hp = angdroid_fa_mon_hp_after_healing(
+		mon->hp, mon->maxhp, amount);
 
 	if (seen) {
 		if (mon->hp == mon->maxhp) {
@@ -1869,8 +1872,9 @@ bool effect_handler_EARTHQUAKE(effect_handler_context_t *context)
 					/* Monster is certainly awake, not thinking about player */
 					monster_wake(mon, false, 0);
 
-					/* Apply damage directly */
-					mon->hp -= m_dam;
+					/* Preserve lethal quake damage before storing int16 HP. */
+					mon->hp = angdroid_fa_mon_hp_after_damage(
+						mon->hp, m_dam);
 
 					if (mon->hp < 0) {
 						if (display_dam) {

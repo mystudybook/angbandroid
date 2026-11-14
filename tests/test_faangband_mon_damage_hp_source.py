@@ -9,6 +9,9 @@ def read(path):
 SOURCE = read("app/src/main/cpp/faangband/mon-util.c")
 MONSTER = read("app/src/main/cpp/faangband/monster.h")
 HELPER = read("app/src/main/cpp/faangband/mon-damage-hp.h")
+PROJECTION = read("app/src/main/cpp/faangband/project-mon.c")
+ATTACK = read("app/src/main/cpp/faangband/effect-handler-attack.c")
+GENERAL = read("app/src/main/cpp/faangband/effect-handler-general.c")
 NATIVE = read("tests/native/test_fa_mon_damage_hp.c")
 RUNNER = read("scripts/test-fa-mon-damage-hp.sh")
 VERIFY = read("scripts/verify-zh-tw.sh")
@@ -24,6 +27,46 @@ assert "int64_t remaining = (int64_t)hp - (int64_t)damage;" in HELPER
 assert "if (remaining < INT16_MIN) return INT16_MIN;" in HELPER
 assert "if (remaining > INT16_MAX) return INT16_MAX;" in HELPER
 assert "return (int16_t)remaining;" in HELPER
+
+# Heal events must check the remaining space before adding; both player
+# projections and monster spells use the same tested C99 helper.
+assert "static inline int16_t angdroid_fa_mon_hp_after_healing(" in HELPER
+assert "amount <= 0 || maxhp <= 0" in HELPER
+assert "amount >= (int64_t)maxhp - (int64_t)hp" in HELPER
+
+project_heal = PROJECTION.split(
+    "static void project_monster_handler_MON_HEAL(", 1)[1].split(
+    "static void project_monster_handler_MON_SPEED(", 1)[0]
+project_attack = PROJECTION.split(
+    "static bool project_m_monster_attack(", 1)[1].split(
+    "static bool project_m_player_attack(", 1)[0]
+self_heal = ATTACK.split("bool effect_handler_MON_HEAL_HP(", 1)[1].split(
+    "bool effect_handler_MON_HEAL_KIN(", 1)[0]
+kin_heal = ATTACK.split("bool effect_handler_MON_HEAL_KIN(", 1)[1].split(
+    "/* Cast a bolt spell", 1)[0]
+quake = ATTACK.split("/* Apply damage directly */", 1)[1].split(
+    "if (mon->hp < 0)", 1)[0]
+mana = GENERAL.split("/* Heal the monster */", 1)[1].split(
+    "/* Redraw mana */", 1)[0]
+
+for code in (PROJECTION, ATTACK, GENERAL):
+    assert '#include "mon-damage-hp.h"' in code
+assert "angdroid_fa_mon_hp_after_healing(" in project_heal
+assert "context->mon->hp, context->mon->maxhp, context->dam" in project_heal
+assert "context->mon->hp += context->dam;" not in project_heal
+assert "angdroid_fa_mon_hp_after_damage(mon->hp, dam)" in project_attack
+assert "mon->hp -= dam;" not in project_attack
+for body in (self_heal, kin_heal):
+    assert "angdroid_fa_mon_hp_after_healing(" in body
+    assert "mon->hp, mon->maxhp, amount" in body
+assert "mon->hp += amount;" not in self_heal
+assert "MIN(mon->hp + amount, mon->maxhp)" not in kin_heal
+assert "angdroid_fa_mon_hp_after_damage(" in quake
+assert "mon->hp, m_dam" in quake
+assert "mon->hp -= m_dam;" not in quake
+assert "angdroid_fa_mon_hp_after_healing(" in mana
+assert "(int64_t)6 * drain" in mana
+assert "mon->hp += (6 * drain);" not in mana
 
 assert "t_mon->hp = angdroid_fa_mon_hp_after_damage(t_mon->hp, dam);" in nonplayer
 assert "mon->hp = angdroid_fa_mon_hp_after_damage(mon->hp, dam);" in player
@@ -45,6 +88,9 @@ for token in (
     "angdroid_fa_mon_hp_after_damage(100, 100000)",
     "angdroid_fa_mon_hp_after_damage(100, INT_MIN)",
     "for (hp = INT16_MIN; hp <= INT16_MAX; ++hp)",
+    "angdroid_fa_mon_hp_after_healing(100, 200, INT64_MAX)",
+    "angdroid_fa_mon_hp_after_healing(100, 0, 50)",
+    "for (maxhp = 1; maxhp <= INT16_MAX; maxhp += 173)",
 ):
     assert token in NATIVE, token
 assert "test_fa_mon_damage_hp.c" in RUNNER
