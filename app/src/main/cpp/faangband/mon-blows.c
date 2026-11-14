@@ -28,6 +28,8 @@
 #include "mon-lore.h"
 #include "mon-make.h"
 #include "mon-msg.h"
+#include "mon-predicate.h"
+#include "mon-spell-message-locale.h"
 #include "mon-util.h"
 #include "obj-desc.h"
 #include "obj-gear.h"
@@ -46,6 +48,34 @@
  * ------------------------------------------------------------------------
  * Monster blow methods
  * ------------------------------------------------------------------------ */
+
+/*
+ * FAangband-specific display name for already translated melee actions.
+ * Keep the English monster_desc() path unchanged when no action translation
+ * was found. Visible shape-unique monsters retain their own names; unseen
+ * targets keep the identity supplied by monster_desc(MDESC_TARG).
+ */
+static const char *monster_blow_display_subject(const struct monster *mon,
+		int mode, char original[256], char translated[320],
+		char offscreen[320])
+{
+	const char *shown;
+
+	monster_desc(original, 256, mon, mode & ~MDESC_COMMA);
+	shown = original;
+	if (rf_has(mon->race->flags, RF_PLAYER_GHOST) && cave->ghost) {
+		shown = angdroid_fa_spell_ghost_subject(original,
+			cave->ghost->name, mon->race->name,
+			true, translated, 320);
+	}
+	if (shown == original &&
+		(!monster_is_shape_unique(mon) || !monster_is_visible(mon))) {
+		shown = angdroid_fa_spell_subject(original, true,
+			translated, 320);
+	}
+	return angdroid_fa_spell_offscreen_subject(shown, true,
+		offscreen, 320);
+}
 
 typedef enum {
 	BLOW_TAG_NONE,
@@ -124,8 +154,14 @@ static char *monster_blow_method_action_for_display(
 
 			switch (blow_tag_lookup(tag)) {
 				case BLOW_TAG_TARGET: {
-					char m_name[80];
-					if (midx > 0) {
+					char m_name[256];
+					if (midx > 0 && translated) {
+						char zh_name[320], offscreen[320];
+						const char *shown = monster_blow_display_subject(
+							t_mon, MDESC_TARG,
+							m_name, zh_name, offscreen);
+						strnfcat(buf, sizeof(buf), &end, "%s", shown);
+					} else if (midx > 0) {
 						int mdesc_mode = MDESC_TARG;
 
 						if (!strchr(punct, *in_cursor)) {
@@ -143,8 +179,14 @@ static char *monster_blow_method_action_for_display(
 					break;
 				}
 				case BLOW_TAG_OF_TARGET: {
-					char m_name[80];
-					if (midx > 0) {
+					char m_name[256];
+					if (midx > 0 && translated) {
+						char zh_name[320], offscreen[320];
+						const char *shown = monster_blow_display_subject(
+							t_mon, MDESC_TARG,
+							m_name, zh_name, offscreen);
+						strnfcat(buf, sizeof(buf), &end, "%s的", shown);
+					} else if (midx > 0) {
 						monster_desc(m_name,
 							sizeof(m_name), t_mon,
 							MDESC_TARG | MDESC_POSS);
