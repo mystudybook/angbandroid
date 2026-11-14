@@ -27,6 +27,7 @@
 #include "../angband/zh-tw-ui.h"
 #include "../angband/menu-text-fit.h"
 #include "ui-recall-viewport.h"
+#include <stdint.h>
 
 /**
  * Choice of recall point (or nowhere)
@@ -110,7 +111,9 @@ int textui_get_recall_point(bool inward, int num_points, int num_poss)
     uint16_t *choice;
 
     /* This menu has a title that consumes two terminal rows. */
-    if (!Term || num_points < 0 || Term->wid < 8 || Term->hgt < 4)
+    if (!Term || num_points < 0 ||
+        num_points > (int)UINT16_MAX - 2 ||
+        Term->wid < 8 || Term->hgt < 4)
         return -1;
     if (inward && num_points < num_poss)
         num_points++;

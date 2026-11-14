@@ -32,19 +32,36 @@ has(RECALL,
     'format("%s %d   ", locality_name(locality), level)',
     "choice[i] = i;",
     "selection = choice[oid];",
-    "selection < num_entries - 2",
+    "evt.type == EVT_SELECT, selection, num_entries)",
+    "num_points > (int)UINT16_MAX - 2",
+    "angdroid_fa_recall_can_confirm(inward,",
     "evt = menu_select(m, cursor, true);",
     "evt.type = EVT_ESCAPE;",
-    "return (evt.type != EVT_ESCAPE) ? selection : -1;")
+    "return (evt.type == EVT_SELECT) ? selection : -1;",
+    '"ui-recall-viewport.h"')
 
 render = RECALL.split("static void recall_display(", 1)[1].split(
     "static bool recall_action(", 1)[0]
 has(render,
-    "char place[96];",
-    "char visible[96];",
+    "const char *place;",
+    "char visible[256];",
     "angdroid_menu_copy_columns(visible, sizeof(visible), place,",
-    "width > 0 ? (size_t)width : 0",
-    "c_put_str(attr, visible, row, col);")
+    "(size_t)MIN(width, Term->wid - col)",
+    "if (visible[0]) c_put_str(attr, visible, row, col);")
+assert "char place[96]" not in render
+assert "my_strcpy(place," not in render
+RECALL_LAYOUT = (ROOT / "app/src/main/cpp/faangband/ui-recall-viewport.h").read_text(
+    encoding="utf-8")
+RECALL_NATIVE = (ROOT / "tests/native/test_fa_recall_viewport.c").read_text(
+    encoding="utf-8")
+has(RECALL_LAYOUT,
+    "angdroid_fa_recall_bounds(",
+    "angdroid_fa_recall_can_confirm(",
+    "entries >= height - 2 ? height : entries + 2",
+    "choice < entries - 2")
+assert "angdroid_fa_recall_bounds(" in RECALL_NATIVE
+assert "angdroid_fa_recall_can_confirm(" in RECALL_NATIVE
+assert "test-fa-recall-viewport.sh" in VERIFY
 
 has(HISTORY,
     '#include "../angband/zh-tw-ui.h"',
