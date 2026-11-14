@@ -721,3 +721,12 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 - **帶傷害訊息標點**：單筆翻譯後的 `MON_MSG_FLAG_DAMAGE` 現在使用「（%d）」；多筆群體仍使用既有「（平均 %d）」與完全相同的平均傷害整數計算，英文依舊是原 `(%d)`、`(average %d)`。沒有修改 `msg_type` 或其他 UI 偏好。
 - **C99／Python 離線回歸**：新增 `tests/native/test_faangband_mon_msg_utf8.c` 和 `scripts/test-fa-mon-msg-utf8.sh`，直接編譯正式 C99 顯示函式，涵蓋 1／多隻怪物、`p_race` 前綴、唯一怪物、玩家幽靈、匿名與畫面外訊息、中文逗號、長種族名稱、4／7／16／32-byte 邊界與完整 UTF-8 檢查。新增 `tests/test_faangband_mon_msg_utf8_source.py`，核對同一個 `p_race` 分組欄位在兩個建立入口的初始化、原 stack 及傷害公式、7 個疼痛階級來源、單複數狀態機與新 Unicode 複製規則。兩者均納入 `scripts/verify-zh-tw.sh`。
 - **驗證限制**：本批透過 GitHub 重新取得正式來源、程式及測試進行靜態一致性核對，並不等於完整 checkout 已實際編譯執行正式 C99／Python、Android NDK／Gradle APK、模擬器或實機驗證。PR #146 保持 Draft，全部提交帶 `[skip ci]`；不執行 GitHub Actions，不合併 `master`。
+
+## 第 259 批 — FAangband 群體訊息中文逗號與修飾名稱（2026-11-14）
+
+- **第 258 批的新顯示函式檢查**：`mon-msg-utf8.h::angdroid_fa_mon_msg_chinese_subject()` 原先先加 `RF_NAME_COMMA` 的「，」，最後才加「（畫面外）」，導致中文顯示像「這隻獸人，（畫面外）受傷了。」；這是英文來源標點順序直接沿用中文造成的可見文法問題。現在將**畫面外註記放在名詞內、中文逗號放在註記之後**，正確顯示「這隻獸人（畫面外），受傷了。」；英文 `get_subject()` 的逗號和 `(offscreen)` 順序完全不改。
+- **預留完整中文尾註及標點**：新輔助函式依 `offscreen`、`invisible`、`RF_NAME_COMMA` 預留可完整容納的 UTF-8 byte 容量，將 `reserved_bytes` 從名稱可用的空間扣除，再用 `angdroid_utf8_append_complete()` 安全附加「（畫面外）」及「，」。避免超長怪物名稱把尾註或中文逗號擠出緩衝區，也不會截出部分漢字。
+- **避免冗長修飾詞吃掉真正種族**：群體名稱有可選的 `p_race->name`（例如「半精靈」）時，只有在**修飾詞、空格及完整 `race->name`／`race->plural` 都能放下**，才加該修飾詞；剩餘空間不足時直接保留真正的怪物種類，而非顯示「這隻[修飾詞] 」就截斷。可見性、特殊唯一怪物、玩家幽靈及 `p_race` 的實際遊戲資料均不變；該規則只作用於繁中顯示。
+- **容量研究結果：不需要擴大訊息緩衝區**：從正式 `list-mon-message.h` 的 **58 條**訊息、`pain.txt` **65 條**不重複疼痛訊息與 `zh-tw-ui.h` 的正式翻譯逐條核對，**123/123 條**已有中文對照；最長翻譯來源只有 **42 UTF-8 bytes**（含單複數選擇標記），低於 `show_message()` 的 `body[256]`。原 `subject[256]` + `body[256]` 再加傷害文字，也低於 `message.c::msgt()` 使用的 **1024-byte** 格式化緩衝區。因此沒有為不存在的傳輸溢位而調整原訊息類別、繪圖換行或新增第二套 formatter。
+- **回歸測試**：擴充 `tests/native/test_faangband_mon_msg_utf8.c`，涵蓋單隻／群體、正常／畫面外兩種逗號排列，窄 `32-byte` 下省略過長 `p_race` 但保留怪物種類及完整「（畫面外），」；保留足夠空間時同時顯示原修飾詞和怪物種類。同步更新 `tests/test_faangband_mon_msg_utf8_source.py` 與原有 `tests/test_faangband_monster_messages_locale_source.py` 的斷言，並將來源 123 條最大 UTF-8 byte 長度與 `message.c::msgt()` 的 1024-byte 緩衝區檢查納入離線守護。
+- **驗證範圍**：本批未修改戰鬥數值、死亡／傷害音效、訊息入列／堆疊、原英文 grammar 或存檔。GitHub 上的來源靜態核對不等於完整 checkout 已執行 C99／Python、Android NDK／Gradle 或手機實測。維持 Draft PR #146，提交均包含 `[skip ci]`，不執行 GitHub Actions，也不合併 `master`。
