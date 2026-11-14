@@ -24,8 +24,19 @@
 #include "ui-curse.h"
 #include "ui-menu.h"
 #include "ui-output.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
 
 static int selection;
+
+/* The same localized label is used to measure and display a curse entry. */
+static void fa_curse_label(char *dest, size_t size, const char *name, int power)
+{
+	if (angdroid_zh_tw_enabled())
+		strnfmt(dest, size, "  %s（詛咒強度 %d）", name, power);
+	else
+		strnfmt(dest, size, "  %s (curse strength %d)", name, power);
+}
 
 struct curse_menu_data {
 	int index;
@@ -40,12 +51,16 @@ static void get_curse_display(struct menu *menu, int oid, bool cursor, int row,
 {
 	struct curse_menu_data *choice = menu_priv(menu);
 	int attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
-	char buf[80];
+	char buf[256], visible[256];
 	int power = choice[oid].power;
-	char *name = curses[choice[oid].index].name;
+	const char *name = curses[choice[oid].index].name;
 
-	strnfmt(buf, sizeof(buf), "  %s (curse strength %d)", name, power);
-	c_put_str(attr, buf, row, col);
+	fa_curse_label(buf, sizeof(buf), name, power);
+	/* Width means terminal columns, not UTF-8 bytes. */
+	angdroid_menu_copy_columns(visible, sizeof(visible), buf,
+		width > 0 ? (size_t)width : 0);
+	if (visible[0])
+		c_put_str(attr, visible, row, col);
 }
 
 /**
@@ -92,9 +107,12 @@ static int curse_menu(struct object *obj, char *dice_string)
 {
 	menu_iter menu_f = { 0, 0, get_curse_display, get_curse_action, 0 };
 	struct menu *m = menu_new(MN_SKIN_SCROLL, &menu_f);
-	char header[80];
+	char header[160], visible_header[160];
 	int row;
-	unsigned int length = 0;
+	size_t length = 0;
+	size_t header_columns;
+	size_t requested_width;
+	int max_width;
 	int i, count = 0;
 	size_t array_size = z_info->curse_max * sizeof(struct curse_menu_data);
 	struct curse_menu_data *available = mem_zalloc(array_size);
@@ -105,9 +123,12 @@ static int curse_menu(struct object *obj, char *dice_string)
 		if ((obj->known->curses[i].power > 0) &&
 			(obj->known->curses[i].power < 100) &&
 			player_knows_curse(player, i)) {
+			char label[256];
 			available[count].index = i;
 			available[count].power = obj->curses[i].power;
-			length = MAX(length, strlen(curses[i].name) + 13);
+			fa_curse_label(label, sizeof(label), curses[i].name,
+				available[count].power);
+			length = MAX(length, angdroid_utf8_display_columns(label));
 			count++;
 		}
 	}
@@ -118,9 +139,12 @@ static int curse_menu(struct object *obj, char *dice_string)
 
 	/* Set up the menu */
 	menu_setpriv(m, count, available);
-	my_strcpy(header,
-			  format(" Remove which curse (spell strength %s)?", dice_string),
-			  sizeof(header));
+	if (angdroid_zh_tw_enabled())
+		strnfmt(header, sizeof(header),
+			"要移除哪種詛咒（法術強度 %s）？", dice_string);
+	else
+		strnfmt(header, sizeof(header),
+			" Remove which curse (spell strength %s)?", dice_string);
 	m->header = header;
 	m->selections = all_letters_nohjkl;
 	m->flags = (MN_PVT_TAGS);
@@ -132,10 +156,19 @@ static int curse_menu(struct object *obj, char *dice_string)
 	/* Set up the menu region */
 	area.page_rows = m->count + 2;
 	area.row = 1;
-	area.col = (Term->wid - 1 - length) / 2;
+	header_columns = angdroid_utf8_display_columns(header);
+	requested_width = MAX(length + 1, header_columns);
+	/* Clamp before centering: never mix unsigned length and screen width. */
+	max_width = MAX(1, Term->wid - 1);
+	if (requested_width > (size_t)max_width)
+		requested_width = (size_t)max_width;
+	area.width = (int)requested_width;
+	area.col = (Term->wid - area.width) / 2;
 	if (area.col <= 3)
 		area.col = 0;
-	area.width = MAX(length + 1, strlen(m->header));
+	angdroid_menu_copy_columns(visible_header, sizeof(visible_header),
+		header, (size_t)area.width);
+	m->header = visible_header;
 
 	for (row = area.row; row < area.row + area.page_rows; row++)
 		prt("", row, MAX(0, area.col - 1));
