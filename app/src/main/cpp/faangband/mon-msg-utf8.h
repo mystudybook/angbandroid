@@ -25,14 +25,27 @@ static inline void angdroid_fa_mon_msg_chinese_subject(
 {
     static const char suffix[] = "（畫面外）";
     char number[64];
-    size_t base_capacity, used = 0;
-    bool suffix_fits;
+    size_t base_capacity, used = 0, reserved_bytes = 0;
+    bool suffix_fits, comma_fits;
 
     if (!dst || !capacity) return;
     dst[0] = '\0';
+    /*
+     * The location marker belongs before the comma in Chinese:
+     * "這隻獸人（畫面外），受傷了。"  Reserve both suffixes *before*
+     * copying a potentially large name; no half-width punctuation or
+     * incomplete UTF-8 can be introduced at the buffer boundary.
+     */
     suffix_fits = offscreen && capacity > sizeof(suffix);
-    base_capacity = suffix_fits ? capacity - (sizeof(suffix) - 1) :
-        capacity;
+    comma_fits = !invisible && comma;
+    if (suffix_fits) reserved_bytes = sizeof(suffix) - 1;
+    if (comma_fits) {
+        if (capacity - reserved_bytes > sizeof("，") - 1)
+            reserved_bytes += sizeof("，") - 1;
+        else
+            comma_fits = false;
+    }
+    base_capacity = capacity - reserved_bytes;
 
     if (invisible) {
         if (count == 1) {
@@ -70,21 +83,36 @@ static inline void angdroid_fa_mon_msg_chinese_subject(
             used = angdroid_utf8_copy_complete(
                 dst, base_capacity, number);
         }
-        if (player_race_name && player_race_name[0]) {
-            used = angdroid_utf8_append_complete(
-                dst, base_capacity, used, player_race_name);
-            used = angdroid_utf8_append_complete(
-                dst, base_capacity, used, " ");
+        {
+            const char *visible_race =
+                count == 1 || !plural ? race_name : plural;
+            /*
+             * The player-race qualifier is optional display metadata.
+             * If both names cannot fit, preserve the real monster race
+             * rather than leaving "這隻<qualifier> " with no creature.
+             */
+            if (player_race_name && player_race_name[0] &&
+                visible_race) {
+                size_t qualifier_len = strlen(player_race_name);
+                size_t race_len = strlen(visible_race);
+                size_t remaining = base_capacity - used - 1;
+                if (qualifier_len < remaining &&
+                    race_len <= remaining - qualifier_len - 1) {
+                    used = angdroid_utf8_append_complete(
+                        dst, base_capacity, used, player_race_name);
+                    used = angdroid_utf8_append_complete(
+                        dst, base_capacity, used, " ");
+                }
+            }
+            used = angdroid_utf8_append_complete(dst, base_capacity, used,
+                visible_race);
         }
-        used = angdroid_utf8_append_complete(dst, base_capacity, used,
-            count == 1 || !plural ? race_name : plural);
     }
 
-    if (!invisible && comma)
-        used = angdroid_utf8_append_complete(
-            dst, base_capacity, used, "，");
     if (suffix_fits)
-        (void)angdroid_utf8_append_complete(dst, capacity, used, suffix);
+        used = angdroid_utf8_append_complete(dst, capacity, used, suffix);
+    if (comma_fits)
+        (void)angdroid_utf8_append_complete(dst, capacity, used, "，");
 }
 
 #endif /* ANGDROID_FA_MON_MSG_UTF8_H */
