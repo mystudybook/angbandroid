@@ -183,11 +183,14 @@ pattern = re.compile(
     re.MULTILINE)
 dictionary = {json.loads(en): json.loads(zh)
               for en, zh in pattern.findall(DICT)}
-list_keys = [json.loads(m.group(1)) for line in REPOSITORY.splitlines()
-             if (m := re.search(r',\\s*("(?:\\\\.|[^"\\\\])*")\\s*\\)
-print("PASS: stacked damage race identity, plural/ghost/hidden UTF-8 subjects")
-, line))
-             and json.loads(m.group(1))]
+list_keys = []
+for line in REPOSITORY.splitlines():
+    if line.startswith("MON_MSG("):
+        quoted = re.findall(r'"(?:\\\\.|[^"\\\\])*"', line)
+        if quoted:
+            value = json.loads(quoted[-1])
+            if value:
+                list_keys.append(value)
 pain_keys = list(dict.fromkeys(
     line.split("message:", 1)[1] for line in PAIN_DATA.splitlines()
     if line.startswith("message:")))
