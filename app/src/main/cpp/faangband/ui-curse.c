@@ -83,21 +83,34 @@ static bool get_curse_action(struct menu *menu, const ui_event *event, int oid)
  */
 static void curse_menu_browser(int oid, void *data, const region *loc)
 {
-	struct curse_menu_data *choice = data;
-	char buf[80];
+	const struct curse_menu_data *choice = data;
+	const char *description;
+	int browse_row;
 
-	/* Redirect output to the screen */
+	/* On a short terminal, there may be no row below the last item.
+	 * Avoid moving the cursor beyond the screen on menu refresh. */
+	if (!Term || !loc || !choice || oid < 0 ||
+		loc->col < 0 || loc->col >= Term->wid) return;
+	browse_row = loc->row + loc->page_rows;
+	if (browse_row < 0 || browse_row >= Term->hgt) return;
+
+	description = curses[choice[oid].index].desc;
+	if (!description || !description[0]) return;
+
 	text_out_hook = text_out_to_screen;
 	text_out_wrap = 0;
 	text_out_indent = loc->col - 1;
 	text_out_pad = 1;
 
-	Term_gotoxy(loc->col, loc->row + loc->page_rows);
-	my_strcpy(buf, curses[choice[oid].index].desc, sizeof(buf));
-	my_strcap(buf);
-	text_out(" %s.\n", buf);
+	Term_gotoxy(loc->col, browse_row);
+	/* Pass the complete description to the Unicode-aware text output.
+	 * The old 80-byte my_strcpy() could truncate a UTF-8 character.
+	 * Preserve the legacy initial ASCII capitalization in English mode. */
+	if (description[0] >= 'a' && description[0] <= 'z')
+		text_out(" %c%s.\n", description[0] - 'a' + 'A', description + 1);
+	else
+		text_out(" %s.\n", description);
 
-	/* XXX */
 	text_out_pad = 0;
 	text_out_indent = 0;
 }
@@ -156,7 +169,8 @@ static int curse_menu(struct object *obj, char *dice_string)
 	selection = 0;
 
 	/* Set up the menu region */
-	area.page_rows = m->count + 2;
+	/* Leave room for title/header; menu_layout() handles scrolling. */
+	area.page_rows = MIN(m->count + 2, MAX(1, Term->hgt - area.row));
 	area.row = 1;
 	header_columns = angdroid_utf8_display_columns(header);
 	requested_width = MAX(length + 1, header_columns);

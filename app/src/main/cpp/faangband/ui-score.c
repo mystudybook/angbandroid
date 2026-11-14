@@ -42,13 +42,21 @@ static void fa_score_put_clipped(uint8_t attr, const char *text, int row,
 /**
  * Display a page of scores
  */
+/* One score needs three text rows starting at row 2, plus a footer row.
+ * Never let fixed five-entry pages draw over the footer on short screens. */
+static int fa_score_page_entries(int terminal_height)
+{
+	if (terminal_height < 6) return 0;
+	return MIN(5, (terminal_height - 2) / 4);
+}
+
 static void display_score_page(const struct high_score scores[], int start,
-							   int count, int highlight)
+							   int count, int highlight, int page_entries)
 {
 	int n;
 
 	/* Dump 5 entries */
-	for (n = 0; start < count && n < 5; start++, n++) {
+	for (n = 0; start < count && n < page_entries; start++, n++) {
 		const struct high_score *score = &scores[start];
 		uint8_t attr;
 		int clev, mlev, cdun, mdun;
@@ -162,6 +170,19 @@ static void display_scores_aux(const struct high_score scores[], int from,
 {
 	struct keypress ch;
 	int k, count;
+	int page_entries;
+
+	if (!Term || Term->wid <= 0 || Term->hgt <= 0) return;
+	page_entries = fa_score_page_entries(Term->hgt);
+	if (page_entries == 0) {
+		/* No complete score card fits.  Do not loop over hidden rows. */
+		Term_clear();
+		fa_score_put_clipped(COLOUR_WHITE,
+			angdroid_zh_tw_enabled() ? "畫面高度不足，按任意鍵返回。" :
+			"Screen too short; press any key to return.", 0, 0);
+		(void)inkey();
+		return;
+	}
 
 	/* Assume we will show the first 10 */
 	if (from < 0) from = 0;
@@ -177,8 +198,8 @@ static void display_scores_aux(const struct high_score scores[], int from,
 	if ((count > to) && !allow_scrolling) count = to;
 
 	/*
-	 * Move 5 entries at a time.  Unless scrolling is allowed, only
-	 * move forward and stop once the end is reached.
+	 * Move only as many records as the terminal can show. Unless scrolling
+	 * is allowed, move forward and stop once the end is reached.
 	 */
 	k = from;
 	while (1) {
@@ -205,7 +226,7 @@ static void display_scores_aux(const struct high_score scores[], int from,
 					0, Term->wid >= 80 ? 30 : 0);
 		}
 
-		display_score_page(scores, k, count, highlight);
+		display_score_page(scores, k, count, highlight, page_entries);
 
 		/* Keep the footer visible on shorter/narrower terminals. */
 		{
@@ -232,15 +253,15 @@ static void display_scores_aux(const struct high_score scores[], int from,
 			break;
 		} else if (ch.code == ARROW_UP && allow_scrolling) {
 			if (k == 0) {
-				k = count - 5;
-				while (k % 5) k++;
-			} else if (k < 5) {
+				k = count > 0 ?
+					((count - 1) / page_entries) * page_entries : 0;
+			} else if (k < page_entries) {
 				k = 0;
 			} else {
-				k = k - 5;
+				k -= page_entries;
 			}
 		} else {
-			k += 5;
+			k += page_entries;
 			if (k >= count) {
 				if (allow_scrolling) {
 					k = 0;
