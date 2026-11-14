@@ -26,6 +26,7 @@
 #include "mon-lore.h"
 #include "mon-make.h"
 #include "mon-msg.h"
+#include "mon-fear-health.h"
 #include "mon-predicate.h"
 #include "mon-spell.h"
 #include "mon-spell-message-locale.h"
@@ -1258,6 +1259,9 @@ static bool monster_scared_by_damage(struct monster *mon, int dam)
 {
 	int current_fear = mon->m_timed[MON_TMD_FEAR];
 
+	/* Never pass healing or zero damage to randint1(). */
+	if (dam <= 0) return false;
+
 	/* Pain can reduce or cancel existing fear, or cause fear */
 	if (current_fear) {
 		int tmp = randint1(dam);
@@ -1272,8 +1276,13 @@ static bool monster_scared_by_damage(struct monster *mon, int dam)
 			return false;
 		}
 	} else if (monster_can_be_scared(mon)) {
-		/* Percentage of fully healthy */
-		int percentage = (100L * mon->hp) / mon->maxhp;
+		int percentage;
+
+		/* A corrupted zero/negative max HP must not divide by zero.
+		 * Valid monsters keep the original integer percentage and RNG. */
+		if (!angdroid_fa_mon_fear_health_percentage(
+				mon->hp, mon->maxhp, &percentage))
+			return false;
 
 		/* Run (sometimes) if at 10% or less of max hit points... */
 		bool low_hp = randint1(10) >= percentage;
