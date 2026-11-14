@@ -27,6 +27,7 @@
 #include "mon-make.h"
 #include "mon-msg.h"
 #include "mon-fear-health.h"
+#include "mon-damage-hp.h"
 #include "mon-predicate.h"
 #include "mon-spell.h"
 #include "mon-spell-message-locale.h"
@@ -1336,8 +1337,9 @@ bool mon_take_nonplayer_hit(int dam, struct monster *t_mon,
 	/* Wake the monster up, doesn't become aware of the player */
 	monster_wake(t_mon, false, 0);
 
-	/* Hurt the monster */
-	t_mon->hp -= dam;
+	/* Keep the resulting 16-bit HP within range even when an int
+	 * damage amount greatly exceeds a monster's remaining health. */
+	t_mon->hp = angdroid_fa_mon_hp_after_damage(t_mon->hp, dam);
 
 	/* Dead or damaged monster */
 	if (t_mon->hp < 0) {
@@ -1406,8 +1408,9 @@ bool mon_take_hit(struct monster *mon, struct player *p, int dam, bool *fear,
 	/* Covering tracks is no longer possible */
 	p->timed[TMD_COVERTRACKS] = 0;
 
-	/* Hurt it */
-	mon->hp -= dam;
+	/* Compute the remaining HP without signed-int overflow or a
+	 * 16-bit narrowing wrap that could turn a lethal hit into healing. */
+	mon->hp = angdroid_fa_mon_hp_after_damage(mon->hp, dam);
 	if (mon->hp < 0) {
 		/* Deal with arena monsters */
 		if (p->upkeep->arena_level) {
