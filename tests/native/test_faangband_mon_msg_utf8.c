@@ -3,6 +3,7 @@
  * Deliberately independent of Android SDK and game state.
  */
 #include <stdbool.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 #include "app/src/main/cpp/faangband/mon-msg-utf8.h"
@@ -164,7 +165,7 @@ int main(void)
         for (mode = 0; mode < 6; ++mode) {
             bool invisible = mode == 1 || mode == 2;
             bool unique = mode == 4;
-            int count = mode == 2 ? 2147483647 : (mode == 3 ? 12 : 1);
+            int count = mode == 2 ? INT_MAX : (mode == 3 ? 12 : 1);
             angdroid_fa_mon_msg_chinese_subject(narrow, cap,
                 mode == 4 ? unique_name : race, "獸人們",
                 mode == 3 ? "極長的玩家種族修飾詞" : NULL,
