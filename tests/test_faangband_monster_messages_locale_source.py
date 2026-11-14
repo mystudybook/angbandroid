@@ -112,7 +112,10 @@ assert "MON_MSG_FLAG_OFFSCREEN" in SOURCE
 assert "MON_MSG_FLAG_DAMAGE" in SOURCE
 assert "get_message_type(msg->msg_code, msg->race)" in SOURCE
 assert "skip_subject(msg->msg_code)" in SOURCE
-assert "msg->damage / msg->count" in SOURCE
+assert "angdroid_fa_mon_msg_average_damage(" in SOURCE
+assert "static inline int angdroid_fa_mon_msg_average_damage(" in HELPER
+assert "total_damage % count >= count / 2 + count % 2" in HELPER
+assert "angdroid_fa_mon_msg_valid_utf8(component);" in HELPER
 assert 'localized ? "%s%s（平均 %d）"' in SOURCE
 assert '"%s%s (average %d)"' in SOURCE
 assert "size_mon_msg = size_mon_hist = 0;" in SOURCE
