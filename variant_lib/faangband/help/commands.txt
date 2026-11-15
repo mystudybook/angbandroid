@@ -1,66 +1,118 @@
+原始按鍵配置：指令對照表
+==============================
 
-Original Keyset Command Summary
-===============================
+說明：^ 後接英文字母代表 Ctrl 與該字母的組合。
+若系統攔截 Ctrl 組合鍵，也可以先按 ^，再按字母。
+所有快捷鍵代碼、大小寫及組合方式皆與原版相同。
+— 表示沒有指令。
 
-^ followed by a letter is an abbreviation for pressing and releasing
-the letter key with the control key also depressed.  You may also press
-and release ^ and then press and release the letter key to activate the
-same command in case your system intercepts the control plus key
-combination and does not pass it on.
-
-  a    Aim a wand                      A    Activate an object
-  b    Browse a book                   B    -
-  c    Close a door                    C    Character description
-  d    Drop an item                    D    Disarm a trap or lock a door
-  e    List equipped items             E    Eat some food
-  f    Fire an item                    F    Fuel your lantern/torch
-  g    Get objects on floor            G    Gain new spells/prayers
-  h    Fire default ammo at target     H    -
-  i    List contents of pack           I    Inspect an item
-  j    -                               J    -
-  k    Ignore an item                  K    Toggle ignore
-  l    Look around                     L    Locate player on map
-  m    Cast a spell                    M    Display map of entire level
-  n    Repeat previous command         N    -
-  o    Open a door or chest            O    -
-  p    Walk to unexplored location     P    -
-  q    Quaff a potion                  Q    Kill character & quit
-  r    Read a scroll                   R    Rest for a period
-  s    Steal from a monster (rogues)   S    Interact with specialties
-  t    Take off equipment              T    Dig a tunnel
-  u    Use a staff                     U    Use an item
-  v    Throw an item                   V    Display version info
-  w    Wear/wield equipment            W    Walk into a trap
-  x    -                               X    -
-  y    -                               Y    -
-  z    Zap a rod                       Z    -
-  !    Change shape (Beornings)        ^a   (special - debug command)
-  @    -                               ^b   -
-  #    Check time                      ^c   (special - break)
-  $    Move house                      ^d   -
-  %    -                               ^e   Toggle inven/equip window
-  ^    (special - control key)         ^f   Repeat level feeling
-  &    -                               ^g   Do autopickup
-  *    Target monster or location      ^h   -
-  (    -                               ^i   (special - tab)
-  )    Dump screen to a file           ^j   (special - linefeed)
-  {    Inscribe an object              ^k   -
-  }    Uninscribe an object            ^l   Center map
-  [    Display visible monster list    ^m   (special - return)
-  ]    Display visible object list     ^n   -
-  -    -                               ^o   Show previous message
-  _    Enter store                     ^p   Show previous messages
-  +    Alter grid, set monster trap    ^q   -
-  =    Set options                     ^r   Redraw the screen
-  ;    Walk (with pickup)              ^s   Save and don't quit
-  :    Take notes                      ^t   -
-  '    Target closest monster          ^u   -
-  "    Enter a user pref command       ^v   -
-  ,    Stay still (with pickup)        ^w   (special - wizard mode)
-  <    Go up/to next up staircase      ^x   Save and quit
-  .    Run                             ^y   -
-  >    Go dow/to next downn staircase  ^z   -
-  \    (special - bypass keymap)        ~   Check knowledge
-  `    (special - escape)               ?   Display help
-  /    Identify symbol
-  |    List contents of quiver
+  a    瞄準魔杖
+  A    啟動物品
+  b    瀏覽法術書
+  B    —
+  c    關門
+  C    查看角色資料
+  d    丟下物品
+  D    解除陷阱或鎖門
+  e    查看裝備清單
+  E    吃食物
+  f    發射彈藥
+  F    補充燈具燃料
+  g    拾取地面物品
+  G    學習新法術／祈禱
+  h    向目標射擊預設彈藥
+  H    —
+  i    查看背包
+  I    檢視物品
+  j    —
+  J    —
+  k    忽略物品
+  K    切換物品忽略設定
+  l    環顧四周
+  L    查看玩家在地圖的位置
+  m    施放法術
+  M    顯示整層地圖
+  n    重複上一個指令
+  N    —
+  o    打開門或寶箱
+  O    —
+  p    前往未探索區域
+  P    —
+  q    喝藥水
+  Q    結束角色生命並離開
+  r    閱讀卷軸
+  R    休息一段時間
+  s    從怪物身上偷竊（盜賊）
+  S    使用特殊能力
+  t    卸下裝備
+  T    挖掘通道
+  u    使用法杖
+  U    使用物品
+  v    投擲物品
+  V    顯示版本資訊
+  w    穿戴／裝備物品
+  W    走進陷阱
+  x    —
+  X    —
+  y    —
+  Y    —
+  z    使用魔法棒
+  Z    —
+  !    變身（比翁族）
+  ^a   特殊：除錯指令
+  @    —
+  ^b   —
+  #    查看時間
+  ^c   特殊：中斷
+  $    搬家
+  ^d   —
+  %    —
+  ^e   切換背包／裝備視窗
+  ^    特殊：Control 鍵
+  ^f   重複顯示樓層感受
+  &    —
+  ^g   自動拾取
+  *    鎖定怪物或地點
+  ^h   —
+  (    —
+  ^i   特殊：Tab 鍵
+  )    將畫面輸出為檔案
+  ^j   特殊：換行
+  {    為物品加註記
+  ^k   —
+  }    移除物品註記
+  ^l   將地圖置中
+  [    查看可見怪物清單
+  ^m   特殊：Enter 鍵
+  ]    查看可見物品清單
+  ^n   —
+  -    —
+  ^o   查看上一則訊息
+  _    進入商店
+  ^p   查看歷史訊息
+  +    與地格互動／設置怪物陷阱
+  ^q   —
+  =    調整設定
+  ^r   重新整理畫面
+  ;    步行（自動拾取）
+  ^s   儲存並繼續遊戲
+  :    記錄筆記
+  ^t   —
+  '    鎖定最近的怪物
+  ^u   —
+  "    輸入使用者偏好設定指令
+  ^v   —
+  ,    原地不動（自動拾取）
+  ^w   特殊：巫師模式
+  <    上樓／前往上行樓梯
+  ^x   儲存並離開
+  .    奔跑
+  ^y   —
+  >    下樓／前往下行樓梯
+  ^z   —
+  \    特殊：略過按鍵映射
+  ~    查看知識
+  `    特殊：Esc 鍵
+  ?    顯示說明
+  /    辨識符號
+  |    查看箭袋內容

@@ -46,5 +46,23 @@ for name, expected in {
     assert "faangband.readthedocs.io" in text
     assert "ESC 離開" in text
     assert text.count(".. menu:: ") == 2
+# One command per line keeps Chinese labels readable on narrow terminals.
+# Verify that neither keyset lost its original key count or special keys.
+for filename, total, title in (
+    ("commands.txt", 110, "原始按鍵配置：指令對照表"),
+    ("r_comm.txt", 111, "Roguelike 按鍵配置：指令對照表"),
+):
+    doc = (FA / filename).read_text(encoding="utf-8")
+    command_lines = [line for line in doc.splitlines()
+                     if re.match(r"^  \S+\s{2,}", line)]
+    keys = [line.strip().split()[0] for line in command_lines]
+    assert len(keys) == total, (filename, len(keys))
+    assert len(set(keys)) == total, filename
+    assert title in doc, filename
+    for special in ("^a", "^x", "?", "/", "!", "<", ">", "A", "a"):
+        assert special in keys, (filename, special)
+    assert "Ctrl" in doc and "查看" in doc
+assert "TAB" in (FA / "r_comm.txt").read_text(encoding="utf-8")
+
 assert "test_faangband_help_zh_tw_source.py" in VERIFY
 print("PASS: FA help viewer prompts, UTF-8 highlighting and menu links")
