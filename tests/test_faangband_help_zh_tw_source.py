@@ -64,5 +64,27 @@ for filename, total, title in (
     assert "Ctrl" in doc and "查看" in doc
 assert "TAB" in (FA / "r_comm.txt").read_text(encoding="utf-8")
 
+# 98 symbols in four sections. Preserve map glyphs and punctuation.
+SYMBOLS = (FA / "symbols.txt").read_text(encoding="utf-8")
+assert "地圖符號速查表" in SYMBOLS
+assert "預設 @ 代表玩家角色" in SYMBOLS
+groups = (
+    ("不阻擋視線的地形", 17),
+    ("阻擋視線的地形", 8),
+    ("物品", 19),
+    ("怪物", 54),
+)
+for j, (heading, count) in enumerate(groups):
+    section = SYMBOLS.split("\n" + heading + "\n", 1)[1]
+    if j + 1 < len(groups):
+        section = section.split("\n" + groups[j + 1][0] + "\n", 1)[0]
+    entries = [line for line in section.splitlines()
+               if re.match(r"^  \S\s{2,}", line)]
+    assert len(entries) == count, (heading, len(entries))
+MAKEFILE = (FA / "Makefile").read_text(encoding="utf-8")
+for filename in ("commands.txt", "index.txt", "symbols.txt",
+                 "r_comm.txt", "r_index.txt"):
+    assert filename in MAKEFILE, filename
+
 assert "test_faangband_help_zh_tw_source.py" in VERIFY
 print("PASS: FA help viewer prompts, UTF-8 highlighting and menu links")
