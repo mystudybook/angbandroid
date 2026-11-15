@@ -47,7 +47,19 @@
 #include "../angband/zh-tw-ui.h"
 #include "../angband/zh-tw-class-titles.h"
 #include "../angband/zh-tw-character-sheet.h"
+#include "../angband/menu-text-fit.h"
+#include "ui-player-presentation.h"
 #include "../curses/unicode_display.h"
+
+/* Character dumps take the English screen layout as their baseline.
+ * Do not allow the additional onscreen stat headers or unit glyphs below
+ * to alter the preexisting character dump output. */
+static bool fa_player_dump_english = false;
+
+static bool fa_player_display_zh_tw(void)
+{
+	return angdroid_zh_tw_enabled() && !fa_player_dump_english;
+}
 
 /**
  * ------------------------------------------------------------------------
@@ -526,6 +538,19 @@ static void display_player_flag_info(void)
 }
 
 
+/* Keep translated captions within the original fixed-width stat
+ * columns and the active terminal, especially on smaller Android screens. */
+static void fa_player_stat_heading(int id, int row, int col, int columns)
+{
+	char visible[32];
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid || columns <= 0) return;
+	angdroid_menu_copy_columns(visible, sizeof(visible),
+		angdroid_fa_stat_heading(id, fa_player_display_zh_tw()),
+		(size_t)MIN(columns, Term->wid - col));
+	if (visible[0]) c_put_str(COLOUR_WHITE, visible, row, col);
+}
+
 /**
  * Special display, part 2b
  */
@@ -543,11 +568,11 @@ void display_player_stat_info(void)
 	col = 42;
 
 	/* Print out the labels for the columns */
-	c_put_str(COLOUR_WHITE, "  Self", row-1, col+5);
-	c_put_str(COLOUR_WHITE, " RB", row-1, col+12);
-	c_put_str(COLOUR_WHITE, " CB", row-1, col+16);
-	c_put_str(COLOUR_WHITE, " EB", row-1, col+20);
-	c_put_str(COLOUR_WHITE, "  Best", row-1, col+24);
+	fa_player_stat_heading(0, row-1, col+5, 7);
+	fa_player_stat_heading(1, row-1, col+12, 4);
+	fa_player_stat_heading(2, row-1, col+16, 4);
+	fa_player_stat_heading(3, row-1, col+20, 4);
+	fa_player_stat_heading(4, row-1, col+24, 7);
 
 	/* Display the stats */
 	for (i = 0; i < STAT_MAX; i++) {
@@ -821,9 +846,13 @@ static struct panel *get_panel_midleft(void) {
 			"Cur Exp", "%d", player->exp);
 	panel_line(p, COLOUR_L_GREEN, "Max Exp", "%d", player->max_exp);
 	panel_line(p, COLOUR_L_GREEN, "Adv Exp", "%s", show_adv_exp());
-	panel_line(p, attr, "Burden", "%.1f lb",
+	panel_line(p, attr, "Burden",
+			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_BURDEN,
+				fa_player_display_zh_tw()),
 			   player->upkeep->total_weight / 10.0F);
-	panel_line(p, attr, "Overweight", "%d.%d lb", -diff / 10, abs(diff) % 10);
+	panel_line(p, attr, "Overweight",
+			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_OVERWEIGHT,
+				fa_player_display_zh_tw()), -diff / 10, abs(diff) % 10);
 	panel_line(p, COLOUR_L_GREEN, "Max Depth", "%s", show_depth());
 
 	return p;
@@ -858,7 +887,9 @@ static struct panel *get_panel_combat(void) {
 				   melee_sides, deadliness_conversion[dam]);
 	}
 	panel_line(p, COLOUR_L_BLUE, "To-hit", "%d,%+d", bth / 10, hit);
-	panel_line(p, COLOUR_L_BLUE, "Blows", "%d.%d/turn",
+	panel_line(p, COLOUR_L_BLUE, "Blows",
+			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_BLOWS,
+				fa_player_display_zh_tw()),
 			player->state.num_blows / 100, (player->state.num_blows / 10 % 10));
 
 	/* Ranged */
@@ -870,7 +901,9 @@ static struct panel *get_panel_combat(void) {
 	panel_line(p, COLOUR_L_BLUE, "Shoot to-dam", "%+d%%",
 			   deadliness_conversion[dam]);
 	panel_line(p, COLOUR_L_BLUE, "To-hit", "%d,%+d", bth / 10, hit);
-	panel_line(p, COLOUR_L_BLUE, "Shots", "%d.%d/turn",
+	panel_line(p, COLOUR_L_BLUE, "Shots",
+			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_SHOTS,
+				fa_player_display_zh_tw()),
 			   player->state.num_shots / 10, player->state.num_shots % 10);
 
 	return p;
@@ -911,7 +944,9 @@ static struct panel *get_panel_skills(void) {
 	panel_line(p, colour_table[skill / 10], "Searching", "%d%%", skill);
 
 	/* Infravision */
-	panel_line(p, COLOUR_L_GREEN, "Infravision", "%d ft",
+	panel_line(p, COLOUR_L_GREEN, "Infravision",
+			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_INFRA,
+				fa_player_display_zh_tw()),
 			player->state.see_infra * 10);
 
 	/* Speed */
@@ -1080,6 +1115,8 @@ void write_character_dump(ang_file *fff)
 	/* Begin dump */
 	file_putf(fff, "  [%s Character Dump]\n\n", buildid);
 
+	/* These screens are captured verbatim by the dump writer. */
+	fa_player_dump_english = true;
 	/* Display player basics */
 	display_player(2);
 
@@ -1119,6 +1156,7 @@ void write_character_dump(ang_file *fff)
 	file_putf(fff, "\n");
 
 	display_player(1);
+	fa_player_dump_english = false;
 
 	/* Print a header */
 	file_putf(fff, "%-25s%s\n", "Resistances", "Abilities");
