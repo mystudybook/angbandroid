@@ -32,7 +32,22 @@
 #include "ui-menu.h"
 #include "ui-prefs.h"
 #include "ui-wizard.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
 
+
+
+/* Only translate what the player sees. Never change native item indices. */
+static void fa_wiz_put_clipped(uint8_t attr, const char *label,
+    int row, int col, int width)
+{
+    char visible[256];
+    if (!Term || !label || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid || width <= 0) return;
+    angdroid_menu_copy_columns(visible, sizeof(visible), label,
+        (size_t)MIN(width, Term->wid - col));
+    if (visible[0]) c_put_str(attr, visible, row, col);
+}
 
 static void proj_display(struct menu *m, int type, bool cursor,
 		int row, int col, int wid)
@@ -61,7 +76,10 @@ static void proj_display(struct menu *m, int type, bool cursor,
 			}
 		}
 	} else {
-		prt("Change tile_height to 1 to see graphics.", row, col);
+		fa_wiz_put_clipped(COLOUR_WHITE, angdroid_zh_tw_enabled() ?
+			"將圖格高度設為 1 才能查看效果。" :
+			"Change tile_height to 1 to see graphics.",
+			row, col, wid - 25);
 	}
 }
 
@@ -82,7 +100,8 @@ void wiz_proj_demo(void)
 
 	menu_setpriv(m, PROJ_MAX, NULL);
 
-	m->title = "PROJ_ types display";
+	m->title = angdroid_zh_tw_enabled() ?
+		"投射效果類型展示" : "PROJ_ types display";
 	menu_layout(m, &loc);
 
 	screen_save();
@@ -146,7 +165,7 @@ static void wiz_create_item_subdisplay(struct menu *m, int oid, bool cursor,
 {
 	int *choices = menu_priv(m);
 	int selected = choices[oid];
-	char buf[70];
+	char buf[256];
 
 	if (selected == WIZ_CREATE_ALL_MENU_ITEM) {
 		/*
@@ -154,13 +173,15 @@ static void wiz_create_item_subdisplay(struct menu *m, int oid, bool cursor,
 		 * item, with the selected tval stored in the next element.
 		 */
 		int current_tval = choices[oid + 1];
-		char name[70];
+		char name[128];
 
 		object_base_name(name, sizeof(name), current_tval, true);
 		if (choose_artifact) {
-			strnfmt(buf, sizeof(buf), "All artifact %s", name);
+			strnfmt(buf, sizeof(buf), angdroid_zh_tw_enabled() ?
+				"全部神器：%s" : "All artifact %s", name);
 		} else {
-			strnfmt(buf, sizeof(buf), "All %s", name);
+			strnfmt(buf, sizeof(buf), angdroid_zh_tw_enabled() ?
+				"全部%s" : "All %s", name);
 		}
 	} else {
 		if (choose_artifact) {
@@ -171,7 +192,8 @@ static void wiz_create_item_subdisplay(struct menu *m, int oid, bool cursor,
 		}
 	}
 
-	c_prt(curs_attrs[CURS_KNOWN][0 != cursor], buf, row, col);
+	fa_wiz_put_clipped(curs_attrs[CURS_KNOWN][0 != cursor],
+		buf, row, col, width);
 }
 
 
@@ -219,19 +241,22 @@ static menu_iter wiz_create_item_submenu = {
 static void wiz_create_item_display(struct menu *m, int oid, bool cursor,
 	int row, int col, int width)
 {
-	char buf[80];
+	char buf[192];
 
 	if (oid == WIZ_CREATE_ALL_MENU_ITEM) {
 		if (choose_artifact) {
-			my_strcpy(buf, "All artifacts", sizeof(buf));
+			my_strcpy(buf, angdroid_zh_tw_enabled() ?
+				"全部神器" : "All artifacts", sizeof(buf));
 		} else {
-			my_strcpy(buf, "All objects", sizeof(buf));
+			my_strcpy(buf, angdroid_zh_tw_enabled() ?
+				"全部物品" : "All objects", sizeof(buf));
 		}
 	} else {
 		object_base_name(buf, sizeof(buf), oid, true);
 	}
 
-	c_prt(curs_attrs[CURS_KNOWN][0 != cursor], buf, row, col);
+	fa_wiz_put_clipped(curs_attrs[CURS_KNOWN][0 != cursor],
+		buf, row, col, width);
 }
 
 
@@ -240,8 +265,8 @@ static bool wiz_create_item_action(struct menu *m, const ui_event *e, int oid)
 	ui_event ret;
 	struct menu *menu;
 
-	char buf[80];
-	char title[80];
+	char buf[128];
+	char title[192];
 
 	int choice[70];
 	int num;
@@ -296,9 +321,11 @@ static bool wiz_create_item_action(struct menu *m, const ui_event *e, int oid)
 
 	object_base_name(buf, sizeof(buf), oid, true);
 	if (choose_artifact) {
-		strnfmt(title, sizeof(title), "Which artifact %s? ", buf);
+		strnfmt(title, sizeof(title), angdroid_zh_tw_enabled() ?
+			"選擇哪個%s神器？" : "Which artifact %s? ", buf);
 	} else {
-		strnfmt(title, sizeof(title), "What kind of %s?", buf);
+		strnfmt(title, sizeof(title), angdroid_zh_tw_enabled() ?
+			"要建立哪種%s？" : "What kind of %s?", buf);
 	}
 	menu->title = title;
 
@@ -335,7 +362,9 @@ void wiz_create_item(bool art)
 	choose_artifact = art;
 
 	menu->selections = all_letters;
-	menu->title = art ? "What kind of artifact?" : "What kind of object?";
+	menu->title = angdroid_zh_tw_enabled() ?
+		(art ? "要建立哪種神器？" : "要建立哪種物品？") :
+		(art ? "What kind of artifact?" : "What kind of object?");
 
 	/* Make a list of all tvals for the filter */
 	for (i = 0, n = 0; i < TV_MAX; i++) {
@@ -382,7 +411,8 @@ void wiz_create_item(bool art)
  */
 void wiz_confirm_quit_no_save(void)
 {
-	if (get_check("Really quit without saving? ")) {
+	if (get_check(angdroid_zh_tw_enabled() ?
+		"確定不儲存直接離開？" : "Really quit without saving? ")) {
 		cmdq_push(CMD_WIZ_QUIT_NO_SAVE);
 	}
 }
