@@ -26,6 +26,15 @@ has(SRC,
     "fa_player_stat_heading(2, row-1, col+16, 4);",
     "fa_player_stat_heading(3, row-1, col+20, 4);",
     "fa_player_stat_heading(4, row-1, col+24, 7);")
+has(SRC,
+    "angdroid_fa_sheet_status_title(",
+    "angdroid_zh_tw_class_title(show_title(),",
+    "fa_player_display_zh_tw()));")
+has(HDR,
+    'strcmp(english, "[=-WIZARD-=]") == 0',
+    'strcmp(english, "***WINNER***") == 0',
+    '"[巫師模式]"',
+    '"***勝利者***"')
 for name in ("BLOWS", "SHOTS", "BURDEN", "OVERWEIGHT", "INFRA"):
     has(SRC, "ANGDROID_FA_SHEET_" + name)
 for col in ("本值", "種族", "職業", "裝備", "最佳",

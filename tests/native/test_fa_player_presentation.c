@@ -40,6 +40,17 @@ int main(void)
         CHECK(strcmp(angdroid_fa_sheet_unit_format(
             (enum angdroid_fa_sheet_format)5, language), "") == 0);
     }
+    CHECK(strcmp(angdroid_fa_sheet_status_title("[=-WIZARD-=]", 1),
+        "[巫師模式]") == 0);
+    CHECK(strcmp(angdroid_fa_sheet_status_title("***WINNER***", 1),
+        "***勝利者***") == 0);
+    CHECK(strcmp(angdroid_fa_sheet_status_title("[=-WIZARD-=]", 0),
+        "[=-WIZARD-=]") == 0);
+    CHECK(strcmp(angdroid_fa_sheet_status_title("***WINNER***", 0),
+        "***WINNER***") == 0);
+    CHECK(strcmp(angdroid_fa_sheet_status_title("Warrior", 1),
+        "Warrior") == 0);
+    CHECK(angdroid_fa_sheet_status_title(NULL, 1) == NULL);
     /* The five column headers have maximum display widths of 7/4/4/4/7.
      * Each CJK glyph takes two terminal cells. */
     CHECK(2 + 2 * 2 == 6);

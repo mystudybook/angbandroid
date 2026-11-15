@@ -827,7 +827,10 @@ static struct panel *get_panel_topleft(void) {
 	panel_line(p, COLOUR_L_BLUE, "Class", "%s",
         angdroid_game_ui_text(player->class->name, angdroid_zh_tw_enabled()));
 	panel_line(p, COLOUR_L_BLUE, "Title", "%s",
-        angdroid_zh_tw_class_title(show_title(), angdroid_zh_tw_enabled()));
+        angdroid_fa_sheet_status_title(
+            angdroid_zh_tw_class_title(show_title(),
+                fa_player_display_zh_tw()),
+            fa_player_display_zh_tw()));
 	panel_line(p, COLOUR_L_BLUE, "HP", "%d/%d", player->chp, player->mhp);
 	panel_line(p, COLOUR_L_BLUE, "SP", "%d/%d", player->csp, player->msp);
 	panel_line(p, COLOUR_L_BLUE, "Gold", "%d", player->au);
