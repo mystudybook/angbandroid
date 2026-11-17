@@ -2437,7 +2437,8 @@ static void update_player_compact_subwindow(game_event_type type,
 			&compact_player_redraw_state[win_idx], inv_term,
 			Term->wid, Term->hgt,
 			window_flag[win_idx] == PW_PLAYER_2,
-			Term->content_generation, angdroid_zh_tw_enabled())) {
+			Term->content_generation, angdroid_zh_tw_enabled(),
+			Term->instance_id)) {
 		int partial_row = -1;
 		switch (type) {
 		case EVENT_PLAYERTITLE:
@@ -2555,6 +2556,7 @@ static void update_player_compact_subwindow(game_event_type type,
 		cache->height = Term->hgt;
 		cache->content_generation = Term->content_generation;
 		cache->locale_zh_tw = angdroid_zh_tw_enabled();
+		cache->instance_id = Term->instance_id;
 		cache->ready = (window_flag[win_idx] == PW_PLAYER_2);
 	}
 	Term_fresh();
