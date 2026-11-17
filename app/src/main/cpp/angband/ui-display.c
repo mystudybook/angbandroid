@@ -589,18 +589,42 @@ static void prt_race(int row, int col) {
 	}
 }
 
+/* Compact topbar names are not 13-cell sidebar fields. In zh-TW mode
+ * clip to the remaining terminal columns and advance by visible cells. */
+static int prt_compact_zh_caption(const char *label, uint8_t attr,
+	int row, int col)
+{
+	char visible[512];
+	size_t available, used;
+
+	if (!Term || !label || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	available = (size_t)(Term->wid - col);
+	used = angdroid_menu_copy_columns(visible, sizeof(visible),
+		label, available);
+	if (visible[0]) c_put_str(attr, visible, row, col);
+	return (int)used + (used < available ? 1 : 0);
+}
+
 static int prt_race_class_short(int row, int col)
 {
 	char buf[512] = "";
 
 	if (player_is_shapechanged(player)) return 0;
 
+	if (angdroid_zh_tw_enabled()) {
+		strnfmt(buf, sizeof(buf), "%s %s",
+			angdroid_game_ui_text(player->race->name, true),
+			angdroid_zh_tw_class_title(
+				player->class->title[(player->lev - 1) / 5], true));
+		return prt_compact_zh_caption(buf, COLOUR_L_GREEN, row, col);
+	}
+
 	strnfmt(buf, sizeof(buf), "%s %s",
 		player->race->name,
 		player->class->title[(player->lev - 1) / 5]);
 
 	c_put_str(COLOUR_L_GREEN, buf, row, col);
-
 	return strlen(buf)+1;
 }
 
@@ -765,8 +789,10 @@ static int prt_speed_short(int row, int col)
 	char buf[32];
 	uint8_t attr;
 
-	int len = prt_speed_aux(buf, sizeof(buf), &attr);	
+	int len = prt_speed_aux(buf, sizeof(buf), &attr);
 	if (len > 0) {
+		if (angdroid_zh_tw_enabled())
+			return prt_compact_zh_caption(buf, attr, row, col);
 		c_put_str(attr, buf, row, col);
 		return len+1;
 	}
@@ -778,6 +804,9 @@ static int prt_depth_short(int row, int col)
 	char buf[32];
 	
 	int len = fmt_depth(buf, sizeof(buf));
+	if (angdroid_zh_tw_enabled())
+		return prt_compact_zh_caption(
+			angdroid_game_ui_text(buf, true), COLOUR_WHITE, row, col);
 	put_str(buf, row, col);
 	return len+1;
 }
@@ -788,7 +817,11 @@ static int prt_title_short(int row, int col)
 	
 	int len = fmt_title(buf, sizeof(buf), true);
 	if (len > 0) {
-		c_put_str(COLOUR_YELLOW, buf, row, col);	
+		if (angdroid_zh_tw_enabled())
+			return prt_compact_zh_caption(
+				angdroid_zh_tw_class_title(buf, true),
+				COLOUR_YELLOW, row, col);
+		c_put_str(COLOUR_YELLOW, buf, row, col);
 		return len+1;
 	}	
 	return 0;
