@@ -114,6 +114,6 @@ int main(void)
     crop_examples();
     width_matrix();
     invalid_arguments();
-    printf("PASS: native CJK resize crop (%%lu assertions)\n", assertions);
+    printf("PASS: native CJK resize crop (%lu assertions)\n", assertions);
     return 0;
 }
