@@ -37,6 +37,7 @@ for engine in ("angband", "faangband"):
     ui_source = (CPP / engine / "ui-display.c").read_text(encoding="utf-8")
 
     assert "uint32_t content_generation;" in term_header, engine
+    assert "uint64_t instance_id;" in term_header, engine
     init = function(term_source, "errr term_init(term *t, int w, int h, int k)")
     assert "memset(t, 0, sizeof(term));" in init, engine
     for signature in (
@@ -75,8 +76,10 @@ for engine in ("angband", "faangband"):
 
     panel = function(ui_source, "static void update_player_compact_subwindow(")
     assert "angdroid_compact_player_cache_matches(" in panel
-    assert "Term->content_generation, angdroid_zh_tw_enabled()))" in panel
+    assert "Term->content_generation, angdroid_zh_tw_enabled()," in panel
+    assert "Term->instance_id))" in panel
     assert "cache->content_generation = Term->content_generation;" in panel
+    assert "cache->instance_id = Term->instance_id;" in panel
     assert "cache->locale_zh_tw = angdroid_zh_tw_enabled();" in panel
     assert panel.index("cache->content_generation = Term->content_generation;") > (
         panel.index("COMPACT_PLAYER_ROW(prt_field("))
