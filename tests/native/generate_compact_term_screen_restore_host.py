@@ -21,6 +21,7 @@ SIGNATURES = (
     "static errr term_win_copy(term_win *s, term_win *f, int w, int h)",
     "errr term_init(term *t, int w, int h, int k)",
     "errr term_nuke(term *t)",
+    "errr Term_resize(int w, int h)",
     "errr Term_clear(void)",
     "errr Term_save(void)",
     "errr Term_load(void)",
@@ -41,11 +42,15 @@ PRELUDE = r'''/* Generated real ui-term.c screen / term functions, minimal host 
 
 #define SIDEBAR_LEFT 1
 #define COLOUR_WHITE 1
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define EVT_RESIZE 1
+#define EVENT_EMPTY {0}
 typedef int errr;
 typedef struct ui_event { int type; } ui_event;
 typedef struct term_win term_win;
 typedef struct term term;
 struct term_win {
+    int width, height;
     bool cu, cv;
     int cx, cy, cnx, cny;
     int **a, **ta;
@@ -53,7 +58,7 @@ struct term_win {
     term_win *next;
 };
 struct term {
-    bool active_flag, mapped_flag, total_erase;
+    bool active_flag, mapped_flag, total_erase, fixed_shape;
     uint64_t instance_id;
     uint32_t content_generation;
     int wid, hgt, y1, y2, sidebar_mode;
@@ -65,7 +70,7 @@ struct term {
     void (*nuke_hook)(term *);
 };
 static term *Term;
-static unsigned long checks, allocations, releases, fresh_count;
+static unsigned long checks, allocations, releases, fresh_count, resize_events;
 #define CHECK(x) do { assert(x); ++checks; } while (0)
 static void *mem_alloc(size_t n) {
     void *p = malloc(n ? n : 1);
@@ -85,6 +90,8 @@ static void mem_free(void *p) {
 static void term_win_init(term_win *win, int w, int h) {
     int y;
     assert(win && w > 0 && h > 0);
+    win->width = w;
+    win->height = h;
     win->a = mem_zalloc((size_t)h * sizeof(*win->a));
     win->c = mem_zalloc((size_t)h * sizeof(*win->c));
     win->ta = mem_zalloc((size_t)h * sizeof(*win->ta));
@@ -98,10 +105,9 @@ static void term_win_init(term_win *win, int w, int h) {
 }
 static void term_win_nuke(term_win *win) {
     int y;
-    /* The real function deallocates every cell-array row. We use global
-     * Term->hgt: tests do not resize and all saved windows share its size. */
+    /* Each snapshot retains its own dimensions through a resize. */
     assert(win && Term);
-    for (y = 0; y < Term->hgt; ++y) {
+    for (y = 0; y < win->height; ++y) {
         mem_free(win->a[y]); mem_free(win->c[y]);
         mem_free(win->ta[y]); mem_free(win->tc[y]);
     }
@@ -111,6 +117,11 @@ static void term_win_nuke(term_win *win) {
 }
 static errr Term_fresh(void) {
     ++fresh_count;
+    return 0;
+}
+static errr Term_event_push(const ui_event *event) {
+    CHECK(event && event->type == EVT_RESIZE);
+    ++resize_events;
     return 0;
 }
 static void on_nuke(term *t) {
@@ -259,6 +270,10 @@ def generate(engine: str) -> str:
         encoding="utf-8")
     extracts = [lifecycle.extract_function(src, signature) for signature in SIGNATURES]
     for sig, body in zip(SIGNATURES, extracts):
+        if sig == "errr Term_save(void)" and "if (Term->saved == UINT8_MAX) return (-1);" not in body:
+            raise ValueError("Snapshot stack must enforce its uint8_t depth limit")
+        if sig == "errr term_nuke(term *t)" and "while (t->mem)" not in body:
+            raise ValueError("Term destruction must release every saved frame")
         if sig in ("errr Term_load(void)", "errr Term_load_all(void)"):
             if "if (!Term->mem) return (-1);" not in body:
                 raise ValueError(f"{sig} must guard absent saved screens")
