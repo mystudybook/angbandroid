@@ -47,7 +47,8 @@ for engine in ("angband", "faangband"):
     broadcast = source_function(player_calcs, "void redraw_stuff(")
 
     assert "compact_player_redraw_state[ANGBAND_TERM_MAX]" in src
-    assert "compact_player_redraw_state[win_idx].ready = 0;" in flags
+    assert "angdroid_compact_player_invalidate(" in flags
+    assert "&compact_player_redraw_state[win_idx]" in flags
     assert "if (angband_term[i] == inv_term)" in redraw
     assert "window_flag[win_idx] == PW_PLAYER_2" in redraw
     assert "angdroid_compact_player_can_redraw_one(" in redraw
