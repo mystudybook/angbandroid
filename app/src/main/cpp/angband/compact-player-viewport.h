@@ -9,6 +9,7 @@
 #ifndef ANGDROID_COMPACT_PLAYER_VIEWPORT_H
 #define ANGDROID_COMPACT_PLAYER_VIEWPORT_H
 #include <limits.h>
+#include <stddef.h>
 
 #define ANGDROID_COMPACT_PLAYER_FIXED_ROWS 12
 
