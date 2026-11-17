@@ -66,6 +66,7 @@
 #include "../angband/zh-tw-terrain-trap.h"
 #include "../angband/statusline-bounds.h"
 #include "../angband/zh-tw-class-titles.h"
+#include "../angband/zh-tw-shape-display.h"
 #include "../angband/zh-tw-character-sheet.h"
 
 /**
@@ -213,6 +214,18 @@ static int fmt_title(char buf[], int max, bool short_mode)
 	return strlen(buf);
 }
 
+/* fmt_title() still formats canonical English for existing callers.
+ * Use the untruncated source name for visible shape captions, so long CJK
+ * translations never pass through fmt_title()'s 32-byte English buffer. */
+static const char *angdroid_visible_player_title(const char *canonical)
+{
+    if (!angdroid_zh_tw_enabled()) return canonical;
+    if (!player->wizard && !player->total_winner &&
+        player->lev <= PY_MAX_LEVEL && player_is_shapechanged(player))
+        return angdroid_shape_display_name(player->shape->name, true);
+    return angdroid_zh_tw_class_title(canonical, true);
+}
+
 /**
  * Prints title, including wizard, winner or shape as needed.
  */
@@ -220,10 +233,9 @@ static void prt_title(int row, int col)
 {	
 	char buf[32];
 
-	fmt_title(buf, sizeof(buf), false);	
+	fmt_title(buf, sizeof(buf), false);
 
-	prt_field(angdroid_zh_tw_class_title(buf,
-		angdroid_zh_tw_enabled()), row, col);
+	prt_field(angdroid_visible_player_title(buf), row, col);
 }
 
 /**
@@ -819,7 +831,7 @@ static int prt_title_short(int row, int col)
 	if (len > 0) {
 		if (angdroid_zh_tw_enabled())
 			return prt_compact_zh_caption(
-				angdroid_zh_tw_class_title(buf, true),
+				angdroid_visible_player_title(buf),
 				COLOUR_YELLOW, row, col);
 		c_put_str(COLOUR_YELLOW, buf, row, col);
 		return len+1;
