@@ -767,23 +767,62 @@ static int prt_gold_short(int row, int col)
 	return 4+strlen(tmp);
 }
 
+/* The compact row may be narrower than even "HP:123/456".  Never pass
+ * a value to c_put_str() with a starting column outside the terminal.
+ * Show complete numeric values only; do not display a misleading half-number.
+ * Return terminal columns, with a separator only if there is room. */
+static int prt_vital_short_clipped(const char *prefix,
+	const char *current, const char *maximum, uint8_t color,
+	int row, int col)
+{
+	char visible[4];
+	size_t room, used, length;
+
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	room = (size_t)(Term->wid - col);
+	used = angdroid_menu_copy_columns(visible, sizeof(visible),
+		prefix, room);
+	if (visible[0]) c_put_str(COLOUR_WHITE, visible, row, col);
+
+	length = strlen(current);
+	if (used == 3 && length <= room - used) {
+		c_put_str(color, current, row, col + (int)used);
+		used += length;
+		length = strlen(maximum);
+		if (length + 1 <= room - used) {
+			c_put_str(COLOUR_WHITE, "/", row, col + (int)used);
+			++used;
+			c_put_str(COLOUR_L_GREEN, maximum, row, col + (int)used);
+			used += length;
+		}
+	}
+	return (int)used + (used < room ? 1 : 0);
+}
+
 static int prt_hp_short(int row, int col)
 {
 	char cur_hp[32], max_hp[32];
 	uint8_t color = player_hp_attr(player);
 
-	put_str("HP:", row, col);
-	col += 3;
-
 	strnfmt(max_hp, sizeof(max_hp), "%d", player->mhp);
 	strnfmt(cur_hp, sizeof(cur_hp), "%d", player->chp);
-	
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	if ((size_t)(Term->wid - col) <
+		4 + strlen(cur_hp) + strlen(max_hp))
+		return prt_vital_short_clipped("HP:", cur_hp, max_hp,
+			color, row, col);
+
+	/* Keep the original full-width color blocks and English text. */
+	put_str("HP:", row, col);
+	col += 3;
 	c_put_str(color, cur_hp, row, col);
 	col += strlen(cur_hp);
 	c_put_str(COLOUR_WHITE, "/", row, col);
-	col += 1;
+	++col;
 	c_put_str(COLOUR_L_GREEN, max_hp, row, col);
-	return 5+strlen(cur_hp)+strlen(max_hp);
+	return 5 + strlen(cur_hp) + strlen(max_hp);
 }
 
 static int prt_sp_short(int row, int col)
@@ -791,29 +830,38 @@ static int prt_sp_short(int row, int col)
 	char cur_sp[32], max_sp[32];
 	uint8_t color = player_sp_attr(player);
 
-	/* Do not show mana unless we should have some */
+	/* Do not show mana unless the class has gained spellcasting. */
 	if (!player->class->magic.total_spells
-			|| (player->lev < player->class->magic.spell_first))
+			|| player->lev < player->class->magic.spell_first)
 		return 0;
+	strnfmt(max_sp, sizeof(max_sp), "%d", player->msp);
+	strnfmt(cur_sp, sizeof(cur_sp), "%d", player->csp);
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	if ((size_t)(Term->wid - col) <
+		4 + strlen(cur_sp) + strlen(max_sp))
+		return prt_vital_short_clipped("SP:", cur_sp, max_sp,
+			color, row, col);
 
 	put_str("SP:", row, col);
 	col += 3;
-
-	strnfmt(max_sp, sizeof(max_sp), "%d", player->msp);
-	strnfmt(cur_sp, sizeof(cur_sp), "%d", player->csp);
-
-	/* Show mana */
 	c_put_str(color, cur_sp, row, col);
 	col += strlen(cur_sp);
 	c_put_str(COLOUR_WHITE, "/", row, col);
-	col += 1;
+	++col;
 	c_put_str(COLOUR_L_GREEN, max_sp, row, col);
-	return 5+strlen(cur_sp)+strlen(max_sp);
+	return 5 + strlen(cur_sp) + strlen(max_sp);
 }
 
 static int prt_health_short(int row, int col)
 {
-	int len = prt_health_aux(row, col);
+	int len;
+
+	/* Health bar writes 12 cells internally (including the padding).
+	 * Skip it if the remaining compact row is shorter than that. */
+	if (!Term || row < 0 || row >= Term->hgt || col < 0 ||
+		col >= Term->wid || Term->wid - col < 12) return 0;
+	len = prt_health_aux(row, col);
 	if (len > 0) {
 		return len+1;
 	}
