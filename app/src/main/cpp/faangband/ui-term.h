@@ -191,6 +191,10 @@ struct term
 	int wid;
 	int hgt;
 
+	/* Increments when the logical screen contents are cleared, restored
+	 * or resized; distinct from a physical repaint of the same cells. */
+	uint32_t content_generation;
+
 	int y1;
 	int y2;
 
