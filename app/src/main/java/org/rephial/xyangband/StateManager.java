@@ -52,7 +52,7 @@ public class StateManager {
 	/* native angband library interface */
 	public NativeWrapper nativew = null;
 
-	public GameActivity context = null;
+	public volatile GameActivity context = null;
 
 	/* game thread */
 	public GameThread gameThread = null;
@@ -105,6 +105,20 @@ public class StateManager {
 		coreCommands = new ArrayList<>();
 
 		createBitmapCache();
+	}
+
+	/**
+	 * Android may recreate GameActivity while the native game thread is still
+	 * active. The static StateManager is intentionally retained for the game,
+	 * but its Activity reference must follow the new instance: JNI callbacks
+	 * (including locale queries) must not use a destroyed Activity.
+	 *
+	 * Do not rebuild the GameThread, native wrapper, terminal buffers or
+	 * screen-save stack merely because the Activity was recreated.
+	 */
+	public void rebindContext(GameActivity activity) {
+		if (activity == null) throw new IllegalArgumentException("activity");
+		context = activity;
 	}
 
 	public void createBitmapCache()
