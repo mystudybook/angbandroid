@@ -86,6 +86,9 @@ for engine in ("angband", "faangband"):
     assert "static void cursor_shrink_guard(term *t)" in generated
     assert "static void resized_cjk_snapshot_edges(void)" in generated
     assert "static void abandoned_session_snapshot_reset(void)" in generated
+    assert "static void discard_other_active_terminal(void)" in generated
+    assert "CHECK(Term_discard_saved_screens(&secondary) == 0);" in generated
+    assert "CHECK(primary.mem != NULL && primary.saved == 1);" in generated
     assert "CHECK(t.mem == NULL && t.saved == 0);" in generated
     assert "CHECK(Term_discard_saved_screens(&t) == 1);" in generated
     assert "static void erase_and_scroll_overlay_replay(void)" in generated
