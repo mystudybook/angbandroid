@@ -46,12 +46,20 @@
 void textui_init(void)
 {
 	uint32_t default_window_flag[ANGBAND_TERM_MAX];
+	int window_index;
 
 	/* Called on both initial startup and play-again after death. Do not
 	 * inherit a previous character's incomplete native screen snapshots or
 	 * its failed-overlay counters. Keep the one intentional icky level
 	 * until ui_enter_world() removes it. */
 	if (term_screen) (void)Term_discard_saved_screens(term_screen);
+	/* Subwindows also have per-Term snapshots. Drop old-character frames
+	 * without discarding the active text or invalidating live terminals. */
+	for (window_index = 0; window_index < ANGBAND_TERM_MAX; ++window_index) {
+		term *window = angband_term[window_index];
+		if (window && window != term_screen)
+			(void)Term_discard_saved_screens(window);
+	}
 	screen_reset_overlay_state();
 
 	/* Initialize graphics info and basic pref data */
