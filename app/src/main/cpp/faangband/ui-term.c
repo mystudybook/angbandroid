@@ -23,6 +23,11 @@
 #include "z-virt.h"
 #include "../curses/unicode_layout.h"
 
+/* This counter survives term_nuke()/term_init() for a reused term address.
+ * The Android native terminals are initialized on the game thread. */
+static uint64_t angdroid_term_instance_sequence;
+
+
 /**
  * This file provides a generic, efficient, terminal window package,
  * which can be used not only on standard terminal environments such
@@ -3200,6 +3205,9 @@ errr term_nuke(term *t)
 	/* Free the input queue */
 	mem_free(t->key_queue);
 
+	/* A destroyed terminal must never satisfy a previous UI cache. */
+	t->instance_id = 0;
+
 	/* Success */
 	return (0);
 }
@@ -3217,6 +3225,12 @@ errr term_init(term *t, int w, int h, int k)
 
 	/* Wipe it */
 	memset(t, 0, sizeof(term));
+
+	/* Identity is not an address or dimensions: those may be identical
+	 * after restarting the native terminal.  Zero is never valid. */
+	if (++angdroid_term_instance_sequence == 0)
+		++angdroid_term_instance_sequence;
+	t->instance_id = angdroid_term_instance_sequence;
 
 	/* Prepare the input queue */
 	t->key_head = t->key_tail = 0;
