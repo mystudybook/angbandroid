@@ -551,6 +551,9 @@ public class GameActivity extends LocalizedActivity {
 
 			if (term != null) {
 
+				/* Native playback survives layout changes, but touch state
+				 * and delayed repeat callbacks belong to this old view. */
+				term.onViewReplaced();
 				term.unloadTiles();
 
 				oldPlugin = term.pluginName;
