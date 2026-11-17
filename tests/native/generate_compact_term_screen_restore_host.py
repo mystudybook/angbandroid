@@ -323,6 +323,33 @@ static void cursor_shrink_guard(term *t) {
     CHECK(Term_resize(w, h) == 0);
 }
 
+
+static void cursor_bounds_matrix(void) {
+    const int widths[] = {1, 2, 80, 255, 1024, INT_MAX};
+    const int coords[] = {INT_MIN, -4, -1, 0, 1, 2, 80, 255, INT_MAX};
+    unsigned wi, hi, xi, yi;
+    for (wi = 0; wi < sizeof(widths)/sizeof(widths[0]); ++wi)
+    for (hi = 0; hi < sizeof(widths)/sizeof(widths[0]); ++hi)
+    for (xi = 0; xi < sizeof(coords)/sizeof(coords[0]); ++xi)
+    for (yi = 0; yi < sizeof(coords)/sizeof(coords[0]); ++yi) {
+        int w = widths[wi], h = widths[hi];
+        int x = coords[xi], y = coords[yi];
+        int want_x = x < 0 ? 0 : (x >= w ? w - 1 : x);
+        int want_y = y < 0 ? 0 : (y >= h ? h - 1 : y);
+        term_win one = {0};
+        one.cx = x; one.cy = y; one.cv = true;
+        one.cnx = 2; one.cny = 3;
+        term_win_clamp_cursor(&one, w, h);
+        CHECK(one.cx == want_x && one.cy == want_y);
+        CHECK(one.cx >= 0 && one.cx < w);
+        CHECK(one.cy >= 0 && one.cy < h);
+        CHECK(one.cu == (x < 0 || x >= w || y < 0 || y >= h));
+        CHECK(one.cv && one.cnx == 2 && one.cny == 3);
+        term_win_clamp_cursor(&one, w, h);
+        CHECK(one.cx == want_x && one.cy == want_y);
+    }
+}
+
 static void snapshot_depth_limit(void) {
     term t;
     unsigned i;
@@ -387,6 +414,7 @@ int main(void) {
     run_screen(12, 2);
     run_screen(80, 24);
     snapshot_depth_limit();
+    cursor_bounds_matrix();
     printf("PASS: real %s Term_clear/save/load/load_all (%lu assertions)\n",
            ENGINE_NAME, checks);
     return 0;
