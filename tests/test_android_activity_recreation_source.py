@@ -42,6 +42,7 @@ VERIFY = (ROOT / "scripts/verify-zh-tw.sh").read_text(encoding="utf-8")
 
 REBIND = method(STATE, "public void rebindContext(GameActivity activity) {")
 REPLACED = method(VIEW, "public void onViewReplaced() {")
+UNLINK_IF_LINKED = method(NATIVE, "public boolean unlinkIfLinked(TermView retired) {")
 
 
 class ActivityRecreationSourceTest(unittest.TestCase):
@@ -83,6 +84,19 @@ class ActivityRecreationSourceTest(unittest.TestCase):
                         REPLACED.index("stopTimers();"))
         self.assertNotIn("SaveGame", REPLACED)
         self.assertNotIn("Term_discard_saved_screens", REPLACED)
+
+    def test_destroy_only_detaches_owned_view(self):
+        destroy = method(ACTIVITY, "public void onDestroy()")
+        self.assertIn("state.nativew.unlinkIfLinked(term)", destroy)
+        self.assertIn("term.onViewReplaced();", destroy)
+        self.assertLess(destroy.index("state.nativew.unlinkIfLinked(term)"),
+                        destroy.index("term.onViewReplaced();"))
+        self.assertIn("if (term != retired) return false;", UNLINK_IF_LINKED)
+        self.assertIn("term = null;", UNLINK_IF_LINKED)
+        self.assertIn("return true;", UNLINK_IF_LINKED)
+        self.assertIn("synchronized (display_lock)", UNLINK_IF_LINKED)
+        self.assertNotIn("gameThread.send", destroy)
+        self.assertNotIn("Term_discard_saved_screens", destroy)
 
     def test_pause_resume_does_not_discard_snapshot_stack(self):
         pause = method(VIEW, "public void onPause() {")
@@ -127,6 +141,12 @@ public final class ActivityRecreationSmoke {
         void stopTimers() { ++stoppedTimers; }
         VIEW_REPLACED_HERE
     }
+    static class NativeWrapper {
+        final Object display_lock = new Object();
+        TermView term;
+        void link(TermView t) { synchronized (display_lock) { term = t; } }
+        UNLINK_IF_LINKED_HERE
+    }
     static void check(boolean yes) {
         if (!yes) throw new AssertionError("Activity recreation regression");
     }
@@ -149,15 +169,30 @@ public final class ActivityRecreationSmoke {
         catch (IllegalArgumentException e) { refused = true; }
         check(refused && state.context == recreated);
         TermView nextView = new TermView(state);
+        NativeWrapper wrapper = new NativeWrapper();
+        wrapper.link(oldView);
+        check(wrapper.unlinkIfLinked(oldView));
+        check(wrapper.term == null);
+        wrapper.link(nextView);
+        check(!wrapper.unlinkIfLinked(oldView));
+        check(wrapper.term == nextView);
+        // A delayed onDestroy from the prior Activity must not touch
+        // the live replacement's epoch, timers or native output owner.
+        check(state.invalidations == 1);
+        check(nextView.screenTapGuard.aborted == 0);
+        check(nextView.stoppedTimers == 0);
         nextView.onViewReplaced();
         check(state.invalidations == 2);
         check(nextView.screenTapGuard.aborted == 1);
         check(oldView.screenTapGuard.aborted == 1);
+        check(wrapper.unlinkIfLinked(nextView));
+        check(wrapper.term == null);
         check(state.gameThread == nativeThread);
         System.out.println("PASS: actual Activity rebind and view replacement methods");
     }
 }
-""".replace("REBIND_HERE", REBIND).replace("VIEW_REPLACED_HERE", REPLACED)
+""".replace("REBIND_HERE", REBIND).replace("VIEW_REPLACED_HERE", REPLACED).replace(
+    "UNLINK_IF_LINKED_HERE", UNLINK_IF_LINKED)
         with tempfile.TemporaryDirectory() as temp:
             src = Path(temp) / "ActivityRecreationSmoke.java"
             src.write_text(fixture, encoding="utf-8")
