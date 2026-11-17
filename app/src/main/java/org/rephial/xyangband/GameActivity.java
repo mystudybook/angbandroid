@@ -139,6 +139,10 @@ public class GameActivity extends LocalizedActivity {
 
 		if (state == null) {
 			state = new StateManager(this);
+		} else {
+			/* Keep the running native game and screen snapshots, but never
+			 * let its retained StateManager hold the destroyed Activity. */
+			state.rebindContext(this);
 		}
 
 		if (dialog == null) {
