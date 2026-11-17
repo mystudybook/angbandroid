@@ -23,6 +23,9 @@ int main(void)
                 CHECK(next == expected);
                 CHECK(next >= 0 && next <= width);
                 CHECK(angdroid_statusline_has_room(column, advance, width) == room);
+                CHECK(angdroid_statusline_fits_field(column, advance, width) ==
+                    (width > 0 && column >= 0 && column < width &&
+                     advance <= (size_t)(width - column)));
             }
         }
     }
@@ -36,6 +39,13 @@ int main(void)
     CHECK(!angdroid_statusline_has_room(-1, 0, 80));
     CHECK(!angdroid_statusline_has_room(12, 0, 12));
     CHECK(!angdroid_statusline_has_room(0, 0, 0));
+    CHECK(angdroid_statusline_fits_field(0, 13, 13));
+    CHECK(!angdroid_statusline_fits_field(0, 14, 13));
+    CHECK(angdroid_statusline_fits_field(8, 5, 13));
+    CHECK(!angdroid_statusline_fits_field(8, 6, 13));
+    CHECK(!angdroid_statusline_fits_field(13, 0, 13));
+    CHECK(!angdroid_statusline_fits_field(-1, 0, 13));
+    CHECK(!angdroid_statusline_fits_field(0, SIZE_MAX, INT_MAX));
     printf("PASS: statusline terminal bounds (%lu checks)\n", checks);
     return 0;
 }
