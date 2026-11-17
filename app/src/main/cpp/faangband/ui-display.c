@@ -1422,13 +1422,24 @@ static status_f *status_handlers[] =
   prt_terrain };
 
 
+/* prt_terrain() normally updates stair soft-key hints after drawing.
+ * When the terminal is full, that handler is skipped but the hints must
+ * remain available; this duplicates only its display-side notification. */
+static void statusline_flash_hidden_stairs(void)
+{
+	if (square_isdownstairs(cave, player->grid)) soft_kbd_flash(">");
+	if (square_isupstairs(cave, player->grid)) soft_kbd_flash("<");
+}
+
 static void update_statusline_aux(int row, int col)
 {
 	size_t i;
 
-	/* Nothing is drawable on an invalid row or without map-side columns. */
-	if (!Term || row < 0 || row >= Term->hgt ||
-		!angdroid_statusline_has_room(col, 0, Term->wid)) return;
+	if (!Term || row < 0 || row >= Term->hgt) return;
+	if (!angdroid_statusline_has_room(col, 0, Term->wid)) {
+		statusline_flash_hidden_stairs();
+		return;
+	}
 
 	/* Clear the remainder of the line */
 	prt("", row, col);
@@ -1439,6 +1450,9 @@ static void update_statusline_aux(int row, int col)
 		col = angdroid_statusline_next_col(col,
 			status_handlers[i](row, col), Term->wid);
 	}
+	/* The last handler is terrain; preserve its stair UI side effect if
+	 * the row filled up before terrain could be rendered. */
+	if (i < N_ELEMENTS(status_handlers)) statusline_flash_hidden_stairs();
 }
 
 /**
