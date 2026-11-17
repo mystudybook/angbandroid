@@ -2327,58 +2327,60 @@ static void update_topbar_subwindow(game_event_type type,
  * Display the left-hand-side of the main term, in more compact fashion.
  */
 static void update_player_compact_subwindow(game_event_type type,
-											game_event_data *data, void *user)
+										game_event_data *data, void *user)
 {
 	int row = 0;
 	int col = 0;
 	int i;
-
 	term *old = Term;
 	term *inv_term = user;
 
-	/* Activate */
+	/* This subwindow redraws every field, not just the event's field.
+	 * Clear once so a shortened title, removed spellpoints or changed
+	 * equipment row never leaves stale content from the prior state. */
+	if (!inv_term || !player || !player->race || !player->class) return;
 	Term_activate(inv_term);
+	if (!Term || Term->hgt <= 0 || Term->wid <= 0) {
+		Term_activate(old);
+		return;
+	}
+	Term_clear();
 
-	/* Race and Class */
-	prt_field(angdroid_game_ui_text(player->race->name,
-		angdroid_zh_tw_enabled()), row++, col);
-	prt_field(angdroid_game_ui_text(player->class->name,
-		angdroid_zh_tw_enabled()), row++, col);
+	/* Keep all row positions stable, even when the subwindow is shorter
+	 * than the complete compact player display. */
+#define COMPACT_PLAYER_ROW(call) do { \
+	if (row < Term->hgt) { call; } \
+	++row; \
+} while (0)
+#define COMPACT_PLAYER_VALUE_ROW(call) do { \
+	if (row < Term->hgt && Term->wid >= 12) { call; } \
+	++row; \
+} while (0)
 
-	/* Title */
-	prt_title(row++, col);
+	COMPACT_PLAYER_ROW(prt_field(angdroid_game_ui_text(
+		player->race->name, angdroid_zh_tw_enabled()), row, col));
+	COMPACT_PLAYER_ROW(prt_field(angdroid_game_ui_text(
+		player->class->name, angdroid_zh_tw_enabled()), row, col));
+	COMPACT_PLAYER_ROW(prt_title(row, col));
 
-	/* Level/Experience */
-	prt_level(row++, col);
-	prt_exp(row++, col);
+	COMPACT_PLAYER_VALUE_ROW(prt_level(row, col));
+	COMPACT_PLAYER_VALUE_ROW(prt_exp(row, col));
+	COMPACT_PLAYER_VALUE_ROW(prt_gold(row, col));
 
-	/* Gold */
-	prt_gold(row++, col);
+	COMPACT_PLAYER_ROW(prt_equippy(row, col));
+	for (i = 0; i < STAT_MAX; i++)
+		COMPACT_PLAYER_VALUE_ROW(prt_stat(i, row, col));
 
-	/* Equippy chars */
-	prt_equippy(row++, col);
+	++row; /* Original blank separator row. */
+	COMPACT_PLAYER_VALUE_ROW(prt_ac(row, col));
+	COMPACT_PLAYER_VALUE_ROW(prt_hp(row, col));
+	COMPACT_PLAYER_VALUE_ROW(prt_sp(row, col));
+	if (row < Term->hgt) prt_health(row, col);
 
-	/* All Stats */
-	for (i = 0; i < STAT_MAX; i++) prt_stat(i, row++, col);
-
-	/* Empty row */
-	row++;
-
-	/* Armor */
-	prt_ac(row++, col);
-
-	/* Hitpoints */
-	prt_hp(row++, col);
-
-	/* Spellpoints */
-	prt_sp(row++, col);
-
-	/* Monster health */
-	prt_health(row, col);
+#undef COMPACT_PLAYER_VALUE_ROW
+#undef COMPACT_PLAYER_ROW
 
 	Term_fresh();
-	
-	/* Restore */
 	Term_activate(old);
 }
 
