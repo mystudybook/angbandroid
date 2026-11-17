@@ -8,6 +8,7 @@
  */
 #ifndef ANGDROID_COMPACT_PLAYER_VIEWPORT_H
 #define ANGDROID_COMPACT_PLAYER_VIEWPORT_H
+#include <limits.h>
 
 #define ANGDROID_COMPACT_PLAYER_FIXED_ROWS 12
 
@@ -45,15 +46,15 @@ static inline int angdroid_compact_player_can_redraw_one(
 #define ANGDROID_COMPACT_ROW_EQUIPMENT  6
 
 static inline int angdroid_compact_row_hp(int stats) {
-    return stats >= 0 && stats <= 2147483636 ? stats + 9 : -1;
+    return stats >= 0 && stats <= INT_MAX - 11 ? stats + 9 : -1;
 }
 
 static inline int angdroid_compact_row_sp(int stats) {
-    return stats >= 0 && stats <= 2147483636 ? stats + 10 : -1;
+    return stats >= 0 && stats <= INT_MAX - 11 ? stats + 10 : -1;
 }
 
 static inline int angdroid_compact_row_monster(int stats) {
-    return stats >= 0 && stats <= 2147483636 ? stats + 11 : -1;
+    return stats >= 0 && stats <= INT_MAX - 11 ? stats + 11 : -1;
 }
 
 #endif /* ANGDROID_COMPACT_PLAYER_VIEWPORT_H */
