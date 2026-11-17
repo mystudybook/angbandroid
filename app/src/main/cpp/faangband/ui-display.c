@@ -677,11 +677,21 @@ static void prt_class(int row, int col) {
 /**
  * Prints level
  */
+/* Every compact numeric field writes a fixed ASCII label plus digits.
+ * Avoid letting a handler print a value at col + label-width when the
+ * terminal ends in the middle of that field. */
+static bool prt_short_field_fits(int row, int col, size_t columns)
+{
+	return Term && row >= 0 && row < Term->hgt && col >= 0 &&
+		col < Term->wid && columns <= (size_t)(Term->wid - col);
+}
+
 static int prt_level_short(int row, int col)
 {
 	char tmp[32];
 
 	strnfmt(tmp, sizeof(tmp), "%d", player->lev);
+	if (!prt_short_field_fits(row, col, 2 + strlen(tmp))) return 0;
 
 	if (player->lev >= player->max_lev) {
 		put_str("L:", row, col);
@@ -698,27 +708,22 @@ static int prt_stat_short(int stat, int row, int col)
 {
 	char tmp[32];
 
-	/* Injured or healthy stat */
+	cnv_stat(player->state.stat_use[stat], tmp, sizeof(tmp));
+	/* Trim whitespace before checking its actual printed width. */
+	strskip(tmp, ' ', 0);
+	if (!prt_short_field_fits(row, col, 2 + strlen(tmp))) return 0;
+
 	if (player->stat_cur[stat] < player->stat_max[stat]) {
-		put_str(format("%c:", stat_names_reduced[stat][0]), row, col);		
-		cnv_stat(player->state.stat_use[stat], tmp, sizeof(tmp));
-		/* Trim whitespace */
-		strskip(tmp,' ', 0);
+		put_str(format("%c:", stat_names_reduced[stat][0]), row, col);
 		c_put_str(COLOUR_YELLOW, tmp, row, col + 2);
 	} else {
 		put_str(format("%c:", stat_names[stat][0]), row, col);
-		cnv_stat(player->state.stat_use[stat], tmp, sizeof(tmp));
-		/* Trim whitespace */
-		strskip(tmp,' ', 0);
-		if (player->stat_max[stat] == 18+100) {
+		if (player->stat_max[stat] == 18+100)
 			c_put_str(COLOUR_L_BLUE, tmp, row, col + 2);
-		}
-		else {
-			c_put_str(COLOUR_L_GREEN, tmp, row, col + 2);	
-		}		
+		else
+			c_put_str(COLOUR_L_GREEN, tmp, row, col + 2);
 	}
-
-	return 3+strlen(tmp);
+	return 3 + strlen(tmp);
 }
 
 static int prt_exp_short(int row, int col)
@@ -734,6 +739,8 @@ static int prt_exp_short(int row, int col)
 
 	/* Format XP */
 	strnfmt(out_val, sizeof(out_val), "%ld", xp);
+	if (!prt_short_field_fits(row, col,
+		4 + strlen(out_val))) return 0;
 
 	if (player->exp >= player->max_exp) {
 		put_str((lev50 ? "EXP:" : "NXT:"), row, col);
@@ -750,9 +757,10 @@ static int prt_ac_short(int row, int col)
 {
 	char tmp[32];
 
-	put_str("AC:", row, col);
 	strnfmt(tmp, sizeof(tmp), "%d", 
 			player->known_state.ac + player->known_state.to_a);
+	if (!prt_short_field_fits(row, col, 3 + strlen(tmp))) return 0;
+	put_str("AC:", row, col);
 	c_put_str(COLOUR_L_GREEN, tmp, row, col + 3);
 	return 4+strlen(tmp);
 }
@@ -761,8 +769,9 @@ static int prt_gold_short(int row, int col)
 {
 	char tmp[32];
 
-	put_str("AU:", row, col);
 	strnfmt(tmp, sizeof(tmp), "%ld", (long)player->au);
+	if (!prt_short_field_fits(row, col, 3 + strlen(tmp))) return 0;
+	put_str("AU:", row, col);
 	c_put_str(COLOUR_L_GREEN, tmp, row, col + 3);
 	return 4+strlen(tmp);
 }
