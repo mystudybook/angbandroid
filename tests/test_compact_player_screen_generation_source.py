@@ -37,6 +37,8 @@ for engine in ("angband", "faangband"):
     ui_source = (CPP / engine / "ui-display.c").read_text(encoding="utf-8")
 
     assert "uint32_t content_generation;" in term_header, engine
+    init = function(term_source, "errr term_init(term *t, int w, int h, int k)")
+    assert "memset(t, 0, sizeof(term));" in init, engine
     for signature in (
         "errr Term_clear(void)",
         "errr Term_load(void)",
@@ -60,6 +62,10 @@ for engine in ("angband", "faangband"):
         resize.index("++Term->content_generation;"))
     assert resize.index("++Term->content_generation;") < (
         resize.index("Term->wid = w;"))
+
+    save = function(term_source, "errr Term_save(void)")
+    assert "++Term->content_generation" not in save, engine
+    assert "term_win_copy(mem, Term->scr, w, h);" in save, engine
 
     repaint = function(term_source, "errr Term_redraw(void)")
     assert "++Term->content_generation" not in repaint, engine
