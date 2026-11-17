@@ -37,6 +37,7 @@ for fn in ("prt_light", "prt_moves", "prt_dtrap"):
     body=SRC.split("static size_t "+fn+"(",1)[1].split("\n}\n",1)[0]
     assert "fa_status_put_exact(" in body,fn
 assert "static status_f *status_handlers[]" in SRC
-assert "col += status_handlers[i](row, col);" in SRC
+assert "col = angdroid_statusline_next_col(col," in SRC
+assert "status_handlers[i](row, col), Term->wid);" in SRC
 assert "test_faangband_statusline_locale_source.py" in RUN
 print("PASS: FA state labels bilingual with measured terminal-cell advance")
