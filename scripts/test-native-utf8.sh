@@ -771,6 +771,17 @@ for engine in angband faangband; do
     "$BUILD_DIR/test_${engine}_screen_restore"
 done
 
+# Compile the actual ui-output.c overlay wrappers, checking rejected
+# snapshots, duplicate loads, 255 native frames and int16 depth saturation.
+for engine in angband faangband; do
+    python3 "$ROOT/tests/native/generate_screen_overlay_depth_host.py" \
+        "$engine" "$BUILD_DIR/test_${engine}_overlay_depth.generated.c"
+    "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+        "$BUILD_DIR/test_${engine}_overlay_depth.generated.c" \
+        -o "$BUILD_DIR/test_${engine}_overlay_depth"
+    "$BUILD_DIR/test_${engine}_overlay_depth"
+done
+
 # Soft cursor redraw: extreme spans, large tiles and the second CJK cell.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
     "$ROOT/tests/native/test_term_soft_cursor_bounds.c" \
