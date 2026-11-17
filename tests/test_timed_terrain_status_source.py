@@ -57,7 +57,7 @@ for engine in ("angband", "faangband"):
     raw_terrain = (GAMEDATA / engine / "gamedata/terrain.txt").read_text(
         encoding="utf-8")
     canonical_terrain = {
-        line.removeprefix("name:") for line in raw_terrain.splitlines()
+        line[5:] for line in raw_terrain.splitlines()
         if line.startswith("name:")
     }
     assert canonical_terrain <= set(terrain_names), (
