@@ -62,9 +62,11 @@ public class NativeWrapper {
 	 * already linked its TermView. Only detach the exact retired view, never
 	 * the newer one and never the running native game's screen snapshots.
 	 */
-	public void unlinkIfLinked(TermView retired) {
+	public boolean unlinkIfLinked(TermView retired) {
 		synchronized (display_lock) {
-			if (term == retired) term = null;
+			if (term != retired) return false;
+			term = null;
+			return true;
 		}
 	}
 
