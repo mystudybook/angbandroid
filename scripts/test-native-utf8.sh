@@ -736,6 +736,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_sidebar_character_field_utf8"
 "$BUILD_DIR/test_sidebar_character_field_utf8"
 
+# Shared shape titles (23) and FA regional names: screen-only lookups.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_shape_locality_display_locale.c" \
+    -o "$BUILD_DIR/test_shape_locality_display_locale"
+"$BUILD_DIR/test_shape_locality_display_locale"
+
 # FAangband-specific on-increase messages for temporary resistances.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_timed_renewals.c" \
