@@ -19,6 +19,7 @@ spec.loader.exec_module(lifecycle)
 
 SIGNATURES = (
     "static errr term_win_copy(term_win *s, term_win *f, int w, int h)",
+    "static void term_win_copy_resized(term_win *dest, term_win *src,\n        int copy_w, int copy_h, int old_w)",
     "errr term_init(term *t, int w, int h, int k)",
     "errr term_nuke(term *t)",
     "static void term_win_clamp_cursor(term_win *win, int w, int h)",
@@ -40,6 +41,7 @@ PRELUDE = r'''/* Generated real ui-term.c screen / term functions, minimal host 
 #include <wchar.h>
 #include <limits.h>
 #include "app/src/main/cpp/angband/compact-player-viewport.h"
+#include "app/src/main/cpp/curses/term-resize-cjk.h"
 
 #define SIDEBAR_LEFT 1
 #define COLOUR_WHITE 1
@@ -350,6 +352,66 @@ static void cursor_bounds_matrix(void) {
     }
 }
 
+
+static void fill_edge_pair(term_win *win, int x, int h) {
+    int y;
+    for (y = 0; y < h; ++y) {
+        win->c[y][x] = L'漢';
+        win->c[y][x + 1] = ANGDROID_TEXT_CONTINUATION;
+        win->a[y][x] = win->a[y][x + 1] = 1;
+        win->tc[y][x] = L'語';
+        win->tc[y][x + 1] = ANGDROID_TEXT_CONTINUATION;
+        win->ta[y][x] = win->ta[y][x + 1] = 1;
+    }
+}
+static void expect_clipped_edge(term_win *win, int x, int h) {
+    int y;
+    for (y = 0; y < h; ++y) {
+        CHECK(win->c[y][x] == L'?');
+        CHECK(win->tc[y][x] == L'?');
+        CHECK(win->c[y][x] != ANGDROID_TEXT_CONTINUATION);
+        CHECK(win->tc[y][x] != ANGDROID_TEXT_CONTINUATION);
+    }
+}
+static void resized_cjk_snapshot_edges(void) {
+    term t;
+    unsigned long before_alloc = allocations, before_free = releases;
+    Term = &t;
+    CHECK(term_init(&t, 5, 2, 8) == 0);
+    Term = &t;
+    t.tmp = mem_zalloc(sizeof(*t.tmp));
+    term_win_init(t.tmp, t.wid, t.hgt);
+    fill_edge_pair(t.old, 3, t.hgt);
+    fill_edge_pair(t.scr, 3, t.hgt);
+    fill_edge_pair(t.tmp, 3, t.hgt);
+    t.tmp->c[0][1] = ANGDROID_TEXT_CONTINUATION;
+    t.tmp->tc[0][1] = ANGDROID_TEXT_CONTINUATION;
+    CHECK(Term_save() == 0);
+    CHECK(Term_save() == 0);
+    CHECK(Term_resize(4, 2) == 0);
+    CHECK(t.saved == 2 && t.mem && t.mem->next);
+    expect_clipped_edge(t.old, 3, t.hgt);
+    expect_clipped_edge(t.scr, 3, t.hgt);
+    expect_clipped_edge(t.tmp, 3, t.hgt);
+    expect_clipped_edge(t.mem, 3, t.hgt);
+    expect_clipped_edge(t.mem->next, 3, t.hgt);
+    CHECK(t.tmp->c[0][1] == L' ');
+    CHECK(t.tmp->tc[0][1] == L' ');
+    CHECK(Term_load() == 0);
+    CHECK(t.saved == 1);
+    expect_clipped_edge(t.scr, 3, t.hgt);
+    CHECK(Term_resize(6, 2) == 0);
+    CHECK(t.saved == 1);
+    expect_clipped_edge(t.scr, 3, t.hgt);
+    CHECK(t.scr->c[0][4] == 0 && t.scr->c[0][5] == 0);
+    CHECK(t.scr->tc[0][4] == 0 && t.scr->tc[0][5] == 0);
+    CHECK(Term_load_all() == 0);
+    CHECK(t.saved == 0 && t.mem == NULL);
+    expect_clipped_edge(t.scr, 3, t.hgt);
+    CHECK(term_nuke(&t) == 0);
+    CHECK(allocations - before_alloc == releases - before_free);
+}
+
 static void snapshot_depth_limit(void) {
     term t;
     unsigned i;
@@ -414,6 +476,7 @@ int main(void) {
     run_screen(12, 2);
     run_screen(80, 24);
     snapshot_depth_limit();
+    resized_cjk_snapshot_edges();
     cursor_bounds_matrix();
     printf("PASS: real %s Term_clear/save/load/load_all (%lu assertions)\n",
            ENGINE_NAME, checks);
@@ -427,6 +490,11 @@ def generate(engine: str) -> str:
         encoding="utf-8")
     extracts = [lifecycle.extract_function(src, signature) for signature in SIGNATURES]
     for sig, body in zip(SIGNATURES, extracts):
+        if sig == "errr Term_resize(int w, int h)" and body.count("term_win_copy_resized(") != 4:
+            raise ValueError("All four resized window categories must repair clipped CJK pairs")
+        if sig.startswith("static void term_win_copy_resized(") and body.count(
+                "angdroid_term_repair_resized_cjk_row(") != 2:
+            raise ValueError("Both foreground and terrain CJK layers must be repaired")
         if sig == "errr Term_resize(int w, int h)" and body.count("term_win_clamp_cursor(") != 5:
             raise ValueError("Resize must clamp old, scr, all saves and temporary cursor copies")
         if sig == "errr Term_save(void)" and "if (Term->saved == UINT8_MAX) return (-1);" not in body:
