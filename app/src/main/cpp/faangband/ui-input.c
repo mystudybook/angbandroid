@@ -1817,7 +1817,8 @@ static int textui_get_count(void)
 	while (1) {
 		struct keypress ke;
 
-		prt(format("Repeat: %d", count), 0, 0);
+		prt(format(angdroid_game_ui_text("Repeat: %d",
+			angdroid_zh_tw_enabled()), count), 0, 0);
 
 		ke = inkey();
 		if (ke.code == ESCAPE)
