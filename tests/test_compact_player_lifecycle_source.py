@@ -58,6 +58,14 @@ for engine in ("angband", "faangband"):
         flags.index("Term_clear();"))
     assert "Term_fresh();" in flags
 
+    windows = function(src, "void subwindows_set_flags(")
+    assert "if (!new_flags) return;" in windows
+    assert "j < n_subwindows && j < ANGBAND_TERM_MAX" in windows
+    assert "if (!angband_term[j]) {" in windows
+    assert "angdroid_compact_player_invalidate(&compact_player_redraw_state[j]);" in windows
+    assert windows.index("angdroid_compact_player_invalidate(") < (
+        windows.index("if (window_flag[j] != new_flags[j])"))
+
     compact = function(src, "static void update_player_compact_subwindow(")
     assert "if (angband_term[i] == inv_term)" in compact
     assert "angdroid_compact_player_can_redraw_one(" in compact
