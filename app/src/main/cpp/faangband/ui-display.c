@@ -312,8 +312,13 @@ static void prt_equippy(int row, int col)
 
 	struct object *obj;
 
+	/* A character may have more equipment slots than a resized
+	 * compact window has columns; never draw those offscreen cells. */
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return;
+
 	/* Dump equippy chars */
-	for (i = 0; i < player->body.count; i++) {
+	for (i = 0; i < player->body.count && i < Term->wid - col; i++) {
 		/* Object */
 		obj = slot_object(player, i);
 
