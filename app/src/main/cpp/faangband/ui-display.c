@@ -936,6 +936,15 @@ static size_t fa_status_put(uint8_t attr, const char *message,
 	return cells + 1;
 }
 
+/* Status labels already ending in a space must not reserve a second gap;
+ * the English statusline retains its original exact column advances. */
+static size_t fa_status_put_exact(uint8_t attr, const char *message,
+	int row, int col)
+{
+	size_t advance = fa_status_put(attr, message, row, col);
+	return advance ? advance - 1 : 0;
+}
+
 /**
  * Print recall status.
  */
@@ -1133,8 +1142,11 @@ static size_t prt_level_feeling(int row, int col)
 		strnfmt(mon_feeling_str, 5, "%d", (unsigned int) ( 10-mon_feeling ));
 
 	/* Display it */
-	c_put_str(COLOUR_WHITE, "LF:", row, col);
-	new_col = col + 3;
+	{
+		const char *label = angdroid_zh_tw_enabled() ? "層感:" : "LF:";
+		c_put_str(COLOUR_WHITE, label, row, col);
+		new_col = col + (int)angdroid_utf8_display_columns(label);
+	}
 	c_put_str(mon_feeling_color[mon_feeling], mon_feeling_str, row, new_col);
 	new_col += strlen( mon_feeling_str );
 	c_put_str(COLOUR_WHITE, "-", row, new_col);
@@ -1152,13 +1164,12 @@ static size_t prt_light(int row, int col)
 {
 	int light = square_light(cave, player->grid);
 
-	if (light > 0) {
-		c_put_str(COLOUR_YELLOW, format("Light %d ", light), row, col);
-	} else {
-		c_put_str(COLOUR_PURPLE, format("Light %d ", light), row, col);
+	{
+		const char *message = format(angdroid_zh_tw_enabled() ?
+			"光源 %d " : "Light %d ", light);
+		return fa_status_put_exact(light > 0 ? COLOUR_YELLOW :
+			COLOUR_PURPLE, message, row, col);
 	}
-
-	return 8 + (ABS(light) > 9 ? 1 : 0) + (light < 0 ? 1 : 0);
 }
 
 /**
@@ -1170,15 +1181,16 @@ static size_t prt_moves(int row, int col)
 
 	/* 1 move is normal and requires no display */
 	if (i > 0) {
-		/* Display the number of moves */
-		c_put_str(COLOUR_L_TEAL, format("Moves +%d ", i), row, col);
+		return fa_status_put_exact(COLOUR_L_TEAL,
+			format(angdroid_zh_tw_enabled() ? "移動 +%d " :
+				"Moves +%d ", i), row, col);
 	} else if (i < 0) {
-		/* Display the number of moves */
-		c_put_str(COLOUR_L_TEAL, format("Moves -%d ", ABS(i)), row, col);
+		return fa_status_put_exact(COLOUR_L_TEAL,
+			format(angdroid_zh_tw_enabled() ? "移動 -%d " :
+				"Moves -%d ", ABS(i)), row, col);
 	}
 
-	/* Shouldn't be double digits, but be paranoid */
-	return (i != 0) ? (9 + ABS(i) / 10) : 0;
+	return 0;
 }
 
 /**
@@ -1238,13 +1250,10 @@ static size_t prt_dtrap(int row, int col)
 {
 	/* The player is in a trap-detected grid */
 	if (square_isdtrap(cave, player->grid)) {
-		/* The player is on the border */
-		if (square_dtrap_edge(cave, player->grid))
-			c_put_str(COLOUR_YELLOW, "DTrap ", row, col);
-		else
-			c_put_str(COLOUR_L_GREEN, "DTrap ", row, col);
-
-		return 6;
+		/* Keep the border warning color; translate only the label. */
+		return fa_status_put_exact(square_dtrap_edge(cave, player->grid) ?
+			COLOUR_YELLOW : COLOUR_L_GREEN,
+			angdroid_zh_tw_enabled() ? "偵陷 " : "DTrap ", row, col);
 	}
 
 	return 0;

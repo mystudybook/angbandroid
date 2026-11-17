@@ -5,9 +5,10 @@ ROOT=Path(__file__).resolve().parents[1]
 SRC=(ROOT/"app/src/main/cpp/faangband/ui-display.c").read_text(
     encoding="utf-8")
 RUN=(ROOT/"scripts/verify-zh-tw.sh").read_text(encoding="utf-8")
-body=SRC.split("static void see_floor_items(",1)[1].split(
-    "static void ui_enter_init(",1)[0] if "static void ui_enter_init(" in SRC else (
-    SRC.split("static void see_floor_items(",1)[1])
+assert "static void see_floor_items(" in SRC
+assert "static void ui_enter_init(" in SRC
+body = SRC.split("static void see_floor_items(", 1)[1].split(
+    "static void ui_enter_init(", 1)[0]
 for token in (
     "scan_floor(floor_list, floor_max, player,",
     "OFLOOR_SENSE | OFLOOR_VISIBLE",
