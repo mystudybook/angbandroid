@@ -10,6 +10,7 @@
 #define ANGDROID_COMPACT_PLAYER_VIEWPORT_H
 #include <limits.h>
 #include <stddef.h>
+#include <stdint.h>
 
 #define ANGDROID_COMPACT_PLAYER_FIXED_ROWS 12
 
@@ -30,6 +31,8 @@ struct angdroid_compact_player_redraw_state {
     int width;
     int height;
     int ready;
+    uint32_t content_generation;
+    int locale_zh_tw;
 };
 
 /* Clear both readiness and terminal identity when leaving a world,
@@ -43,6 +46,8 @@ static inline void angdroid_compact_player_invalidate(
     state->width = 0;
     state->height = 0;
     state->ready = 0;
+    state->content_generation = 0;
+    state->locale_zh_tw = 0;
 }
 
 static inline int angdroid_compact_player_can_redraw_one(
@@ -53,6 +58,21 @@ static inline int angdroid_compact_player_can_redraw_one(
         terminal && state->terminal == terminal &&
         term_width > 0 && term_height > 0 &&
         state->width == term_width && state->height == term_height;
+}
+
+/* A physical Term_redraw() only repaints unchanged cells, but
+ * Term_clear(), Term_load(), Term_load_all() and Term_resize() replace
+ * logical screen contents. A language switch also changes visible labels
+ * without necessarily changing terminal dimensions or window flags. */
+static inline int angdroid_compact_player_cache_matches(
+    const struct angdroid_compact_player_redraw_state *state,
+    const void *terminal, int width, int height, int sole_compact_flag,
+    uint32_t content_generation, int locale_zh_tw)
+{
+    return angdroid_compact_player_can_redraw_one(state, terminal,
+            width, height, sole_compact_flag) &&
+        state->content_generation == content_generation &&
+        state->locale_zh_tw == locale_zh_tw;
 }
 
 /* Zero-based rows owned by the compact character display. */
