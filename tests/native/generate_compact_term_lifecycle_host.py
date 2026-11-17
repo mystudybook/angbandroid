@@ -45,6 +45,8 @@ def generate(engine: str) -> str:
             raise ValueError(f"Term initializer no longer meets harness: {required}")
     if "t->instance_id = 0;" not in nuke:
         raise ValueError("Term destruction no longer invalidates cache identity")
+    if nuke.index("t->instance_id = 0;") > nuke.index("if (t->active_flag)"):
+        raise ValueError("Term identity must be invalid before native nuke hooks")
 
     prelude = r'''/* Generated from the real ui-term.c initializer and destructor. */
 #include <assert.h>
@@ -96,7 +98,8 @@ static void term_win_nuke(term_win *win) {
     win->cells = NULL;
 }
 static void on_nuke(term *t) {
-    assert(t->instance_id != 0);
+    /* A teardown hook cannot access a terminal with a valid cache ID. */
+    assert(t->instance_id == 0);
     ++nuke_hooks;
 }
 '''
