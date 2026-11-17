@@ -13,6 +13,15 @@ static inline int angdroid_statusline_has_room(int col, size_t used,
         used < (size_t)(term_width - col);
 }
 
+/* A fixed-width widget must fit in full before it draws its suffix,
+ * otherwise a short terminal can place a number outside the screen. */
+static inline int angdroid_statusline_fits_field(int col,
+    size_t columns, int term_width)
+{
+    return term_width > 0 && col >= 0 && col < term_width &&
+        columns <= (size_t)(term_width - col);
+}
+
 static inline int angdroid_statusline_next_col(int col, size_t advance,
     int term_width)
 {
