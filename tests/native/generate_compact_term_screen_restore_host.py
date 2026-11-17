@@ -391,8 +391,8 @@ def generate(engine: str) -> str:
         encoding="utf-8")
     extracts = [lifecycle.extract_function(src, signature) for signature in SIGNATURES]
     for sig, body in zip(SIGNATURES, extracts):
-        if sig == "errr Term_resize(int w, int h)" and body.count("term_win_clamp_cursor(") != 4:
-            raise ValueError("Resize must clamp old, scr, memorized and temporary cursors")
+        if sig == "errr Term_resize(int w, int h)" and body.count("term_win_clamp_cursor(") != 5:
+            raise ValueError("Resize must clamp old, scr, all saves and temporary cursor copies")
         if sig == "errr Term_save(void)" and "if (Term->saved == UINT8_MAX) return (-1);" not in body:
             raise ValueError("Snapshot stack must enforce its uint8_t depth limit")
         if sig == "errr term_nuke(term *t)" and "while (t->mem)" not in body:
