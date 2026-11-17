@@ -36,6 +36,11 @@ for engine in ("angband", "faangband"):
     assert "angdroid_term_big_cursor_fits(scr->cx, scr->cy, w, h," in fresh
     assert "old->cy + old->cny - 1" not in fresh
     assert "old->cx + old->cnx - 1" not in fresh
+    erase = module.lifecycle.extract_function(native, "errr Term_erase(int x, int y, int n)")
+    assert "if (n > w - x) n = w - x;" in erase
+    assert "if (x + n > w)" not in erase
+    assert "scr_taa[x] == 0 && scr_tcc[x] == 0" in erase
+    assert 'errr Term_erase(int x, int y, int n)' in module.SIGNATURES
     save = module.lifecycle.extract_function(native, "errr Term_save(void)")
     nuke = module.lifecycle.extract_function(native, "errr term_nuke(term *t)")
     resize = module.lifecycle.extract_function(native, "errr Term_resize(int w, int h)")
@@ -72,6 +77,11 @@ for engine in ("angband", "faangband"):
     assert "static void snapshot_depth_limit(void)" in generated
     assert "static void cursor_shrink_guard(term *t)" in generated
     assert "static void resized_cjk_snapshot_edges(void)" in generated
+    assert "static void erase_and_scroll_overlay_replay(void)" in generated
+    assert "CHECK(t.scr->tc[0][1] == 0 && t.scr->ta[0][1] == 0);" in generated
+    assert "CHECK(t.scr->tc[0][1] == L'樹' && t.scr->ta[0][1] == 4);" in generated
+    assert "CHECK(Term_erase(2, 1, INT_MAX) == 0);" in generated
+    assert "CHECK(Term_load_all() == 0);" in generated
     assert "expect_clipped_edge(t.mem->next, 3, t.hgt);" in generated
     assert "CHECK(t->scr->cu && t->scr->cx == w - 1 && t->scr->cy == h - 1);" in generated
     assert "CHECK(t->tmp->cu && t->tmp->cx == 0 && t->tmp->cy == 0);" in generated
@@ -87,4 +97,4 @@ for engine in ("angband", "faangband"):
     assert "L'丙'" in generated
     assert "CHECK(allocations - prev_alloc == releases - prev_release);" in generated
 
-print("PASS: native cursor redraw and resized CJK cells across all windows")
+print("PASS: native safe erase, nested CJK terrain replay and resize contracts")
