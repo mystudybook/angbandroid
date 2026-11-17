@@ -748,6 +748,18 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_compact_player_viewport"
 "$BUILD_DIR/test_compact_player_viewport"
 
+# Compile the actual term_init()/term_nuke() from both native engines with
+# mock window allocation. Exercise repeated destruction and same-address
+# recreation, not just pure cache-lookup helpers.
+for engine in angband faangband; do
+    python3 "$ROOT/tests/native/generate_compact_term_lifecycle_host.py" \
+        "$engine" "$BUILD_DIR/test_${engine}_term_lifecycle.generated.c"
+    "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+        "$BUILD_DIR/test_${engine}_term_lifecycle.generated.c" \
+        -o "$BUILD_DIR/test_${engine}_term_lifecycle"
+    "$BUILD_DIR/test_${engine}_term_lifecycle"
+done
+
 # FAangband-specific on-increase messages for temporary resistances.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_timed_renewals.c" \
