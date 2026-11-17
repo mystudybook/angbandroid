@@ -71,6 +71,7 @@ run_check "FAangband daily commands, store, input and options bilingual UI" pyth
 run_check "FAangband command picker 124 names and categories zh-TW" python3 "$ROOT/tests/test_faangband_command_picker_locale_source.py"
 run_check "FAangband wizard object creation menu zh-TW" python3 "$ROOT/tests/test_faangband_wizard_menu_locale_source.py"
 run_check "FAangband color/keymap/pref confirmations zh-TW" python3 "$ROOT/tests/test_faangband_small_prompts_locale_source.py"
+run_check "FAangband effect selection menu zh-TW and UTF-8 widths" python3 "$ROOT/tests/test_faangband_effect_menu_locale_source.py"
 run_check "FAangband recall and player history screen-only zh-TW" python3 "$ROOT/tests/test_faangband_recall_history_locale_source.py"
 run_check "FAangband recall layout and cancel safety C99" sh "$ROOT/scripts/test-fa-recall-viewport.sh"
 run_check "FAangband spoiler generator menu zh-TW and command safety" python3 "$ROOT/tests/test_faangband_spoiler_menu_locale_source.py"
