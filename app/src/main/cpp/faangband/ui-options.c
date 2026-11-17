@@ -724,8 +724,10 @@ static void ui_keymap_create(const char *title, int row)
             "  Press '=' when finished.", angdroid_zh_tw_enabled()), 17, 0);
 		c_prt(COLOUR_L_BLUE, angdroid_game_ui_text(
             "  Use 'CTRL-u' to reset.", angdroid_zh_tw_enabled()), 18, 0);
-		c_prt(COLOUR_L_BLUE, format("(Maximum keymap length is %d keys.)",
-									KEYMAP_ACTION_MAX), 19, 0);
+		c_prt(COLOUR_L_BLUE, angdroid_zh_tw_enabled() ?
+            format("按鍵映射最多 %d 鍵。", KEYMAP_ACTION_MAX) :
+            format("(Maximum keymap length is %d keys.)",
+                KEYMAP_ACTION_MAX), 19, 0);
 
 		kp = inkey();
 
@@ -1377,7 +1379,9 @@ static void do_cmd_pref_file_hack(long row)
 	if(!arg_force_name)
 		ok = askfor_aux(ftmp, sizeof ftmp, NULL);
 	else
-		ok = get_check(format("Confirm loading %s? ", ftmp));
+		ok = get_check(angdroid_zh_tw_enabled() ?
+            format("確定載入 %s？ ", ftmp) :
+            format("Confirm loading %s? ", ftmp));
 	
 	/* Ask for a file (or cancel) */
 	if(ok) {

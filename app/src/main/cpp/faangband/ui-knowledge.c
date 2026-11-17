@@ -541,7 +541,8 @@ static void display_glyphs(int col, int row, int height, int width, uint8_t a,
 	        Term_erase(col, row + i, width);
 
 	/* Prompt */
-	prt("Choose colour:", row + height/2, col);
+	prt(angdroid_zh_tw_enabled() ? "選擇顏色：" : "Choose colour:",
+		row + height/2, col);
 	Term_locate(&x, &y);
 	for (i = 0; i < MAX_COLORS; i++) big_pad(x + i, y, i, c);
 	
