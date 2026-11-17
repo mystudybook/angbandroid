@@ -53,7 +53,7 @@ for engine in ("angband", "faangband"):
     activation = compact.index("Term_activate(inv_term);")
     cleared = compact.index("Term_clear();")
     first_row = compact.index("COMPACT_PLAYER_ROW(prt_field(")
-    flashed = compact.index("Term_fresh();")
+    flashed = compact.index("Term_fresh();", first_row)
     restored = compact.index("Term_activate(old);", flashed)
     assert activation < cleared < first_row < flashed < restored
 
