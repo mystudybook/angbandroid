@@ -63,6 +63,7 @@
 #include "menu-text-fit.h"
 #include "zh-tw-timed-status.h"
 #include "zh-tw-terrain-trap.h"
+#include "statusline-bounds.h"
 
 /**
  * There are a few functions installed to be triggered by several 
@@ -1334,6 +1335,9 @@ static size_t prt_tmd(int row, int col)
 	size_t i, len = 0;
 
 	for (i = 0; i < TMD_MAX; i++) {
+		/* Stop before deriving or printing statuses beyond the right edge. */
+		if (!Term || !angdroid_statusline_has_room(col, len,
+			Term->wid)) break;
 		if (player->timed[i]) {
 			struct timed_grade *grade = timed_effects[i].grade;
 			while (player->timed[i] > grade->max) {
@@ -1350,7 +1354,10 @@ static size_t prt_tmd(int row, int col)
 
 			/* Food meter */
 			if (i == TMD_FOOD) {
-				char *meter = format("%d %%", player->timed[i] / 100);
+				char *meter;
+				if (!angdroid_statusline_has_room(col, len,
+					Term->wid)) break;
+				meter = format("%d %%", player->timed[i] / 100);
 				len += ang_status_put(grade->color, meter, row,
 					col + (int)len);
 			}
@@ -1386,12 +1393,19 @@ static void update_statusline_aux(int row, int col)
 {
 	size_t i;
 
+	/* Nothing is drawable on an invalid row or without map-side columns. */
+	if (!Term || row < 0 || row >= Term->hgt ||
+		!angdroid_statusline_has_room(col, 0, Term->wid)) return;
+
 	/* Clear the remainder of the line */
 	prt("", row, col);
 
-	/* Display those which need redrawing */
-	for (i = 0; i < N_ELEMENTS(status_handlers); i++)
-		col += status_handlers[i](row, col);
+	/* Clamp each handler advance to the actual terminal width. */
+	for (i = 0; i < N_ELEMENTS(status_handlers); i++) {
+		if (!angdroid_statusline_has_room(col, 0, Term->wid)) break;
+		col = angdroid_statusline_next_col(col,
+			status_handlers[i](row, col), Term->wid);
+	}
 }
 
 /**
