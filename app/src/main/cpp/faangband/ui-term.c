@@ -23,6 +23,7 @@
 #include "z-virt.h"
 #include "../curses/unicode_layout.h"
 #include "../curses/term-soft-cursor-bounds.h"
+#include "../curses/term-resize-cjk.h"
 
 /* This counter survives term_nuke()/term_init() for a reused term address.
  * The Android native terminals are initialized on the game thread. */
@@ -2955,6 +2956,22 @@ static void term_win_clamp_cursor(term_win *win, int w, int h)
 	else if (win->cy >= h) win->cy = h - 1;
 }
 
+/* Copies the overlapping rectangle of a previous terminal window and
+ * repairs text pairs that lose their second column at the new right edge.
+ * Keep the display and terrain layers independent. */
+static void term_win_copy_resized(term_win *dest, term_win *src,
+        int copy_w, int copy_h, int old_w)
+{
+    int y;
+    (void)term_win_copy(dest, src, copy_w, copy_h);
+    for (y = 0; y < copy_h; ++y) {
+        angdroid_term_repair_resized_cjk_row(
+            dest->c[y], dest->a[y], src->c[y], src->a[y], copy_w, old_w);
+        angdroid_term_repair_resized_cjk_row(
+            dest->tc[y], dest->ta[y], src->tc[y], src->ta[y], copy_w, old_w);
+    }
+}
+
 errr Term_resize(int w, int h)
 {
 	int i;
@@ -3013,7 +3030,7 @@ errr Term_resize(int w, int h)
 	term_win_init(Term->old, w, h);
 
 	/* Save the contents */
-	term_win_copy(Term->old, hold_old, wid, hgt);
+	term_win_copy_resized(Term->old, hold_old, wid, hgt, Term->wid);
 
 	/* Create new window */
 	Term->scr = mem_zalloc(sizeof(term_win));
@@ -3022,7 +3039,7 @@ errr Term_resize(int w, int h)
 	term_win_init(Term->scr, w, h);
 
 	/* Save the contents */
-	term_win_copy(Term->scr, hold_scr, wid, hgt);
+	term_win_copy_resized(Term->scr, hold_scr, wid, hgt, Term->wid);
 
 	/* If needed */
 	hold_mem_dest = &Term->mem;
@@ -3036,7 +3053,7 @@ errr Term_resize(int w, int h)
 		term_win_init(*hold_mem_dest, w, h);
 
 		/* Save the contents */
-		term_win_copy(*hold_mem_dest, hold_mem, wid, hgt);
+		term_win_copy_resized(*hold_mem_dest, hold_mem, wid, hgt, Term->wid);
 		term_win_clamp_cursor(*hold_mem_dest, w, h);
 
 		trash = hold_mem;
@@ -3060,7 +3077,7 @@ errr Term_resize(int w, int h)
 		term_win_init(Term->tmp, w, h);
 
 		/* Save the contents */
-		term_win_copy(Term->tmp, hold_tmp, wid, hgt);
+		term_win_copy_resized(Term->tmp, hold_tmp, wid, hgt, Term->wid);
 		term_win_clamp_cursor(Term->tmp, w, h);
 	}
 
