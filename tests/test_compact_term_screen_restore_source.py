@@ -42,7 +42,7 @@ for engine in ("angband", "faangband"):
     assert '#include "../curses/term-resize-cjk.h"' in native
     assert resize.count("term_win_copy_resized(") == 4
     resized_copy = module.lifecycle.extract_function(native,
-        "static void term_win_copy_resized(term_win *dest, term_win *src,\\n        int copy_w, int copy_h, int old_w)")
+        "static void term_win_copy_resized(term_win *dest, term_win *src,\n        int copy_w, int copy_h, int old_w)")
     assert "term_win_copy(dest, src, copy_w, copy_h);" in resized_copy
     assert resized_copy.count("angdroid_term_repair_resized_cjk_row(") == 2
     clamp = module.lifecycle.extract_function(
