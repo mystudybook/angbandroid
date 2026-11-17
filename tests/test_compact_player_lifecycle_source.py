@@ -73,6 +73,8 @@ for engine in ("angband", "faangband"):
     assert "cache->ready = (window_flag[win_idx] == PW_PLAYER_2);" in compact
     assert "cache->content_generation = Term->content_generation;" in compact
     assert "cache->locale_zh_tw = angdroid_zh_tw_enabled();" in compact
+    assert "cache->instance_id = Term->instance_id;" in compact
+    assert "Term->instance_id))" in compact
     assert compact.index("cache->ready = ") > compact.index(
         "COMPACT_PLAYER_ROW(prt_field(")
 
