@@ -81,6 +81,7 @@ run_check "Angband/FA narrow statusline dispatch and multi-effect bounds" python
 run_check "Angband/FA bilingual sidebar and compact topbar CJK widths" python3 "$ROOT/tests/test_sidebar_character_field_locale_source.py"
 run_check "Angband/FA player-shape and FA locality display-only zh-TW" python3 "$ROOT/tests/test_shape_locality_display_source.py"
 run_check "Angband/FA two-row compact topbar viewport bounds and FA depth suffix" python3 "$ROOT/tests/test_compact_topbar_bounds_source.py"
+run_check "Angband/FA numeric compact topbar and FA character dump locale safety" python3 "$ROOT/tests/test_compact_vitals_and_fa_dump_source.py"
 run_check "FAangband floor-item observations and display zh-TW" python3 "$ROOT/tests/test_faangband_floor_messages_locale_source.py"
 run_check "FAangband recall and player history screen-only zh-TW" python3 "$ROOT/tests/test_faangband_recall_history_locale_source.py"
 run_check "FAangband recall layout and cancel safety C99" sh "$ROOT/scripts/test-fa-recall-viewport.sh"
