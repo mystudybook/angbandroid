@@ -1011,7 +1011,7 @@ static size_t prt_state(int row, int col)
 			else if (n == REST_SOME_POINTS)
 				my_strcpy(zh_text, "休息 !!!!!", sizeof(zh_text));
 			else if (n == REST_SUNLIGHT)
-				my_strcpy(zh_text, "休息 $$$", sizeof(zh_text));
+				my_strcpy(zh_text, "休息 日夜", sizeof(zh_text));
 			else
 				my_strcpy(zh_text, "休息", sizeof(zh_text));
 		} else if (cmd_get_nrepeats()) {
