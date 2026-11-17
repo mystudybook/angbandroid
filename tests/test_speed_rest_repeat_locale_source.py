@@ -51,7 +51,7 @@ for variant, source in (("Angband", ang_display), ("FAangband", fa_display)):
     assert '"Rep. %3d00"' in english and '"Repeat %3d"' in english, variant
     assert "return strlen(text) + 1;" in english, variant
 
-assert '"休息 $$$$$"' in function(fa_display, "static size_t prt_state(")
+assert '"休息 日夜"' in function(fa_display, "static size_t prt_state(")
 assert 'REST_SUNLIGHT' in function(fa_display, "static size_t prt_state(")
 assert 'fa_status_put(attr, zh_text, row, col)' in fa_display
 assert 'ang_status_put(attr, zh_text, row, col)' in ang_display
