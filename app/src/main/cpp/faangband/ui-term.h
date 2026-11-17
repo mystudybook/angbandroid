@@ -401,6 +401,7 @@ extern errr Term_key_push(int k);
 extern errr Term_event_push(const ui_event *ke);
 extern errr Term_inkey(ui_event *ch, bool wait, bool take);
 
+extern errr Term_discard_saved_screens(term *t);
 extern errr Term_save(void);
 extern errr Term_load(void);
 extern errr Term_load_all(void);
