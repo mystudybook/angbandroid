@@ -486,6 +486,31 @@ void prt(const char *str, int row, int col) {
  */
 int16_t screen_save_depth;
 
+/* The native terminal can store only 255 screen snapshots.  Remember
+ * additional logical pushes so their matching pops do not accidentally
+ * restore a different (older) overlay. Keep the public depth type intact;
+ * very deep nesting is represented by screen_save_excess_depth. */
+static uint64_t screen_save_unbacked_depth;
+static uint64_t screen_save_excess_depth;
+
+/* Finish one logical pop without touching the native save stack if its
+ * matching push did not create a snapshot. */
+static bool screen_load_is_unbacked(void)
+{
+	if (screen_save_excess_depth) {
+		--screen_save_excess_depth;
+		if (screen_save_unbacked_depth) --screen_save_unbacked_depth;
+		return true;
+	}
+	if (screen_save_depth <= 0) return true;
+	if (screen_save_unbacked_depth) {
+		--screen_save_unbacked_depth;
+		--screen_save_depth;
+		return true;
+	}
+	return false;
+}
+
 /**
  * Save the screen, and increase the "icky" depth.
  */
@@ -494,8 +519,16 @@ void screen_save(void)
 	player->upkeep->redraw |= PR_MAP;
 	redraw_stuff(player);
 	event_signal(EVENT_MESSAGE_FLUSH);
-	Term_save();
-	screen_save_depth++;
+
+	/* Once an outer push failed, later pushes must remain unbacked until
+	 * that failure is unwound, even if the native stack changes meanwhile. */
+	if (screen_save_unbacked_depth || Term_save() != 0)
+		++screen_save_unbacked_depth;
+
+	if (screen_save_depth < INT16_MAX)
+		++screen_save_depth;
+	else
+		++screen_save_excess_depth;
 }
 
 /**
@@ -504,8 +537,8 @@ void screen_save(void)
 void screen_load(void)
 {
 	event_signal(EVENT_MESSAGE_FLUSH);
-	Term_load();
-	screen_save_depth--;
+	if (screen_load_is_unbacked()) return;
+	if (Term_load() == 0) --screen_save_depth;
 }
 
 /**
@@ -515,8 +548,8 @@ void screen_load(void)
 void screen_load_all(void)
 {
 	event_signal(EVENT_MESSAGE_FLUSH);
-	Term_load_all();
-	screen_save_depth--;
+	if (screen_load_is_unbacked()) return;
+	if (Term_load_all() == 0) --screen_save_depth;
 }
 
 bool textui_map_is_visible(void)
