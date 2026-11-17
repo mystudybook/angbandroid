@@ -865,38 +865,49 @@ static int prt_title_short(int row, int col)
 
 static void update_topbar(game_event_type type, game_event_data *data,
 						  void *user, int row)
-{	
-	int col = 0;	
+{
+	int col = 0;
+
+	/* Guard handlers before giving them an offscreen starting column.
+	 * A compact subwindow can also be shorter than two rows. */
+	if (!Term || row < 0 || row >= Term->hgt || Term->wid <= 0) return;
+#define APPEND_TOPBAR(call) do { \
+	if (angdroid_statusline_has_room(col, 0, Term->wid)) \
+		col = angdroid_statusline_next_col(col, (size_t)(call), \
+			Term->wid); \
+} while (0)
 
 	prt("", row, col);	
 
-	col += prt_level_short(row, col);
+	APPEND_TOPBAR(prt_level_short(row, col));
 
-	col += prt_exp_short(row, col);
+	APPEND_TOPBAR(prt_exp_short(row, col));
 	
-	col += prt_stat_short(STAT_STR, row, col);
-	col += prt_stat_short(STAT_INT, row, col);
-	col += prt_stat_short(STAT_WIS, row, col);
-	col += prt_stat_short(STAT_DEX, row, col);
-	col += prt_stat_short(STAT_CON, row, col);
+	APPEND_TOPBAR(prt_stat_short(STAT_STR, row, col));
+	APPEND_TOPBAR(prt_stat_short(STAT_INT, row, col));
+	APPEND_TOPBAR(prt_stat_short(STAT_WIS, row, col));
+	APPEND_TOPBAR(prt_stat_short(STAT_DEX, row, col));
+	APPEND_TOPBAR(prt_stat_short(STAT_CON, row, col));
 
-	col += prt_ac_short(row, col);
+	APPEND_TOPBAR(prt_ac_short(row, col));
 
-	col += prt_gold_short(row, col);
+	APPEND_TOPBAR(prt_gold_short(row, col));
 
-	col += prt_race_class_short(row, col);
+	APPEND_TOPBAR(prt_race_class_short(row, col));
 
 	++row;
+	if (row >= Term->hgt) return;
 	col = 0;
 
 	prt("", row, col);
 
-	col += prt_hp_short(row, col);
-	col += prt_sp_short(row, col);
-	col += prt_health_short(row, col);	
-	col += prt_speed_short(row, col);
-	col += prt_depth_short(row, col);
-	col += prt_title_short(row, col);
+	APPEND_TOPBAR(prt_hp_short(row, col));
+	APPEND_TOPBAR(prt_sp_short(row, col));
+	APPEND_TOPBAR(prt_health_short(row, col));	
+	APPEND_TOPBAR(prt_speed_short(row, col));
+	APPEND_TOPBAR(prt_depth_short(row, col));
+	APPEND_TOPBAR(prt_title_short(row, col));
+#undef APPEND_TOPBAR
 }
 
 
