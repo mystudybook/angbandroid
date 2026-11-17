@@ -603,6 +603,39 @@ static void abandoned_session_snapshot_reset(void) {
     CHECK(allocations - alloc_start == releases - free_start);
 }
 
+static void discard_other_active_terminal(void) {
+    term primary, secondary;
+    unsigned long start_alloc = allocations, start_free = releases;
+    uint32_t primary_version, secondary_version;
+    Term = &primary;
+    CHECK(term_init(&primary, 6, 2, 8) == 0);
+    Term = &secondary;
+    CHECK(term_init(&secondary, 4, 3, 8) == 0);
+    Term = &primary;
+    set_screen(L'甲', 2);
+    CHECK(Term_save() == 0);
+    primary_version = primary.content_generation;
+    Term = &secondary;
+    set_screen(L'乙', 3);
+    CHECK(Term_save() == 0);
+    secondary_version = secondary.content_generation;
+    /* The caller can discard another initialized Term even when Term
+     * still refers to the first terminal (as textui_init() does). */
+    Term = &primary;
+    CHECK(Term_discard_saved_screens(&secondary) == 0);
+    CHECK(secondary.mem == NULL && secondary.saved == 0);
+    CHECK(secondary.content_generation == secondary_version + 1);
+    CHECK(primary.mem != NULL && primary.saved == 1);
+    CHECK(primary.content_generation == primary_version);
+    CHECK(Term_discard_saved_screens(&primary) == 0);
+    CHECK(primary.mem == NULL && primary.saved == 0);
+    CHECK(primary.content_generation == primary_version + 1);
+    CHECK(term_nuke(&primary) == 0);
+    Term = &secondary;
+    CHECK(term_nuke(&secondary) == 0);
+    CHECK(allocations - start_alloc == releases - start_free);
+}
+
 static void snapshot_depth_limit(void) {
     term t;
     unsigned i;
@@ -668,6 +701,7 @@ int main(void) {
     run_screen(80, 24);
     snapshot_depth_limit();
     abandoned_session_snapshot_reset();
+    discard_other_active_terminal();
     resized_cjk_snapshot_edges();
     erase_and_scroll_overlay_replay();
     cursor_bounds_matrix();
