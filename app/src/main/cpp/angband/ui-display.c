@@ -64,6 +64,8 @@
 #include "zh-tw-timed-status.h"
 #include "zh-tw-terrain-trap.h"
 #include "statusline-bounds.h"
+#include "zh-tw-ui.h"
+#include "zh-tw-class-titles.h"
 
 /**
  * There are a few functions installed to be triggered by several 
@@ -145,10 +147,25 @@ void cnv_stat(int val, char *out_val, size_t out_len)
  */
 static void prt_field(const char *info, int row, int col)
 {
-	/* Dump 13 spaces to clear */
-	c_put_str(COLOUR_WHITE, "             ", row, col);
+	/* Chinese labels may require several UTF-8 bytes per display cell.
+	 * Clear the original 13-cell field, then copy only complete glyphs
+	 * into that same field. Never let it overwrite the next widget. */
+	if (angdroid_zh_tw_enabled()) {
+		char visible[96];
+		size_t width;
 
-	/* Dump the info itself */
+		if (!Term || row < 0 || row >= Term->hgt ||
+			col < 0 || col >= Term->wid) return;
+		width = (size_t)(Term->wid - col);
+		if (width > 13) width = 13;
+		Term_erase(col, row, (int)width);
+		angdroid_menu_copy_columns(visible, sizeof(visible), info, width);
+		if (visible[0]) c_put_str(COLOUR_L_BLUE, visible, row, col);
+		return;
+	}
+
+	/* Preserve the original English sidebar presentation. */
+	c_put_str(COLOUR_WHITE, "             ", row, col);
 	c_put_str(COLOUR_L_BLUE, info, row, col);
 }
 
@@ -204,7 +221,8 @@ static void prt_title(int row, int col)
 
 	fmt_title(buf, sizeof(buf), false);	
 
-	prt_field(buf, row, col);
+	prt_field(angdroid_zh_tw_class_title(buf,
+		angdroid_zh_tw_enabled()), row, col);
 }
 
 /**
@@ -566,7 +584,8 @@ static void prt_race(int row, int col) {
 	if (player_is_shapechanged(player)) {
 		prt_field("", row, col);
 	} else {
-		prt_field(player->race->name, row, col);
+		prt_field(angdroid_game_ui_text(player->race->name,
+			angdroid_zh_tw_enabled()), row, col);
 	}
 }
 
@@ -589,7 +608,8 @@ static void prt_class(int row, int col) {
 	if (player_is_shapechanged(player)) {
 		prt_field("", row, col);
 	} else {
-		prt_field(player->class->name, row, col);
+		prt_field(angdroid_game_ui_text(player->class->name,
+			angdroid_zh_tw_enabled()), row, col);
 	}
 }
 
@@ -2176,8 +2196,10 @@ static void update_player_compact_subwindow(game_event_type type,
 	Term_activate(inv_term);
 
 	/* Race and Class */
-	prt_field(player->race->name, row++, col);
-	prt_field(player->class->name, row++, col);
+	prt_field(angdroid_game_ui_text(player->race->name,
+		angdroid_zh_tw_enabled()), row++, col);
+	prt_field(angdroid_game_ui_text(player->class->name,
+		angdroid_zh_tw_enabled()), row++, col);
 
 	/* Title */
 	prt_title(row++, col);
