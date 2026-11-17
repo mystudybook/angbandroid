@@ -49,6 +49,52 @@ int main(void)
     CHECK(angdroid_compact_player_visible_rows(0, INT_MAX) == 12);
     CHECK(angdroid_compact_player_visible_rows(INT_MAX, 1) == 1);
 
+    /* One-line updates are safe only after an isolated compact window
+     * has received a full draw and has kept the same term and dimensions. */
+    {
+        int screen_a, screen_b;
+        struct angdroid_compact_player_redraw_state state = {
+            &screen_a, 80, 25, 0
+        };
+        int w, h;
+        CHECK(!angdroid_compact_player_can_redraw_one(
+            &state, &screen_a, 80, 25, 1));
+        state.ready = 1;
+        CHECK(angdroid_compact_player_can_redraw_one(
+            &state, &screen_a, 80, 25, 1));
+        CHECK(!angdroid_compact_player_can_redraw_one(
+            &state, &screen_a, 80, 25, 0)); /* Mixed window flags */
+        CHECK(!angdroid_compact_player_can_redraw_one(
+            &state, &screen_b, 80, 25, 1)); /* Replaced terminal */
+        CHECK(!angdroid_compact_player_can_redraw_one(
+            &state, NULL, 80, 25, 1));
+        CHECK(!angdroid_compact_player_can_redraw_one(
+            NULL, &screen_a, 80, 25, 1));
+        for (w = -1; w <= 100; ++w) {
+            for (h = -1; h <= 60; ++h) {
+                int expected = w == 80 && h == 25;
+                CHECK(!!angdroid_compact_player_can_redraw_one(
+                    &state, &screen_a, w, h, 1) == expected);
+            }
+        }
+        state.ready = 0; /* Changed PW_PLAYER_2 or flag combination */
+        CHECK(!angdroid_compact_player_can_redraw_one(
+            &state, &screen_a, 80, 25, 1));
+    }
+    CHECK(ANGDROID_COMPACT_ROW_TITLE == 2);
+    CHECK(ANGDROID_COMPACT_ROW_EXP == 4);
+    CHECK(ANGDROID_COMPACT_ROW_GOLD == 5);
+    CHECK(ANGDROID_COMPACT_ROW_EQUIPMENT == 6);
+    CHECK(angdroid_compact_row_hp(5) == 14);
+    CHECK(angdroid_compact_row_sp(5) == 15);
+    CHECK(angdroid_compact_row_monster(5) == 16);
+    CHECK(angdroid_compact_row_hp(-1) == -1);
+    CHECK(angdroid_compact_row_sp(-1) == -1);
+    CHECK(angdroid_compact_row_monster(-1) == -1);
+    CHECK(angdroid_compact_row_hp(INT_MAX) == -1);
+    CHECK(angdroid_compact_row_sp(INT_MAX) == -1);
+    CHECK(angdroid_compact_row_monster(INT_MAX) == -1);
+
     printf("PASS: compact player selective clearing (%lu checks)\n", checks);
     return 0;
 }
