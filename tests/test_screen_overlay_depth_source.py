@@ -43,6 +43,9 @@ for engine in ("angband", "faangband"):
     pref = ui_init.index('process_pref_file("pref.prf"', init_entry)
     play_again = ui_init.index("if (!play_again)", init_entry)
     assert init_entry < discard < reset_call < pref < play_again
+    assert "for (window_index = 0; window_index < ANGBAND_TERM_MAX; ++window_index)" in ui_init
+    assert "window && window != term_screen" in ui_init
+    assert "Term_discard_saved_screens(window)" in ui_init
     assert "screen_save_depth++;" not in ui_init
     save = generator.module.extract_function(original, "void screen_save(void)")
     load = generator.module.extract_function(original, "void screen_load(void)")
