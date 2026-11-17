@@ -22,7 +22,7 @@ def body(src: str, signature: str) -> str:
     return src[start:src.index("\n}\n", start) + 2]
 
 
-def keys(src: str) -> set[str]:
+def keys(src: str):
     pairs = re.findall(r'\{\s*"([^"]+)",\s*"([^"]+)"\s*\}', src)
     assert len(pairs) == len(set(en for en, _ in pairs))
     return set(en for en, _ in pairs)
