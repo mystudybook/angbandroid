@@ -461,8 +461,21 @@ uint8_t monster_health_attr(void)
 
 static int prt_health_aux(int row, int col)
 {
-	uint8_t attr = monster_health_attr();
-	struct monster *mon = player->upkeep->health_who;
+	uint8_t attr;
+	struct monster *mon;
+
+	/* The regular/sidebar health renderer also runs in user-resized
+	 * subwindows.  Do not write the 12-cell bar beyond the right edge.
+	 * Clearing the visible remainder removes an old partial bar. */
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	if (!angdroid_statusline_fits_field(col, 12, Term->wid)) {
+		Term_erase(col, row, Term->wid - col);
+		return 0;
+	}
+
+	attr = monster_health_attr();
+	mon = player->upkeep->health_who;
 
 	/* Not tracking */
 	if (!mon) {
