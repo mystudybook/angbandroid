@@ -20,4 +20,40 @@ static inline int angdroid_compact_player_visible_rows(
     return stat_count + ANGDROID_COMPACT_PLAYER_FIXED_ROWS;
 }
 
+/* Do not reuse cached partial state after a resize or a window-flag
+ * change.  Multiple flags may share a terminal, so only use incremental
+ * character redraws when this is its sole active widget. */
+struct angdroid_compact_player_redraw_state {
+    int width;
+    int height;
+    int ready;
+};
+
+static inline int angdroid_compact_player_can_redraw_one(
+    const struct angdroid_compact_player_redraw_state *state,
+    int term_width, int term_height, int sole_compact_flag)
+{
+    return state && state->ready && sole_compact_flag &&
+        term_width > 0 && term_height > 0 &&
+        state->width == term_width && state->height == term_height;
+}
+
+/* Zero-based rows owned by the compact character display. */
+#define ANGDROID_COMPACT_ROW_TITLE      2
+#define ANGDROID_COMPACT_ROW_EXP        4
+#define ANGDROID_COMPACT_ROW_GOLD       5
+#define ANGDROID_COMPACT_ROW_EQUIPMENT  6
+
+static inline int angdroid_compact_row_hp(int stats) {
+    return stats >= 0 && stats <= 2147483636 ? stats + 9 : -1;
+}
+
+static inline int angdroid_compact_row_sp(int stats) {
+    return stats >= 0 && stats <= 2147483636 ? stats + 10 : -1;
+}
+
+static inline int angdroid_compact_row_monster(int stats) {
+    return stats >= 0 && stats <= 2147483636 ? stats + 11 : -1;
+}
+
 #endif /* ANGDROID_COMPACT_PLAYER_VIEWPORT_H */
