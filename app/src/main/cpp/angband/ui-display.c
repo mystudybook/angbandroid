@@ -578,7 +578,23 @@ static void prt_depth(int row, int col)
 
 	fmt_depth(depths, sizeof(depths));
 
-	/* Right-Adjust the "depth", and clear old values */
+	if (angdroid_zh_tw_enabled()) {
+		const char *localized = angdroid_character_sheet_text(depths, true);
+		char visible[96];
+		size_t width;
+
+		if (!Term || row < 0 || row >= Term->hgt ||
+			col < 0 || col >= Term->wid) return;
+		width = (size_t)(Term->wid - col);
+		if (width > 13) width = 13;
+		Term_erase(col, row, (int)width);
+		angdroid_menu_copy_columns(visible, sizeof(visible),
+			localized, width);
+		if (visible[0]) c_put_str(COLOUR_WHITE, visible, row, col);
+		return;
+	}
+
+	/* Preserve the original English 13-cell sidebar depth display. */
 	put_str(format("%-13s", depths), row, col);
 }
 
