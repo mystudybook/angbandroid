@@ -2939,6 +2939,22 @@ errr Term_load_all(void)
 /**
  * React to a new physical window size.
  */
+/* A resize may leave a saved cursor outside the smaller terminal.
+ * Mark it unusable AND move its coordinates into the new grid, since the
+ * hardware cursor path still passes cy to curs_hook() when cu is true. */
+static void term_win_clamp_cursor(term_win *win, int w, int h)
+{
+	if (win->cx < 0 || win->cx >= w ||
+			win->cy < 0 || win->cy >= h)
+		win->cu = true;
+
+	if (win->cx < 0) win->cx = 0;
+	else if (win->cx >= w) win->cx = w - 1;
+
+	if (win->cy < 0) win->cy = 0;
+	else if (win->cy >= h) win->cy = h - 1;
+}
+
 errr Term_resize(int w, int h)
 {
 	int i;
@@ -3021,6 +3037,7 @@ errr Term_resize(int w, int h)
 
 		/* Save the contents */
 		term_win_copy(*hold_mem_dest, hold_mem, wid, hgt);
+		term_win_clamp_cursor(*hold_mem_dest, w, h);
 
 		trash = hold_mem;
 		hold_mem = hold_mem->next;
@@ -3044,6 +3061,7 @@ errr Term_resize(int w, int h)
 
 		/* Save the contents */
 		term_win_copy(Term->tmp, hold_tmp, wid, hgt);
+		term_win_clamp_cursor(Term->tmp, w, h);
 	}
 
 	/* Free some arrays */
@@ -3056,9 +3074,8 @@ errr Term_resize(int w, int h)
 	/* Kill */
 	mem_free(hold_old);
 
-	/* Illegal cursor */
-	if (Term->old->cx >= w) Term->old->cu = 1;
-	if (Term->old->cy >= h) Term->old->cu = 1;
+	/* Saved cursor coordinates must also be safe for curs_hook(). */
+	term_win_clamp_cursor(Term->old, w, h);
 
 	/* Nuke */
 	term_win_nuke(hold_scr);
@@ -3066,9 +3083,8 @@ errr Term_resize(int w, int h)
 	/* Kill */
 	mem_free(hold_scr);
 
-	/* Illegal cursor */
-	if (Term->scr->cx >= w) Term->scr->cu = 1;
-	if (Term->scr->cy >= h) Term->scr->cu = 1;
+	/* The hard cursor path uses scr->cy even when scr->cu is true. */
+	term_win_clamp_cursor(Term->scr, w, h);
 
 	/* If needed */
 	if (hold_tmp) {
@@ -3078,9 +3094,7 @@ errr Term_resize(int w, int h)
 		/* Kill */
 		mem_free(hold_tmp);
 
-		/* Illegal cursor */
-		if (Term->tmp->cx >= w) Term->tmp->cu = 1;
-		if (Term->tmp->cy >= h) Term->tmp->cu = 1;
+		term_win_clamp_cursor(Term->tmp, w, h);
 	}
 
 	/* Resizing replaces the screen buffers, even if a later resize
