@@ -51,10 +51,13 @@ for engine in ("angband", "faangband"):
     assert "&compact_player_redraw_state[win_idx]" in flags
     assert "if (angband_term[i] == inv_term)" in redraw
     assert "window_flag[win_idx] == PW_PLAYER_2" in redraw
-    assert "angdroid_compact_player_can_redraw_one(" in redraw
+    assert "angdroid_compact_player_cache_matches(" in redraw
     assert "cache->terminal = inv_term;" in redraw
     assert "cache->width = Term->wid;" in redraw
     assert "cache->height = Term->hgt;" in redraw
+    assert "cache->content_generation = Term->content_generation;" in redraw
+    assert "cache->locale_zh_tw = angdroid_zh_tw_enabled();" in redraw
+    assert "Term->content_generation, angdroid_zh_tw_enabled()))" in redraw
     assert "cache->ready = (window_flag[win_idx] == PW_PLAYER_2);" in redraw
     assert redraw.index("if (win_idx >= 0 &&") < redraw.index(
         "visible_rows = angdroid_compact_player_visible_rows(")
