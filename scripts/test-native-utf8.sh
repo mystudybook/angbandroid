@@ -718,6 +718,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_timed_messages_locale"
 "$BUILD_DIR/test_timed_messages_locale"
 
+# Timed status captions: canonical bilingual grades and strict English fallback.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_timed_status_locale.c" \
+    -o "$BUILD_DIR/test_timed_status_locale"
+"$BUILD_DIR/test_timed_status_locale"
+
 # FAangband-specific on-increase messages for temporary resistances.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_timed_renewals.c" \
