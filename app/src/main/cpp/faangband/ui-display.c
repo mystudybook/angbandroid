@@ -2385,6 +2385,12 @@ static void update_topbar_subwindow(game_event_type type,
 /**
  * Display the left-hand-side of the main term, in more compact fashion.
  */
+/* Independent redraw cache for each terminal.  Only exact PW_PLAYER_2
+ * windows may use an event-specific row update; shared multi-flag windows
+ * always retain their previous full-redraw behavior. */
+static struct angdroid_compact_player_redraw_state
+    compact_player_redraw_state[ANGBAND_TERM_MAX];
+
 static void update_player_compact_subwindow(game_event_type type,
 										game_event_data *data, void *user)
 {
@@ -2392,6 +2398,7 @@ static void update_player_compact_subwindow(game_event_type type,
 	int col = 0;
 	int i;
 	int visible_rows;
+	int win_idx = -1;
 	term *old = Term;
 	term *inv_term = user;
 
@@ -2404,6 +2411,84 @@ static void update_player_compact_subwindow(game_event_type type,
 		Term_activate(old);
 		return;
 	}
+	/* No global event deferral: redraw_stuff() omits EVENT_END while the
+	 * map is hidden.  Instead use a single-row immediate refresh after an
+	 * initial complete draw, and fall back to the full path for events
+	 * that can affect multiple fields.  A changed term or flag disables
+	 * this optimization until another full draw finishes. */
+	for (i = 0; i < ANGBAND_TERM_MAX; ++i) {
+		if (angband_term[i] == inv_term) {
+			win_idx = i;
+			break;
+		}
+	}
+	if (win_idx >= 0 &&
+		angdroid_compact_player_can_redraw_one(
+			&compact_player_redraw_state[win_idx], inv_term,
+			Term->wid, Term->hgt,
+			window_flag[win_idx] == PW_PLAYER_2)) {
+		int partial_row = -1;
+		switch (type) {
+		case EVENT_PLAYERTITLE:
+			partial_row = ANGDROID_COMPACT_ROW_TITLE;
+			break;
+		case EVENT_EXPERIENCE:
+			partial_row = ANGDROID_COMPACT_ROW_EXP;
+			break;
+		case EVENT_GOLD:
+			partial_row = ANGDROID_COMPACT_ROW_GOLD;
+			break;
+		case EVENT_HP:
+			partial_row = angdroid_compact_row_hp(STAT_MAX);
+			break;
+		case EVENT_MANA:
+			partial_row = angdroid_compact_row_sp(STAT_MAX);
+			break;
+		case EVENT_MONSTERHEALTH:
+			partial_row = angdroid_compact_row_monster(STAT_MAX);
+			break;
+		case EVENT_PLAYERSPEED:
+		case EVENT_DUNGEONLEVEL:
+			/* Neither status is present in this character subwindow. */
+			Term_activate(old);
+			return;
+		default:
+			/* Equipment, level, stats or race changes may affect
+			 * several values: retain the complete redraw. */
+			break;
+		}
+		if (partial_row >= 0) {
+			if (partial_row < Term->hgt) {
+				Term_erase(0, partial_row, Term->wid);
+				switch (type) {
+				case EVENT_PLAYERTITLE:
+					prt_title(partial_row, col);
+					break;
+				case EVENT_EXPERIENCE:
+					if (Term->wid >= 12) prt_exp(partial_row, col);
+					break;
+				case EVENT_GOLD:
+					if (Term->wid >= 12) prt_gold(partial_row, col);
+					break;
+				case EVENT_HP:
+					if (Term->wid >= 12) prt_hp(partial_row, col);
+					break;
+				case EVENT_MANA:
+					if (Term->wid >= 12) prt_sp(partial_row, col);
+					break;
+				case EVENT_MONSTERHEALTH:
+					prt_health(partial_row, col);
+					break;
+				default:
+					break;
+				}
+				Term_fresh();
+			}
+			Term_activate(old);
+			return;
+		}
+	}
+
 	visible_rows = angdroid_compact_player_visible_rows(
 		STAT_MAX, Term->hgt);
 	if (visible_rows == Term->hgt) {
@@ -2450,6 +2535,15 @@ static void update_player_compact_subwindow(game_event_type type,
 #undef COMPACT_PLAYER_VALUE_ROW
 #undef COMPACT_PLAYER_ROW
 
+	/* Only mark initialized after the full redraw reaches completion. */
+	if (win_idx >= 0) {
+		struct angdroid_compact_player_redraw_state *cache =
+			&compact_player_redraw_state[win_idx];
+		cache->terminal = inv_term;
+		cache->width = Term->wid;
+		cache->height = Term->hgt;
+		cache->ready = (window_flag[win_idx] == PW_PLAYER_2);
+	}
 	Term_fresh();
 	Term_activate(old);
 }
@@ -2673,6 +2767,9 @@ static void subwindow_set_flags(int win_idx, uint32_t new_flags)
 {
 	term *old = Term;
 	int i;
+
+	/* Any change of window mode invalidates prior partial redraws. */
+	compact_player_redraw_state[win_idx].ready = 0;
 
 	/* Deal with the changed flags by seeing what's changed */
 	for (i = 0; i < 32; i++)
