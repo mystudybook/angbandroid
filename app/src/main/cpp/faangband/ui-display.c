@@ -486,10 +486,10 @@ static int prt_speed_aux(char buf[], int max, uint8_t *attr)
 	/* 110 is normal speed, and requires no display */
 	if (i > 110) {
 		*attr = COLOUR_L_GREEN;
-		type = "Fast";
+		type = angdroid_zh_tw_enabled() ? "加速" : "Fast";
 	} else if (i < 110) {
 		*attr = COLOUR_L_UMBER;
-		type = "Slow";
+		type = angdroid_zh_tw_enabled() ? "減速" : "Slow";
 	}
 
 	if (type && !OPT(player, effective_speed))
@@ -502,7 +502,7 @@ static int prt_speed_aux(char buf[], int max, uint8_t *attr)
 		strnfmt(buf, max, "%s (%d.%dx)", type, int_mul, dec_mul);
 	}
 
-	return strlen(buf);
+	return (int)angdroid_utf8_display_columns(buf);
 }
 
 /**
@@ -515,8 +515,15 @@ static void prt_speed(int row, int col)
 
 	prt_speed_aux(buf, sizeof(buf), &attr);
 
-	/* Display the speed */
-	c_put_str(attr, format("%-11s", buf), row, col);
+	/* The English sidebar uses its original byte-based formatting.  Clear
+	 * 11 terminal cells before drawing the Chinese speed label so its
+	 * UTF-8 byte length never changes the adjacent field width. */
+	if (angdroid_zh_tw_enabled()) {
+		c_put_str(attr, "           ", row, col);
+		c_put_str(attr, buf, row, col);
+	} else {
+		c_put_str(attr, format("%-11s", buf), row, col);
+	}
 }
 
 static int fmt_depth(char buf[], int max)
@@ -986,6 +993,39 @@ static size_t prt_state(int row, int col)
 
 	char text[16] = "";
 
+	/* Keep the original English fast path and its ten-cell layout intact.
+	 * Chinese status text is built separately: never write into UTF-8
+	 * byte offsets to replace ASCII count digits. */
+	if (angdroid_zh_tw_enabled()) {
+		char zh_text[40] = "";
+		if (player_is_resting(player)) {
+			int n = player_resting_count(player);
+			if (n >= 1000)
+				strnfmt(zh_text, sizeof(zh_text), "休息 %d00", n / 100);
+			else if (n > 0)
+				strnfmt(zh_text, sizeof(zh_text), "休息 %d", n);
+			else if (n == REST_ALL_POINTS)
+				my_strcpy(zh_text, "休息 *****", sizeof(zh_text));
+			else if (n == REST_COMPLETE)
+				my_strcpy(zh_text, "休息 &&&&&", sizeof(zh_text));
+			else if (n == REST_SOME_POINTS)
+				my_strcpy(zh_text, "休息 !!!!!", sizeof(zh_text));
+			else if (n == REST_SUNLIGHT)
+				my_strcpy(zh_text, "休息 $$$", sizeof(zh_text));
+			else
+				my_strcpy(zh_text, "休息", sizeof(zh_text));
+		} else if (cmd_get_nrepeats()) {
+			int nrepeats = cmd_get_nrepeats();
+			if (nrepeats > 999)
+				strnfmt(zh_text, sizeof(zh_text),
+					"重複 %d00", nrepeats / 100);
+			else
+				strnfmt(zh_text, sizeof(zh_text),
+					"重複 %d", nrepeats);
+		}
+		return zh_text[0] ?
+			fa_status_put(attr, zh_text, row, col) : 0;
+	}
 
 	/* Displayed states are resting and repeating */
 	if (player_is_resting(player)) {
