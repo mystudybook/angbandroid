@@ -87,6 +87,7 @@ run_check "Angband/FA compact player occupied rows and flag-change clearing" pyt
 run_check "Angband/FA immediate compact event redraw with full fallback" python3 "$ROOT/tests/test_compact_player_event_redraw_source.py"
 run_check "Angband/FA compact player world-lifecycle cache invalidation" python3 "$ROOT/tests/test_compact_player_lifecycle_source.py"
 run_check "Angband/FA compact player logical screen generation and locale" python3 "$ROOT/tests/test_compact_player_screen_generation_source.py"
+run_check "Angband/FA compact player native terminal identity and language restart" python3 "$ROOT/tests/test_compact_terminal_instance_source.py"
 run_check "FAangband floor-item observations and display zh-TW" python3 "$ROOT/tests/test_faangband_floor_messages_locale_source.py"
 run_check "FAangband recall and player history screen-only zh-TW" python3 "$ROOT/tests/test_faangband_recall_history_locale_source.py"
 run_check "FAangband recall layout and cancel safety C99" sh "$ROOT/scripts/test-fa-recall-viewport.sh"
