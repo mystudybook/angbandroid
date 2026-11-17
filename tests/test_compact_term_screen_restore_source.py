@@ -41,6 +41,14 @@ for engine in ("angband", "faangband"):
     assert "if (x + n > w)" not in erase
     assert "scr_taa[x] == 0 && scr_tcc[x] == 0" in erase
     assert 'errr Term_erase(int x, int y, int n)' in module.SIGNATURES
+    discard = module.lifecycle.extract_function(native,
+        "errr Term_discard_saved_screens(term *t)")
+    assert "if (!t || !t->instance_id) return (-1);" in discard
+    assert "while (t->mem)" in discard
+    assert "t->saved = 0;" in discard
+    assert "++t->content_generation;" in discard
+    assert "t->total_erase = true;" in discard
+    assert "errr Term_discard_saved_screens(term *t)" in generated
     save = module.lifecycle.extract_function(native, "errr Term_save(void)")
     nuke = module.lifecycle.extract_function(native, "errr term_nuke(term *t)")
     resize = module.lifecycle.extract_function(native, "errr Term_resize(int w, int h)")
@@ -77,6 +85,9 @@ for engine in ("angband", "faangband"):
     assert "static void snapshot_depth_limit(void)" in generated
     assert "static void cursor_shrink_guard(term *t)" in generated
     assert "static void resized_cjk_snapshot_edges(void)" in generated
+    assert "static void abandoned_session_snapshot_reset(void)" in generated
+    assert "CHECK(t.mem == NULL && t.saved == 0);" in generated
+    assert "CHECK(Term_discard_saved_screens(&t) == 1);" in generated
     assert "static void erase_and_scroll_overlay_replay(void)" in generated
     assert "CHECK(t.scr->tc[0][1] == 0 && t.scr->ta[0][1] == 0);" in generated
     assert "CHECK(t.scr->tc[0][1] == L'樹' && t.scr->ta[0][1] == 4);" in generated
