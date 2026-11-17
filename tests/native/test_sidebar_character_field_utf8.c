@@ -7,6 +7,7 @@
 #include "../../app/src/main/cpp/angband/menu-text-fit.h"
 #include "../../app/src/main/cpp/angband/zh-tw-ui.h"
 #include "../../app/src/main/cpp/angband/zh-tw-class-titles.h"
+#include "../../app/src/main/cpp/angband/zh-tw-character-sheet.h"
 
 static unsigned checks;
 #define CHECK(expr) do { assert(expr); ++checks; } while (0)
@@ -48,6 +49,8 @@ int main(void)
     CHECK(strcmp(angdroid_game_ui_text("Warrior", 1), "戰士") == 0);
     CHECK(strcmp(angdroid_game_ui_text("High-Elf", 1), "高等精靈") == 0);
     CHECK(strcmp(angdroid_game_ui_text("Human", 0), "Human") == 0);
+    CHECK(strcmp(angdroid_character_sheet_text("Town", 1), "城鎮") == 0);
+    CHECK(strcmp(angdroid_character_sheet_text("Town", 0), "Town") == 0);
 
     puts("PASS: fixed 13-cell sidebar and compact UTF-8 glyph clipping");
     printf("%u character label checks passed\n", checks);
