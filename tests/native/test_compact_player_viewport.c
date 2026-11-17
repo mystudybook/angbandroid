@@ -54,7 +54,7 @@ int main(void)
     {
         int screen_a, screen_b;
         struct angdroid_compact_player_redraw_state state = {
-            &screen_a, 80, 25, 0, 0, 0
+            &screen_a, 80, 25, 0, 0, 0, 0
         };
         int w, h;
         CHECK(!angdroid_compact_player_can_redraw_one(
@@ -86,22 +86,28 @@ int main(void)
     {
         int screen;
         struct angdroid_compact_player_redraw_state state = {
-            &screen, 80, 25, 1, 17, 1
+            &screen, 80, 25, 1, 17, 1, 41
         };
         CHECK(angdroid_compact_player_can_redraw_one(
             &state, &screen, 80, 25, 1));
         CHECK(angdroid_compact_player_cache_matches(
-            &state, &screen, 80, 25, 1, 17, 1));
+            &state, &screen, 80, 25, 1, 17, 1, 41));
         CHECK(!angdroid_compact_player_cache_matches(
-            &state, &screen, 80, 25, 1, 18, 1)); /* Clear or restore */
+            &state, &screen, 80, 25, 1, 18, 1, 41)); /* Clear or restore */
         CHECK(!angdroid_compact_player_cache_matches(
-            &state, &screen, 80, 25, 1, 17, 0)); /* Locale change */
+            &state, &screen, 80, 25, 1, 17, 0, 41)); /* Locale change */
         CHECK(!angdroid_compact_player_cache_matches(
-            &state, &screen, 80, 25, 0, 17, 1)); /* Mixed flags */
+            &state, &screen, 80, 25, 0, 17, 1, 41)); /* Mixed flags */
         CHECK(!angdroid_compact_player_cache_matches(
-            &state, NULL, 80, 25, 1, 17, 1));
+            &state, NULL, 80, 25, 1, 17, 1, 41));
         CHECK(!angdroid_compact_player_cache_matches(
-            NULL, &screen, 80, 25, 1, 17, 1));
+            NULL, &screen, 80, 25, 1, 17, 1, 41));
+        /* Even identical terminal pointer, size, screen version and
+         * language must not reuse another term_init() instance. */
+        CHECK(!angdroid_compact_player_cache_matches(
+            &state, &screen, 80, 25, 1, 17, 1, 42));
+        CHECK(!angdroid_compact_player_cache_matches(
+            &state, &screen, 80, 25, 1, 17, 1, 0));
         angdroid_compact_player_invalidate(&state);
         CHECK(state.terminal == NULL);
         CHECK(state.width == 0);
@@ -109,6 +115,7 @@ int main(void)
         CHECK(state.ready == 0);
         CHECK(state.content_generation == 0);
         CHECK(state.locale_zh_tw == 0);
+        CHECK(state.instance_id == 0);
         CHECK(!angdroid_compact_player_can_redraw_one(
             &state, &screen, 80, 25, 1));
         /* It is safe to invalidate twice or without a state. */
@@ -122,10 +129,11 @@ int main(void)
         state.ready = 1;
         state.content_generation = 19;
         state.locale_zh_tw = 0;
+        state.instance_id = 43;
         CHECK(angdroid_compact_player_cache_matches(
-            &state, &screen, 80, 25, 1, 19, 0));
+            &state, &screen, 80, 25, 1, 19, 0, 43));
         CHECK(!angdroid_compact_player_cache_matches(
-            &state, &screen, 80, 25, 1, 19, 1));
+            &state, &screen, 80, 25, 1, 19, 1, 43));
     }
     CHECK(ANGDROID_COMPACT_ROW_TITLE == 2);
     CHECK(ANGDROID_COMPACT_ROW_EXP == 4);
