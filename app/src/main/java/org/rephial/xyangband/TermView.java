@@ -3853,6 +3853,18 @@ public class TermView extends View implements OnGestureListener {
 		*/
 	}
 
+	/**
+	 * A layout rebuild replaces the TermView while the native game keeps
+	 * running. Revoke any held directional key, pending long press, and
+	 * native spell tap before disconnecting this old view. Unlike onPause(),
+	 * this does not request a save or discard the native screen stack.
+	 */
+	public void onViewReplaced() {
+		state.invalidateInputLifecycleEpoch();
+		screenTapGuard.abortGesture();
+		stopTimers();
+	}
+
 	public void onResume() {
 		/* Invalidate a native spell tap as well as the Java DOWN/UP state. */
 		state.invalidateInputLifecycleEpoch();
