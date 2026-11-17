@@ -57,6 +57,17 @@ public class NativeWrapper {
 		}
 	}
 
+	/**
+	 * A previous Activity may receive onDestroy after a replacement has
+	 * already linked its TermView. Only detach the exact retired view, never
+	 * the newer one and never the running native game's screen snapshots.
+	 */
+	public void unlinkIfLinked(TermView retired) {
+		synchronized (display_lock) {
+			if (term == retired) term = null;
+		}
+	}
+
 	public class LockWithTimer {
 		public boolean locked = false;
 		public int millis = 0;
