@@ -760,6 +760,17 @@ for engine in angband faangband; do
     "$BUILD_DIR/test_${engine}_term_lifecycle"
 done
 
+# Compile the real terminal screen clear/save/restore functions with minimal
+# window hardware mocks, including empty restore, nested snapshots and CJK.
+for engine in angband faangband; do
+    python3 "$ROOT/tests/native/generate_compact_term_screen_restore_host.py" \
+        "$engine" "$BUILD_DIR/test_${engine}_screen_restore.generated.c"
+    "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+        "$BUILD_DIR/test_${engine}_screen_restore.generated.c" \
+        -o "$BUILD_DIR/test_${engine}_screen_restore"
+    "$BUILD_DIR/test_${engine}_screen_restore"
+done
+
 # FAangband-specific on-increase messages for temporary resistances.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_timed_renewals.c" \
