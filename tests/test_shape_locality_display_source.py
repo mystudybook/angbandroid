@@ -85,9 +85,11 @@ assert "angdroid_utf8_copy_complete(buf, (size_t)max, display)" in fa_fmt_depth
 assert "angdroid_utf8_display_columns(buf)" in fa_fmt_depth
 assert "my_strcpy(buf, level_name(lev), max);" in fa_fmt_depth
 fa_depth = body(fa_src, "static size_t prt_depth(")
+assert "char depths[160];" in fa_depth
 assert "return fa_status_put(COLOUR_WHITE, depths, row, col);" in fa_depth
 assert "return strlen(depths) + 1;" in fa_depth
 compact_depth = body(fa_src, "static int prt_depth_short(")
+assert "char buf[160];" in compact_depth
 assert "prt_compact_zh_caption(" in compact_depth
 assert "angdroid_character_sheet_text(buf, true)" in compact_depth
 
