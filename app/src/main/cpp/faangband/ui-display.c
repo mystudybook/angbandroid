@@ -60,6 +60,8 @@
 #include "wizard.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
 
 /**
  * There are a few functions installed to be triggered by several 
@@ -918,14 +920,30 @@ struct state_info
 	uint8_t attr;
 };
 
+/* UI-only state labels.  The return value is the actual terminal-cell
+ * advance, not UTF-8 byte count, so later labels never overlap Chinese. */
+static size_t fa_status_put(uint8_t attr, const char *message,
+	int row, int col)
+{
+	char visible[192];
+	size_t cells;
+
+	if (!Term || !message || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	cells = angdroid_menu_copy_columns(visible, sizeof(visible),
+		message, (size_t)(Term->wid - col));
+	if (visible[0]) c_put_str(attr, visible, row, col);
+	return cells + 1;
+}
+
 /**
  * Print recall status.
  */
 static size_t prt_recall(int row, int col)
 {
 	if (player->word_recall) {
-		c_put_str(COLOUR_WHITE, "Recall", row, col);
-		return sizeof "Recall";
+		return fa_status_put(COLOUR_WHITE,
+			angdroid_zh_tw_enabled() ? "回城" : "Recall", row, col);
 	}
 
 	return 0;
@@ -938,8 +956,8 @@ static size_t prt_recall(int row, int col)
 static size_t prt_descent(int row, int col)
 {
 	if (player->deep_descent) {
-		c_put_str(COLOUR_WHITE, "Descent", row, col);
-		return sizeof "Descent";
+		return fa_status_put(COLOUR_WHITE,
+			angdroid_zh_tw_enabled() ? "深入" : "Descent", row, col);
 	}
 
 	return 0;
@@ -1248,9 +1266,9 @@ static size_t prt_study(int row, int col)
 			attr = COLOUR_L_DARK;
 
 		/* Print study message */
-		text = format("Study (%d)", player->upkeep->new_spells);
-		c_put_str(attr, text, row, col);
-		return strlen(text) + 1;
+		text = format(angdroid_zh_tw_enabled() ?
+			"學習 (%d)" : "Study (%d)", player->upkeep->new_spells);
+		return fa_status_put(attr, text, row, col);
 	}
 
 	return 0;
@@ -1263,9 +1281,9 @@ static size_t prt_study(int row, int col)
 static size_t prt_spec(int row, int col)
 {
 	if (player->upkeep->new_specialties) {
-		char *text = format("Spec. (%d)", player->upkeep->new_specialties);
-		c_put_str(COLOUR_VIOLET, text, row, col);
-		return strlen(text) + 1;
+		char *text = format(angdroid_zh_tw_enabled() ?
+			"專精 (%d)" : "Spec. (%d)", player->upkeep->new_specialties);
+		return fa_status_put(COLOUR_VIOLET, text, row, col);
 	}
 
 	return 0;
@@ -1307,9 +1325,9 @@ static size_t prt_tmd(int row, int col)
 static size_t prt_unignore(int row, int col)
 {
 	if (player->unignoring) {
-		const char *str = "Unignoring";
-		put_str(str, row, col);
-		return strlen(str) + 1;
+		const char *str = angdroid_zh_tw_enabled() ?
+			"暫停忽略" : "Unignoring";
+		return fa_status_put(COLOUR_WHITE, str, row, col);
 	}
 
 	return 0;
@@ -2736,7 +2754,7 @@ static void ui_leave_init(game_event_type type, game_event_data *data,
 	event_remove_handler(EVENT_INITSTATUS, splashscreen_note, NULL);
 
 	/* Flash a message */
-	prt("Please wait...", 0, 0);
+	prt(angdroid_zh_tw_enabled() ? "請稍候……" : "Please wait...", 0, 0);
 
 	/* Flush the message */
 	Term_fresh();
