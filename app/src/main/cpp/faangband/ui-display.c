@@ -592,7 +592,8 @@ static int fmt_depth(char buf[], int max)
  */
 static size_t prt_depth(int row, int col)
 {
-	char depths[80];
+	/* Whole translated locality + depth (not 32-byte English shorthand). */
+	char depths[160];
 
 	fmt_depth(depths, sizeof(depths));
 
@@ -836,7 +837,8 @@ static int prt_speed_short(int row, int col)
 
 static int prt_depth_short(int row, int col)
 {
-	char buf[32];
+	/* Keep the numeric level suffix when a localized region name grows. */
+	char buf[160];
 	
 	int len = fmt_depth(buf, sizeof(buf));
 	if (angdroid_zh_tw_enabled())
