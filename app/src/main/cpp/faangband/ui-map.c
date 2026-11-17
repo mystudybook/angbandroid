@@ -1020,7 +1020,8 @@ static void regional_map(int num, int centre_place)
 		row = (i / side) * 4 + 1;
 
 		/* Get the level string */
-		lev_name = format("Level %d", world->levels[place[i]].depth);
+		lev_name = format(angdroid_zh_tw_enabled() ? "第 %d 層" :
+            "Level %d", world->levels[place[i]].depth);
 		/* Print the locality name */
 		print_map_name(place[i], row, col, false);
 

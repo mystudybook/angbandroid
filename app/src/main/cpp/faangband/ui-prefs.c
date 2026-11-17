@@ -39,6 +39,7 @@
 #include "sound.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
 
 char arg_name[PLAYER_NAME_LEN];		/* Command arg -- request character name */
 int arg_graphics;			/* Command arg -- Request graphics mode */
@@ -108,7 +109,8 @@ static void remove_old_dump(const char *cur_fname, const char *mark)
 	new_file = file_open(new_fname, MODE_WRITE, FTYPE_TEXT);
 	if (!new_file) {
 		file_close(cur_file);
-		msg("Failed to create file %s", new_fname);
+		msg(angdroid_zh_tw_enabled() ?
+            "無法建立檔案 %s" : "Failed to create file %s", new_fname);
 		return;
 	}
 
@@ -1189,8 +1191,10 @@ errr process_pref_file_command(const char *s)
 static void print_error(const char *name, struct parser *p) {
 	struct parser_state s;
 	parser_getstate(p, &s);
-	msg("Parse error in %s line %d column %d: %s: %s", name,
-	           s.line, s.col, s.msg, parser_error_str[s.error]);
+	msg(angdroid_zh_tw_enabled() ?
+        "設定檔 %s 第 %d 行第 %d 欄解析錯誤：%s：%s" :
+        "Parse error in %s line %d column %d: %s: %s", name,
+        s.line, s.col, s.msg, parser_error_str[s.error]);
 	event_signal(EVENT_MESSAGE_FLUSH);
 }
 
@@ -1209,7 +1213,8 @@ static bool process_pref_file_named(const char *path, bool quiet, bool user) {
 
 	if (!f) {
 		if (!quiet)
-			msg("Cannot open '%s'.", path);
+			msg(angdroid_zh_tw_enabled() ?
+                "無法開啟「%s」。" : "Cannot open '%s'.", path);
 
 		e = PARSE_ERROR_INTERNAL; /* signal failure to callers */
 	} else {
