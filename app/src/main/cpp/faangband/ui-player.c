@@ -777,7 +777,7 @@ static const char *show_depth(void)
 {
 	static char buffer[13];
 
-	if (player->max_depth == 0) return angdroid_character_sheet_text("Town", angdroid_zh_tw_enabled());
+	if (player->max_depth == 0) return angdroid_character_sheet_text("Town", fa_player_display_zh_tw());
 
 	strnfmt(buffer, sizeof(buffer), "%d' (L%d)",
 	        player->max_depth * 50, player->max_depth);
@@ -791,7 +791,7 @@ static const char *show_speed(void)
 	if (player->timed[TMD_FAST])
 		tmp -= (player_has(player, PF_ENHANCE_MAGIC)) ? 13 : 10;
 	if (player->timed[TMD_SLOW]) tmp += 10;
-	if (tmp == 110) return angdroid_character_sheet_text("Normal", angdroid_zh_tw_enabled());
+	if (tmp == 110) return angdroid_character_sheet_text("Normal", fa_player_display_zh_tw());
 	int multiplier = 10 * extract_energy[tmp] / extract_energy[110];
 	int int_mul = multiplier / 10;
 	int dec_mul = multiplier % 10;
@@ -821,19 +821,26 @@ static const uint8_t colour_table[] =
 static struct panel *get_panel_topleft(void) {
 	struct panel *p = panel_allocate(7);
 
-	panel_line(p, COLOUR_L_BLUE, "Name", "%s", player->full_name);
-	panel_line(p, COLOUR_L_BLUE, "Race", "%s",
-        angdroid_game_ui_text(player->race->name, angdroid_zh_tw_enabled()));
-	panel_line(p, COLOUR_L_BLUE, "Class", "%s",
-        angdroid_game_ui_text(player->class->name, angdroid_zh_tw_enabled()));
-	panel_line(p, COLOUR_L_BLUE, "Title", "%s",
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Name",
+		fa_player_display_zh_tw()), "%s", player->full_name);
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Race",
+		fa_player_display_zh_tw()), "%s",
+		angdroid_game_ui_text(player->race->name,
+			fa_player_display_zh_tw()));
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Class",
+		fa_player_display_zh_tw()), "%s",
+		angdroid_game_ui_text(player->class->name,
+			fa_player_display_zh_tw()));
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Title",
+		fa_player_display_zh_tw()), "%s",
         angdroid_fa_sheet_status_title(
             angdroid_zh_tw_class_title(show_title(),
                 fa_player_display_zh_tw()),
             fa_player_display_zh_tw()));
 	panel_line(p, COLOUR_L_BLUE, "HP", "%d/%d", player->chp, player->mhp);
 	panel_line(p, COLOUR_L_BLUE, "SP", "%d/%d", player->csp, player->msp);
-	panel_line(p, COLOUR_L_BLUE, "Gold", "%d", player->au);
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Gold",
+		fa_player_display_zh_tw()), "%d", player->au);
 
 	return p;
 }
@@ -844,19 +851,26 @@ static struct panel *get_panel_midleft(void) {
 	uint8_t attr = diff < 0 ? COLOUR_L_RED : COLOUR_L_GREEN;
 
 	panel_line(p, max_color(player->lev, player->max_lev),
-			"Level", "%d", player->lev);
+			angdroid_game_ui_text("Level", fa_player_display_zh_tw()),
+			"%d", player->lev);
 	panel_line(p, max_color(player->exp, player->max_exp),
-			"Cur Exp", "%d", player->exp);
-	panel_line(p, COLOUR_L_GREEN, "Max Exp", "%d", player->max_exp);
-	panel_line(p, COLOUR_L_GREEN, "Adv Exp", "%s", show_adv_exp());
-	panel_line(p, attr, "Burden",
+			angdroid_game_ui_text("Cur Exp", fa_player_display_zh_tw()),
+			"%d", player->exp);
+	panel_line(p, COLOUR_L_GREEN, angdroid_game_ui_text("Max Exp",
+		fa_player_display_zh_tw()), "%d", player->max_exp);
+	panel_line(p, COLOUR_L_GREEN, angdroid_game_ui_text("Adv Exp",
+		fa_player_display_zh_tw()), "%s", show_adv_exp());
+	panel_line(p, attr, angdroid_game_ui_text("Burden",
+		fa_player_display_zh_tw()),
 			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_BURDEN,
 				fa_player_display_zh_tw()),
 			   player->upkeep->total_weight / 10.0F);
-	panel_line(p, attr, "Overweight",
+	panel_line(p, attr, angdroid_game_ui_text("Overweight",
+		fa_player_display_zh_tw()),
 			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_OVERWEIGHT,
 				fa_player_display_zh_tw()), -diff / 10, abs(diff) % 10);
-	panel_line(p, COLOUR_L_GREEN, "Max Depth", "%s", show_depth());
+	panel_line(p, COLOUR_L_GREEN, angdroid_game_ui_text("Max Depth",
+		fa_player_display_zh_tw()), "%s", show_depth());
 
 	return p;
 }
