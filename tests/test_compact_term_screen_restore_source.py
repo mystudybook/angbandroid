@@ -28,6 +28,13 @@ for engine in ("angband", "faangband"):
     save = module.lifecycle.extract_function(native, "errr Term_save(void)")
     nuke = module.lifecycle.extract_function(native, "errr term_nuke(term *t)")
     resize = module.lifecycle.extract_function(native, "errr Term_resize(int w, int h)")
+    clamp = module.lifecycle.extract_function(
+        native, "static void term_win_clamp_cursor(term_win *win, int w, int h)")
+    assert "win->cu = true;" in clamp
+    assert "win->cx = w - 1;" in clamp
+    assert "win->cy = h - 1;" in clamp
+    assert resize.count("term_win_clamp_cursor(") == 5
+
     assert "if (Term->saved == UINT8_MAX) return (-1);" in save
     assert save.index("if (Term->saved == UINT8_MAX)") < save.index("mem_zalloc(")
     assert "while (t->mem)" in nuke
@@ -46,6 +53,9 @@ for engine in ("angband", "faangband"):
     assert "static void nested_snapshot(term *t)" in generated
     assert "static void resize_nested_snapshot(term *t)" in generated
     assert "static void snapshot_depth_limit(void)" in generated
+    assert "static void cursor_shrink_guard(term *t)" in generated
+    assert "CHECK(t->scr->cu && t->scr->cx == w - 1 && t->scr->cy == h - 1);" in generated
+    assert "CHECK(t->tmp->cu && t->tmp->cx == 0 && t->tmp->cy == 0);" in generated
     assert "CHECK(Term_resize(old_w + 2, old_h + 1) == 0);" in generated
     assert "CHECK(Term->saved == UINT8_MAX && Term->mem == top);" in generated
     assert "CHECK(Term->saved == 2);" in generated
@@ -58,4 +68,4 @@ for engine in ("angband", "faangband"):
     assert "L'丙'" in generated
     assert "CHECK(allocations - prev_alloc == releases - prev_release);" in generated
 
-print("PASS: native save/resize/restore, stack-limit and full terminal cleanup contracts")
+print("PASS: native resize cursor bounds, snapshots and terminal reuse contracts")
