@@ -1,91 +1,123 @@
-Symbols On Your Map
-===================
+地圖符號速查表
+==============
 
-Symbols on your map can be broken down into three categories: Features of
-the dungeon such as walls, floor, doors, and traps; Objects which can be
-picked up such as treasure, weapons, magical devices, etc; and creatures
-which may or may not move about the dungeon, but are mostly harmful to your
-character's well being.
-
-Some symbols are used to represent more than one type of entity, and some
-symbols are used to represent entities in more than one category. The "@"
-symbol (by default) is used to represent the character.
-
-It will not be necessary to remember all of the symbols and their meanings.
-The "slash" command ('/') will identify any character appearing on your
-map (see 'commands.txt').
-
-Note that you can use a "user pref file" to change any of these symbols to
-something you are more comfortable with.
+地圖上的符號分為地形、物品與怪物。
+有些符號可以代表不只一種事物，須依地圖環境判斷。
+預設 @ 代表玩家角色；使用 / 指令可查詢地圖上的符號。
+也可以透過使用者偏好設定檔修改符號外觀。
 
 
+不阻擋視線的地形
+------------------------------
 
-Features that do not block line of sight
-----------------------------------------
+  .   地板
+  1   雜貨店入口
+  .   隱藏陷阱
+  2   防具店入口
+  ^   已發現的陷阱
+  3   武器店入口
+  ;   守護符文
+  4   書店入口
+  '   開啟的門
+  5   鍊金店入口
+  '   破損的門
+  6   魔法商店入口
+  <   上樓梯
+  7   黑市入口
+  >   下樓梯
+  8   自宅入口
+  #   岩漿池
 
-.  A floor space                 1  Entrance to General Store
-.  A trap (hidden)               2  Entrance to Armoury
-^  A trap (known)                3  Entrance to Weapon Smith
-;  A glyph of warding            4  Entrance to Bookseller
-'  An open door                  5  Entrance to Alchemy Shop
-'  A broken door                 6  Entrance to Magic Shop
-<  A staircase up                7  Entrance to the Black Market
->  A staircase down              8  Entrance to your Home
-#  A pool of lava
+阻擋視線的地形
+------------------------------
 
+  #   暗門
+  #   牆壁
+  +   關閉的門
+  %   礦脈
+  +   上鎖的門
+  *   含寶藏的礦脈
+  :   瓦礫堆
+  :   可穿越的瓦礫
 
-Features that block line of sight
----------------------------------
+物品
+------------------------------
 
-#  A secret door                 #  A wall
-+  A closed door                 %  A mineral vein
-+  A locked door                 *  A mineral vein with treasure
-:  A pile of rubble              :  A pile of passable rubble
+  !   藥水（或瓶子）
+  /   長柄武器
+  ?   卷軸（或書籍）
+  |   刀劍等利刃武器
+  ,   蘑菇（或食物）
+  \   鈍器
+  -   魔杖或魔法棒
+  }   投石索、弓或弩
+  _   法杖
+  {   彈丸、箭或弩矢
+  =   戒指
+  (   軟甲
+  "   護身符
+  [   硬甲
+  $   金幣或寶石
+  ]   其他護甲
+  ~   燈具、工具、寶箱等
+  )   盾牌
+  &   多件物品
 
+怪物
+------------------------------
 
-Objects
--------
-
-!  A potion (or flask)           /  A pole-arm
-?  A scroll (or book)            |  An edged weapon
-,  A mushroom (or food)          \  A hafted weapon
--  A wand or rod                 }  A sling, bow, or x-bow
-_  A staff                       {  A shot, arrow, or bolt
-=  A ring                        (  Soft armour
-"  An amulet                     [  Hard armour
-$  Gold or gems                  ]  Misc. armour
-~  Lights, Tools, Chests, etc    )  A shield
-&  Multiple items
-
-
-Monsters
---------
-
-$  Creeping Coins             ,  Mushroom Patch
-a  Giant Ant                  A  Ainu
-b  Giant Bat                  B  Bird
-c  Giant Centipede            C  Canine (Dog)
-d  Dragon                     D  Ancient Dragon
-e  Floating Eye               E  Elemental
-f  Feline (Cat)               F  Dragon Fly
-g  Golem                      G  Ghost
-h  Humanoid                   H  Hybrid
-i  Icky-Thing                 I  Insect
-j  Jelly                      J  Snake
-k  Kobold                     K  Killer Beetle
-l  Tree/Ent                   L  Lich
-m  Mold                       M  Multi-Headed Hydra
-n  Naga                       N  -
-o  Orc                        O  Ogre
-p  Human "person"             P  Giant "person"
-q  Quadruped                  Q  Quylthulg (Pulsing Flesh Mound)
-r  Rodent                     R  Reptile/Amphibian
-s  Skeleton                   S  Spider/Scorpion/Tick
-t  Townsperson                T  Troll
-u  Minor Demon                U  Major Demon
-v  Vortex                     V  Vampire
-w  Worm or Worm Mass          W  Wight/Wraith
-x  -                          X  Xorn/Xaren
-y  Yeek                       Y  Yeti
-z  Zombie/Mummy               Z  Zephyr Hound
+  $   蠕動硬幣
+  ,   蘑菇群
+  a   巨蟻
+  A   愛努精靈
+  b   巨蝙蝠
+  B   鳥類
+  c   巨蜈蚣
+  C   犬類
+  d   龍
+  D   遠古巨龍
+  e   浮眼怪
+  E   元素生物
+  f   貓科動物
+  F   蜻蜓
+  g   魔像
+  G   幽靈
+  h   類人怪
+  H   混種怪物
+  i   黏膩怪
+  I   昆蟲
+  j   膠凍怪
+  J   蛇
+  k   狗頭人
+  K   殺人甲蟲
+  l   樹木／樹人
+  L   巫妖
+  m   黴菌怪
+  M   多頭九頭蛇
+  n   娜迦
+  N   —
+  o   半獸人
+  O   食人魔
+  p   人類
+  P   巨人
+  q   四足獸
+  Q   脈動肉塊怪
+  r   齧齒類
+  R   爬蟲／兩棲類
+  s   骷髏
+  S   蜘蛛／蠍子／蜱蟲
+  t   城鎮居民
+  T   巨魔
+  u   低階惡魔
+  U   高階惡魔
+  v   漩渦怪
+  V   吸血鬼
+  w   蠕蟲或蟲群
+  W   屍妖／幽魂
+  x   —
+  X   索恩／薩倫
+  y   伊克族
+  Y   雪人
+  z   殭屍／木乃伊
+  Z   風之獵犬
 

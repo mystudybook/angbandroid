@@ -49,6 +49,16 @@
 #include "ui-spell.h"
 #include "ui-command.h"
 #include "ui-store.h"
+#include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/zh-tw-store-names.h"
+#include "../angband/zh-tw-store-text.h"
+#include "../angband/store-column-layout.h"
+#include "../angband/store-detail-text.h"
+#include "../angband/store-menu-row.h"
+#include "../angband/store-stock-guard.h"
+#include "../angband/store-confirmation-text.h"
+#include "../angband/menu-text-fit.h"
 #include "z-debug.h"
 
 
@@ -97,6 +107,22 @@ enum
 	LOC_MAX
 };
 
+/* Store rows may occupy a smaller region than the terminal.
+ * Render by terminal display columns and preserve full UTF-8 glyphs. */
+static void fa_store_put_clipped(int attr, const char *text,
+    int row, int col, int columns)
+{
+    char clipped[512];
+    if (!Term || !text || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid || columns <= 0)
+        return;
+    columns = MIN(columns, Term->wid - col);
+    angdroid_menu_copy_columns(clipped, sizeof(clipped),
+        text, (size_t)columns);
+    if (clipped[0])
+        c_put_str(attr, clipped, row, col);
+}
+
 /* State flags */
 #define STORE_GOLD_CHANGE      0x01
 #define STORE_FRAME_CHANGE     0x02
@@ -111,6 +137,10 @@ struct store_context {
 	struct object **list;	/* List of objects (unused) */
 	int flags;				/* Display flags */
 	bool inspect_only;		/* Only allow looking */
+	/* The old cursor no longer names the same item after stock refresh. */
+	bool stock_changed;
+	/* Explicit Exit in the shopkeeper popup is not a cancel or a tap-Back. */
+	bool exit_requested;
 
 	/* Places for the various things displayed onscreen */
 	unsigned int scr_places_x[LOC_MAX];
@@ -141,17 +171,22 @@ static void prt_welcome(const struct owner *proprietor)
 	char short_name[20];
 	const char *owner_name = proprietor->name;
 
-	int j;
+	size_t used = 0;
 
 	if (one_in_(2))
 		return;
 
-	/* Get the first name of the store owner (stop before the first space) */
-	for (j = 0; owner_name[j] && owner_name[j] != ' '; j++)
-		short_name[j] = owner_name[j];
-
-	/* Truncate the name */
-	short_name[j] = '\0';
+	/* Preserve the owner's first name without overrunning this 20-byte
+	 * message-local buffer or cutting a multibyte Unicode scalar. */
+	while (owner_name[used] && owner_name[used] != ' ') {
+		uint32_t cp;
+		size_t width = angdroid_utf8_next_scalar(owner_name + used, &cp);
+		if (!width || width > sizeof(short_name) - used - 1)
+			break;
+		memcpy(short_name + used, owner_name + used, width);
+		used += width;
+	}
+	short_name[used] = '\0';
 
 	if (one_in_(3)) {
 		size_t i = randint0(N_ELEMENTS(comment_hint));
@@ -207,170 +242,185 @@ static void prt_welcome(const struct owner *proprietor)
  */
 static void store_display_recalc(struct store_context *ctx)
 {
-	int wid, hgt;
-	region loc;
+    int wid, hgt, content_height;
+    bool show_help;
+    region loc;
+    angdroid_store_column_layout columns;
+    struct menu *m = &ctx->menu;
 
-	struct menu *m = &ctx->menu;
-	struct store *store = ctx->store;
+    Term_get_size(&wid, &hgt);
+    columns = angdroid_store_columns(
+        wid, 1, store_is_home(ctx->store));
+    /* Keep signed negative coordinates out of unsigned screen arrays. */
+    text_out_wrap = MAX(1, columns.width - 2);
+    ctx->scr_places_x[LOC_PRICE] =
+        columns.price_col >= 0 ? columns.price_col : 0;
+    ctx->scr_places_x[LOC_WEIGHT] =
+        columns.weight_col >= 0 ? columns.weight_col : 0;
+    ctx->scr_places_x[LOC_AU] = columns.gold_col;
+    ctx->scr_places_x[LOC_OWNER] = columns.owner_end;
 
-	Term_get_size(&wid, &hgt);
+    /* A portrait viewport cannot safely fit the multi-line help footer.
+     * Preserve selectable stock rows instead of assigning negative Y. */
+    show_help = (ctx->flags & STORE_SHOW_HELP) &&
+        wid >= 70 && hgt >= 16;
+    content_height = show_help ? hgt - 3 : hgt;
+    ctx->scr_places_y[LOC_OWNER] =
+        angdroid_store_safe_row(1, hgt);
+    ctx->scr_places_y[LOC_HEADER] =
+        angdroid_store_safe_row(3, hgt);
+    ctx->scr_places_y[LOC_MORE] =
+        angdroid_store_safe_row(content_height - 3, hgt);
+    ctx->scr_places_y[LOC_AU] =
+        angdroid_store_safe_row(content_height - 1, hgt);
 
-	/* Clip the width at a max of 104 (enough room for an 80-char item name) */
-	if (wid > 104) wid = 104;
-
-	/* Clip the text_out function at two smaller than the screen width */
-	text_out_wrap = wid - 2;
-
-
-	/* X co-ords first */
-	ctx->scr_places_x[LOC_PRICE] = wid - 14;
-	ctx->scr_places_x[LOC_AU] = wid - 26;
-	ctx->scr_places_x[LOC_OWNER] = wid - 2;
-	ctx->scr_places_x[LOC_WEIGHT] = wid - 14;
-
-	/* Add space for prices */
-	if (!store_is_home(store))
-		ctx->scr_places_x[LOC_WEIGHT] -= 10;
-
-	/* Then Y */
-	ctx->scr_places_y[LOC_OWNER] = 1;
-	ctx->scr_places_y[LOC_HEADER] = 3;
-
-	/* If we are displaying help, make the height smaller */
-	if (ctx->flags & (STORE_SHOW_HELP))
-		hgt -= 3;
-
-	ctx->scr_places_y[LOC_MORE] = hgt - 3;
-	ctx->scr_places_y[LOC_AU] = hgt - 1;
-
-	loc = m->boundary;
-
-	/* If we're displaying the help, then put it with a line of padding */
-	if (ctx->flags & (STORE_SHOW_HELP)) {
-		ctx->scr_places_y[LOC_HELP_CLEAR] = hgt - 1;
-		ctx->scr_places_y[LOC_HELP_PROMPT] = hgt;
-		loc.page_rows = -5;
-	} else {
-		ctx->scr_places_y[LOC_HELP_CLEAR] = hgt - 2;
-		ctx->scr_places_y[LOC_HELP_PROMPT] = hgt - 1;
-		loc.page_rows = -2;
-	}
-
-	menu_layout(m, &loc);
+    loc = m->boundary;
+    if (show_help) {
+        ctx->scr_places_y[LOC_HELP_CLEAR] =
+            angdroid_store_safe_row(content_height - 1, hgt);
+        ctx->scr_places_y[LOC_HELP_PROMPT] =
+            angdroid_store_safe_row(content_height, hgt);
+        loc.page_rows = -5;
+    } else {
+        ctx->scr_places_y[LOC_HELP_CLEAR] =
+            angdroid_store_safe_row(hgt - 2, hgt);
+        /* The last row belongs to Gold Remaining. Keep the compact
+         * help shortcut one row above it, outside the stock menu. */
+        ctx->scr_places_y[LOC_HELP_PROMPT] =
+            angdroid_store_safe_row(hgt - 2, hgt);
+        loc.page_rows = -2;
+    }
+    menu_layout(m, &loc);
 }
-
 
 /**
  * Redisplay a single store entry
  */
-static void store_display_entry(struct menu *menu, int oid, bool cursor, int row,
-								int col, int width)
+static void store_display_entry(struct menu *menu, int oid,
+    bool cursor, int row, int col, int width)
 {
-	struct object *obj;
-	int32_t x;
-	uint32_t desc = ODESC_PREFIX;
+    struct store_context *ctx = menu_priv(menu);
+    struct store *store = ctx->store;
+    angdroid_store_column_layout columns;
+    struct object *obj;
+    uint32_t desc = ODESC_PREFIX | ODESC_ZH_TW;
+    int name_width;
+    int32_t x;
+    char o_name[256];
+    char out_val[160];
+    uint8_t colour;
 
-	char o_name[80];
-	char out_val[160];
-	uint8_t colour;
-	int16_t obj_weight;
+    assert(store);
+    if (!Term || !ctx->list || oid < 0 || oid >= store->stock_num ||
+        !ctx->list[oid] || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid || width <= 0)
+        return;
+    obj = ctx->list[oid];
+    columns = angdroid_store_columns(
+        Term->wid, 1, store_is_home(store));
+    width = MIN(width, Term->wid - col);
+    name_width = angdroid_store_name_budget(columns, col, width);
 
-	struct store_context *ctx = menu_priv(menu);
-	struct store *store = ctx->store;
-	assert(store);
+    /* Home descriptions retain the actual inscriptions. The screen name
+     * is shortened only in the temporary buffer, never in game data. */
+    if (store_is_home(store))
+        desc |= ODESC_FULL;
+    else
+        desc |= ODESC_FULL | ODESC_STORE;
+    object_desc(o_name, sizeof(o_name), obj, desc, player);
+    fa_store_put_clipped(obj->kind->base->attr,
+        o_name, row, col, name_width);
 
-	/* Get the object */
-	obj = ctx->list[oid];
+    colour = curs_attrs[CURS_KNOWN][(int)cursor];
+    if (columns.weight_col >= 0 &&
+        columns.weight_col >= col &&
+        columns.weight_col < col + width) {
+        int weight = object_weight_one(obj);
+        int budget = MIN(10, col + width - columns.weight_col);
+        if (angdroid_store_weight_text(
+                out_val, sizeof(out_val), weight, angdroid_zh_tw_enabled()) &&
+            angdroid_utf8_display_columns(out_val) <= (size_t)budget)
+            fa_store_put_clipped(colour, out_val, row,
+                columns.weight_col, budget);
+    }
 
-	/* Describe the object - preserving insriptions in the home */
-	if (store_is_home(store)) {
-		desc |= ODESC_FULL;
-	} else {
-		desc |= ODESC_FULL | ODESC_STORE;
-	}
-	object_desc(o_name, sizeof(o_name), obj, desc, player);
-
-	/* Display the object */
-	c_put_str(obj->kind->base->attr, o_name, row, col);
-
-	/* Show weights */
-	colour = curs_attrs[CURS_KNOWN][(int)cursor];
-	obj_weight = object_weight_one(obj);
-	strnfmt(out_val, sizeof out_val, "%3d.%d lb", obj_weight / 10,
-			obj_weight % 10);
-	c_put_str(colour, out_val, row, ctx->scr_places_x[LOC_WEIGHT]);
-
-	/* Describe an object (fully) in a store */
-	if (!store_is_home(store)) {
-		/* Extract the "minimum" price */
-		x = price_item(store, obj, false, 1);
-
-		/* Make sure the player can afford it */
-		if (player->au < x)
-			colour = curs_attrs[CURS_UNKNOWN][(int)cursor];
-
-		/* Actually draw the price */
-		if (tval_can_have_charges(obj) && (obj->number > 1))
-			strnfmt(out_val, sizeof out_val, "%9ld avg", (long)x);
-		else
-			strnfmt(out_val, sizeof out_val, "%9ld    ", (long)x);
-
-		c_put_str(colour, out_val, row, ctx->scr_places_x[LOC_PRICE]);
-	}
+    if (!store_is_home(store) && columns.price_col >= 0 &&
+        columns.price_col >= col &&
+        columns.price_col < col + width) {
+        int budget = MIN(14, col + width - columns.price_col);
+        x = price_item(store, obj, false, 1);
+        if (player->au < x)
+            colour = curs_attrs[CURS_UNKNOWN][(int)cursor];
+        if (angdroid_store_price_text(out_val, sizeof(out_val),
+                (long)x, tval_can_have_charges(obj) && obj->number > 1,
+                angdroid_zh_tw_enabled()) &&
+            angdroid_utf8_display_columns(out_val) <= (size_t)budget)
+            fa_store_put_clipped(colour, out_val, row,
+                columns.price_col, budget);
+    }
 }
-
 
 /**
  * Display store (after clearing screen)
  */
 static void store_display_frame(struct store_context *ctx)
 {
-	char buf[80];
-	struct store *store = ctx->store;
-	struct owner *proprietor = store->owner;
+    char buf[160];
+    struct store *store = ctx->store;
+    struct owner *proprietor = store->owner;
+    bool home = store_is_home(store);
+    angdroid_store_column_layout layout =
+        angdroid_store_columns(Term->wid, 1, home);
+    int owner_row = ctx->scr_places_y[LOC_OWNER];
+    int header_row = ctx->scr_places_y[LOC_HEADER];
 
-	/* Clear screen */
-	Term_clear();
+    Term_clear();
+    if (home) {
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_game_ui_text("Your Home", angdroid_zh_tw_enabled()),
+            owner_row, 1, MAX(0, layout.width - 2));
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_game_ui_text("Home Inventory",
+                angdroid_zh_tw_enabled()),
+            header_row, 1, layout.name_cols);
+    } else {
+        const char *shop = angdroid_store_display_name(
+            store->name, angdroid_zh_tw_enabled());
+        const char *owner_name = proprietor->name;
+        const char *owner_race = proprietor->race->name;
+        size_t owner_cols, summary_cols;
 
-	/* The "Home" is special */
-	if (store_is_home(store)) {
-		/* Put the owner name */
-		put_str("Your Home", ctx->scr_places_y[LOC_OWNER], 1);
+        strnfmt(buf, sizeof(buf), "%s (%s)", owner_name, owner_race);
+        owner_cols = angdroid_utf8_display_columns(buf);
+        fa_store_put_clipped(COLOUR_WHITE, buf,
+            owner_row, 1, MAX(0, layout.width - 2));
 
-		/* Label the object descriptions */
-		put_str("Home Inventory", ctx->scr_places_y[LOC_HEADER], 1);
+        /* A right-aligned stock/price summary is optional: do not
+         * overwrite the shopkeeper's name in a portrait window. */
+        strnfmt(buf, sizeof(buf), "%s (%ld)",
+            shop, (long)proprietor->max_cost);
+        summary_cols = angdroid_utf8_display_columns(buf);
+        if (summary_cols + owner_cols + 4 <= (size_t)layout.width) {
+            int summary_col = layout.width - 2 - (int)summary_cols;
+            fa_store_put_clipped(COLOUR_WHITE, buf,
+                owner_row, summary_col, (int)summary_cols);
+        }
 
-		/* Show weight header */
-		put_str("Weight", ctx->scr_places_y[LOC_HEADER],
-				ctx->scr_places_x[LOC_WEIGHT] + 2);
-	} else {
-		/* Normal stores */
-		const char *store_name = store->name;
-		const char *owner_name = proprietor->name;
-		const char *owner_race = proprietor->race->name;
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_game_ui_text(
+                "Store Inventory", angdroid_zh_tw_enabled()),
+            header_row, 1, layout.name_cols);
+    }
 
-		/* Put the owner name */
-		strnfmt(buf, sizeof(buf), "%s (%s)", owner_name, owner_race);
-		put_str(buf, ctx->scr_places_y[LOC_OWNER], 1);
-
-		/* Show the max price in the store (above prices) */
-		strnfmt(buf, sizeof(buf), "%s (%ld)", store_name,
-				(long)proprietor->max_cost);
-		prt(buf, ctx->scr_places_y[LOC_OWNER],
-			ctx->scr_places_x[LOC_OWNER] - strlen(buf));
-
-		/* Label the object descriptions */
-		put_str("Store Inventory", ctx->scr_places_y[LOC_HEADER], 1);
-
-		/* Showing weight label */
-		put_str("Weight", ctx->scr_places_y[LOC_HEADER],
-				ctx->scr_places_x[LOC_WEIGHT] + 2);
-
-		/* Label the asking price (in stores) */
-		put_str("Price", ctx->scr_places_y[LOC_HEADER], ctx->scr_places_x[LOC_PRICE] + 4);
-	}
+    if (layout.weight_col >= 0)
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_game_ui_text("Weight", angdroid_zh_tw_enabled()),
+            header_row, layout.weight_col + 2, 8);
+    if (layout.price_col >= 0)
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_game_ui_text("Price", angdroid_zh_tw_enabled()),
+            header_row, layout.price_col + 4, 10);
 }
-
 
 /**
  * Display help.
@@ -380,6 +430,7 @@ static void store_display_help(struct store_context *ctx)
 	struct store *store = ctx->store;
 	int help_loc = ctx->scr_places_y[LOC_HELP_PROMPT];
 	bool is_home = store_is_home(store);
+	bool zh_tw = angdroid_zh_tw_enabled();
 
 	/* Clear */
 	clear_from(ctx->scr_places_y[LOC_HELP_CLEAR]);
@@ -394,44 +445,44 @@ static void store_display_help(struct store_context *ctx)
 	else
 		text_out_c(COLOUR_L_GREEN, "l");
 
-	text_out(" examines");
+	text_out("%s", angdroid_store_ui_text(" examines", zh_tw));
 	if (!ctx->inspect_only) {
-		text_out(" and ");
+		text_out("%s", angdroid_store_ui_text(" and ", zh_tw));
 		text_out_c(COLOUR_L_GREEN, "p");
-		text_out(" (or ");
+		text_out("%s", angdroid_store_ui_text(" (or ", zh_tw));
 		text_out_c(COLOUR_L_GREEN, "g");
-		text_out(")");
+		text_out("%s", angdroid_store_ui_text(")", zh_tw));
 
-		if (is_home) text_out(" picks up");
-		else text_out(" purchases");
+		if (is_home) text_out("%s", angdroid_store_ui_text(" picks up", zh_tw));
+		else text_out("%s", angdroid_store_ui_text(" purchases", zh_tw));
 	}
-	text_out(" an item. ");
+	text_out("%s", angdroid_store_ui_text(" an item. ", zh_tw));
 
 	if (!ctx->inspect_only) {
 		if (OPT(player, birth_no_selling) && !is_home) {
 			text_out_c(COLOUR_L_GREEN, "d");
-			text_out(" (or ");
+			text_out("%s", angdroid_store_ui_text(" (or ", zh_tw));
 			text_out_c(COLOUR_L_GREEN, "s");
-			text_out(")");
-			text_out(" gives an item to the store in return for its identification. Some wands and staves will also be recharged. ");
+			text_out("%s", angdroid_store_ui_text(")", zh_tw));
+			text_out("%s", angdroid_store_ui_text(" gives an item to the store in return for its identification. Some wands and staves will also be recharged. ", zh_tw));
 		} else {
 			text_out_c(COLOUR_L_GREEN, "d");
-			text_out(" (or ");
+			text_out("%s", angdroid_store_ui_text(" (or ", zh_tw));
 			text_out_c(COLOUR_L_GREEN, "s");
-			text_out(")");
-			if (is_home) text_out(" drops");
-			else text_out(" sells");
-			text_out(" an item from your inventory. ");
+			text_out("%s", angdroid_store_ui_text(")", zh_tw));
+			if (is_home) text_out("%s", angdroid_store_ui_text(" drops", zh_tw));
+			else text_out("%s", angdroid_store_ui_text(" sells", zh_tw));
+			text_out("%s", angdroid_store_ui_text(" an item from your inventory. ", zh_tw));
 		}
 	}
 	text_out_c(COLOUR_L_GREEN, "I");
-	text_out(" inspects an item from your inventory. ");
+	text_out("%s", angdroid_store_ui_text(" inspects an item from your inventory. ", zh_tw));
 
 	text_out_c(COLOUR_L_GREEN, "ESC");
 	if (!ctx->inspect_only)
-		text_out(" exits the building.");
+		text_out("%s", angdroid_store_ui_text(" exits the building.", zh_tw));
 	else
-		text_out(" exits this screen.");
+		text_out("%s", angdroid_store_ui_text(" exits this screen.", zh_tw));
 
 	text_out_indent = 0;
 }
@@ -445,17 +496,29 @@ static void store_redraw(struct store_context *ctx)
 	if (ctx->flags & (STORE_FRAME_CHANGE)) {
 		store_display_frame(ctx);
 
-		if (ctx->flags & STORE_SHOW_HELP)
+		/* Multiline help requires a wide/tall surface. On phones,
+		 * keep the stock rows and display only a one-line shortcut. */
+		if ((ctx->flags & STORE_SHOW_HELP) &&
+			Term->wid >= 70 && Term->hgt >= 16)
 			store_display_help(ctx);
-		else
-			prt("Press '?' for help.", ctx->scr_places_y[LOC_HELP_PROMPT], 1);
+		else if (Term->hgt >= 7)
+			fa_store_put_clipped(COLOUR_WHITE,
+				angdroid_zh_tw_enabled() ? "按 ? 查看說明" :
+				"Press '?' for help.",
+				ctx->scr_places_y[LOC_HELP_PROMPT], 1,
+				Term->wid - 2);
 
 		ctx->flags &= ~(STORE_FRAME_CHANGE);
 	}
 
 	if (ctx->flags & (STORE_GOLD_CHANGE)) {
-		prt(format("Gold Remaining: %9ld", (long)player->au),
-				ctx->scr_places_y[LOC_AU], ctx->scr_places_x[LOC_AU]);
+		char gold_text[80];
+		strnfmt(gold_text, sizeof(gold_text),
+			angdroid_zh_tw_enabled() ? "剩餘金幣：%9ld" :
+			"Gold Remaining: %9ld", (long)player->au);
+		fa_store_put_clipped(COLOUR_WHITE, gold_text,
+			ctx->scr_places_y[LOC_AU], ctx->scr_places_x[LOC_AU],
+			Term->wid - (int)ctx->scr_places_x[LOC_AU]);
 		ctx->flags &= ~(STORE_GOLD_CHANGE);
 	}
 }
@@ -464,8 +527,10 @@ static bool store_get_check(const char *prompt)
 {
 	struct keypress ch;
 
-	/* Prompt for it */
-	prt(prompt, 0, 0);
+    /* A shorter localized label must erase the previous top-line text. */
+    prt("", 0, 0);
+    fa_store_put_clipped(COLOUR_WHITE, prompt, 0, 0,
+        Term ? Term->wid : 0);
 
 	/* Get an answer */
 	ch = inkey();
@@ -502,6 +567,9 @@ static bool store_sell(struct store_context *ctx)
 	const char *prompt = OPT(player, birth_no_selling) ? "Give which item? " : "Sell which item? ";
 
 	assert(store);
+	/* The knowledge-only shop is read-only, even with a key queued from
+	 * another menu. Header/info actions are unaffected. */
+	if (ctx->inspect_only) return false;
 
 	/* Clear all current messages */
 	msg_flag = false;
@@ -517,20 +585,37 @@ static bool store_sell(struct store_context *ctx)
 	/* Get an item */
 	player->upkeep->command_wrk = USE_INVEN;
 
-	if (!get_item(&obj, prompt, reject, CMD_DROP, tester, get_mode))
+	/* Keep the original command and tester, translate only the prompts. */
+	if (!get_item(&obj,
+			angdroid_store_ui_text(prompt, angdroid_zh_tw_enabled()),
+			angdroid_store_ui_text(reject, angdroid_zh_tw_enabled()),
+			CMD_DROP, tester, get_mode))
 		return false;
 
 	/* Cannot remove stickied objects */
 	if (object_is_equipped(player->body, obj) && !obj_can_takeoff(obj)) {
 		/* Oops */
-		msg("Hmmm, it seems to be stuck.");
+		msg("%s", angdroid_zh_tw_enabled() ?
+            "這件裝備似乎無法卸下。" : "Hmmm, it seems to be stuck.");
 
 		/* Nope */
 		return false;
 	}
 
 	/* Get a quantity */
-	amt = get_quantity(NULL, obj->number);
+	{
+        char quantity_prompt[128];
+        const char *ask = NULL;
+        if (angdroid_zh_tw_enabled() &&
+            angdroid_store_quantity_prompt(quantity_prompt,
+                sizeof(quantity_prompt),
+                store_is_home(store) ? ANGDROID_STORE_Q_STASH :
+                OPT(player, birth_no_selling) ? ANGDROID_STORE_Q_GIVE :
+                    ANGDROID_STORE_Q_SELL,
+                obj->number, 0))
+            ask = quantity_prompt;
+        amt = get_quantity(ask, obj->number);
+    }
 
 	/* Allow user abort */
 	if (amt <= 0) return false;
@@ -541,16 +626,20 @@ static bool store_sell(struct store_context *ctx)
 	if (!store_check_num(store, temp_obj)) {
 		object_wipe(temp_obj);
 		if (store_is_home(store))
-			msg("Your home is full.");
+			msg("%s", angdroid_game_ui_text(
+                "Your home is full.", angdroid_zh_tw_enabled()));
 		else
-			msg("I have not the room in my store to keep it.");
+			msg("%s", angdroid_game_ui_text(
+                "I have not the room in my store to keep it.",
+                angdroid_zh_tw_enabled()));
 
 		return false;
 	}
 
 	/* Get a full description */
 	object_desc(o_name, sizeof(o_name), temp_obj,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL |
+        (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	/* Real store */
 	if (!store_is_home(store)) {
@@ -562,11 +651,18 @@ static bool store_sell(struct store_context *ctx)
 
 		/* Show price */
 		if (!OPT(player, birth_no_selling))
-			prt(format("Price: %ld", (long)price), 1, 0);
+			fa_store_put_clipped(COLOUR_WHITE,
+                angdroid_zh_tw_enabled() ?
+                    format("價格：%ld", (long)price) :
+                    format("Price: %ld", (long)price),
+                1, 0, Term->wid);
 
 		/* Confirm sale */
-		if (!store_get_check(format("%s %s? [ESC, any other key to accept]",
-				OPT(player, birth_no_selling) ? "Give" : "Sell", o_name))) {
+		if (!store_get_check(angdroid_zh_tw_enabled() ?
+                format("%s %s？[Esc 取消，其他按鍵確認]",
+                    OPT(player, birth_no_selling) ? "交出" : "出售", o_name) :
+                format("%s %s? [ESC, any other key to accept]",
+                    OPT(player, birth_no_selling) ? "Give" : "Sell", o_name))) {
 			screen_load();
 			return false;
 		}
@@ -598,7 +694,7 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 {
 	struct store *store = ctx->store;
 
-	struct object *obj = ctx->list[item];
+	struct object *obj;
 	struct object *dummy = NULL;
 
 	char o_name[80];
@@ -606,6 +702,13 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 	int amt, num;
 
 	int32_t price;
+
+	if (ctx->inspect_only || !store || !ctx->list ||
+		!angdroid_store_stock_index_valid(
+		item, store->stock_num, z_info->store_inven_max) ||
+		!ctx->list[item])
+		return false;
+	obj = ctx->list[item];
 
 	/* Clear all current messages */
 	msg_flag = false;
@@ -621,7 +724,9 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		/* Check if the player can afford any at all */
 		if (!store_is_home(store) &&
 				player->au < price_item(store, obj, false, 1)) {
-			msg("You do not have enough gold for this item.");
+			msg("%s", angdroid_game_ui_text(
+                "You do not have enough gold for this item.",
+                angdroid_zh_tw_enabled()));
 			return false;
 		}
 	} else {
@@ -635,7 +740,9 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 			/* Check if the player can afford any at all */
 			if ((uint32_t)player->au < (uint32_t)price) {
-				msg("You do not have enough gold for this item.");
+				msg("%s", angdroid_game_ui_text(
+                "You do not have enough gold for this item.",
+                angdroid_zh_tw_enabled()));
 				return false;
 			}
 
@@ -662,7 +769,9 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		flavor_aware = object_flavor_is_aware(obj);
 		if (amt <= 0 || (!flavor_aware && !store_is_home(store) &&
 						 pack_is_full())) {
-			msg("You cannot carry that many items.");
+			msg("%s", angdroid_game_ui_text(
+                "You cannot carry that many items.",
+                angdroid_zh_tw_enabled()));
 			return false;
 		}
 
@@ -673,9 +782,14 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		else
 			num = find_inven(obj);
 
-		strnfmt(o_name, sizeof o_name, "%s how many%s? (max %d) ",
-				(store_is_home(store)) ? "Take" : "Buy",
-				num ? format(" (you have %d)", num) : "", amt);
+		if (!(angdroid_zh_tw_enabled() &&
+                angdroid_store_quantity_prompt(o_name, sizeof(o_name),
+                    store_is_home(store) ? ANGDROID_STORE_Q_TAKE :
+                        ANGDROID_STORE_Q_BUY, amt, num))) {
+            strnfmt(o_name, sizeof(o_name), "%s how many%s? (max %d) ",
+                store_is_home(store) ? "Take" : "Buy",
+                num ? format(" (you have %d)", num) : "", amt);
+        }
 
 		/* Get a quantity */
 		amt = get_quantity(o_name, amt);
@@ -684,13 +798,23 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		if (amt <= 0) return false;
 	}
 
+	/* The displayed row can change while the quantity prompt is open.
+	 * Never copy from an object removed/replaced by a stock refresh. */
+	if (ctx->stock_changed || !ctx->list ||
+		!angdroid_store_stock_index_valid(
+			item, store->stock_num, z_info->store_inven_max) ||
+		ctx->list[item] != obj)
+		return false;
+
 	/* Get desired object */
 	dummy = object_new();
 	object_copy_amt(dummy, obj, amt);
 
 	/* Ensure we have room */
 	if (!inven_carry_okay(dummy)) {
-		msg("You cannot carry that many items.");
+		msg("%s", angdroid_game_ui_text(
+                "You cannot carry that many items.",
+                angdroid_zh_tw_enabled()));
 		object_delete(NULL, NULL, &dummy);
 		return false;
 	}
@@ -704,7 +828,8 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 
 		/* Describe the object (fully) */
 		object_desc(o_name, sizeof(o_name), dummy,
-			ODESC_PREFIX | ODESC_FULL | ODESC_STORE, player);
+			ODESC_PREFIX | ODESC_FULL | ODESC_STORE |
+            (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 		/* Extract the price for the entire stack */
 		price = price_item(store, dummy, false, dummy->number);
@@ -712,18 +837,37 @@ static bool store_purchase(struct store_context *ctx, int item, bool single)
 		screen_save();
 
 		/* Show price */
-		prt(format("Price: %ld", (long)price), 1, 0);
+		fa_store_put_clipped(COLOUR_WHITE,
+                angdroid_zh_tw_enabled() ?
+                    format("價格：%ld", (long)price) :
+                    format("Price: %ld", (long)price),
+                1, 0, Term->wid);
 
 		/* Confirm purchase */
-		response = store_get_check(format("Buy %s?%s %s",
-					o_name,
-					obj_can_use ? "" : " (Can't use!)",
-					"[ESC, any other key to accept]"));
+		response = store_get_check(angdroid_zh_tw_enabled() ?
+            format("購買 %s？%s [Esc 取消，其他按鍵確認]",
+                o_name, obj_can_use ? "" : "（目前無法使用）") :
+            format("Buy %s?%s %s", o_name,
+                obj_can_use ? "" : " (Can't use!)",
+                "[ESC, any other key to accept]"));
 
 		screen_load();
 
 		/* Negative response, so give up */
-		if (!response) return false;
+		if (!response) {
+			object_delete(NULL, NULL, &dummy);
+			return false;
+		}
+
+		/* A stock mutation during confirmation invalidates the item
+		 * identity. Do not queue a command using a dangling pointer. */
+		if (ctx->stock_changed || !ctx->list ||
+			!angdroid_store_stock_index_valid(
+				item, store->stock_num, z_info->store_inven_max) ||
+			ctx->list[item] != obj) {
+			object_delete(NULL, NULL, &dummy);
+			return false;
+		}
 
 		cmdq_push(CMD_BUY);
 		cmd_set_arg_item(cmdq_peek(), "item", obj);
@@ -756,7 +900,10 @@ static void store_examine(struct store_context *ctx, int item)
 	region area = { 0, 0, 0, 0 };
 	uint32_t odesc_flags = ODESC_PREFIX | ODESC_FULL;
 
-	if (item < 0) return;
+	if (!ctx->list || !angdroid_store_stock_index_valid(
+		item, ctx->store->stock_num, z_info->store_inven_max) ||
+		!ctx->list[item])
+		return;
 
 	/* Get the actual object */
 	obj = ctx->list[item];
@@ -773,7 +920,7 @@ static void store_examine(struct store_context *ctx, int item)
 
 	/* Show full info in most stores, but normal info in player home */
 	tb = object_info(obj, OINFO_NONE);
-	object_desc(header, sizeof(header), obj, odesc_flags, player);
+	object_desc(header, sizeof(header), obj, odesc_flags | ODESC_ZH_TW, player);
 
 	textui_textblock_show(tb, area, header);
 	textblock_free(tb);
@@ -812,7 +959,13 @@ static void store_menu_set_selections(struct menu *menu, bool knowledge_menu)
 static void store_menu_recalc(struct menu *m)
 {
 	struct store_context *ctx = menu_priv(m);
-	menu_setpriv(m, ctx->store->stock_num, ctx);
+	/* The displayed list is only allocated for store_inven_max entries. */
+	menu_setpriv(m, MAX(0, MIN(ctx->store->stock_num,
+		z_info->store_inven_max)), ctx);
+	/* menu_setpriv() validates bounds, but a reordered slot can contain
+	 * a different object at the same index. Require a fresh tap/key. */
+	angdroid_store_clear_stale_selection(ctx->stock_changed,
+		&m->cursor, &m->top);
 }
 
 /**
@@ -867,27 +1020,29 @@ static bool store_process_command_key(struct keypress kp)
 /**
  * Select an item from the store's stock, and return the stock index
  */
-static int store_get_stock(struct menu *m, int oid)
+static int store_get_stock(struct menu *m)
 {
+	struct store_context *ctx = menu_priv(m);
 	ui_event e;
 	int no_act = m->flags & MN_NO_ACTION;
+	int selected;
 
-	/* Set a flag to make sure that we get the selection or escape
-	 * without running the menu handler */
+	/* An empty shop still accepts Sell/Help, but no stock selection. */
+	if (!ctx->list || ctx->store->stock_num <= 0)
+		return -1;
+
+	/* Selection-only nested menu; canceled/invalidated inputs must not
+	 * buy or examine the previously highlighted stock index. */
 	m->flags |= MN_NO_ACTION;
 	e = menu_select(m, 0, true);
-	if (!no_act) {
+	if (!no_act)
 		m->flags &= ~MN_NO_ACTION;
-	}
 
-	if (e.type == EVT_SELECT) {
-		return m->cursor;
-	} else if (e.type == EVT_ESCAPE) {
-		return -1;
-	}
-
-	/* if we do not have a new selection, just return the original item */
-	return oid;
+	selected = angdroid_store_selected_index(
+		e.type == EVT_SELECT, m->cursor,
+		ctx->store->stock_num, z_info->store_inven_max);
+	return !ctx->stock_changed && selected >= 0 &&
+		ctx->list && ctx->list[selected] ? selected : -1;
 }
 
 /** Enum for context menu entries */
@@ -911,12 +1066,15 @@ static int context_menu_store(struct store_context *ctx, const int oid, int mx, 
 	char *labels = string_make(lower_case);
 	m->selections = labels;
 
-	menu_dynamic_add_label(m, "Inspect inventory", 'I', ACT_INSPECT_INVEN, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Inspect inventory",
+        angdroid_zh_tw_enabled()), 'I', ACT_INSPECT_INVEN, labels);
 	if (!ctx->inspect_only) {
-		menu_dynamic_add_label(m, home ? "Stash" : "Sell", 'd',
-			ACT_SELL, labels);
+		menu_dynamic_add_label(m,
+            angdroid_zh_tw_enabled() ? (home ? "存放" : "出售") :
+                (home ? "Stash" : "Sell"), 'd', ACT_SELL, labels);
 	}
-	menu_dynamic_add_label(m, "Exit", '`', ACT_EXIT, labels);
+	menu_dynamic_add_label(m, angdroid_game_ui_text("Exit",
+        angdroid_zh_tw_enabled()), '`', ACT_EXIT, labels);
 
 	/* Hack -- no flush needed */
 	msg_flag = false;
@@ -925,7 +1083,10 @@ static int context_menu_store(struct store_context *ctx, const int oid, int mx, 
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt("(Enter to select, ESC) Command:", 0, 0);
+    prt("", 0, 0);
+    fa_store_put_clipped(COLOUR_WHITE,
+        angdroid_game_ui_text("(Enter to select, ESC) Command:",
+            angdroid_zh_tw_enabled()), 0, 0, Term->wid);
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
@@ -941,6 +1102,8 @@ static int context_menu_store(struct store_context *ctx, const int oid, int mx, 
 			textui_obj_examine();
 			break;
 		case ACT_EXIT:
+			/* Let menu_handle_mouse turn this header action into Escape. */
+			ctx->exit_requested = true;
 			return false;
 	}
 
@@ -966,27 +1129,41 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 {
 	bool home = store_is_home(ctx->store);
 
-	struct menu *m = menu_dynamic_new();
-	struct object *obj = ctx->list[oid];
+	struct menu *m;
+	struct object *obj;
 	menu_iter mod_iter;
 	int selected;
 	char *labels;
 	char header[120];
 
+	/* Verify a real item before indexing the stock array or allocating
+	 * a modal popup. Empty-store header actions use a different menu. */
+	if (!ctx->list || !angdroid_store_stock_index_valid(
+		oid, ctx->store->stock_num, z_info->store_inven_max) ||
+		!ctx->list[oid])
+		return false;
+	obj = ctx->list[oid];
+	m = menu_dynamic_new();
+
 	object_desc(header, sizeof(header), obj,
-		ODESC_PREFIX | ODESC_FULL | ((home) ? 0 : ODESC_STORE), player);
+		ODESC_PREFIX | ODESC_FULL | ((home) ? 0 : ODESC_STORE) |
+        (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	labels = string_make(lower_case);
 	m->selections = labels;
 
-	menu_dynamic_add_label(m, "Examine", (OPT(player, rogue_like_commands))
+	menu_dynamic_add_label(m,
+        angdroid_game_ui_text("Examine", angdroid_zh_tw_enabled()),
+        (OPT(player, rogue_like_commands))
 		? 'x' : 'l', ACT_EXAMINE, labels);
 	if (!ctx->inspect_only) {
-		menu_dynamic_add_label(m, home ? "Take" : "Buy", 'p',
-			ACT_BUY, labels);
+		menu_dynamic_add_label(m,
+            angdroid_zh_tw_enabled() ? (home ? "取出" : "購買") :
+                (home ? "Take" : "Buy"), 'p', ACT_BUY, labels);
 		if (obj->number > 1) {
-			menu_dynamic_add_label(m, home ? "Take one" : "Buy one",
-				'o', ACT_BUY_ONE, labels);
+			menu_dynamic_add_label(m, angdroid_game_ui_text(
+                home ? "Take one" : "Buy one", angdroid_zh_tw_enabled()),
+                'o', ACT_BUY_ONE, labels);
 		}
 		/*
 		 * This a bit of a hack so 'g' acts like 'p' (as it does when
@@ -1006,13 +1183,26 @@ static bool context_menu_store_item(struct store_context *ctx, const int oid, in
 	menu_dynamic_calc_location(m, mx, my);
 	region_erase_bordered(&m->boundary);
 
-	prt(format("(Enter to select, ESC) Command for %s:", header), 0, 0);
+    prt("", 0, 0);
+    fa_store_put_clipped(COLOUR_WHITE,
+        angdroid_zh_tw_enabled() ?
+            format("Enter 選取／Esc 返回：%s", header) :
+            format("(Enter to select, ESC) Command for %s:", header),
+        0, 0, Term->wid);
 	selected = menu_dynamic_select(m);
 
 	menu_dynamic_free(m);
 	string_free(labels);
 
 	screen_load();
+
+	/* Never execute the popup's result against a different stock item if
+	 * the inventory changed while the dialog was open. */
+	if (ctx->stock_changed || !ctx->list ||
+		!angdroid_store_stock_index_valid(
+			oid, ctx->store->stock_num, z_info->store_inven_max) ||
+		ctx->list[oid] != obj)
+		return false;
 
 	switch (selected) {
 		case ACT_EXAMINE:
@@ -1034,11 +1224,22 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 	bool processed = true;
 	struct store_context *ctx = menu_priv(m);
 	struct store *store = ctx->store;
-	
+
+	/* This is a new user input; an intervening stock refresh will set
+	 * stock_changed again, including while a nested popup is active. */
+	ctx->stock_changed = false;
+
 	if (event->type == EVT_SELECT) {
-		/* Hack -- there's no mouse event coordinates to use for */
-		/* menu_store_item, so fake one as if mouse clicked on letter */
-		bool purchased = context_menu_store_item(ctx, oid, 1, m->active.row + oid);
+		int popup_row = angdroid_store_menu_screen_row(
+			oid, m->top, m->active.row, m->active.page_rows);
+		/* A shrink, filter update, or rotation may invalidate an existing
+		 * stock row. Never dereference or open a popup for stale data. */
+		if (!ctx->list || !angdroid_store_stock_index_valid(
+			oid, store->stock_num, z_info->store_inven_max) ||
+			!ctx->list[oid] || popup_row < 0)
+			return false;
+
+		(void)context_menu_store_item(ctx, oid, 1, popup_row);
 		ctx->flags |= (STORE_FRAME_CHANGE | STORE_GOLD_CHANGE);
 
 		/* Let the game handle any core commands (equipping, etc) */
@@ -1048,13 +1249,13 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 		notice_stuff(player);
 		handle_stuff(player);
 
-		if (purchased) {
-			/* Display the store */
-			store_display_recalc(ctx);
-			store_menu_recalc(m);
-			store_redraw(ctx);
-		}
-
+		/* The popup restores its saved screen even on Examine or Cancel.
+		 * A stock-change callback may have repainted underneath that
+		 * snapshot; always restore the current frame, hints and prices.
+		 * The outer menu loop will draw the current stock rows next. */
+		store_display_recalc(ctx);
+		store_menu_recalc(m);
+		store_redraw(ctx);
 		return true;
 	} else if (event->type == EVT_MOUSE) {
 		if (event->mouse.button == 2) {
@@ -1069,8 +1270,13 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 					return false;
 
 				action = true;
-			} else if ((oid >= 0) && (event->mouse.y == m->active.row + oid)) {
-				/* if press is on a list item, so store item context */
+			} else if (region_inside(&m->active, event) &&
+				ctx->list && angdroid_store_stock_index_valid(
+					oid, store->stock_num, z_info->store_inven_max) &&
+				ctx->list[oid] &&
+				event->mouse.y == angdroid_store_menu_screen_row(
+					oid, m->top, m->active.row, m->active.page_rows)) {
+				/* Only the selected visible stock row may open this popup. */
 				context_menu_store_item(ctx, oid, event->mouse.x,
 										event->mouse.y);
 				action = true;
@@ -1104,13 +1310,21 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 				/* use the old way of purchasing items */
 				msg_flag = false;
 				if (!store_is_home(store)) {
-					prt("Purchase which item? (ESC to cancel, Enter to select)",
-						0, 0);
+                    prt("", 0, 0);
+                    fa_store_put_clipped(COLOUR_WHITE,
+                        angdroid_game_ui_text(
+                            "Purchase which item? (ESC to cancel, Enter to select)",
+                            angdroid_zh_tw_enabled()),
+                        0, 0, Term->wid);
 				} else {
-					prt("Get which item? (Esc to cancel, Enter to select)",
-						0, 0);
+                    prt("", 0, 0);
+                    fa_store_put_clipped(COLOUR_WHITE,
+                        angdroid_game_ui_text(
+                            "Get which item? (Esc to cancel, Enter to select)",
+                            angdroid_zh_tw_enabled()),
+                        0, 0, Term->wid);
 				}
-				oid = store_get_stock(m, oid);
+				oid = store_get_stock(m);
 				prt("", 0, 0);
 				if (oid >= 0) {
 					store_purchase(ctx, oid, false);
@@ -1120,9 +1334,13 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 			case 'x':
 				/* use the old way of examining items */
 				msg_flag = false;
-				prt("Examine which item? (ESC to cancel, Enter to select)",
-					0, 0);
-				oid = store_get_stock(m, oid);
+                prt("", 0, 0);
+                fa_store_put_clipped(COLOUR_WHITE,
+                    angdroid_game_ui_text(
+                        "Examine which item? (ESC to cancel, Enter to select)",
+                        angdroid_zh_tw_enabled()),
+                    0, 0, Term->wid);
+				oid = store_get_stock(m);
 				prt("", 0, 0);
 				if (oid >= 0) {
 					store_examine(ctx, oid);
@@ -1173,6 +1391,37 @@ static bool store_menu_handle(struct menu *m, const ui_event *event, int oid)
 	return false;
 }
 
+/* The native menu driver calls this after EVT_RESIZE.  Recalculate
+ * header and footer positions as well as the menu bounds before repaint. */
+static void store_menu_resize(struct menu *m)
+{
+	struct store_context *ctx = menu_priv(m);
+
+	if (!ctx || !Term) return;
+	store_display_recalc(ctx);
+	ctx->flags |= STORE_FRAME_CHANGE | STORE_GOLD_CHANGE;
+	store_redraw(ctx);
+
+	/* The shared FA menu event loop now checks the recalculated region
+	 * and refreshes item rows exactly once, even if the cursor is unchanged.
+	 * Do not repaint here; that caused duplicate work on every rotation. */
+}
+
+/* The shopkeeper menu is above the item list, so a deliberate Exit
+ * must work at every header X coordinate without misclassifying Cancel
+ * or a tap on the first column as a generic Back gesture. */
+static bool store_menu_context_exit(struct menu *m,
+	const ui_event *in, ui_event *out)
+{
+	struct store_context *ctx = menu_priv(m);
+
+	if (!ctx || !ctx->exit_requested || in->type != EVT_MOUSE)
+		return false;
+	ctx->exit_requested = false;
+	out->type = EVT_ESCAPE;
+	return true;
+}
+
 static region store_menu_region = { 1, 4, -1, -2 };
 static const menu_iter store_menu =
 {
@@ -1180,7 +1429,7 @@ static const menu_iter store_menu =
 	NULL,
 	store_display_entry,
 	store_menu_handle,
-	NULL
+	store_menu_resize
 };
 
 /**
@@ -1193,12 +1442,19 @@ static void store_menu_init(struct store_context *ctx, struct store *store, bool
 	ctx->store = store;
 	ctx->flags = STORE_INIT_CHANGE;
 	ctx->inspect_only = inspect_only;
+	ctx->stock_changed = false;
+	ctx->exit_requested = false;
 	ctx->list = mem_zalloc(sizeof(struct object *) * z_info->store_inven_max);
 
 	store_stock_list(ctx->store, ctx->list, z_info->store_inven_max);
 
 	/* Init the menu structure */
 	menu_init(menu, MN_SKIN_SCROLL, &store_menu);
+	menu->context_hook = store_menu_context_exit;
+	/* Empty shops must still accept Sell, Help, Options and header taps. */
+	/* Store stock rows use EVT_MOUSE coordinates for their context
+	 * popups; generic item pickers use EVT_SELECT instead. */
+	menu->flags |= MN_ALLOW_EMPTY_INPUT | MN_MOUSE_ROW_ACTION;
 	menu_setpriv(menu, 0, ctx);
 
 	/* Calculate the positions of things and draw */
@@ -1222,7 +1478,9 @@ void textui_store_knowledge(struct store *store)
 	clear_from(0);
 
 	if (!store) {
-		prt("You have no home!", 15, 0);
+        fa_store_put_clipped(COLOUR_WHITE,
+            angdroid_zh_tw_enabled() ? "你目前沒有住家！" :
+                "You have no home!", 15, 0, Term->wid);
 		anykey();
 		screen_load();
 		return;
@@ -1250,6 +1508,11 @@ static void refresh_stock(game_event_type type, game_event_data *unused, void *u
 
 	store_stock_list(ctx->store, ctx->list, z_info->store_inven_max);
 
+	/* A fast queued second tap refers to the old list arrangement.
+	 * Drop stale input, then clear the selected slot identity. */
+	ctx->stock_changed = true;
+	Term_flush();
+
 	/* Display the store */
 	store_display_recalc(ctx);
 	store_menu_recalc(menu);
@@ -1265,7 +1528,8 @@ void enter_store(game_event_type type, game_event_data *data, void *user)
 
 	/* Check that we're on a store */
 	if (!store) {
-		msg("You see no store here.");
+        msg("%s", angdroid_game_ui_text(
+            "You see no store here.", angdroid_zh_tw_enabled()));
 		return;
 	}
 

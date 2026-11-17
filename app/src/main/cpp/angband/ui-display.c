@@ -60,6 +60,15 @@
 #include "wizard.h"
 
 #include "droid.h"
+#include "menu-text-fit.h"
+#include "zh-tw-timed-status.h"
+#include "zh-tw-terrain-trap.h"
+#include "statusline-bounds.h"
+#include "compact-player-viewport.h"
+#include "zh-tw-ui.h"
+#include "zh-tw-class-titles.h"
+#include "zh-tw-shape-display.h"
+#include "zh-tw-character-sheet.h"
 
 /**
  * There are a few functions installed to be triggered by several 
@@ -141,10 +150,25 @@ void cnv_stat(int val, char *out_val, size_t out_len)
  */
 static void prt_field(const char *info, int row, int col)
 {
-	/* Dump 13 spaces to clear */
-	c_put_str(COLOUR_WHITE, "             ", row, col);
+	/* Chinese labels may require several UTF-8 bytes per display cell.
+	 * Clear the original 13-cell field, then copy only complete glyphs
+	 * into that same field. Never let it overwrite the next widget. */
+	if (angdroid_zh_tw_enabled()) {
+		char visible[96];
+		size_t width;
 
-	/* Dump the info itself */
+		if (!Term || row < 0 || row >= Term->hgt ||
+			col < 0 || col >= Term->wid) return;
+		width = (size_t)(Term->wid - col);
+		if (width > 13) width = 13;
+		Term_erase(col, row, (int)width);
+		angdroid_menu_copy_columns(visible, sizeof(visible), info, width);
+		if (visible[0]) c_put_str(COLOUR_L_BLUE, visible, row, col);
+		return;
+	}
+
+	/* Preserve the original English sidebar presentation. */
+	c_put_str(COLOUR_WHITE, "             ", row, col);
 	c_put_str(COLOUR_L_BLUE, info, row, col);
 }
 
@@ -191,6 +215,18 @@ static int fmt_title(char buf[], int max, bool short_mode)
 	return strlen(buf);
 }
 
+/* fmt_title() still formats canonical English for existing callers.
+ * Use the untruncated source name for visible shape captions, so long CJK
+ * translations never pass through fmt_title()'s 32-byte English buffer. */
+static const char *angdroid_visible_player_title(const char *canonical)
+{
+    if (!angdroid_zh_tw_enabled()) return canonical;
+    if (!player->wizard && !player->total_winner &&
+        player->lev <= PY_MAX_LEVEL && player_is_shapechanged(player))
+        return angdroid_shape_display_name(player->shape->name, true);
+    return angdroid_zh_tw_class_title(canonical, true);
+}
+
 /**
  * Prints title, including wizard, winner or shape as needed.
  */
@@ -198,9 +234,9 @@ static void prt_title(int row, int col)
 {	
 	char buf[32];
 
-	fmt_title(buf, sizeof(buf), false);	
+	fmt_title(buf, sizeof(buf), false);
 
-	prt_field(buf, row, col);
+	prt_field(angdroid_visible_player_title(buf), row, col);
 }
 
 /**
@@ -277,8 +313,13 @@ static void prt_equippy(int row, int col)
 
 	struct object *obj;
 
+	/* A character may have more equipment slots than a resized
+	 * compact window has columns; never draw those offscreen cells. */
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return;
+
 	/* Dump equippy chars */
-	for (i = 0; i < player->body.count; i++) {
+	for (i = 0; i < player->body.count && i < Term->wid - col; i++) {
 		/* Object */
 		obj = slot_object(player, i);
 
@@ -426,8 +467,21 @@ uint8_t monster_health_attr(void)
 
 static int prt_health_aux(int row, int col)
 {
-	uint8_t attr = monster_health_attr();
-	struct monster *mon = player->upkeep->health_who;
+	uint8_t attr;
+	struct monster *mon;
+
+	/* The regular/sidebar health renderer also runs in user-resized
+	 * subwindows.  Do not write the 12-cell bar beyond the right edge.
+	 * Clearing the visible remainder removes an old partial bar. */
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	if (!angdroid_statusline_fits_field(col, 12, Term->wid)) {
+		Term_erase(col, row, Term->wid - col);
+		return 0;
+	}
+
+	attr = monster_health_attr();
+	mon = player->upkeep->health_who;
 
 	/* Not tracking */
 	if (!mon) {
@@ -439,7 +493,8 @@ static int prt_health_aux(int row, int col)
 	/* Tracking an unseen, hallucinatory, or dead monster */
 	if (!monster_is_visible(mon) || /* Unseen */
 		(player->timed[TMD_IMAGE]) || /* Hallucination */
-		(mon->hp < 0)) { /* Dead (?) */
+		(mon->hp < 0) || /* Dead (?) */
+		(mon->maxhp <= 0)) { /* Missing denominator: unknown health */
 		/* The monster health is "unknown" */
 		Term_putstr(col, row, 12, attr, "[----------]");
 	} else { /* Visible */
@@ -485,10 +540,10 @@ static int prt_speed_aux(char buf[], int max, uint8_t *attr)
 	/* 110 is normal speed, and requires no display */
 	if (i > 110) {
 		*attr = COLOUR_L_GREEN;
-		type = "Fast";
+		type = angdroid_zh_tw_enabled() ? "加速" : "Fast";
 	} else if (i < 110) {
 		*attr = COLOUR_L_UMBER;
-		type = "Slow";
+		type = angdroid_zh_tw_enabled() ? "減速" : "Slow";
 	}
 
 	if (type && !OPT(player, effective_speed))
@@ -501,7 +556,7 @@ static int prt_speed_aux(char buf[], int max, uint8_t *attr)
 		strnfmt(buf, max, "%s (%d.%dx)", type, int_mul, dec_mul);
 	}
 
-	return strlen(buf);
+	return (int)angdroid_utf8_display_columns(buf);
 }
 
 /**
@@ -514,8 +569,14 @@ static void prt_speed(int row, int col)
 
 	prt_speed_aux(buf, sizeof(buf), &attr);
 
-	/* Display the speed */
-	c_put_str(attr, format("%-11s", buf), row, col);
+	/* Preserve the original English 11-cell sidebar.  UTF-8 Chinese
+	 * labels need terminal-cell padding rather than printf byte padding. */
+	if (angdroid_zh_tw_enabled()) {
+		c_put_str(attr, "           ", row, col);
+		c_put_str(attr, buf, row, col);
+	} else {
+		c_put_str(attr, format("%-11s", buf), row, col);
+	}
 }
 
 static int fmt_depth(char buf[], int max)
@@ -537,7 +598,23 @@ static void prt_depth(int row, int col)
 
 	fmt_depth(depths, sizeof(depths));
 
-	/* Right-Adjust the "depth", and clear old values */
+	if (angdroid_zh_tw_enabled()) {
+		const char *localized = angdroid_character_sheet_text(depths, true);
+		char visible[96];
+		size_t width;
+
+		if (!Term || row < 0 || row >= Term->hgt ||
+			col < 0 || col >= Term->wid) return;
+		width = (size_t)(Term->wid - col);
+		if (width > 13) width = 13;
+		Term_erase(col, row, (int)width);
+		angdroid_menu_copy_columns(visible, sizeof(visible),
+			localized, width);
+		if (visible[0]) c_put_str(COLOUR_WHITE, visible, row, col);
+		return;
+	}
+
+	/* Preserve the original English 13-cell sidebar depth display. */
 	put_str(format("%-13s", depths), row, col);
 }
 
@@ -556,8 +633,26 @@ static void prt_race(int row, int col) {
 	if (player_is_shapechanged(player)) {
 		prt_field("", row, col);
 	} else {
-		prt_field(player->race->name, row, col);
+		prt_field(angdroid_game_ui_text(player->race->name,
+			angdroid_zh_tw_enabled()), row, col);
 	}
+}
+
+/* Compact topbar names are not 13-cell sidebar fields. In zh-TW mode
+ * clip to the remaining terminal columns and advance by visible cells. */
+static int prt_compact_zh_caption(const char *label, uint8_t attr,
+	int row, int col)
+{
+	char visible[512];
+	size_t available, used;
+
+	if (!Term || !label || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	available = (size_t)(Term->wid - col);
+	used = angdroid_menu_copy_columns(visible, sizeof(visible),
+		label, available);
+	if (visible[0]) c_put_str(attr, visible, row, col);
+	return (int)used + (used < available ? 1 : 0);
 }
 
 static int prt_race_class_short(int row, int col)
@@ -566,12 +661,19 @@ static int prt_race_class_short(int row, int col)
 
 	if (player_is_shapechanged(player)) return 0;
 
+	if (angdroid_zh_tw_enabled()) {
+		strnfmt(buf, sizeof(buf), "%s %s",
+			angdroid_game_ui_text(player->race->name, true),
+			angdroid_zh_tw_class_title(
+				player->class->title[(player->lev - 1) / 5], true));
+		return prt_compact_zh_caption(buf, COLOUR_L_GREEN, row, col);
+	}
+
 	strnfmt(buf, sizeof(buf), "%s %s",
 		player->race->name,
 		player->class->title[(player->lev - 1) / 5]);
 
 	c_put_str(COLOUR_L_GREEN, buf, row, col);
-
 	return strlen(buf)+1;
 }
 
@@ -579,18 +681,29 @@ static void prt_class(int row, int col) {
 	if (player_is_shapechanged(player)) {
 		prt_field("", row, col);
 	} else {
-		prt_field(player->class->name, row, col);
+		prt_field(angdroid_game_ui_text(player->class->name,
+			angdroid_zh_tw_enabled()), row, col);
 	}
 }
 
 /**
  * Prints level
  */
+/* Every compact numeric field writes a fixed ASCII label plus digits.
+ * Avoid letting a handler print a value at col + label-width when the
+ * terminal ends in the middle of that field. */
+static bool prt_short_field_fits(int row, int col, size_t columns)
+{
+	return Term && row >= 0 && row < Term->hgt &&
+		angdroid_statusline_fits_field(col, columns, Term->wid);
+}
+
 static int prt_level_short(int row, int col)
 {
 	char tmp[32];
 
 	strnfmt(tmp, sizeof(tmp), "%d", player->lev);
+	if (!prt_short_field_fits(row, col, 2 + strlen(tmp))) return 0;
 
 	if (player->lev >= player->max_lev) {
 		put_str("L:", row, col);
@@ -607,27 +720,22 @@ static int prt_stat_short(int stat, int row, int col)
 {
 	char tmp[32];
 
-	/* Injured or healthy stat */
+	cnv_stat(player->state.stat_use[stat], tmp, sizeof(tmp));
+	/* Trim whitespace before checking its actual printed width. */
+	strskip(tmp, ' ', 0);
+	if (!prt_short_field_fits(row, col, 2 + strlen(tmp))) return 0;
+
 	if (player->stat_cur[stat] < player->stat_max[stat]) {
-		put_str(format("%c:", stat_names_reduced[stat][0]), row, col);		
-		cnv_stat(player->state.stat_use[stat], tmp, sizeof(tmp));
-		/* Trim whitespace */
-		strskip(tmp,' ', 0);
+		put_str(format("%c:", stat_names_reduced[stat][0]), row, col);
 		c_put_str(COLOUR_YELLOW, tmp, row, col + 2);
 	} else {
 		put_str(format("%c:", stat_names[stat][0]), row, col);
-		cnv_stat(player->state.stat_use[stat], tmp, sizeof(tmp));
-		/* Trim whitespace */
-		strskip(tmp,' ', 0);
-		if (player->stat_max[stat] == 18+100) {
+		if (player->stat_max[stat] == 18+100)
 			c_put_str(COLOUR_L_BLUE, tmp, row, col + 2);
-		}
-		else {
-			c_put_str(COLOUR_L_GREEN, tmp, row, col + 2);	
-		}		
+		else
+			c_put_str(COLOUR_L_GREEN, tmp, row, col + 2);
 	}
-
-	return 3+strlen(tmp);
+	return 3 + strlen(tmp);
 }
 
 static int prt_exp_short(int row, int col)
@@ -644,6 +752,8 @@ static int prt_exp_short(int row, int col)
 
 	/* Format XP */
 	strnfmt(out_val, sizeof(out_val), "%ld", xp);
+	if (!prt_short_field_fits(row, col,
+		4 + strlen(out_val))) return 0;
 
 	if (player->exp >= player->max_exp) {
 		put_str((lev50 ? "EXP:" : "NXT:"), row, col);
@@ -660,9 +770,10 @@ static int prt_ac_short(int row, int col)
 {
 	char tmp[32];
 
-	put_str("AC:", row, col);
 	strnfmt(tmp, sizeof(tmp), "%d", 
 			player->known_state.ac + player->known_state.to_a);
+	if (!prt_short_field_fits(row, col, 3 + strlen(tmp))) return 0;
+	put_str("AC:", row, col);
 	c_put_str(COLOUR_L_GREEN, tmp, row, col + 3);
 	return 4+strlen(tmp);
 }
@@ -671,10 +782,44 @@ static int prt_gold_short(int row, int col)
 {
 	char tmp[32];
 
-	put_str("AU:", row, col);
 	strnfmt(tmp, sizeof(tmp), "%ld", (long)player->au);
+	if (!prt_short_field_fits(row, col, 3 + strlen(tmp))) return 0;
+	put_str("AU:", row, col);
 	c_put_str(COLOUR_L_GREEN, tmp, row, col + 3);
 	return 4+strlen(tmp);
+}
+
+/* The compact row may be narrower than even "HP:123/456".  Never pass
+ * a value to c_put_str() with a starting column outside the terminal.
+ * Show complete numeric values only; do not display a misleading half-number.
+ * Return terminal columns, with a separator only if there is room. */
+static int prt_vital_short_clipped(const char *prefix,
+	const char *current, const char *maximum, uint8_t color,
+	int row, int col)
+{
+	char visible[4];
+	size_t room, used, length;
+
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	room = (size_t)(Term->wid - col);
+	used = angdroid_menu_copy_columns(visible, sizeof(visible),
+		prefix, room);
+	if (visible[0]) c_put_str(COLOUR_WHITE, visible, row, col);
+
+	length = strlen(current);
+	if (used == 3 && length <= room - used) {
+		c_put_str(color, current, row, col + (int)used);
+		used += length;
+		length = strlen(maximum);
+		if (length + 1 <= room - used) {
+			c_put_str(COLOUR_WHITE, "/", row, col + (int)used);
+			++used;
+			c_put_str(COLOUR_L_GREEN, maximum, row, col + (int)used);
+			used += length;
+		}
+	}
+	return (int)used + (used < room ? 1 : 0);
 }
 
 static int prt_hp_short(int row, int col)
@@ -682,18 +827,24 @@ static int prt_hp_short(int row, int col)
 	char cur_hp[32], max_hp[32];
 	uint8_t color = player_hp_attr(player);
 
-	put_str("HP:", row, col);
-	col += 3;
-
 	strnfmt(max_hp, sizeof(max_hp), "%d", player->mhp);
 	strnfmt(cur_hp, sizeof(cur_hp), "%d", player->chp);
-	
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	if ((size_t)(Term->wid - col) <
+		4 + strlen(cur_hp) + strlen(max_hp))
+		return prt_vital_short_clipped("HP:", cur_hp, max_hp,
+			color, row, col);
+
+	/* Keep the original full-width color blocks and English text. */
+	put_str("HP:", row, col);
+	col += 3;
 	c_put_str(color, cur_hp, row, col);
 	col += strlen(cur_hp);
 	c_put_str(COLOUR_WHITE, "/", row, col);
-	col += 1;
+	++col;
 	c_put_str(COLOUR_L_GREEN, max_hp, row, col);
-	return 5+strlen(cur_hp)+strlen(max_hp);
+	return 5 + strlen(cur_hp) + strlen(max_hp);
 }
 
 static int prt_sp_short(int row, int col)
@@ -701,29 +852,38 @@ static int prt_sp_short(int row, int col)
 	char cur_sp[32], max_sp[32];
 	uint8_t color = player_sp_attr(player);
 
-	/* Do not show mana unless we should have some */
+	/* Do not show mana unless the class has gained spellcasting. */
 	if (!player->class->magic.total_spells
-			|| (player->lev < player->class->magic.spell_first))
+			|| player->lev < player->class->magic.spell_first)
 		return 0;
+	strnfmt(max_sp, sizeof(max_sp), "%d", player->msp);
+	strnfmt(cur_sp, sizeof(cur_sp), "%d", player->csp);
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	if ((size_t)(Term->wid - col) <
+		4 + strlen(cur_sp) + strlen(max_sp))
+		return prt_vital_short_clipped("SP:", cur_sp, max_sp,
+			color, row, col);
 
 	put_str("SP:", row, col);
 	col += 3;
-
-	strnfmt(max_sp, sizeof(max_sp), "%d", player->msp);
-	strnfmt(cur_sp, sizeof(cur_sp), "%d", player->csp);
-
-	/* Show mana */
 	c_put_str(color, cur_sp, row, col);
 	col += strlen(cur_sp);
 	c_put_str(COLOUR_WHITE, "/", row, col);
-	col += 1;
+	++col;
 	c_put_str(COLOUR_L_GREEN, max_sp, row, col);
-	return 5+strlen(cur_sp)+strlen(max_sp);
+	return 5 + strlen(cur_sp) + strlen(max_sp);
 }
 
 static int prt_health_short(int row, int col)
 {
-	int len = prt_health_aux(row, col);
+	int len;
+
+	/* Health bar writes 12 cells internally (including the padding).
+	 * Skip it if the remaining compact row is shorter than that. */
+	if (!Term || row < 0 || row >= Term->hgt || col < 0 ||
+		col >= Term->wid || Term->wid - col < 12) return 0;
+	len = prt_health_aux(row, col);
 	if (len > 0) {
 		return len+1;
 	}
@@ -735,8 +895,10 @@ static int prt_speed_short(int row, int col)
 	char buf[32];
 	uint8_t attr;
 
-	int len = prt_speed_aux(buf, sizeof(buf), &attr);	
+	int len = prt_speed_aux(buf, sizeof(buf), &attr);
 	if (len > 0) {
+		if (angdroid_zh_tw_enabled())
+			return prt_compact_zh_caption(buf, attr, row, col);
 		c_put_str(attr, buf, row, col);
 		return len+1;
 	}
@@ -748,6 +910,10 @@ static int prt_depth_short(int row, int col)
 	char buf[32];
 	
 	int len = fmt_depth(buf, sizeof(buf));
+	if (angdroid_zh_tw_enabled())
+		return prt_compact_zh_caption(
+			angdroid_character_sheet_text(buf, true),
+			COLOUR_WHITE, row, col);
 	put_str(buf, row, col);
 	return len+1;
 }
@@ -758,7 +924,11 @@ static int prt_title_short(int row, int col)
 	
 	int len = fmt_title(buf, sizeof(buf), true);
 	if (len > 0) {
-		c_put_str(COLOUR_YELLOW, buf, row, col);	
+		if (angdroid_zh_tw_enabled())
+			return prt_compact_zh_caption(
+				angdroid_visible_player_title(buf),
+				COLOUR_YELLOW, row, col);
+		c_put_str(COLOUR_YELLOW, buf, row, col);
 		return len+1;
 	}	
 	return 0;
@@ -766,38 +936,49 @@ static int prt_title_short(int row, int col)
 
 static void update_topbar(game_event_type type, game_event_data *data,
 						  void *user, int row)
-{	
-	int col = 0;	
+{
+	int col = 0;
+
+	/* Guard handlers before giving them an offscreen starting column.
+	 * A compact subwindow can also be shorter than two rows. */
+	if (!Term || row < 0 || row >= Term->hgt || Term->wid <= 0) return;
+#define APPEND_TOPBAR(call) do { \
+	if (angdroid_statusline_has_room(col, 0, Term->wid)) \
+		col = angdroid_statusline_next_col(col, (size_t)(call), \
+			Term->wid); \
+} while (0)
 
 	prt("", row, col);	
 
-	col += prt_level_short(row, col);
+	APPEND_TOPBAR(prt_level_short(row, col));
 
-	col += prt_exp_short(row, col);
+	APPEND_TOPBAR(prt_exp_short(row, col));
 	
-	col += prt_stat_short(STAT_STR, row, col);
-	col += prt_stat_short(STAT_INT, row, col);
-	col += prt_stat_short(STAT_WIS, row, col);
-	col += prt_stat_short(STAT_DEX, row, col);
-	col += prt_stat_short(STAT_CON, row, col);
+	APPEND_TOPBAR(prt_stat_short(STAT_STR, row, col));
+	APPEND_TOPBAR(prt_stat_short(STAT_INT, row, col));
+	APPEND_TOPBAR(prt_stat_short(STAT_WIS, row, col));
+	APPEND_TOPBAR(prt_stat_short(STAT_DEX, row, col));
+	APPEND_TOPBAR(prt_stat_short(STAT_CON, row, col));
 
-	col += prt_ac_short(row, col);
+	APPEND_TOPBAR(prt_ac_short(row, col));
 
-	col += prt_gold_short(row, col);
+	APPEND_TOPBAR(prt_gold_short(row, col));
 
-	col += prt_race_class_short(row, col);
+	APPEND_TOPBAR(prt_race_class_short(row, col));
 
 	++row;
+	if (row >= Term->hgt) return;
 	col = 0;
 
 	prt("", row, col);
 
-	col += prt_hp_short(row, col);
-	col += prt_sp_short(row, col);
-	col += prt_health_short(row, col);	
-	col += prt_speed_short(row, col);
-	col += prt_depth_short(row, col);
-	col += prt_title_short(row, col);
+	APPEND_TOPBAR(prt_hp_short(row, col));
+	APPEND_TOPBAR(prt_sp_short(row, col));
+	APPEND_TOPBAR(prt_health_short(row, col));	
+	APPEND_TOPBAR(prt_speed_short(row, col));
+	APPEND_TOPBAR(prt_depth_short(row, col));
+	APPEND_TOPBAR(prt_title_short(row, col));
+#undef APPEND_TOPBAR
 }
 
 
@@ -921,30 +1102,49 @@ struct state_info
 	uint8_t attr;
 };
 
+/* Clip translated status at complete UTF-8 characters and advance by
+ * display cells, never by the encoded byte count. */
+static size_t ang_status_put(uint8_t attr, const char *message,
+	int row, int col)
+{
+	char visible[192];
+	size_t cells;
+
+	if (!Term || !message || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return 0;
+	cells = angdroid_menu_copy_columns(visible, sizeof(visible),
+		message, (size_t)(Term->wid - col));
+	if (visible[0]) c_put_str(attr, visible, row, col);
+	return cells + 1;
+}
+
+/* Labels with their own trailing space do not need a second separator. */
+static size_t ang_status_put_exact(uint8_t attr, const char *message,
+	int row, int col)
+{
+	size_t advance = ang_status_put(attr, message, row, col);
+	return advance ? advance - 1 : 0;
+}
+
 /**
  * Print recall status.
  */
 static size_t prt_recall(int row, int col)
 {
-	if (player->word_recall) {
-		c_put_str(COLOUR_WHITE, "Recall", row, col);
-		return sizeof "Recall";
-	}
-
+	if (player->word_recall)
+		return ang_status_put(COLOUR_WHITE,
+			angdroid_zh_tw_enabled() ? "回城" : "Recall", row, col);
 	return 0;
 }
-
 
 /**
  * Print deep descent status.
  */
 static size_t prt_descent(int row, int col)
 {
-	if (player->deep_descent) {
-		c_put_str(COLOUR_WHITE, "Descent", row, col);
-		return sizeof "Descent";
-	}
-
+	if (player->deep_descent)
+		return ang_status_put(COLOUR_WHITE,
+			angdroid_zh_tw_enabled() ? "深入" : "Descent", row, col);
 	return 0;
 }
 
@@ -962,6 +1162,36 @@ static size_t prt_state(int row, int col)
 
 	char text[16] = "";
 
+	/* Do not modify ASCII positions inside a multibyte Chinese string.
+	 * Preserve the original English rest/count formatting untouched. */
+	if (angdroid_zh_tw_enabled()) {
+		char zh_text[40] = "";
+		if (player_is_resting(player)) {
+			int n = player_resting_count(player);
+			if (n >= 1000)
+				strnfmt(zh_text, sizeof(zh_text), "休息 %d00", n / 100);
+			else if (n > 0)
+				strnfmt(zh_text, sizeof(zh_text), "休息 %d", n);
+			else if (n == REST_ALL_POINTS)
+				my_strcpy(zh_text, "休息 *****", sizeof(zh_text));
+			else if (n == REST_COMPLETE)
+				my_strcpy(zh_text, "休息 &&&&&", sizeof(zh_text));
+			else if (n == REST_SOME_POINTS)
+				my_strcpy(zh_text, "休息 !!!!!", sizeof(zh_text));
+			else
+				my_strcpy(zh_text, "休息", sizeof(zh_text));
+		} else if (cmd_get_nrepeats()) {
+			int nrepeats = cmd_get_nrepeats();
+			if (nrepeats > 999)
+				strnfmt(zh_text, sizeof(zh_text),
+					"重複 %d00", nrepeats / 100);
+			else
+				strnfmt(zh_text, sizeof(zh_text),
+					"重複 %d", nrepeats);
+		}
+		return zh_text[0] ?
+			ang_status_put(attr, zh_text, row, col) : 0;
+	}
 
 	/* Displayed states are resting and repeating */
 	if (player_is_resting(player)) {
@@ -1112,9 +1342,13 @@ static size_t prt_level_feeling(int row, int col)
 	else
 		strnfmt(mon_feeling_str, 5, "%d", (unsigned int) ( 10-mon_feeling ));
 
-	/* Display it */
-	c_put_str(COLOUR_WHITE, "LF:", row, col);
-	new_col = col + 3;
+	/* Only the label changes: feeling scores and warning colours stay
+	 * identical to their original English display. */
+	{
+		const char *label = angdroid_zh_tw_enabled() ? "層感:" : "LF:";
+		c_put_str(COLOUR_WHITE, label, row, col);
+		new_col = col + (int)angdroid_utf8_display_columns(label);
+	}
 	c_put_str(mon_feeling_color[mon_feeling], mon_feeling_str, row, new_col);
 	new_col += strlen( mon_feeling_str );
 	c_put_str(COLOUR_WHITE, "-", row, new_col);
@@ -1131,14 +1365,11 @@ static size_t prt_level_feeling(int row, int col)
 static size_t prt_light(int row, int col)
 {
 	int light = square_light(cave, player->grid);
+	const char *message = format(angdroid_zh_tw_enabled() ?
+		"光源 %d " : "Light %d ", light);
 
-	if (light > 0) {
-		c_put_str(COLOUR_YELLOW, format("Light %d ", light), row, col);
-	} else {
-		c_put_str(COLOUR_PURPLE, format("Light %d ", light), row, col);
-	}
-
-	return 8 + (ABS(light) > 9 ? 1 : 0) + (light < 0 ? 1 : 0);
+	return ang_status_put_exact(light > 0 ? COLOUR_YELLOW :
+		COLOUR_PURPLE, message, row, col);
 }
 
 /**
@@ -1148,17 +1379,18 @@ static size_t prt_moves(int row, int col)
 {
 	int i = player->state.num_moves;
 
-	/* 1 move is normal and requires no display */
+	/* Normal movement requires no status label. */
 	if (i > 0) {
-		/* Display the number of moves */
-		c_put_str(COLOUR_L_TEAL, format("Moves +%d ", i), row, col);
+		return ang_status_put_exact(COLOUR_L_TEAL,
+			format(angdroid_zh_tw_enabled() ? "移動 +%d " :
+				"Moves +%d ", i), row, col);
 	} else if (i < 0) {
-		/* Display the number of moves */
-		c_put_str(COLOUR_L_TEAL, format("Moves -%d ", ABS(i)), row, col);
+		return ang_status_put_exact(COLOUR_L_TEAL,
+			format(angdroid_zh_tw_enabled() ? "移動 -%d " :
+				"Moves -%d ", ABS(i)), row, col);
 	}
 
-	/* Shouldn't be double digits, but be paranoid */
-	return (i != 0) ? (9 + ABS(i) / 10) : 0;
+	return 0;
 }
 
 /**
@@ -1187,6 +1419,9 @@ static size_t prt_terrain(int row, int col)
 {
 	struct feature *feat = square_feat(cave, player->grid);
 	struct trap *trap = square_trap(cave, player->grid);
+	const char *english_name;
+	const char *visible_name;
+	bool detected_trap = trap && !square_isinvis(cave, player->grid);
 	char buf[30];
 	uint8_t attr;
 
@@ -1198,13 +1433,25 @@ static size_t prt_terrain(int row, int col)
 		soft_kbd_flash("<");
 	}
 
-	if (trap && !square_isinvis(cave, player->grid)) {
-		my_strcpy(buf, trap->kind->name, sizeof(buf));
+	if (detected_trap) {
+		english_name = trap->kind->name;
 		attr = trap->kind->d_attr;
 	} else {
-		my_strcpy(buf, feat->name, sizeof(buf));
+		english_name = feat->name;
 		attr = feat->d_attr;
 	}
+
+	/* Use the existing exact-name knowledge translations for visible
+	 * terrain/traps. Unknown names use their unchanged English path. */
+	if (angdroid_zh_tw_enabled()) {
+		visible_name = detected_trap ?
+			angdroid_trap_name(english_name, true) :
+			angdroid_terrain_name(english_name, true);
+		if (visible_name != english_name)
+			return ang_status_put(attr, visible_name, row, col);
+	}
+
+	my_strcpy(buf, english_name, sizeof(buf));
 	my_strcap(buf);
 	c_put_str(attr, format("%s ", buf), row, col);
 
@@ -1216,16 +1463,12 @@ static size_t prt_terrain(int row, int col)
  */
 static size_t prt_dtrap(int row, int col)
 {
-	/* The player is in a trap-detected grid */
-	if (square_isdtrap(cave, player->grid)) {
-		/* The player is on the border */
-		if (square_dtrap_edge(cave, player->grid))
-			c_put_str(COLOUR_YELLOW, "DTrap ", row, col);
-		else
-			c_put_str(COLOUR_L_GREEN, "DTrap ", row, col);
-
-		return 6;
-	}
+	/* The player is in a trap-detected grid.  Preserve the original
+	 * border-warning colour, changing only the displayed label. */
+	if (square_isdtrap(cave, player->grid))
+		return ang_status_put_exact(square_dtrap_edge(cave, player->grid) ?
+			COLOUR_YELLOW : COLOUR_L_GREEN,
+			angdroid_zh_tw_enabled() ? "偵陷 " : "DTrap ", row, col);
 
 	return 0;
 }
@@ -1246,9 +1489,9 @@ static size_t prt_study(int row, int col)
 			attr = COLOUR_L_DARK;
 
 		/* Print study message */
-		text = format("Study (%d)", player->upkeep->new_spells);
-		c_put_str(attr, text, row, col);
-		return strlen(text) + 1;
+		text = format(angdroid_zh_tw_enabled() ?
+			"學習 (%d)" : "Study (%d)", player->upkeep->new_spells);
+		return ang_status_put(attr, text, row, col);
 	}
 
 	return 0;
@@ -1263,20 +1506,31 @@ static size_t prt_tmd(int row, int col)
 	size_t i, len = 0;
 
 	for (i = 0; i < TMD_MAX; i++) {
+		/* Stop before deriving or printing statuses beyond the right edge. */
+		if (!Term || !angdroid_statusline_has_room(col, len,
+			Term->wid)) break;
 		if (player->timed[i]) {
 			struct timed_grade *grade = timed_effects[i].grade;
 			while (player->timed[i] > grade->max) {
 				grade = grade->next;
 			}
+			const char *label;
 			if (!grade->name) continue;
-			c_put_str(grade->color, grade->name, row, col + len);
-			len += strlen(grade->name) + 1;
+			/* Translate only the visible grade, not its parser data or
+			 * thresholds. The clipper returns terminal cells, not bytes. */
+			label = angdroid_timed_status_name(grade->name,
+				angdroid_zh_tw_enabled());
+			len += ang_status_put(grade->color, label, row,
+				col + (int)len);
 
 			/* Food meter */
 			if (i == TMD_FOOD) {
-				char *meter = format("%d %%", player->timed[i] / 100);
-				c_put_str(grade->color, meter, row, col + len);
-				len += strlen(meter) + 1;
+				char *meter;
+				if (!angdroid_statusline_has_room(col, len,
+					Term->wid)) break;
+				meter = format("%d %%", player->timed[i] / 100);
+				len += ang_status_put(grade->color, meter, row,
+					col + (int)len);
 			}
 		}
 	}
@@ -1289,12 +1543,10 @@ static size_t prt_tmd(int row, int col)
  */
 static size_t prt_unignore(int row, int col)
 {
-	if (player->unignoring) {
-		const char *str = "Unignoring";
-		put_str(str, row, col);
-		return strlen(str) + 1;
-	}
-
+	if (player->unignoring)
+		return ang_status_put(COLOUR_WHITE,
+			angdroid_zh_tw_enabled() ? "暫停忽略" : "Unignoring",
+			row, col);
 	return 0;
 }
 
@@ -1308,16 +1560,37 @@ static status_f *status_handlers[] =
   prt_descent, prt_state, prt_study, prt_tmd, prt_dtrap, prt_terrain };
 
 
+/* prt_terrain() normally updates stair soft-key hints after drawing.
+ * When the terminal is full, that handler is skipped but the hints must
+ * remain available; this duplicates only its display-side notification. */
+static void statusline_flash_hidden_stairs(void)
+{
+	if (square_isdownstairs(cave, player->grid)) soft_kbd_flash(">");
+	if (square_isupstairs(cave, player->grid)) soft_kbd_flash("<");
+}
+
 static void update_statusline_aux(int row, int col)
 {
 	size_t i;
 
+	if (!Term || row < 0 || row >= Term->hgt) return;
+	if (!angdroid_statusline_has_room(col, 0, Term->wid)) {
+		statusline_flash_hidden_stairs();
+		return;
+	}
+
 	/* Clear the remainder of the line */
 	prt("", row, col);
 
-	/* Display those which need redrawing */
-	for (i = 0; i < N_ELEMENTS(status_handlers); i++)
-		col += status_handlers[i](row, col);
+	/* Clamp each handler advance to the actual terminal width. */
+	for (i = 0; i < N_ELEMENTS(status_handlers); i++) {
+		if (!angdroid_statusline_has_room(col, 0, Term->wid)) break;
+		col = angdroid_statusline_next_col(col,
+			status_handlers[i](row, col), Term->wid);
+	}
+	/* The last handler is terrain; preserve its stair UI side effect if
+	 * the row filled up before terrain could be rendered. */
+	if (i < N_ELEMENTS(status_handlers)) statusline_flash_hidden_stairs();
 }
 
 /**
@@ -2060,57 +2333,181 @@ static void update_topbar_subwindow(game_event_type type,
 /**
  * Display the left-hand-side of the main term, in more compact fashion.
  */
+/* Independent redraw cache for each terminal.  Only exact PW_PLAYER_2
+ * windows may use an event-specific row update; shared multi-flag windows
+ * always retain their previous full-redraw behavior. */
+static struct angdroid_compact_player_redraw_state
+    compact_player_redraw_state[ANGBAND_TERM_MAX];
+
+/* EVENT_ENTER_WORLD and EVENT_LEAVE_WORLD can happen without a window
+ * flag or terminal-size change.  A new character must always get an
+ * initial full redraw rather than inheriting another character's rows. */
+static void angdroid_compact_player_invalidate_all(void)
+{
+	int i;
+	for (i = 0; i < ANGBAND_TERM_MAX; ++i)
+		angdroid_compact_player_invalidate(&compact_player_redraw_state[i]);
+}
+
 static void update_player_compact_subwindow(game_event_type type,
-											game_event_data *data, void *user)
+										game_event_data *data, void *user)
 {
 	int row = 0;
 	int col = 0;
 	int i;
-
+	int visible_rows;
+	int win_idx = -1;
 	term *old = Term;
 	term *inv_term = user;
 
-	/* Activate */
+	/* Redraw every owned field to remove old titles / no-longer-available
+	 * spellpoints. Flag changes already call Term_clear() on the whole
+	 * subwindow; normal player events should not clear unrelated rows. */
+	if (!inv_term || !player || !player->race || !player->class) return;
 	Term_activate(inv_term);
+	if (!Term || Term->hgt <= 0 || Term->wid <= 0) {
+		Term_activate(old);
+		return;
+	}
+	/* No global event deferral: redraw_stuff() omits EVENT_END while the
+	 * map is hidden.  Instead use a single-row immediate refresh after an
+	 * initial complete draw, and fall back to the full path for events
+	 * that can affect multiple fields.  A changed term or flag disables
+	 * this optimization until another full draw finishes. */
+	for (i = 0; i < ANGBAND_TERM_MAX; ++i) {
+		if (angband_term[i] == inv_term) {
+			win_idx = i;
+			break;
+		}
+	}
+	if (win_idx >= 0 &&
+		angdroid_compact_player_cache_matches(
+			&compact_player_redraw_state[win_idx], inv_term,
+			Term->wid, Term->hgt,
+			window_flag[win_idx] == PW_PLAYER_2,
+			Term->content_generation, angdroid_zh_tw_enabled(),
+			Term->instance_id)) {
+		int partial_row = -1;
+		switch (type) {
+		case EVENT_PLAYERTITLE:
+			partial_row = ANGDROID_COMPACT_ROW_TITLE;
+			break;
+		case EVENT_EXPERIENCE:
+			partial_row = ANGDROID_COMPACT_ROW_EXP;
+			break;
+		case EVENT_GOLD:
+			partial_row = ANGDROID_COMPACT_ROW_GOLD;
+			break;
+		case EVENT_HP:
+			partial_row = angdroid_compact_row_hp(STAT_MAX);
+			break;
+		case EVENT_MANA:
+			partial_row = angdroid_compact_row_sp(STAT_MAX);
+			break;
+		case EVENT_MONSTERHEALTH:
+			partial_row = angdroid_compact_row_monster(STAT_MAX);
+			break;
+		case EVENT_PLAYERSPEED:
+		case EVENT_DUNGEONLEVEL:
+			/* Neither status is present in this character subwindow. */
+			Term_activate(old);
+			return;
+		default:
+			/* Equipment, level, stats or race changes may affect
+			 * several values: retain the complete redraw. */
+			break;
+		}
+		if (partial_row >= 0) {
+			if (partial_row < Term->hgt) {
+				Term_erase(0, partial_row, Term->wid);
+				switch (type) {
+				case EVENT_PLAYERTITLE:
+					prt_title(partial_row, col);
+					break;
+				case EVENT_EXPERIENCE:
+					if (Term->wid >= 12) prt_exp(partial_row, col);
+					break;
+				case EVENT_GOLD:
+					if (Term->wid >= 12) prt_gold(partial_row, col);
+					break;
+				case EVENT_HP:
+					if (Term->wid >= 12) prt_hp(partial_row, col);
+					break;
+				case EVENT_MANA:
+					if (Term->wid >= 12) prt_sp(partial_row, col);
+					break;
+				case EVENT_MONSTERHEALTH:
+					prt_health(partial_row, col);
+					break;
+				default:
+					break;
+				}
+				Term_fresh();
+			}
+			Term_activate(old);
+			return;
+		}
+	}
 
-	/* Race and Class */
-	prt_field(player->race->name, row++, col);
-	prt_field(player->class->name, row++, col);
+	visible_rows = angdroid_compact_player_visible_rows(
+		STAT_MAX, Term->hgt);
+	if (visible_rows == Term->hgt) {
+		/* Whole compact panel fits or the terminal is shorter than it. */
+		Term_clear();
+	} else {
+		/* For taller windows, erase only the rows actually owned by the
+		 * compact character panel, leaving other rows untouched. */
+		for (i = 0; i < visible_rows; ++i)
+			Term_erase(0, i, Term->wid);
+	}
 
-	/* Title */
-	prt_title(row++, col);
+	/* Keep all row positions stable, even when the subwindow is shorter
+	 * than the complete compact player display. */
+#define COMPACT_PLAYER_ROW(call) do { \
+	if (row < Term->hgt) { call; } \
+	++row; \
+} while (0)
+#define COMPACT_PLAYER_VALUE_ROW(call) do { \
+	if (row < Term->hgt && Term->wid >= 12) { call; } \
+	++row; \
+} while (0)
 
-	/* Level/Experience */
-	prt_level(row++, col);
-	prt_exp(row++, col);
+	COMPACT_PLAYER_ROW(prt_field(angdroid_game_ui_text(
+		player->race->name, angdroid_zh_tw_enabled()), row, col));
+	COMPACT_PLAYER_ROW(prt_field(angdroid_game_ui_text(
+		player->class->name, angdroid_zh_tw_enabled()), row, col));
+	COMPACT_PLAYER_ROW(prt_title(row, col));
 
-	/* Gold */
-	prt_gold(row++, col);
+	COMPACT_PLAYER_VALUE_ROW(prt_level(row, col));
+	COMPACT_PLAYER_VALUE_ROW(prt_exp(row, col));
+	COMPACT_PLAYER_VALUE_ROW(prt_gold(row, col));
 
-	/* Equippy chars */
-	prt_equippy(row++, col);
+	COMPACT_PLAYER_ROW(prt_equippy(row, col));
+	for (i = 0; i < STAT_MAX; i++)
+		COMPACT_PLAYER_VALUE_ROW(prt_stat(i, row, col));
 
-	/* All Stats */
-	for (i = 0; i < STAT_MAX; i++) prt_stat(i, row++, col);
+	++row; /* Original blank separator row. */
+	COMPACT_PLAYER_VALUE_ROW(prt_ac(row, col));
+	COMPACT_PLAYER_VALUE_ROW(prt_hp(row, col));
+	COMPACT_PLAYER_VALUE_ROW(prt_sp(row, col));
+	if (row < Term->hgt) prt_health(row, col);
 
-	/* Empty row */
-	row++;
+#undef COMPACT_PLAYER_VALUE_ROW
+#undef COMPACT_PLAYER_ROW
 
-	/* Armor */
-	prt_ac(row++, col);
-
-	/* Hitpoints */
-	prt_hp(row++, col);
-
-	/* Spellpoints */
-	prt_sp(row++, col);
-
-	/* Monster health */
-	prt_health(row, col);
-
+	/* Only mark initialized after the full redraw reaches completion. */
+	if (win_idx >= 0) {
+		struct angdroid_compact_player_redraw_state *cache =
+			&compact_player_redraw_state[win_idx];
+		cache->terminal = inv_term;
+		cache->width = Term->wid;
+		cache->height = Term->hgt;
+		cache->content_generation = Term->content_generation;
+		cache->locale_zh_tw = angdroid_zh_tw_enabled();
+		cache->instance_id = Term->instance_id;
+		cache->ready = (window_flag[win_idx] == PW_PLAYER_2);
+	}
 	Term_fresh();
-	
-	/* Restore */
 	Term_activate(old);
 }
 
@@ -2339,6 +2736,9 @@ static void subwindow_set_flags(int win_idx, uint32_t new_flags)
 	term *old = Term;
 	int i;
 
+	/* A flag change invalidates all cached geometry and readiness. */
+	angdroid_compact_player_invalidate(&compact_player_redraw_state[win_idx]);
+
 	/* Deal with the changed flags by seeing what's changed */
 	for (i = 0; i < 32; i++)
 		/* Only process valid flags */
@@ -2376,9 +2776,14 @@ void subwindows_set_flags(uint32_t *new_flags, size_t n_subwindows)
 {
 	size_t j;
 
-	for (j = 0; j < n_subwindows; j++) {
-		/* Dead window */
-		if (!angband_term[j]) continue;
+	if (!new_flags) return;
+	for (j = 0; j < n_subwindows && j < ANGBAND_TERM_MAX; j++) {
+		/* A detached term must not retain a partial redraw cache, even
+		 * if the next attached term happens to reuse its old address. */
+		if (!angband_term[j]) {
+			angdroid_compact_player_invalidate(&compact_player_redraw_state[j]);
+			continue;
+		}
 
 		/* Ignore non-changes */
 		if (window_flag[j] != new_flags[j])
@@ -2722,6 +3127,8 @@ static void ui_leave_init(game_event_type type, game_event_data *data,
 static void ui_enter_world(game_event_type type, game_event_data *data,
 						  void *user)
 {
+	/* Invalidate compact player rows on world/game lifetime changes. */
+	angdroid_compact_player_invalidate_all();
 	/* Allow big cursor */
 	smlcurs = false;
 
@@ -2791,6 +3198,8 @@ static void ui_enter_world(game_event_type type, game_event_data *data,
 static void ui_leave_world(game_event_type type, game_event_data *data,
 						  void *user)
 {
+	/* Invalidate compact player rows on world/game lifetime changes. */
+	angdroid_compact_player_invalidate_all();
 	/* Disallow big cursor */
 	smlcurs = true;
 
@@ -2875,6 +3284,8 @@ static void ui_enter_game(game_event_type type, game_event_data *data,
 static void ui_leave_game(game_event_type type, game_event_data *data,
 						  void *user)
 {
+	/* Invalidate compact player rows on world/game lifetime changes. */
+	angdroid_compact_player_invalidate_all();
 	/* Display a message to the player */
 	event_remove_handler(EVENT_MESSAGE, display_message, NULL);
 

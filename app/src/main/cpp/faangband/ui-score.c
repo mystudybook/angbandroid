@@ -23,17 +23,40 @@
 #include "ui-output.h"
 #include "ui-score.h"
 #include "ui-term.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
+
+/* High scores store canonical data in English. Only clip and localize the
+ * terminal presentation, without changing highscore records or game state. */
+static void fa_score_put_clipped(uint8_t attr, const char *text, int row,
+								int col)
+{
+	char visible[256];
+	if (!Term || !text || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid) return;
+	angdroid_menu_copy_columns(visible, sizeof(visible), text,
+		(size_t)(Term->wid - col));
+	if (visible[0]) c_put_str(attr, visible, row, col);
+}
 
 /**
  * Display a page of scores
  */
+/* One score needs three text rows starting at row 2, plus a footer row.
+ * Never let fixed five-entry pages draw over the footer on short screens. */
+static int fa_score_page_entries(int terminal_height)
+{
+	if (terminal_height < 6) return 0;
+	return MIN(5, (terminal_height - 2) / 4);
+}
+
 static void display_score_page(const struct high_score scores[], int start,
-							   int count, int highlight)
+							   int count, int highlight, int page_entries)
 {
 	int n;
 
 	/* Dump 5 entries */
-	for (n = 0; start < count && n < 5; start++, n++) {
+	for (n = 0; start < count && n < page_entries; start++, n++) {
 		const struct high_score *score = &scores[start];
 		uint8_t attr;
 		int clev, mlev, cdun, mdun;
@@ -42,6 +65,9 @@ static void display_score_page(const struct high_score scores[], int start,
 		struct player_race *r;
 		char out_val[160];
 		char tmp_val[160];
+		/* Preserve original indentation at 80 columns, reclaim room on
+		 * narrow mobile terminals so the details remain legible. */
+		int details_col = Term && Term->wid < 60 ? 0 : 15;
 
 		/* Hack -- indicate death in yellow */
 		attr = (start == highlight) ? COLOUR_L_GREEN : COLOUR_WHITE;
@@ -65,8 +91,15 @@ static void display_score_page(const struct high_score scores[], int start,
 		for (aged = score->turns; isspace((unsigned char)*aged); aged++)
 			/* loop */;
 
-		/* Dump some info */
-		strnfmt(out_val, sizeof(out_val),
+		/* Display only: never change the stored race/class/player IDs. */
+		if (angdroid_zh_tw_enabled())
+			strnfmt(out_val, sizeof(out_val),
+				"%3d.%9s  %s（%s %s），等級 %d",
+				start + 1, score->pts, score->who,
+				r ? r->name : "<none>", c ? c->name : "<none>",
+				clev);
+		else
+			strnfmt(out_val, sizeof(out_val),
 				"%3d.%9s  %s the %s %s, level %d",
 				start + 1, score->pts, score->who,
 				r ? r->name : "<none>", c ? c->name : "<none>",
@@ -74,26 +107,39 @@ static void display_score_page(const struct high_score scores[], int start,
 
 		/* Append a "maximum level" */
 		if (mlev > clev)
-			my_strcat(out_val, format(" (Max %d)", mlev), sizeof(out_val));
+			my_strcat(out_val, angdroid_zh_tw_enabled() ?
+				format("（最高 %d）", mlev) : format(" (Max %d)", mlev),
+				sizeof(out_val));
 
 		/* Dump the first line */
-		c_put_str(attr, out_val, n * 4 + 2, 0);
+		fa_score_put_clipped(attr, out_val, n * 4 + 2, 0);
 
 
 		/* Died where? */
-		if (!cdun)
-			strnfmt(out_val, sizeof(out_val), "Killed by %s in the town",
+		if (!cdun) {
+			if (angdroid_zh_tw_enabled())
+				strnfmt(out_val, sizeof(out_val), "在城鎮死於 %s",
 					score->how);
-		else
-			strnfmt(out_val, sizeof(out_val),
+			else
+				strnfmt(out_val, sizeof(out_val), "Killed by %s in the town",
+					score->how);
+		} else {
+			if (angdroid_zh_tw_enabled())
+				strnfmt(out_val, sizeof(out_val),
+					"在地下城第 %d 層死於 %s", cdun, score->how);
+			else
+				strnfmt(out_val, sizeof(out_val),
 					"Killed by %s on dungeon level %d", score->how, cdun);
+		}
 
 		/* Append a "maximum level" */
 		if (mdun > cdun)
-			my_strcat(out_val, format(" (Max %d)", mdun), sizeof(out_val));
+			my_strcat(out_val, angdroid_zh_tw_enabled() ?
+				format("（最高 %d）", mdun) : format(" (Max %d)", mdun),
+				sizeof(out_val));
 
 		/* Dump the info */
-		c_put_str(attr, out_val, n * 4 + 3, 15);
+		fa_score_put_clipped(attr, out_val, n * 4 + 3, details_col);
 
 
 		/* Clean up standard encoded form of "when" */
@@ -104,10 +150,15 @@ static void display_score_page(const struct high_score scores[], int start,
 		}
 
 		/* And still another line of info */
-		strnfmt(out_val, sizeof(out_val),
+		if (angdroid_zh_tw_enabled())
+			strnfmt(out_val, sizeof(out_val),
+				"（玩家 %s，日期 %s，金幣 %s，回合 %s）",
+				user, when, gold, aged);
+		else
+			strnfmt(out_val, sizeof(out_val),
 				"(User %s, Date %s, Gold %s, Turn %s).",
 				user, when, gold, aged);
-		c_put_str(attr, out_val, n * 4 + 4, 15);
+		fa_score_put_clipped(attr, out_val, n * 4 + 4, details_col);
 	}
 }
 
@@ -119,6 +170,9 @@ static void display_scores_aux(const struct high_score scores[], int from,
 {
 	struct keypress ch;
 	int k, count;
+	int page_entries;
+
+	if (!Term || Term->wid <= 0 || Term->hgt <= 0) return;
 
 	/* Assume we will show the first 10 */
 	if (from < 0) from = 0;
@@ -134,46 +188,84 @@ static void display_scores_aux(const struct high_score scores[], int from,
 	if ((count > to) && !allow_scrolling) count = to;
 
 	/*
-	 * Move 5 entries at a time.  Unless scrolling is allowed, only
-	 * move forward and stop once the end is reached.
+	 * Move only as many records as the terminal can show. Unless scrolling
+	 * is allowed, move forward and stop once the end is reached.
 	 */
 	k = from;
 	while (1) {
+		/* Recompute after rotations: the available rows can change while
+		 * the user is selecting the next score page. */
+		if (!Term || Term->wid <= 0 || Term->hgt <= 0) return;
+		page_entries = fa_score_page_entries(Term->hgt);
+		if (page_entries == 0) {
+			Term_clear();
+			fa_score_put_clipped(COLOUR_WHITE,
+				angdroid_zh_tw_enabled() ? "畫面高度不足，按任意鍵返回。" :
+				"Screen too short; press any key to return.", 0, 0);
+			(void)inkey();
+			return;
+		}
+
 		/* Clear screen */
 		Term_clear();
 
 		/* Title */
 		if (k > 0) {
-			put_str(format("%s Hall of Fame (from position %d)",
-				VERSION_NAME, k + 1), 0, 21);
+			if (angdroid_zh_tw_enabled())
+				fa_score_put_clipped(COLOUR_WHITE,
+					format("%s 名人榜（第 %d 名起）", VERSION_NAME, k + 1),
+					0, 0);
+			else
+				fa_score_put_clipped(COLOUR_WHITE,
+					format("%s Hall of Fame (from position %d)",
+						VERSION_NAME, k + 1), 0, Term->wid >= 80 ? 21 : 0);
 		} else {
-			put_str(format("%s Hall of Fame", VERSION_NAME), 0, 30);
+			if (angdroid_zh_tw_enabled())
+				fa_score_put_clipped(COLOUR_WHITE,
+					format("%s 名人榜", VERSION_NAME), 0, 0);
+			else
+				fa_score_put_clipped(COLOUR_WHITE,
+					format("%s Hall of Fame", VERSION_NAME),
+					0, Term->wid >= 80 ? 30 : 0);
 		}
 
-		display_score_page(scores, k, count, highlight);
+		display_score_page(scores, k, count, highlight, page_entries);
 
-		/* Wait for response; prompt centered on 80 character line */
-		if (allow_scrolling) {
-			prt("[Press ESC to exit, up for prior page, any other key for next page.]", 23, 6);
-		} else {
-			prt("[Press ESC to exit, any other key to page forward till done.]", 23, 9);
+		/* Keep the footer visible on shorter/narrower terminals. */
+		{
+			int footer_row = MIN(23, Term->hgt - 1);
+			int footer_col = Term->wid >= 80 ?
+				(allow_scrolling ? 6 : 9) : 0;
+			if (allow_scrolling)
+				fa_score_put_clipped(COLOUR_WHITE,
+					angdroid_zh_tw_enabled() ?
+					"[ESC 離開，上方向鍵上頁，其他按鍵下頁]" :
+					"[Press ESC to exit, up for prior page, any other key for next page.]",
+					footer_row, footer_col);
+			else
+				fa_score_put_clipped(COLOUR_WHITE,
+					angdroid_zh_tw_enabled() ?
+					"[ESC 離開，其他按鍵翻至下一頁]" :
+					"[Press ESC to exit, any other key to page forward till done.]",
+					footer_row, footer_col);
+			ch = inkey();
+			if (Term && footer_row >= 0 && footer_row < Term->hgt)
+				prt("", footer_row, 0);
 		}
-		ch = inkey();
-		prt("", 23, 0);
 
 		if (ch.code == ESCAPE) {
 			break;
 		} else if (ch.code == ARROW_UP && allow_scrolling) {
 			if (k == 0) {
-				k = count - 5;
-				while (k % 5) k++;
-			} else if (k < 5) {
+				k = count > 0 ?
+					((count - 1) / page_entries) * page_entries : 0;
+			} else if (k < page_entries) {
 				k = 0;
 			} else {
-				k = k - 5;
+				k -= page_entries;
 			}
 		} else {
-			k += 5;
+			k += page_entries;
 			if (k >= count) {
 				if (allow_scrolling) {
 					k = 0;

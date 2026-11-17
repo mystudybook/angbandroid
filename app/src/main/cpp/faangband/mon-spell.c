@@ -24,6 +24,9 @@
 #include "mon-make.h"
 #include "mon-predicate.h"
 #include "mon-spell.h"
+#include "mon-spell-message-locale.h"
+#include "../angband/zh-tw-mon-spell-lash.h"
+#include "../angband/zh-tw-ui.h"
 #include "mon-timed.h"
 #include "mon-util.h"
 #include "obj-knowledge.h"
@@ -105,6 +108,7 @@ static void spell_message(struct monster *mon,
 	struct monster_spell_level *level = spell->level;
 	struct monster *t_mon = NULL;
 	bool is_leading;
+	bool localized = false;
 
 	/* Get the right level of message */
 	while (level->next && mon->race->spell_power >= level->next->power) {
@@ -126,11 +130,16 @@ static void spell_message(struct monster *mon,
 			if (in_cursor == NULL) {
 				in_cursor = level->blind_message;
 				if (in_cursor == NULL) {
-					msg("No message-invis for monster "
-						"spell %d cast by %s.  "
-						"Please report this bug.",
-						(int)spell->index,
-						mon->race->name);
+					/* Do not disclose an unseen caster's race in the
+					 * translated missing-message diagnostic. */
+					if (angdroid_zh_tw_enabled()) {
+						msg("缺少視野外施法訊息，請回報此問題。");
+					} else {
+						msg("No message-invis for monster "
+							"spell %d cast by %s.  "
+							"Please report this bug.",
+							(int)spell->index, mon->race->name);
+					}
 					return;
 				}
 			} else if (in_cursor[0] == '\0') {
@@ -143,9 +152,14 @@ static void spell_message(struct monster *mon,
 		if (in_cursor == NULL) {
 			in_cursor = level->miss_message;
 			if (in_cursor == NULL) {
-				msg("No message-miss for monster spell %d "
-					"cast by %s.  Please report this bug.",
-					(int)spell->index, mon->race->name);
+				if (angdroid_zh_tw_enabled()) {
+					msg("怪物 %s 的法術 %d 缺少未命中訊息，請回報此問題。",
+						mon->race->name, (int)spell->index);
+				} else {
+					msg("No message-miss for monster spell %d "
+						"cast by %s.  Please report this bug.",
+						(int)spell->index, mon->race->name);
+				}
 				return;
 			}
 		} else if (in_cursor[0] == '\0') {
@@ -157,9 +171,14 @@ static void spell_message(struct monster *mon,
 		if (in_cursor == NULL) {
 			in_cursor = level->message;
 			if (in_cursor == NULL) {
-				msg("No message-vis for monster spell %d "
-					"cast by %s.  Please report this bug.",
-					(int)spell->index, mon->race->name);
+				if (angdroid_zh_tw_enabled()) {
+					msg("怪物 %s 的法術 %d 缺少可見施法訊息，請回報此問題。",
+						mon->race->name, (int)spell->index);
+				} else {
+					msg("No message-vis for monster spell %d "
+						"cast by %s.  Please report this bug.",
+						(int)spell->index, mon->race->name);
+				}
 				return;
 			}
 		} else if (in_cursor[0] == '\0') {
@@ -167,6 +186,28 @@ static void spell_message(struct monster *mon,
 		}
 	}
 
+	/* A selected race-specific alternate may be untranslated. Only adjust
+	 * placeholders when the selected whole template has a translation. */
+	{
+		const char *selected = in_cursor;
+		in_cursor = angdroid_fa_spell_message_locale(selected,
+			angdroid_zh_tw_enabled());
+		localized = (in_cursor != selected);
+	}
+
+	/*
+	 * A template can contain multiple dynamic names. The old strnfcat()
+	 * path silently truncated later tags and final punctuation once the
+	 * 1024-byte buffer was full.  With known Chinese templates, reserve
+	 * the largest 320-byte subject/target expansion for *each* tag before
+	 * rendering any part of the message. Never output a half-rendered
+	 * localized template. The English formatter is intentionally unchanged.
+	 */
+	if (localized && !angdroid_fa_spell_template_fits(
+			in_cursor, sizeof(buf), 320)) {
+		msgt(spell->msgt, "%s", "施法訊息過長，已省略詳細內容。");
+		return;
+	}
 	next = strchr(in_cursor, '{');
 	is_leading = (next == in_cursor);
 	while (next) {
@@ -185,50 +226,86 @@ static void spell_message(struct monster *mon,
 
 			switch (spell_tag_lookup(tag)) {
 				case SPELL_TAG_NAME: {
-					char m_name[80];
+					char m_name[256];
 					int mdesc_mode = (MDESC_IND_HID |
 						MDESC_PRO_HID);
 
 					if (is_leading) {
 						mdesc_mode |= MDESC_CAPITAL;
 					}
-					if (!strchr(punct, *in_cursor)) {
+					if (!localized && !strchr(punct, *in_cursor)) {
 						mdesc_mode |= MDESC_COMMA;
 					}
 					monster_desc(m_name, sizeof(m_name),
 						mon, mdesc_mode);
 
-					strnfcat(buf, sizeof(buf), &end, "%s",
-						m_name);
+					{
+						char cn_name[320];
+						char cn_offscreen[320];
+						const char *display_name = m_name;
+						if (localized && rf_has(mon->race->flags, RF_PLAYER_GHOST)) {
+							display_name = angdroid_fa_spell_ghost_subject(
+								m_name, cave->ghost->name, mon->race->name,
+								true, cn_name, sizeof(cn_name));
+						} else if (localized && !monster_is_shape_unique(mon)) {
+							display_name = angdroid_fa_spell_subject(m_name,
+								true, cn_name, sizeof(cn_name));
+						}
+						if (localized)
+							display_name = angdroid_fa_spell_offscreen_subject(
+								display_name, true, cn_offscreen,
+								sizeof(cn_offscreen));
+						strnfcat(buf, sizeof(buf), &end, "%s", display_name);
+					}
 					break;
 				}
 
 				case SPELL_TAG_PRONOUN: {
-					char m_poss[80];
+					char m_poss[256];
 
 					/* Get the monster possessive ("his"/"her"/"its") */
 					monster_desc(m_poss, sizeof(m_poss), mon, MDESC_PRO_VIS | MDESC_POSS);
 
 					strnfcat(buf, sizeof(buf), &end, "%s",
-						m_poss);
+						localized ? "牠的" : m_poss);
 					break;
 				}
 
 				case SPELL_TAG_TARGET: {
-					char m_name[80];
+					char m_name[256];
 					if (mon->target.midx > 0) {
 						int mdesc_mode = MDESC_TARG;
 
-						if (!strchr(punct, *in_cursor)) {
+						if (!localized && !strchr(punct, *in_cursor)) {
 							mdesc_mode |= MDESC_COMMA;
 						}
 						monster_desc(m_name,
 							sizeof(m_name), t_mon,
 							mdesc_mode);
-						strnfcat(buf, sizeof(buf), &end,
-							"%s", m_name);
+						if (localized && t_mon) {
+							char cn_name[320];
+							char cn_offscreen[320];
+							const char *display_name = m_name;
+							if (rf_has(t_mon->race->flags, RF_PLAYER_GHOST)) {
+								display_name = angdroid_fa_spell_ghost_subject(
+									m_name, cave->ghost->name, t_mon->race->name,
+									true, cn_name, sizeof(cn_name));
+							} else if (!monster_is_shape_unique(t_mon)) {
+								display_name = angdroid_fa_spell_subject(m_name,
+									true, cn_name, sizeof(cn_name));
+							}
+							/* Keep a known monster's panel position visible. */
+							display_name = angdroid_fa_spell_offscreen_subject(
+								display_name, true, cn_offscreen,
+								sizeof(cn_offscreen));
+							strnfcat(buf, sizeof(buf), &end,
+								"%s", display_name);
+						} else {
+							strnfcat(buf, sizeof(buf), &end, "%s", m_name);
+						}
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "you");
+						strnfcat(buf, sizeof(buf), &end,
+							localized ? "你" : "you");
 					}
 					break;
 				}
@@ -238,8 +315,11 @@ static void spell_message(struct monster *mon,
 					int type = mon->race->blow[0].effect->lash_type;
 					char *type_name = projections[type].lash_desc;
 
-					strnfcat(buf, sizeof(buf), &end, "%s",
-						type_name);
+					/* Some projection records omit an optional lash descriptor;
+					 * do not pass NULL to the variadic string formatter. */
+					if (type_name)
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							angdroid_mon_spell_lash(type_name, localized));
 					break;
 				}
 
@@ -249,9 +329,12 @@ static void spell_message(struct monster *mon,
 					char *type_name = projections[type].lash_desc;
 
 					if (type_name) {
-						strnfcat(buf, sizeof(buf), &end, " of ");
 						strnfcat(buf, sizeof(buf), &end,
-							"%s", type_name);
+							localized ? "（" : " of ");
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							angdroid_mon_spell_lash(type_name, localized));
+						if (localized)
+							strnfcat(buf, sizeof(buf), &end, "）");
 					}
 					break;
 				}
@@ -270,7 +353,17 @@ static void spell_message(struct monster *mon,
 	}
 	strnfcat(buf, 1024, &end, "%s", in_cursor);
 
-	msgt(spell->msgt, "%s", buf);
+	/* strnfcat() uses byte capacity. A long Han message can reach that
+	 * boundary partway through a UTF-8 scalar. Preserve complete glyphs
+	 * before handing localized text to the terminal; leave English data
+	 * and the original message category unchanged. */
+	if (localized) {
+		char safe_buf[sizeof(buf)];
+		angdroid_utf8_copy_complete(safe_buf, sizeof(safe_buf), buf);
+		msgt(spell->msgt, "%s", safe_buf);
+	} else {
+		msgt(spell->msgt, "%s", buf);
+	}
 }
 
 const struct monster_spell *monster_spell_by_index(int index)
@@ -379,7 +472,8 @@ void do_mon_spell(int index, struct monster *mon, bool seen)
 		/* Try a saving throw if available */
 		if (level->save_message && (target_midx <= 0) &&
 				randint0(100) < player->state.skills[SKILL_SAVE]) {
-			msg("%s", level->save_message);
+			msg("%s", angdroid_fa_spell_message_locale(
+				level->save_message, angdroid_zh_tw_enabled()));
 			spell_check_for_fail_rune(spell);
 		} else {
 			effect_do(spell->effect, source_monster(mon->midx), NULL, &ident, true, 0, 0, 0, NULL);

@@ -36,6 +36,23 @@
 #include "ui-term.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
+
+/* Display centered prompts by terminal cells (CJK glyphs are 2 cells).
+ * Do not change movement controls or world-map coordinates. */
+static void fa_map_prompt_centered(const char *message, int row)
+{
+    char clipped[192];
+    int columns, x;
+    if (!Term || !message || Term->wid <= 0 ||
+        row < 0 || row >= Term->hgt) return;
+    columns = (int)angdroid_utf8_display_columns(message);
+    x = columns >= Term->wid ? 0 : (Term->wid - columns) / 2;
+    angdroid_menu_copy_columns(clipped, sizeof(clipped), message,
+        (size_t)(Term->wid - x));
+    if (clipped[0]) put_str(clipped, row, x);
+}
 
 /**
  * Hack -- Hallucinatory monster
@@ -1003,7 +1020,8 @@ static void regional_map(int num, int centre_place)
 		row = (i / side) * 4 + 1;
 
 		/* Get the level string */
-		lev_name = format("Level %d", world->levels[place[i]].depth);
+		lev_name = format(angdroid_zh_tw_enabled() ? "第 %d 層" :
+            "Level %d", world->levels[place[i]].depth);
 		/* Print the locality name */
 		print_map_name(place[i], row, col, false);
 
@@ -1042,7 +1060,8 @@ void do_cmd_view_map(void)
 {
 	int cy, cx;
 	uint8_t w, h;
-	const char *prompt = "Hit any key to continue";
+	const char *prompt = angdroid_zh_tw_enabled() ?
+        "按任意鍵繼續" : "Hit any key to continue";
 	/* variables for regional map */
 	int wid, hgt;
 	int num_down, num_across, num, centre_place, next_place;
@@ -1068,7 +1087,8 @@ void do_cmd_view_map(void)
 	screen_save();
 
 	/* Note */
-	prt("Please wait...", 0, 0);
+	prt(angdroid_zh_tw_enabled() ?
+        "請稍候……" : "Please wait...", 0, 0);
 
 	/* Flush */
 	Term_fresh();
@@ -1089,7 +1109,7 @@ void do_cmd_view_map(void)
 	display_map(&cy, &cx);
 
 	/* Show the prompt */
-	put_str(prompt, Term->hgt - 1, Term->wid / 2 - strlen(prompt) / 2);
+	fa_map_prompt_centered(prompt, Term->hgt - 1);
 
 	/* Highlight the player */
 	Term_gotoxy(cx, cy);
@@ -1131,8 +1151,10 @@ void do_cmd_view_map(void)
 			regional_map(num, centre_place);
 
 			/* Wait for it */
-			put_str("Move keys to scroll, other input to continue",
-					hgt - 1, (wid - 40) / 2);
+			fa_map_prompt_centered(angdroid_zh_tw_enabled() ?
+                "方向鍵捲動，其他按鍵繼續" :
+                "Move keys to scroll, other input to continue",
+                hgt - 1);
 
 			/* Get any key */
 			ke = inkey_ex();

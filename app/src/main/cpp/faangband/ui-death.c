@@ -36,29 +36,47 @@
 #include "ui-spoil.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-death.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/zh-tw-class-titles.h"
+#include "../angband/menu-text-fit.h"
 
 /**
  * Write formatted string `fmt` on line `y`, centred between points x1 and x2.
  */
 static void put_str_centred(int y, int x1, int x2, const char *fmt, ...)
 {
-	va_list vp;
-	char *tmp;
-	size_t len;
-	int x;
+    va_list vp;
+    char *tmp, visible[512];
+    int left, right, width, columns, x;
+    if (!Term || Term->wid <= 0 || y < 0 || y >= Term->hgt) return;
 
-	/* Format into the (growable) tmp */
-	va_start(vp, fmt);
-	tmp = vformat(fmt, vp);
-	va_end(vp);
+    va_start(vp, fmt);
+    tmp = vformat(fmt, vp);
+    va_end(vp);
+    if (!tmp) return;
 
-	/* Centre now; account for possible multibyte characters */
-	len = utf8_strlen(tmp);
-	x = x1 + ((x2-x1)/2 - len/2);
-
-	put_str(tmp, y, x);
+    left = MAX(0, x1);
+    right = MIN(Term->wid - 1, x2);
+    if (right < left) return;
+    width = right - left + 1;
+    columns = (int)angdroid_menu_copy_columns(visible, sizeof(visible),
+        tmp, (size_t)width);
+    x = left + (width - columns) / 2;
+    if (visible[0]) put_str(visible, y, x);
 }
 
+/* Death and ghost prompts can be longer than the available phone screen.
+ * Crop on complete UTF-8 terminal cells, leaving command tags untouched. */
+static void fa_death_print_prompt(const char *message, int row)
+{
+    char visible[512];
+    if (!Term || !message || row < 0 || row >= Term->hgt ||
+        Term->wid <= 0) return;
+    angdroid_menu_copy_columns(visible, sizeof(visible),
+        message, (size_t)Term->wid);
+    prt(visible, row, 0);
+}
 
 /**
  * Display the tombstone/retirement screen
@@ -105,39 +123,60 @@ static void display_exit_screen(void)
 	}
 
 	put_str_centred(line++, start, start+31, "%s", player->full_name);
-	put_str_centred(line++, start, start+31, "the");
+	put_str_centred(line++, start, start+31, "%s",
+        angdroid_zh_tw_enabled() ? "稱號" : "the");
 	if (player->total_winner)
-		put_str_centred(line++, start, start+31, "Magnificent");
+		put_str_centred(line++, start, start+31, "%s",
+            angdroid_zh_tw_enabled() ? "偉大的勝利者" : "Magnificent");
 	else
-		put_str_centred(line++, start, start+31, "%s", player->class->title[(player->lev - 1) / 5]);
+		put_str_centred(line++, start, start+31, "%s",
+            angdroid_zh_tw_class_title(
+                player->class->title[(player->lev - 1) / 5],
+                angdroid_zh_tw_enabled()));
 
 	line++;
 
-	put_str_centred(line++, start, start+31, "%s", player->class->name);
-	put_str_centred(line++, start, start+31, "Level: %d", (int)player->lev);
-	put_str_centred(line++, start, start+31, "Exp: %d", (int)player->exp);
-	put_str_centred(line++, start, start+31, "AU: %d", (int)player->au);
+	put_str_centred(line++, start, start+31, "%s",
+        angdroid_game_ui_text(player->class->name,
+            angdroid_zh_tw_enabled()));
+	put_str_centred(line++, start, start+31,
+        angdroid_zh_tw_enabled() ? "等級：%d" : "Level: %d",
+        (int)player->lev);
+	put_str_centred(line++, start, start+31,
+        angdroid_zh_tw_enabled() ? "經驗：%d" : "Exp: %d",
+        (int)player->exp);
+	put_str_centred(line++, start, start+31,
+        angdroid_zh_tw_enabled() ? "金幣：%d" : "AU: %d",
+        (int)player->au);
 	if (boat) {
-		put_str_centred(line++, start, start+31, "Sailed victorious to Aman.");
+		put_str_centred(line++, start, start+31, "%s",
+            angdroid_zh_tw_enabled() ? "凱旋航向阿門。" : "Sailed victorious to Aman.");
 	} else if (tree) {
-		put_str_centred(line++,start, start+31, "Retired to Fangorn Forest.");
+		put_str_centred(line++, start, start+31, "%s",
+            angdroid_zh_tw_enabled() ? "隱退至法貢森林。" : "Retired to Fangorn Forest.");
 	} else if (retired) {
-		put_str_centred(line++, 8, 8+31, "Retired in %s %d.",
+		put_str_centred(line++, start, start+31,
+            angdroid_zh_tw_enabled() ? "於%s第%d層退休。" : "Retired in %s %d.",
 						locality_name(lev->locality), lev->depth);
 	} else {
 		if (lev->depth) {
-			put_str_centred(line++, start, start+31, "Killed in %s %d",
+			put_str_centred(line++, start, start+31,
+            angdroid_zh_tw_enabled() ? "命喪%s第%d層" : "Killed in %s %d",
 							locality_name(lev->locality), lev->depth);
 		} else {
-			put_str_centred(line++, start, start+31, "Killed in %s Town",
+			put_str_centred(line++, start, start+31,
+            angdroid_zh_tw_enabled() ? "命喪%s城鎮" : "Killed in %s Town",
 							locality_name(lev->locality));
 		}
-		put_str_centred(line++, start, start+31, "by %s.", player->died_from);
+		put_str_centred(line++, start, start+31,
+            angdroid_zh_tw_enabled() ? "死因：%s" : "by %s.", player->died_from);
 	}
 
 	line++;
 
-	put_str_centred(line, start, start+31, "on %-.24s", ctime(&death_time));
+	put_str_centred(line, start, start+31,
+        angdroid_zh_tw_enabled() ? "日期：%-.24s" : "on %-.24s",
+        ctime(&death_time));
 }
 
 
@@ -147,69 +186,75 @@ static void display_exit_screen(void)
 static char *get_personalized_string(uint8_t choice)
 {
 	static char tmp[80], info[80];
-	uint8_t n, i;
-	bool no_string = true;
+    char cleaned[80];
+    size_t n;
+    bool punctuation;
 
 	/* Clear last line */
 	clear_from(15);
 
 	/* Prompt and ask */
 	if (choice == 1) {
-		prt("Enter a message for your character's ghost", 15, 0);
-		prt("above, or hit ESCAPE.", 16, 0);
+		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "輸入角色幽靈的留言：" : "Enter a message for your character's ghost", 15);
+		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "完成後按 Esc 離開。" : "above, or hit ESCAPE.", 16);
 	} else if (choice == 2) {
-		prt("Enter an addition to your character ghost's", 15, 0);
-		prt("description above, or hit ESCAPE.", 16, 0);
+		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "輸入角色幽靈的描述補充：" : "Enter an addition to your character ghost's", 15);
+		fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "完成後按 Esc 離開。" : "description above, or hit ESCAPE.", 16);
 	} else
 		return NULL;
 
-	strnfmt(info, sizeof(info),"(%d characters maximum.  Entry will be used as",
-			79);
+	strnfmt(info, sizeof(info), angdroid_zh_tw_enabled() ?
+            "最多 %d 位元組，內容會作為" :
+            "(%d characters maximum.  Entry will be used as", 79);
 
-	prt(info, 17, 0);
-	prt("(a) sentence(s).)", 18, 0);
+	fa_death_print_prompt(info, 17);
+	fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "一句或數句幽靈台詞。" : "(a) sentence(s).)", 18);
 
 	/* Ask until happy */
 	while (1) {
 		/* Start at beginning of field. */
 		Term_gotoxy(0, 14);
 
-		/* Get an input */
-		(void) askfor_aux(tmp, sizeof(tmp) - 1, NULL);
+        /* An aborted new entry must not reuse a previous ghost message. */
+        tmp[0] = '\0';
+        (void) askfor_aux(tmp, sizeof(tmp) - 1, NULL);
 
 		/* All done */
 		break;
 	}
 
-	/* Pad the string (to clear junk and allow room for a ending) */
-	strnfmt(tmp, sizeof(tmp), "%-79.79s", tmp);
+    /* A UTF-8 Chinese ghost message may contain multibyte codepoints.
+     * Never split a codepoint, and never run ctype on a signed UTF-8 byte.
+     * Bones files continue to store the exact original byte-oriented format. */
+    angdroid_utf8_copy_complete(cleaned, sizeof(cleaned), tmp);
+    n = strlen(cleaned);
+    while (n > 0 && cleaned[n - 1] == ' ')
+        cleaned[--n] = '\0';
+    if (n == 0) return NULL;
 
-	/* Ensure that strings end like a sentence, and neatly clip the string. */
-	for (n = 78; n > 0 ; n--) {
-		if ((tmp[n] == ' ') || (tmp[n] == '\0')) continue;
-		no_string = false;
-		if ((tmp[n] == '!') || (tmp[n] == '.') || (tmp[n] == '?')) {
-			tmp[n + 1] = '\0';
-			for (i = n + 2; i < 80; i++) {
-				tmp[i] = '\0';
-			}
-			break;
-		} else {
-			tmp[n + 1] = '.';
-			tmp[n + 2] = '\0';
-			for (i = n + 3; i < 80; i++) {
-				tmp[i] = '\0';
-			}
-			break;
-		}
-	}
+    punctuation = (cleaned[n - 1] == '.' ||
+        cleaned[n - 1] == '!' || cleaned[n - 1] == '?');
+    if (n >= 3) {
+        const char *end = cleaned + n - 3;
+        if (memcmp(end, "。", 3) == 0 ||
+            memcmp(end, "！", 3) == 0 ||
+            memcmp(end, "？", 3) == 0)
+            punctuation = true;
+    }
+    if (!punctuation && n < sizeof(cleaned) - 2) {
+        cleaned[n++] = '.';
+        cleaned[n] = '\0';
+    }
 
-	/* Start the sentence with a capital letter. */
-	if (islower(tmp[0]))
-		tmp[0] = toupper(tmp[0]);
-
-	/* Return the string */
-	return no_string ? NULL : tmp;
+    if (cleaned[0] >= 'a' && cleaned[0] <= 'z')
+        cleaned[0] = (char)(cleaned[0] - 'a' + 'A');
+    my_strcpy(tmp, cleaned, sizeof(tmp));
+    return tmp;
 
 }
 
@@ -295,9 +340,12 @@ static void make_bones(void)
 	Term_clear();
 
 	/* Ask if the player wants to add a personalized string. */
-	prt("Information about your character has been saved", 15, 0);
-	prt("in a bones file.  Would you like to give the", 16, 0);
-	prt("ghost a special message or description? (y/n)", 17, 0);
+	fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "角色資料已儲存於幽靈紀錄。" : "Information about your character has been saved", 15);
+	fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "要為角色的幽靈加上特別的" : "in a bones file.  Would you like to give the", 16);
+	fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "留言或描述嗎？(y/n)" : "ghost a special message or description? (y/n)", 17);
 
 	while (no_answer) {
 
@@ -311,9 +359,12 @@ static void make_bones(void)
 
 		/* Determine what the personalized string will be used for.  */
 		if ((answer.key.code == 'Y') || (answer.key.code == 'y')) {
-			prt("Will you add something for your ghost to say,", 15, 0);
-			prt("or add to the monster description?", 16, 0);
-			prt("((M)essage/(D)escription/ESC for neither)", 17, 0);
+			fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "要加入幽靈說的話，" : "Will you add something for your ghost to say,", 15);
+			fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "還是補充怪物描述？" : "or add to the monster description?", 16);
+			fa_death_print_prompt(angdroid_zh_tw_enabled() ?
+            "(M) 留言／(D) 描述／Esc 跳過" : "((M)essage/(D)escription/ESC for neither)", 17);
 
 			while (1) {
 				answer = inkey_ex();
@@ -393,13 +444,21 @@ static void display_winner(void)
 
 		/* Dump the file to the screen */
 		while (file_getl(fp, buf, sizeof(buf))) {
-			put_str(buf, i++, (wid / 2) - (width / 2));
-		}
+            char visible[1024];
+            int x = MAX(0, (wid - width) / 2);
+            if (i >= hgt || x >= wid) break;
+            angdroid_menu_copy_columns(visible, sizeof(visible),
+                buf, (size_t)(wid - x));
+            if (visible[0]) put_str(visible, i, x);
+            ++i;
+        }
 
 		file_close(fp);
 	}
 
-	put_str_centred(i, 0, wid, "All Hail the Mighty Champion!");
+	put_str_centred(i, 0, wid - 1, "%s",
+        angdroid_zh_tw_enabled() ?
+            "向偉大冠軍致敬！" : "All Hail the Mighty Champion!");
 
 	event_signal(EVENT_INPUT_FLUSH);
 	pause_line(Term);
@@ -428,9 +487,9 @@ static void death_file(const char *title, int row)
 
 		/* Check result */
 		if (success)
-			msg("Character dump successful.");
+			msg("%s", angdroid_death_prompt(ANGDROID_DEATH_DUMP_SUCCESS, angdroid_zh_tw_enabled()));
 		else
-			msg("Character dump failed!");
+			msg("%s", angdroid_death_prompt(ANGDROID_DEATH_DUMP_FAILED, angdroid_zh_tw_enabled()));
 
 		/* Flush messages */
 		event_signal(EVENT_MESSAGE_FLUSH);
@@ -450,7 +509,8 @@ static void death_info(const char *title, int row)
 	display_player(0);
 
 	/* Prompt for inventory */
-	prt("Hit any key to see more information: ", 0, 0);
+	fa_death_print_prompt(angdroid_death_prompt(
+            ANGDROID_DEATH_MORE_INFORMATION, angdroid_zh_tw_enabled()), 0);
 
 	/* Allow abort at this point */
 	(void)anykey();
@@ -462,7 +522,8 @@ static void death_info(const char *title, int row)
 	if (player->upkeep->equip_cnt) {
 		Term_clear();
 		show_equip(OLIST_WEIGHT | OLIST_SEMPTY | OLIST_DEATH, NULL);
-		prt("You are using: -more-", 0, 0);
+		fa_death_print_prompt(angdroid_death_prompt(
+            ANGDROID_DEATH_EQUIPMENT, angdroid_zh_tw_enabled()), 0);
 		(void)anykey();
 	}
 
@@ -470,7 +531,8 @@ static void death_info(const char *title, int row)
 	if (player->upkeep->inven_cnt) {
 		Term_clear();
 		show_inven(OLIST_WEIGHT | OLIST_DEATH, NULL);
-		prt("You are carrying: -more-", 0, 0);
+		fa_death_print_prompt(angdroid_death_prompt(
+            ANGDROID_DEATH_INVENTORY, angdroid_zh_tw_enabled()), 0);
 		(void)anykey();
 	}
 
@@ -478,7 +540,8 @@ static void death_info(const char *title, int row)
 	if (player->upkeep->quiver_cnt) {
 		Term_clear();
 		show_quiver(OLIST_WEIGHT | OLIST_DEATH, NULL);
-		prt("Your quiver holds: -more-", 0, 0);
+		fa_death_print_prompt(angdroid_death_prompt(
+            ANGDROID_DEATH_QUIVER, angdroid_zh_tw_enabled()), 0);
 		(void)anykey();
 	}
 
@@ -495,10 +558,11 @@ static void death_info(const char *title, int row)
 			Term_clear();
 
 			/* Show 12 items */
-			for (line = 0; obj && line < 12; obj = obj->next, line++) {
+			for (line = 0; obj && line < MIN(12, MAX(1, Term->hgt - 5));
+                obj = obj->next, line++) {
 				uint8_t attr;
 
-				char o_name[80];
+				char o_name[192];
 				char tmp_val[80];
 
 				/* Print header, clear line */
@@ -507,17 +571,26 @@ static void death_info(const char *title, int row)
 
 				/* Get the object description */
 				object_desc(o_name, sizeof(o_name), obj,
-					ODESC_PREFIX | ODESC_FULL, player);
+                    ODESC_PREFIX | ODESC_FULL |
+                    (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 				/* Get the inventory color */
 				attr = obj->kind->base->attr;
 
 				/* Display the object */
-				c_put_str(attr, o_name, line + 2, 7);
+				if (Term && Term->wid > 7) {
+                    char visible[192];
+                    angdroid_menu_copy_columns(visible, sizeof(visible),
+                        o_name, (size_t)(Term->wid - 7));
+                    if (visible[0])
+                        c_put_str(attr, visible, line + 2, 7);
+                }
 			}
 
 			/* Caption */
-			prt(format("Your home contains (page %d): -more-", page), 0, 0);
+			fa_death_print_prompt(format(angdroid_death_prompt(
+                ANGDROID_DEATH_HOME_PAGE, angdroid_zh_tw_enabled()),
+                page), 0);
 
 			/* Wait for it */
 			(void)anykey();
@@ -556,8 +629,8 @@ static void death_examine(const char *title, int row)
 	const char *q, *s;
 
 	/* Get an item */
-	q = "Examine which item? ";
-	s = "You have nothing to examine.";
+	q = angdroid_death_prompt(ANGDROID_DEATH_EXAMINE, angdroid_zh_tw_enabled());
+	s = angdroid_death_prompt(ANGDROID_DEATH_NO_ITEMS, angdroid_zh_tw_enabled());
 
 	while (get_item(&obj, q, s, 0, NULL, (USE_INVEN | USE_QUIVER | USE_EQUIP | IS_HARMLESS))) {
 		char header[120];
@@ -567,7 +640,8 @@ static void death_examine(const char *title, int row)
 
 		tb = object_info(obj, OINFO_NONE);
 		object_desc(header, sizeof(header), obj,
-			ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL, player);
+			ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL |
+            (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 		textui_textblock_show(tb, area, header);
 		textblock_free(tb);
@@ -596,7 +670,8 @@ static void death_spoilers(const char *title, int row)
  */
 static void death_new_game(const char *title, int row)
 {
-    play_again = get_check("Start a new game? ");
+    play_again = get_check(angdroid_death_prompt(
+        ANGDROID_DEATH_NEW_GAME, angdroid_zh_tw_enabled()));
 }
 
 /**
@@ -625,7 +700,11 @@ void death_screen(void)
 {
 	struct menu *death_menu;
 	bool done = false;
-	const region area = { 51, 2, 0, N_ELEMENTS(death_actions) };
+	region area = { 51, 2, 0, N_ELEMENTS(death_actions) };
+    size_t label_index;
+    /* A fixed x=51 makes the death menu unreachable on portrait phones. */
+    if (Term && Term->wid <= 72)
+        area.col = MAX(0, Term->wid - 24);
 
 	/* Dump bones file */
 	make_bones();
@@ -642,6 +721,14 @@ void death_screen(void)
 	/* Flush all input and output */
 	event_signal(EVENT_INPUT_FLUSH);
 	event_signal(EVENT_MESSAGE_FLUSH);
+
+    /* Rebuild visible labels from stable indexes each time: the
+     * numeric menu IDs, callbacks and i/m/f/v/x/h/s/n/q tags remain fixed.
+     * The final Quit action must stay last. */
+    for (label_index = 0; label_index < N_ELEMENTS(death_actions);
+         ++label_index)
+        death_actions[label_index].name = angdroid_death_menu_label(
+            (int)label_index, angdroid_zh_tw_enabled());
 
 	/* Display and use the death menu */
 	death_menu = menu_new_action(death_actions,
@@ -661,7 +748,8 @@ void death_screen(void)
 		}
 		else if (e.type == EVT_SELECT)
 		{
-			done = get_check("Do you want to quit? ");
+			done = get_check(angdroid_death_prompt(
+                ANGDROID_DEATH_QUIT, angdroid_zh_tw_enabled()));
 		}
 	}
 

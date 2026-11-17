@@ -21,6 +21,14 @@
 #include "z-color.h"
 #include "z-util.h"
 #include "z-virt.h"
+#include "../curses/unicode_layout.h"
+#include "../curses/term-soft-cursor-bounds.h"
+#include "../curses/term-resize-cjk.h"
+
+/* This counter survives term_nuke()/term_init() for a reused term address.
+ * The Android native terminals are initialized on the game thread. */
+static uint64_t angdroid_term_instance_sequence;
+
 
 /**
  * This file provides a generic, efficient, terminal window package,
@@ -546,7 +554,7 @@ static errr Term_pict_hack(int x, int y, int n, const int *ap,
  *
  * Assumes given location and values are valid.
  */
-void Term_queue_char(term *t, int x, int y, int a, wchar_t c, int ta,
+static void Term_queue_char_raw(term *t, int x, int y, int a, wchar_t c, int ta,
 					 wchar_t tc)
 {
 	int *scr_aa = t->scr->a[y];
@@ -623,6 +631,41 @@ void Term_queue_char(term *t, int x, int y, int a, wchar_t c, int ta,
 	}
 }
 
+/* FAangband's stream drawing reserves its CJK continuation cell in
+ * ui-output.c, while map drawing still uses fixed one-cell positions.
+ * Do not auto-expand every queued character as native Angband does.
+ *
+ * When a write REPLACES either half of an existing two-cell text glyph,
+ * remove the other half using the shared grid helper. The raw path keeps
+ * its existing terrain layers, double-height handling and dirty bounds.
+ */
+static void Term_clear_wide_neighbor(term *t, int x, int y, wchar_t incoming,
+        int attr)
+{
+    int partner = angdroid_wide_partner_column(t->wid, x,
+        t->scr->c[y], t->scr->a[y]);
+
+    if (partner < 0) return;
+
+    /* ui-output writes the right marker first, then its new wide lead.
+     * When repainting an existing lead, the marker must not be erased
+     * by the second write. Overwriting a continuation always clears
+     * its old leading glyph before placing new content. */
+    if (t->scr->c[y][x] == ANGDROID_TEXT_CONTINUATION ||
+            !angdroid_is_wide_text(incoming, attr))
+        Term_queue_char_raw(t, partner, y, COLOUR_WHITE, L' ', 0, 0);
+}
+
+void Term_queue_char(term *t, int x, int y, int a, wchar_t c, int ta,
+                     wchar_t tc)
+{
+    if (!t || !t->scr || x < 0 || y < 0 ||
+            x >= t->wid || y >= t->hgt) return;
+
+    Term_clear_wide_neighbor(t, x, y, c, a);
+    Term_queue_char_raw(t, x, y, a, c, ta, tc);
+}
+
 /**
  * Queue a large-sized tile.
  * \param x Is the column for the upper left corner of the tile.
@@ -697,8 +740,11 @@ void Term_queue_chars(int x, int y, int n, int a, const wchar_t *s)
 	int *scr_taa = Term->scr->ta[y];
 	wchar_t *scr_tcc = Term->scr->tc[y];
 
-	/* Queue the attr/chars */
+	/* Queue fixed-position columns. An overwrite must invalidate
+     * the other half of any pre-existing wide text glyph. */
 	for ( ; n; x++, s++, n--) {
+        wchar_t glyph = angdroid_fixed_cell_glyph(*s, a);
+        Term_clear_wide_neighbor(Term, x, y, glyph, a);
 		int oa = scr_aa[x];
 		wchar_t oc = scr_cc[x];
 
@@ -706,11 +752,11 @@ void Term_queue_chars(int x, int y, int n, int a, const wchar_t *s)
 		wchar_t otc = scr_tcc[x];
 
 		/* Hack -- Ignore non-changes */
-		if ((oa == a) && (oc == *s) && (ota == 0) && (otc == 0)) continue;
+		if ((oa == a) && (oc == glyph) && (ota == 0) && (otc == 0)) continue;
 
 		/* Save the "literal" information */
 		scr_aa[x] = a;
-		scr_cc[x] = *s;
+		scr_cc[x] = glyph;
 
 		scr_taa[x] = 0;
 		scr_tcc[x] = 0;
@@ -1791,38 +1837,35 @@ errr Term_fresh(void)
 
 	/* Cursor update -- Erase old Cursor */
 	if (Term->soft_cursor) {
-		/* Cursor was visible */
-		if (!old->cu && old->cv) {
-		        /*
-		         * Fake a change at the old cursor position so that
-		         * position will be redrawn along with any other
-			 * changes.
-			 */
-			int mty = MAX(old->cy,
-				MIN(old->cy + old->cny - 1, h - 1));
-			int mtx = MAX(old->cx,
-				MIN(old->cx + old->cnx - 1, w - 1));
+		/* Only visit cells within the current terminal. In particular, a
+		 * large cursor's saved span must not overflow signed coordinates. */
+		int last_y = angdroid_term_cursor_last_cell(old->cy, old->cny, h);
+		int last_x = angdroid_term_cursor_last_cell(old->cx, old->cnx, w);
+
+		if (!old->cu && old->cv && last_x >= 0 && last_y >= 0) {
 			int ty;
-
-			for (ty = old->cy; ty <= mty; ++ty) {
+			for (ty = old->cy; ty <= last_y; ++ty) {
 				int tx;
+				int left = old->cx;
+				int right = last_x;
 
-				for (tx = old->cx; tx <= mtx; ++tx) {
+				/* The Android terminal stores a two-column CJK glyph as a
+				 * lead cell plus a private continuation. Repaint both cells
+				 * when a soft cursor covered either half of that glyph. */
+				for (tx = old->cx; tx <= last_x; ++tx) {
+					int partner = angdroid_wide_partner_column(w, tx,
+						scr->c[ty], scr->a[ty]);
+					if (partner >= 0 && partner < left) left = partner;
+					if (partner > right) right = partner;
+				}
+				for (tx = left; tx <= right; ++tx) {
 					old->c[ty][tx] = ~scr->c[ty][tx];
 				}
-				if (Term->x1[ty] > old->cx) {
-					Term->x1[ty] = old->cx;
-				}
-				if (Term->x2[ty] < mtx) {
-					Term->x2[ty] = mtx;
-				}
+				if (Term->x1[ty] > left) Term->x1[ty] = left;
+				if (Term->x2[ty] < right) Term->x2[ty] = right;
 			}
-			if (y1 > old->cy) {
-			    y1 = old->cy;
-			}
-			if (y2 < mty) {
-			    y2 = mty;
-			}
+			if (y1 > old->cy) y1 = old->cy;
+			if (y2 < last_y) y2 = last_y;
 		}
 	} else {
 		/* Cursor will be invisible */
@@ -1931,9 +1974,11 @@ errr Term_fresh(void)
 	if (Term->soft_cursor) {
 		/* Draw the (large or small) cursor */
 		if (!scr->cu && scr->cv) {
-			if ((((tile_width > 1)||(tile_height > 1)) &&
-			     (!smlcurs) && (Term->saved == 0) && (scr->cy > 0))
-			    || bigcurs) {
+			if (((((tile_width > 1)||(tile_height > 1)) &&
+			      (!smlcurs) && (Term->saved == 0) && (scr->cy > 0))
+			    || bigcurs) &&
+			    angdroid_term_big_cursor_fits(scr->cx, scr->cy, w, h,
+			        tile_width, tile_height)) {
 				(void)((*Term->bigcurs_hook)(scr->cx, scr->cy));
 				scr->cnx = tile_width;
 				scr->cny = tile_height;
@@ -2048,8 +2093,9 @@ errr Term_draw(int x, int y, int a, wchar_t c)
 	/* Paranoia -- illegal char */
 	if (!c) return (-2);
 
-	/* Queue it for later */
-	Term_queue_char(Term, x, y, a, c, 0, 0);
+	/* Fixed-position map cells cannot occupy adjacent CJK columns. */
+    Term_queue_char(Term, x, y,
+        a, angdroid_fixed_cell_glyph(c, a), 0, 0);
 
 	/* Success */
 	return (0);
@@ -2074,28 +2120,38 @@ errr Term_draw(int x, int y, int a, wchar_t c)
  */
 errr Term_addch(int a, wchar_t c)
 {
-	int w = Term->wid;
+    int x, y, w, span;
 
-	/* Handle "unusable" cursor */
-	if (Term->scr->cu) return (-1);
+    if (!Term || !Term->scr) return (-1);
+    w = Term->wid;
+    if (Term->scr->cu) return (-1);
+    if (!c) return (-2);
 
-	/* Paranoia -- no illegal chars */
-	if (!c) return (-2);
+    x = Term->scr->cx;
+    y = Term->scr->cy;
+    if (x < 0 || x >= w || y < 0 || y >= Term->hgt) return (-1);
 
-	/* Queue the given character for display */
-	Term_queue_char(Term, Term->scr->cx, Term->scr->cy, a, c, 0, 0);
+    /* Text-stream writes use display columns. Map-cell writes through
+     * Term_draw()/Term_queue_chars() keep their fixed-grid semantics. */
+    c = angdroid_stream_glyph(c);
+    span = angdroid_is_wide_text(c, a) ? 2 : 1;
+    if (x + span > w) {
+        /* A double-column glyph cannot fit in the final column. */
+        c = L'?';
+        span = 1;
+    }
+    if (span == 2) {
+        /* Write the trailing marker first. An overwrite of the old
+         * marker clears its previous lead; the new lead is then drawn. */
+        Term_queue_char(Term, x + 1, y, a,
+            ANGDROID_TEXT_CONTINUATION, 0, 0);
+    }
+    Term_queue_char(Term, x, y, a, c, 0, 0);
+    Term->scr->cx += span;
+    if (Term->scr->cx < w) return (0);
 
-	/* Advance the cursor */
-	Term->scr->cx++;
-
-	/* Success */
-	if (Term->scr->cx < w) return (0);
-
-	/* Note "Useless" cursor */
-	Term->scr->cu = 1;
-
-	/* Note "Useless" cursor */
-	return (1);
+    Term->scr->cu = 1;
+    return (1);
 }
 
 
@@ -2120,40 +2176,42 @@ errr Term_addch(int a, wchar_t c)
  */
 errr Term_addstr(int n, int a, const char *buf)
 {
-	int k;
+    int k, count, i, width;
+    int available;
+    errr res = 0;
+    angdroid_text_fit fit;
+    wchar_t s[1024] = {0};
 
-	int w = Term->wid;
+    if (!Term || !Term->scr || !buf || Term->scr->cu) return (-1);
+    width = Term->wid;
+    if (width <= 0 || Term->scr->cx < 0 ||
+            Term->scr->cx >= width) return (-1);
 
-	errr res = 0;
+    /* An explicit n is a maximum number of wchar_t glyphs, not a
+     * number of terminal columns. Leave space for the terminator. */
+    text_mbstowcs(s, buf, 1023);
+    s[1023] = L'\0';
+    k = (n < 0) ? width + 1 : n;
+    if (k > 1023) k = 1023;
+    for (count = 0; count < k && s[count]; ++count) { /* loop */ }
 
-	wchar_t s[1024];
+    available = width - Term->scr->cx;
+    fit = angdroid_fit_terminal_text(s, (size_t)count,
+        (size_t)available, a);
 
-	/* Copy to a rewriteable string */
- 	text_mbstowcs(s, buf, 1024);
+    /* Term_addch() owns wide continuation cells and cursor movement;
+     * never send a display-cell text stream to the fixed-grid bulk
+     * Term_queue_chars() API. */
+    for (i = 0; i < (int)fit.codepoints; ++i) {
+        res = Term_addch(a, s[i]);
+        if (res < 0) return (res);
+    }
 
-	/* Handle "unusable" cursor */
-	if (Term->scr->cu) return (-1);
-
-	/* Obtain maximal length */
-	k = (n < 0) ? (w + 1) : n;
-
-	/* Obtain the usable string length */
-	for (n = 0; (n < k) && s[n]; n++) /* loop */;
-
-	/* React to reaching the edge of the screen */
-	if (Term->scr->cx + n >= w) res = n = w - Term->scr->cx;
-
-	/* Queue the first "n" characters for display */
-	Term_queue_chars(Term->scr->cx, Term->scr->cy, n, a, s);
-
-	/* Advance the cursor */
-	Term->scr->cx += n;
-
-	/* Hack -- Notice "Useless" cursor */
-	if (res) Term->scr->cu = 1;
-
-	/* Success (usually) */
-	return (res);
+    if (fit.clipped || Term->scr->cx >= width) {
+        Term->scr->cu = 1;
+        return fit.codepoints ? (errr)fit.codepoints : 1;
+    }
+    return 0;
 }
 
 
@@ -2263,8 +2321,9 @@ errr Term_erase(int x, int y, int n)
 	/* Place cursor */
 	if (Term_gotoxy(x, y)) return (-1);
 
-	/* Force legal size */
-	if (x + n > w) n = w - x;
+	/* Term_gotoxy() already checked x. Subtract first so an untrusted
+	 * large erase count cannot overflow the signed x + n expression. */
+	if (n > w - x) n = w - x;
 
 	/* Fast access */
 	scr_aa = Term->scr->a[y];
@@ -2273,13 +2332,26 @@ errr Term_erase(int x, int y, int n)
 	scr_taa = Term->scr->ta[y];
 	scr_tcc = Term->scr->tc[y];
 
+    /* If a partial erase touches either half of a two-column glyph,
+     * also invalidate the other half, even outside the requested range. */
+    for (i = 0; i < n; ++i) {
+        int column = x + i;
+        if (scr_cc[column] == ANGDROID_TEXT_CONTINUATION ||
+                angdroid_is_wide_text(scr_cc[column], scr_aa[column])) {
+            Term_clear_wide_neighbor(Term, column, y, L' ', COLOUR_WHITE);
+        }
+    }
+
 	/* Scan every column */
 	for (i = 0; i < n; i++, x++) {
 		int oa = scr_aa[x];
 		wchar_t oc = scr_cc[x];
 
 		/* Hack -- Ignore "non-changes" */
-		if ((oa == COLOUR_WHITE) && (oc == ' ')) continue;
+		/* A blank foreground may still hide stale terrain: erase both
+		 * layers, just as Angband's Term_erase() already does. */
+		if ((oa == COLOUR_WHITE) && (oc == ' ') &&
+			scr_taa[x] == 0 && scr_tcc[x] == 0) continue;
 
 		/* Save the "literal" information */
 		scr_aa[x] = COLOUR_WHITE;
@@ -2322,6 +2394,9 @@ errr Term_clear(void)
 
 	int w = Term->wid;
 	int h = Term->hgt;
+
+	/* Invalidate compact-panel caches after a logical screen reset. */
+	++Term->content_generation;
 
 	/* Cursor usable */
 	Term->scr->cu = 0;
@@ -2386,45 +2461,50 @@ errr Term_redraw(void)
  */
 errr Term_redraw_section(int x1, int y1, int x2, int y2)
 {
-	int i, j;
+    int i, j;
 
-	wchar_t *c_ptr;
+    /* Ignore invalid or completely off-screen rectangles. Negative
+     * coordinates must be clipped only after excluding disjoint ranges,
+     * otherwise an inverted rectangle can touch invalid screen rows. */
+    if (!Term || !Term->scr || !Term->old ||
+            x1 > x2 || y1 > y2 ||
+            x1 >= Term->wid || x2 < 0 ||
+            y1 >= Term->hgt || y2 < 0)
+        return (-1);
 
-	/* Bounds checking */
-	if (y2 >= Term->hgt) y2 = Term->hgt - 1;
-	if (x2 >= Term->wid) x2 = Term->wid - 1;
-	if (y1 < 0) y1 = 0;
-	if (x1 < 0) x1 = 0;
+    if (x2 >= Term->wid) x2 = Term->wid - 1;
+    if (y2 >= Term->hgt) y2 = Term->hgt - 1;
+    if (x1 < 0) x1 = 0;
+    if (y1 < 0) y1 = 0;
 
+    /* Do not overwrite other dirty rows pending before this request. */
+    angdroid_union_dirty_range(y1, y2, &Term->y1, &Term->y2);
 
-	/* Set y limits */
-	Term->y1 = y1;
-	Term->y2 = y2;
+    for (i = y1; i <= y2; ++i) {
+        int first = x1, last = x2;
+        wchar_t *previous = Term->old->c[i];
 
-	/* Set the x limits */
-	for (i = Term->y1; i <= Term->y2; i++) {
-		if ((x1 > 0) && (Term->old->a[i][x1] == 255))
-			x1--;
+        /* Full-width glyphs occupy both the leading cell and their
+         * private continuation marker. Include both when either half
+         * is redrawn; retain the legacy big-tile attr 255 adjustment.
+         * The adjusted rectangle MUST be recalculated for each row. */
+        angdroid_expand_redraw_columns(Term->wid, &first, &last,
+            Term->scr->c[i], Term->scr->a[i],
+            Term->old->c[i], Term->old->a[i]);
 
-		Term->x1[i] = x1;
-		Term->x2[i] = x2;
+        /* Preserve other pending updates in this row, instead of
+         * replacing the dirty limits with the new rectangle. */
+        angdroid_union_dirty_range(first, last,
+            &Term->x1[i], &Term->x2[i]);
 
-		c_ptr = Term->old->c[i];
+        for (j = first; j <= last; ++j) {
+            previous[j] = 0;
+        }
+    }
 
-		/* Clear the section so it is redrawn */
-		for (j = x1; j <= x2; j++) {
-			/* Hack - set the old character to "none" */
-			c_ptr[j] = 0;
-		}
-	}
-
-	/* Hack -- Refresh */
-	Term_fresh();
-
-	/* Success */
-	return (0);
+    Term_fresh();
+    return (0);
 }
-
 
 
 
@@ -2492,7 +2572,7 @@ errr Term_what(int x, int y, int *a, wchar_t *c)
 
 	/* Direct access */
 	(*a) = Term->scr->a[y][x];
-	(*c) = Term->scr->c[y][x];
+	(*c) = angdroid_public_grid_glyph(Term->scr->c[y][x]);
 
 	/* Success */
 	return (0);
@@ -2720,6 +2800,10 @@ errr Term_save(void)
 
 	term_win *mem;
 
+	/* saved is a uint8_t: refuse a new frame before it could wrap to zero.
+	 * Leave the existing snapshot chain and requested screen untouched. */
+	if (Term->saved == UINT8_MAX) return (-1);
+
 	/* Allocate window */
 	mem = mem_zalloc(sizeof(term_win));
 
@@ -2756,23 +2840,21 @@ errr Term_load(void)
 
 	term_win *tmp;
 
+	/* No saved screen: do not decrement the unsigned save depth or mark
+	 * unchanged rows dirty. The caller can handle this as a failed load. */
+	if (!Term->mem) return (-1);
+
 	/* Pop off window from the list */
-	if (Term->mem) {
-		/* Save pointer to old mem */
-		tmp = Term->mem;
+	tmp = Term->mem;
+	Term->mem = tmp->next;
 
-		/* Forget it */
-		Term->mem = Term->mem->next;
+	/* Restoring saved cells replaces the current logical screen. */
+	++Term->content_generation;
+	term_win_copy(Term->scr, tmp, w, h);
 
-		/* Load */
-		term_win_copy(Term->scr, tmp, w, h);
-
-		/* Free the old window */
-		(void)term_win_nuke(tmp);
-
-		/* Kill it */
-		mem_free(tmp);
-	}
+	/* Free the saved window */
+	(void)term_win_nuke(tmp);
+	mem_free(tmp);
 
 	/* Assume change */
 	for (y = 0; y < h; y++) {
@@ -2811,6 +2893,10 @@ errr Term_load_all(void)
 	} *reversed_list = NULL;
 	struct term_win *cursor;
 
+	/* No snapshot to replay: saved is an unsigned byte and must never
+	 * wrap from zero to 255, nor should a no-op damage the current screen. */
+	if (!Term->mem) return (-1);
+
 	for (cursor = Term->mem; cursor; cursor = cursor->next) {
 		struct reversed_save *new_head = mem_alloc(sizeof(*new_head));
 
@@ -2824,6 +2910,7 @@ errr Term_load_all(void)
 		int y;
 
 		reversed_list = reversed_list->next;
+		++Term->content_generation;
 		term_win_copy(Term->scr, tgt->saved_mem, w, h);
 		mem_free(tgt);
 
@@ -2857,6 +2944,63 @@ errr Term_load_all(void)
 /**
  * React to a new physical window size.
  */
+/**
+ * Drop any outstanding saved overlays when starting a new game session.
+ * Do not restore their contents: an abandoned frame from a prior character
+ * must never become the new character's display. Leave the active screen
+ * and cursor intact, but force a physical repaint after discarding saves.
+ */
+errr Term_discard_saved_screens(term *t)
+{
+	term_win *saved;
+
+	if (!t || !t->instance_id) return (-1);
+	if (!t->mem && !t->saved) return (1);
+
+	while (t->mem) {
+		saved = t->mem;
+		t->mem = saved->next;
+		term_win_nuke(saved);
+		mem_free(saved);
+	}
+	t->saved = 0;
+	++t->content_generation;
+	t->total_erase = true;
+	return (0);
+}
+
+/* A resize may leave a saved cursor outside the smaller terminal.
+ * Mark it unusable AND move its coordinates into the new grid, since the
+ * hardware cursor path still passes cy to curs_hook() when cu is true. */
+static void term_win_clamp_cursor(term_win *win, int w, int h)
+{
+	if (win->cx < 0 || win->cx >= w ||
+			win->cy < 0 || win->cy >= h)
+		win->cu = true;
+
+	if (win->cx < 0) win->cx = 0;
+	else if (win->cx >= w) win->cx = w - 1;
+
+	if (win->cy < 0) win->cy = 0;
+	else if (win->cy >= h) win->cy = h - 1;
+}
+
+/* Copies the overlapping rectangle of a previous terminal window and
+ * repairs text pairs that lose their second column at the new right edge.
+ * Keep the display and terrain layers independent. */
+static void term_win_copy_resized(term_win *dest, term_win *src,
+        int copy_w, int copy_h, int old_w)
+{
+    int y;
+    (void)term_win_copy(dest, src, copy_w, copy_h);
+    for (y = 0; y < copy_h; ++y) {
+        angdroid_term_repair_resized_cjk_row(
+            dest->c[y], dest->a[y], src->c[y], src->a[y], copy_w, old_w);
+        angdroid_term_repair_resized_cjk_row(
+            dest->tc[y], dest->ta[y], src->tc[y], src->ta[y], copy_w, old_w);
+    }
+}
+
 errr Term_resize(int w, int h)
 {
 	int i;
@@ -2915,7 +3059,7 @@ errr Term_resize(int w, int h)
 	term_win_init(Term->old, w, h);
 
 	/* Save the contents */
-	term_win_copy(Term->old, hold_old, wid, hgt);
+	term_win_copy_resized(Term->old, hold_old, wid, hgt, Term->wid);
 
 	/* Create new window */
 	Term->scr = mem_zalloc(sizeof(term_win));
@@ -2924,7 +3068,7 @@ errr Term_resize(int w, int h)
 	term_win_init(Term->scr, w, h);
 
 	/* Save the contents */
-	term_win_copy(Term->scr, hold_scr, wid, hgt);
+	term_win_copy_resized(Term->scr, hold_scr, wid, hgt, Term->wid);
 
 	/* If needed */
 	hold_mem_dest = &Term->mem;
@@ -2938,7 +3082,8 @@ errr Term_resize(int w, int h)
 		term_win_init(*hold_mem_dest, w, h);
 
 		/* Save the contents */
-		term_win_copy(*hold_mem_dest, hold_mem, wid, hgt);
+		term_win_copy_resized(*hold_mem_dest, hold_mem, wid, hgt, Term->wid);
+		term_win_clamp_cursor(*hold_mem_dest, w, h);
 
 		trash = hold_mem;
 		hold_mem = hold_mem->next;
@@ -2961,7 +3106,8 @@ errr Term_resize(int w, int h)
 		term_win_init(Term->tmp, w, h);
 
 		/* Save the contents */
-		term_win_copy(Term->tmp, hold_tmp, wid, hgt);
+		term_win_copy_resized(Term->tmp, hold_tmp, wid, hgt, Term->wid);
+		term_win_clamp_cursor(Term->tmp, w, h);
 	}
 
 	/* Free some arrays */
@@ -2974,9 +3120,8 @@ errr Term_resize(int w, int h)
 	/* Kill */
 	mem_free(hold_old);
 
-	/* Illegal cursor */
-	if (Term->old->cx >= w) Term->old->cu = 1;
-	if (Term->old->cy >= h) Term->old->cu = 1;
+	/* Saved cursor coordinates must also be safe for curs_hook(). */
+	term_win_clamp_cursor(Term->old, w, h);
 
 	/* Nuke */
 	term_win_nuke(hold_scr);
@@ -2984,9 +3129,8 @@ errr Term_resize(int w, int h)
 	/* Kill */
 	mem_free(hold_scr);
 
-	/* Illegal cursor */
-	if (Term->scr->cx >= w) Term->scr->cu = 1;
-	if (Term->scr->cy >= h) Term->scr->cu = 1;
+	/* The hard cursor path uses scr->cy even when scr->cu is true. */
+	term_win_clamp_cursor(Term->scr, w, h);
 
 	/* If needed */
 	if (hold_tmp) {
@@ -2996,11 +3140,12 @@ errr Term_resize(int w, int h)
 		/* Kill */
 		mem_free(hold_tmp);
 
-		/* Illegal cursor */
-		if (Term->tmp->cx >= w) Term->tmp->cu = 1;
-		if (Term->tmp->cy >= h) Term->tmp->cu = 1;
+		term_win_clamp_cursor(Term->tmp, w, h);
 	}
 
+	/* Resizing replaces the screen buffers, even if a later resize
+	 * returns to a previously cached width and height. */
+	++Term->content_generation;
 	/* Save new size */
 	Term->wid = w;
 	Term->hgt = h;
@@ -3074,6 +3219,9 @@ errr Term_activate(term *t)
  */
 errr term_nuke(term *t)
 {
+	/* Invalidate the instance before any hook can trigger a redraw. */
+	t->instance_id = 0;
+
 	/* Hack -- Call the special "nuke" hook */
 	if (t->active_flag) {
 		/* Call the "nuke" hook */
@@ -3099,14 +3247,15 @@ errr term_nuke(term *t)
 	/* Kill "requested" */
 	mem_free(t->scr);
 
-	/* If needed */
-	if (t->mem) {
-		/* Nuke "memorized" */
-		term_win_nuke(t->mem);
-
-		/* Kill "memorized" */
-		mem_free(t->mem);
+	/* Every Term_save() allocates one linked snapshot.  Discard the
+	 * entire stack when a terminal is destroyed, not only its top frame. */
+	while (t->mem) {
+		term_win *saved = t->mem;
+		t->mem = saved->next;
+		term_win_nuke(saved);
+		mem_free(saved);
 	}
+	t->saved = 0;
 
 	/* If needed */
 	if (t->tmp) {
@@ -3141,6 +3290,12 @@ errr term_init(term *t, int w, int h, int k)
 
 	/* Wipe it */
 	memset(t, 0, sizeof(term));
+
+	/* Identity is not an address or dimensions: those may be identical
+	 * after restarting the native terminal.  Zero is never valid. */
+	if (++angdroid_term_instance_sequence == 0)
+		++angdroid_term_instance_sequence;
+	t->instance_id = angdroid_term_instance_sequence;
 
 	/* Prepare the input queue */
 	t->key_head = t->key_tail = 0;

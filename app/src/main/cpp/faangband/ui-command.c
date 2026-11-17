@@ -48,6 +48,7 @@
 #include "ui-target.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
 
 
 /**
@@ -134,7 +135,8 @@ void do_cmd_xxx_options(void)
  */
 void do_cmd_unknown(void)
 {
-	prt("Type '?' for help.", 0, 0);
+	prt(angdroid_game_ui_text("Type '?' for help.",
+        angdroid_zh_tw_enabled()), 0, 0);
 }
 
 
@@ -149,7 +151,9 @@ void do_cmd_version(void)
 	region local_area = { 0, 0, 0, 0 };
 
 	my_strcpy(header_buf,
-			  format("You are playing %s.  Type '?' for more info.", buildver),
+			  format(angdroid_zh_tw_enabled() ?
+                  "目前遊玩版本：%s。按 ? 查看更多資訊。" :
+                  "You are playing %s.  Type '?' for more info.", buildver),
 			  sizeof(header_buf));
 	textblock_append(tb, "\n");
 	textblock_append(tb, "%s", copyright);
@@ -167,16 +171,21 @@ void textui_cmd_retire(void)
 
 	/* Verify */
 	if (player->total_winner) {
-		if (!get_check("Do you want to retire? "))
+		if (!get_check(angdroid_zh_tw_enabled() ?
+                "確定要讓角色退休嗎？ " : "Do you want to retire? "))
 			return;
 	} else {
 		struct keypress ch;
 
-		if (!get_check("Do you really want to retire?"))
+		if (!get_check(angdroid_zh_tw_enabled() ?
+                "真的要讓角色退休嗎？" : "Do you really want to retire?"))
 			return;
 
 		/* Special Verification for retirement */
-		prt("Please verify RETIRING THIS CHARACTER by typing the '@' sign: ", 0, 0);
+		prt(angdroid_zh_tw_enabled() ?
+            "請輸入 @ 確認角色退休：" :
+            "Please verify RETIRING THIS CHARACTER by typing the '@' sign: ",
+            0, 0);
 		event_signal(EVENT_INPUT_FLUSH);
 
 		soft_kbd_flash("@");
@@ -194,7 +203,9 @@ void textui_cmd_retire(void)
  */
 void textui_cmd_rest(void)
 {
-	const char *p = "Rest (0-9999, '!': HP/SP, '*': HP+SP, '&': all, '$': sunrise/set): ";
+	const char *p = angdroid_zh_tw_enabled() ?
+        "休息（0-9999 回合、! 回 HP/SP、* 回滿、& 完全恢復、$ 日出／日落）：" :
+        "Rest (0-9999, '!': HP/SP, '*': HP+SP, '&': all, '$': sunrise/set): ";
 
 	char out_val[5] = "& ";
 
@@ -517,7 +528,8 @@ static void do_cmd_save_screen_html(int mode, term *other_term)
 
 	/* Check for failure */
 	if (!fff) {
-		msg("Screen dump failed.");
+		msg("%s", angdroid_zh_tw_enabled() ?
+            "畫面擷取失敗。" : "Screen dump failed.");
 		event_signal(EVENT_MESSAGE_FLUSH);
 		return;
 	}
@@ -539,7 +551,10 @@ static void do_cmd_save_screen_html(int mode, term *other_term)
 	file_delete(file_name);
 	do_cmd_redraw();
 
-	msg("%s screen dump saved.", mode ? "Forum text" : "HTML");
+	msg(angdroid_zh_tw_enabled() ? "已儲存%s畫面擷取。" :
+        "%s screen dump saved.",
+        mode ? (angdroid_zh_tw_enabled() ? "論壇文字格式" : "Forum text") :
+            "HTML");
 	event_signal(EVENT_MESSAGE_FLUSH);
 }
 
@@ -549,7 +564,9 @@ static void do_cmd_save_screen_html(int mode, term *other_term)
  */
 void do_cmd_save_screen(void)
 {
-	char ch = get_char("Dump as (H)TML or (F)orum text? ", "hf", 2, ' ');
+	char ch = get_char(angdroid_zh_tw_enabled() ?
+        "擷取格式：H=HTML、F=論壇文字？ " :
+        "Dump as (H)TML or (F)orum text? ", "hf", 2, ' ');
 	int mode = 0;
 	term *ml_term;
 
@@ -565,7 +582,8 @@ void do_cmd_save_screen(void)
 	}
 	ml_term = find_first_subwindow(PW_MONLIST);
 	if (ml_term) {
-		if (!get_check("Include monster list? ")) ml_term = NULL;
+		if (!get_check(angdroid_zh_tw_enabled() ?
+            "要包含怪物清單嗎？ " : "Include monster list? ")) ml_term = NULL;
 	}
 	do_cmd_save_screen_html(mode, ml_term);
 }

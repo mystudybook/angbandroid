@@ -29,6 +29,20 @@ int main(void)
     shape("warg", "座狼");
     shape("vampire", "吸血鬼");
     shape("werewolf", "狼人");
+    shape("bear cub", "小熊");
+    shape("great bear", "巨熊");
+    shape("black dragon", "黑龍");
+    shape("blue dragon", "藍龍");
+    shape("white dragon", "白龍");
+    shape("red dragon", "紅龍");
+    shape("green dragon", "綠龍");
+    shape("shining dragon", "輝光龍");
+    shape("law dragon", "秩序龍");
+    shape("chaos dragon", "混沌龍");
+    shape("gold dragon", "金龍");
+    shape("multi-hued dragon", "多彩龍");
+    shape("balance dragon", "平衡龍");
+    shape("power dragon", "威能龍");
     shape("unlisted", "unlisted");
     assert(angdroid_shape_name(NULL, 1) == NULL);
     ++checks;
@@ -78,6 +92,12 @@ int main(void)
     assert(strcmp(angdroid_shape_misc_desc("Custom flag.", 1),
         "Custom flag.") == 0);
     assert(angdroid_shape_misc_desc(NULL, 1) == NULL);
+    checks += 2;
+    /* New FAangband FLYING player-ability text, not a global property edit. */
+    assert(strcmp(angdroid_shape_misc_desc("You can fly.", 1),
+        "你能飛行。") == 0);
+    assert(strcmp(angdroid_shape_misc_desc("You can fly.", 0),
+        "You can fly.") == 0);
     checks += 2;
     printf("PASS: Angband shape knowledge bilingual labels (%d checks)\n", checks);
     return 0;

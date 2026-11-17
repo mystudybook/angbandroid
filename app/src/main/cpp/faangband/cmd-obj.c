@@ -40,6 +40,7 @@
 #include "player-util.h"
 #include "target.h"
 #include "trap.h"
+#include "../angband/zh-tw-ui.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -77,14 +78,31 @@ static int check_devices(struct object *obj)
 	/* Roll for usage */
 	if (randint1(1000) < fail) {
 		event_signal(EVENT_INPUT_FLUSH);
-		msg("You failed to %s properly.", action);
+		if (angdroid_zh_tw_enabled()) {
+            if (tval_is_rod(obj)) {
+                msg("你沒能正確使用魔棒。");
+            } else if (tval_is_wand(obj)) {
+                msg("你沒能正確使用魔杖。");
+            } else if (tval_is_staff(obj)) {
+                msg("你沒能正確使用法杖。");
+            } else {
+                msg("你沒能成功啟動這件物品。");
+            }
+        } else {
+            msg("You failed to %s properly.", action);
+        }
 		return false;
 	}
 
 	/* Notice empty staffs */
 	if (what && obj->pval <= 0) {
 		event_signal(EVENT_INPUT_FLUSH);
-		msg("The %s has no charges left.", what);
+		if (angdroid_zh_tw_enabled()) {
+            msg("這根%s已沒有使用次數。", tval_is_wand(obj) ?
+                "魔杖" : "法杖");
+        } else {
+            msg("The %s has no charges left.", what);
+        }
 		return false;
 	}
 
@@ -154,14 +172,15 @@ void do_cmd_uninscribe(struct command *cmd)
 
 	/* Get arguments */
 	if (cmd_get_item(cmd, "item", &obj,
-			/* Prompt */ "Uninscribe which item?",
-			/* Error  */ "You have nothing you can uninscribe.",
+			/* Prompt */ angdroid_game_ui_text("Uninscribe which item?", angdroid_zh_tw_enabled()),
+			/* Error  */ angdroid_game_ui_text("You have nothing you can uninscribe.", angdroid_zh_tw_enabled()),
 			/* Filter */ obj_has_inscrip,
 			/* Choice */ USE_EQUIP | USE_INVEN | USE_QUIVER | USE_FLOOR) != CMD_OK)
 		return;
 
 	obj->note = 0;
-	msg("Inscription removed.");
+	msg("%s", angdroid_game_ui_text("Inscription removed.",
+            angdroid_zh_tw_enabled()));
 
 	player->upkeep->notice |= (PN_COMBINE | PN_IGNORE);
 	player->upkeep->redraw |= (PR_INVEN | PR_EQUIP);
@@ -184,8 +203,8 @@ void do_cmd_inscribe(struct command *cmd)
 
 	/* Get arguments */
 	if (cmd_get_item(cmd, "item", &obj,
-			/* Prompt */ "Inscribe which item?",
-			/* Error  */ "You have nothing to inscribe.",
+			/* Prompt */ angdroid_game_ui_text("Inscribe which item?", angdroid_zh_tw_enabled()),
+			/* Error  */ angdroid_game_ui_text("You have nothing to inscribe.", angdroid_zh_tw_enabled()),
 			/* Filter */ NULL,
 			/* Choice */ USE_EQUIP | USE_INVEN | USE_QUIVER | USE_FLOOR | IS_HARMLESS) != CMD_OK)
 		return;
@@ -193,11 +212,15 @@ void do_cmd_inscribe(struct command *cmd)
 	/* Form prompt */
 	object_desc(o_name, sizeof(o_name), obj, ODESC_PREFIX | ODESC_FULL,
 		player);
-	strnfmt(prompt, sizeof prompt, "Inscribing %s.", o_name);
+	if (angdroid_zh_tw_enabled()) {
+        strnfmt(prompt, sizeof prompt, "正在為 %s 刻字。", o_name);
+    } else {
+        strnfmt(prompt, sizeof prompt, "Inscribing %s.", o_name);
+    }
 
 	if (cmd_get_string(cmd, "inscription", &str,
 			quark_str(obj->note) /* Default */,
-			prompt, "Inscribe with what? ") != CMD_OK)
+			prompt, angdroid_game_ui_text("Inscribe with what? ", angdroid_zh_tw_enabled())) != CMD_OK)
 		return;
 
 	obj->note = quark_add(str);
@@ -240,8 +263,8 @@ void do_cmd_takeoff(struct command *cmd)
 
 	/* Get arguments */
 	if (cmd_get_item(cmd, "item", &obj,
-			/* Prompt */ "Take off or unwield which item?",
-			/* Error  */ "You have nothing to take off or unwield.",
+			/* Prompt */ angdroid_game_ui_text("Take off or unwield which item?", angdroid_zh_tw_enabled()),
+			/* Error  */ angdroid_game_ui_text("You have nothing to take off or unwield.", angdroid_zh_tw_enabled()),
 			/* Filter */ obj_can_takeoff,
 			/* Choice */ USE_EQUIP) != CMD_OK)
 		return;
@@ -273,8 +296,8 @@ void do_cmd_wield(struct command *cmd)
 
 	/* Get arguments */
 	if (cmd_get_item(cmd, "item", &obj,
-			/* Prompt */ "Wear or wield which item?",
-			/* Error  */ "You have nothing to wear or wield.",
+			/* Prompt */ angdroid_game_ui_text("Wear or wield which item?", angdroid_zh_tw_enabled()),
+			/* Error  */ angdroid_game_ui_text("You have nothing to wear or wield.", angdroid_zh_tw_enabled()),
 			/* Filter */ obj_can_wear,
 			/* Choice */ USE_INVEN | USE_FLOOR | USE_QUIVER) != CMD_OK)
 		return;
@@ -294,7 +317,7 @@ void do_cmd_wield(struct command *cmd)
 	 * want to replace */
 	if (tval_is_ring(obj)) {
 		if (cmd_get_item(cmd, "replace", &equip_obj,
-						 /* Prompt */ "Replace which ring? ",
+						 /* Prompt */ angdroid_game_ui_text("Replace which ring? ", angdroid_zh_tw_enabled()),
 						 /* Error  */ "Error in do_cmd_wield(), please report.",
 						 /* Filter */ tval_is_ring,
 						 /* Choice */ USE_EQUIP) != CMD_OK)
@@ -308,8 +331,12 @@ void do_cmd_wield(struct command *cmd)
 	if (!obj_can_takeoff(equip_obj)) {
 		object_desc(o_name, sizeof(o_name), equip_obj, ODESC_BASE,
 			player);
-		msg("You cannot remove the %s you are %s.", o_name,
-			equip_describe(player, slot));
+		if (angdroid_zh_tw_enabled()) {
+            msg("你無法卸下已裝備的 %s。", o_name);
+        } else {
+            msg("You cannot remove the %s you are %s.", o_name,
+                equip_describe(player, slot));
+        }
 		return;
 	}
 
@@ -321,7 +348,9 @@ void do_cmd_wield(struct command *cmd)
 			ODESC_PREFIX | ODESC_FULL, player);
 		
 		/* Forget it */
-		if (!get_check(format("Really take off %s? ", o_name))) return;
+		if (!get_check(angdroid_zh_tw_enabled() ?
+                format("確定卸下 %s 嗎？ ", o_name) :
+                format("Really take off %s? ", o_name))) return;
 	}
 
 	/* Describe the object */
@@ -344,8 +373,13 @@ void do_cmd_wield(struct command *cmd)
 	inven_wield(obj, slot);
 
 	/* Message */
-	msgt(MSG_WIELD, "%s %s (%c).", act, o_name,
-		gear_to_label(player, equip_obj));
+	if (angdroid_zh_tw_enabled()) {
+        msgt(MSG_WIELD, "你卸下了 %s（%c）。", o_name,
+            gear_to_label(player, equip_obj));
+    } else {
+        msgt(MSG_WIELD, "%s %s (%c).", act, o_name,
+            gear_to_label(player, equip_obj));
+    }
 }
 
 /**
@@ -362,15 +396,16 @@ void do_cmd_drop(struct command *cmd)
 
 	/* Get arguments */
 	if (cmd_get_item(cmd, "item", &obj,
-			/* Prompt */ "Drop which item?",
-			/* Error  */ "You have nothing to drop.",
+			/* Prompt */ angdroid_game_ui_text("Drop which item?", angdroid_zh_tw_enabled()),
+			/* Error  */ angdroid_game_ui_text("You have nothing to drop.", angdroid_zh_tw_enabled()),
 			/* Filter */ NULL,
 			/* Choice */ USE_EQUIP | USE_INVEN | USE_QUIVER) != CMD_OK)
 		return;
 
 	/* Cannot remove stickied items */
 	if (object_is_equipped(player->body, obj) && !obj_can_takeoff(obj)) {
-		msg("Hmmm, it seems to be stuck.");
+		msg("%s", angdroid_game_ui_text("Hmmm, it seems to be stuck.",
+            angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -482,7 +517,8 @@ static void use_aux(struct command *cmd, struct object *obj, enum use use,
 
 		/* Sound and/or message */
 		if (obj->activation) {
-			msgt(snd, "You activate it.");
+			msgt(snd, "%s", angdroid_game_ui_text("You activate it.",
+                angdroid_zh_tw_enabled()));
 			activation_message(obj, player);
 		} else if (obj->kind->effect_msg) {
 			msgt(snd, "%s", obj->kind->effect_msg);
@@ -680,12 +716,24 @@ static void use_aux(struct command *cmd, struct object *obj, enum use use,
 				-1 : 0)) << 16), player);
 			if (from_floor) {
 				/* Print a message */
-				msg("You see %s.", name);
+				if (angdroid_zh_tw_enabled()) {
+                    msg("你看到 %s。", name);
+                } else {
+                    msg("You see %s.", name);
+                }
 			} else if (first_remainder) {
 				label = gear_to_label(player, first_remainder);
-				msg("You have %s (1st %c).", name, label);
+				if (angdroid_zh_tw_enabled()) {
+                    msg("你有 %s（第一組：%c）。", name, label);
+                } else {
+                    msg("You have %s (1st %c).", name, label);
+                }
 			} else {
-				msg("You have %s (%c).", name, label);
+				if (angdroid_zh_tw_enabled()) {
+                    msg("你有 %s（%c）。", name, label);
+                } else {
+                    msg("You have %s (%c).", name, label);
+                }
 			}
 		} else if (used && use == USE_CHARGE) {
 			/* Describe charges */
@@ -738,8 +786,8 @@ void do_cmd_read_scroll(struct command *cmd)
 
 	/* Get the scroll */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Read which scroll? ",
-			"You have no scrolls to read.",
+			angdroid_game_ui_text("Read which scroll? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no scrolls to read.", angdroid_zh_tw_enabled()),
 			tval_is_scroll,
 			USE_INVEN | USE_FLOOR) != CMD_OK) return;
 
@@ -759,13 +807,14 @@ void do_cmd_use_staff(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Use which staff? ",
-			"You have no staves to use.",
+			angdroid_game_ui_text("Use which staff? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no staves to use.", angdroid_zh_tw_enabled()),
 			tval_is_staff,
 			USE_INVEN | USE_FLOOR | SHOW_FAIL) != CMD_OK) return;
 
 	if (!obj_has_charges(obj)) {
-		msg("That staff has no charges.");
+		msg("%s", angdroid_game_ui_text("That staff has no charges.",
+            angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -785,13 +834,14 @@ void do_cmd_aim_wand(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Aim which wand? ",
-			"You have no wands to aim.",
+			angdroid_game_ui_text("Aim which wand? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no wands to aim.", angdroid_zh_tw_enabled()),
 			tval_is_wand,
 			USE_INVEN | USE_FLOOR | SHOW_FAIL) != CMD_OK) return;
 
 	if (!obj_has_charges(obj)) {
-		msg("That wand has no charges.");
+		msg("%s", angdroid_game_ui_text("That wand has no charges.",
+            angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -811,13 +861,14 @@ void do_cmd_zap_rod(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Zap which rod? ",
-			"You have no rods to zap.",
+			angdroid_game_ui_text("Zap which rod? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no rods to zap.", angdroid_zh_tw_enabled()),
 			tval_is_rod,
 			USE_INVEN | USE_FLOOR | SHOW_FAIL) != CMD_OK) return;
 
 	if (!obj_can_zap(obj)) {
-		msg("That rod is still charging.");
+		msg("%s", angdroid_game_ui_text("That rod is still charging.",
+            angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -838,13 +889,14 @@ void do_cmd_activate(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Activate which item? ",
-			"You have no items to activate.",
+			angdroid_game_ui_text("Activate which item? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no items to activate.", angdroid_zh_tw_enabled()),
 			obj_is_activatable,
 			USE_EQUIP | SHOW_FAIL) != CMD_OK) return;
 
 	if (!obj_can_activate(obj)) {
-		msg("That item is still charging.");
+		msg("%s", angdroid_game_ui_text("That item is still charging.",
+            angdroid_zh_tw_enabled()));
 		return;
 	}
 
@@ -860,8 +912,8 @@ void do_cmd_eat_food(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Eat which food? ",
-			"You have no food to eat.",
+			angdroid_game_ui_text("Eat which food? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no food to eat.", angdroid_zh_tw_enabled()),
 			tval_is_edible,
 			USE_INVEN | USE_FLOOR) != CMD_OK) return;
 
@@ -881,8 +933,8 @@ void do_cmd_quaff_potion(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Quaff which potion? ",
-			"You have no potions from which to quaff.",
+			angdroid_game_ui_text("Quaff which potion? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no potions from which to quaff.", angdroid_zh_tw_enabled()),
 			tval_is_potion,
 			USE_INVEN | USE_FLOOR) != CMD_OK) return;
 
@@ -902,8 +954,8 @@ void do_cmd_use(struct command *cmd)
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Use which item? ",
-			"You have no items to use.",
+			angdroid_game_ui_text("Use which item? ", angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have no items to use.", angdroid_zh_tw_enabled()),
 			obj_is_useable,
 			USE_EQUIP | USE_INVEN | USE_QUIVER | USE_FLOOR | SHOW_FAIL | QUIVER_TAGS | SHOW_FAIL) != CMD_OK)
 		return;
@@ -920,10 +972,12 @@ void do_cmd_use(struct command *cmd)
 		if (object_is_equipped(player->body, obj)) {
 			do_cmd_activate(cmd);
 		} else {
-			msg("Equip the item to use it.");
+			msg("%s", angdroid_game_ui_text("Equip the item to use it.",
+            angdroid_zh_tw_enabled()));
 		}
 	} else
-		msg("The item cannot be used at the moment");
+		msg("%s", angdroid_game_ui_text("The item cannot be used at the moment",
+            angdroid_zh_tw_enabled()));
 }
 
 
@@ -939,12 +993,14 @@ static void refill_lamp(struct object *lamp, struct object *obj)
 	lamp->timeout += obj->timeout ? obj->timeout : obj->pval;
 
 	/* Message */
-	msg("You fuel your lamp.");
+	msg("%s", angdroid_game_ui_text("You fuel your lamp.",
+            angdroid_zh_tw_enabled()));
 
 	/* Comment */
 	if (lamp->timeout >= z_info->fuel_lamp) {
 		lamp->timeout = z_info->fuel_lamp;
-		msg("Your lamp is full.");
+		msg("%s", angdroid_game_ui_text("Your lamp is full.",
+            angdroid_zh_tw_enabled()));
 	}
 
 	/* Refilled from a lantern */
@@ -1007,18 +1063,21 @@ void do_cmd_refill(struct command *cmd)
 
 	/* Check what we're wielding. */
 	if (!light || !tval_is_light(light)) {
-		msg("You are not wielding a light.");
+		msg("%s", angdroid_game_ui_text("You are not wielding a light.",
+            angdroid_zh_tw_enabled()));
 		return;
 	} else if (of_has(light->flags, OF_NO_FUEL)
 			|| !of_has(light->flags, OF_TAKES_FUEL)) {
-		msg("Your light cannot be refilled.");
+		msg("%s", angdroid_game_ui_text("Your light cannot be refilled.",
+            angdroid_zh_tw_enabled()));
 		return;
 	}
 
 	/* Get an item */
 	if (cmd_get_item(cmd, "item", &obj,
-			"Refuel with with fuel source? ",
-			"You have nothing you can refuel with.",
+			angdroid_game_ui_text("Refuel with which fuel source? ",
+                angdroid_zh_tw_enabled()),
+			angdroid_game_ui_text("You have nothing you can refuel with.", angdroid_zh_tw_enabled()),
 			obj_can_refill,
 			USE_INVEN | USE_FLOOR | USE_QUIVER) != CMD_OK) return;
 
@@ -1055,9 +1114,9 @@ void do_cmd_cast(struct command *cmd)
 	if (cmd_get_spell(cmd, "spell", player, &spell_index,
 			/* Verb */ "cast",
 			/* Book */ obj_can_cast_from,
-			/* Book error */ "There are no spells you can cast.",
+			/* Book error */ angdroid_game_ui_text("There are no spells you can cast.", angdroid_zh_tw_enabled()),
 			/* Filter */ spell_okay_to_cast,
-			/* Spell error */ "That book has no spells that you can cast.") != CMD_OK) {
+			/* Spell error */ angdroid_game_ui_text("That book has no spells that you can cast.", angdroid_zh_tw_enabled())) != CMD_OK) {
 		return;
 	}
 
@@ -1070,13 +1129,17 @@ void do_cmd_cast(struct command *cmd)
 		const char *noun = spell->realm->spell_noun;
 
 		/* Warning */
-		msg("You do not have enough mana to %s this %s.", verb, noun);
+		if (angdroid_zh_tw_enabled()) {
+            msg("你的法力不足，無法施放這個法術。");
+        } else {
+            msg("You do not have enough mana to %s this %s.", verb, noun);
+        }
 
 		/* Flush input */
 		event_signal(EVENT_INPUT_FLUSH);
 
 		/* Verify */
-		if (!get_check("Attempt it anyway? ")) return;
+		if (!get_check(angdroid_game_ui_text("Attempt it anyway? ", angdroid_zh_tw_enabled()))) return;
 	}
 
 	if (spell_needs_aim(spell_index)) {
@@ -1122,9 +1185,9 @@ void do_cmd_study_spell(struct command *cmd)
 	if (cmd_get_spell(cmd, "spell", player, &spell_index,
 			/* Verb */ "study",
 			/* Book */ obj_can_study,
-			/* Book error */ "You cannot learn any new spells from the books you have.",
+			/* Book error */ angdroid_game_ui_text("You cannot learn any new spells from the books you have.", angdroid_zh_tw_enabled()),
 			/* Filter */ spell_okay_to_study,
-			/* Spell error */ "That book has no spells that you can learn.") != CMD_OK)
+			/* Spell error */ angdroid_game_ui_text("That book has no spells that you can learn.", angdroid_zh_tw_enabled())) != CMD_OK)
 		return;
 
 	spell_learn(spell_index);
@@ -1147,8 +1210,8 @@ void do_cmd_study_book(struct command *cmd)
 		return;
 
 	if (cmd_get_item(cmd, "item", &book_obj,
-			/* Prompt */ "Study which book? ",
-			/* Error  */ "You cannot learn any new spells from the books you have.",
+			/* Prompt */ angdroid_game_ui_text("Study which book? ", angdroid_zh_tw_enabled()),
+			/* Error  */ angdroid_game_ui_text("You cannot learn any new spells from the books you have.", angdroid_zh_tw_enabled()),
 			/* Filter */ obj_can_study,
 			/* Choice */ USE_INVEN | USE_FLOOR) != CMD_OK)
 		return;
@@ -1167,7 +1230,12 @@ void do_cmd_study_book(struct command *cmd)
 	}
 
 	if (spell_index < 0) {
-		msg("You cannot learn any %ss in that book.", book->realm->spell_noun);
+		if (angdroid_zh_tw_enabled()) {
+            msg("這本書沒有可以學習的法術。");
+        } else {
+            msg("You cannot learn any %ss in that book.",
+                book->realm->spell_noun);
+        }
 	} else {
 		spell_learn(spell_index);
 		player->upkeep->energy_use = z_info->move_energy;

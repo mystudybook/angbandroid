@@ -6,6 +6,7 @@
 #define ANGDROID_ZH_TW_MON_LORE_TERMS_H
 #include <string.h>
 #include <stddef.h>
+#include "zh-tw-faangband-mon-spell-lore.h"
 struct angdroid_lore_term { const char *en; const char *zh; };
 static inline const char *angdroid_zh_tw_lore_lookup(const char *en,
         const struct angdroid_lore_term *pairs, size_t count, int zh_tw)
@@ -192,7 +193,9 @@ static inline const char *angdroid_zh_tw_monster_spell(const char *en, int zh_tw
         { "summon ringwraiths", "召喚戒靈" },
         { "summon uniques", "召喚特殊怪物" },
     };
-    return angdroid_zh_tw_lore_lookup(en, pairs,
+    const char *translated = angdroid_zh_tw_lore_lookup(en, pairs,
         sizeof(pairs)/sizeof(pairs[0]), zh_tw);
+    return translated != en ? translated :
+        angdroid_faangband_mon_spell_lore(en, zh_tw);
 }
 #endif

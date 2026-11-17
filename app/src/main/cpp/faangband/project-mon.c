@@ -25,6 +25,7 @@
 #include "mon-make.h"
 #include "mon-move.h"
 #include "mon-msg.h"
+#include "mon-damage-hp.h"
 #include "mon-predicate.h"
 #include "mon-spell.h"
 #include "mon-timed.h"
@@ -1023,12 +1024,9 @@ static void project_monster_handler_MON_POLY(project_monster_handler_context_t *
 /* Heal Monster (use "dam" as amount of healing) */
 static void project_monster_handler_MON_HEAL(project_monster_handler_context_t *context)
 {
-	/* Heal */
-	context->mon->hp += context->dam;
-
-	/* No overflow */
-	if (context->mon->hp > context->mon->maxhp)
-		context->mon->hp = context->mon->maxhp;
+	/* A healing projection cannot wrap 16-bit HP before checking maxhp. */
+	context->mon->hp = angdroid_fa_mon_hp_after_healing(
+		context->mon->hp, context->mon->maxhp, context->dam);
 
 	/* Redraw (later) if needed */
 	if (player->upkeep->health_who == context->mon)
@@ -1189,8 +1187,8 @@ static bool project_m_monster_attack(project_monster_handler_context_t *context,
 	/* Wake the monster up, don't notice the player */
 	monster_wake(mon, false, 0);
 
-	/* Hurt the monster */
-	mon->hp -= dam;
+	/* A wide subtraction also protects large projection damage values. */
+	mon->hp = angdroid_fa_mon_hp_after_damage(mon->hp, dam);
 
 	/* Dead or damaged monster */
 	if (mon->hp < 0) {

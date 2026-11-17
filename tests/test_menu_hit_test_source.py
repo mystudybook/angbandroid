@@ -30,8 +30,10 @@ if "if (cursor >= n) cursor = n - 1;" in column:
 mouse = source.split("bool menu_handle_mouse(", 1)[1].split(
     "static bool menu_handle_action(", 1
 )[0]
-if "if (is_valid_row(menu, new_cursor))" not in mouse:
-    raise SystemExit("FAIL: invalid touch hit can select an action")
+if "if (menu_navigation_is_valid(menu, new_cursor))" not in mouse:
+    raise SystemExit("FAIL: blank or hidden menu row is touch-selectable")
+if "if (is_valid_row(menu, new_cursor))" in mouse:
+    raise SystemExit("FAIL: hidden source row still accepts a screen tap")
 
 # The current touch must resolve its new stock row BEFORE dispatching.
 # Header/outside actions must still run independently of the active list.
@@ -44,7 +46,7 @@ inside = select.split("if (in.type == EVT_MOUSE) {", 1)[1].split(
 for phrase in (
     "if (region_inside(&menu->active, &in)) {",
     "menu_handle_mouse(menu, &in, &out);",
-    "if (out.type == EVT_SELECT && !no_act) {",
+    "if (out.type == EVT_SELECT && !no_act &&",
     "menu_handle_action(menu, &in))",
     "} else {",
     "if (!no_act && menu_handle_action(menu, &in))",
@@ -52,9 +54,11 @@ for phrase in (
     if phrase not in inside:
         raise SystemExit(f"FAIL: touch row may dispatch stale selection: {phrase}")
 if inside.index("menu_handle_mouse(menu, &in, &out);") > inside.index(
-    "if (out.type == EVT_SELECT && !no_act) {"
+    "if (out.type == EVT_SELECT && !no_act &&"
 ):
     raise SystemExit("FAIL: touch action runs before current row hit-test")
+if "(menu->flags & MN_MOUSE_ROW_ACTION)" not in inside:
+    raise SystemExit("FAIL: raw mouse event must be opt-in for stock menus")
 if "touch_select_dispatched = true;" not in inside:
     raise SystemExit("FAIL: one touch can dispatch an action twice")
 if "!touch_select_dispatched &&" not in select:

@@ -26,6 +26,7 @@
 #include "z-textblock.h"
 #include "droid.h"
 #include "zh-tw-monsters.h"
+#include "zh-tw-unique-monsters.h"
 
 /**
  * Place a monster recall title into a textblock.
@@ -52,13 +53,20 @@ void lore_title(textblock *tb, const struct monster_race *race)
 	standard_attr = race->d_attr;
 	optional_attr = monster_x_attr[race->ridx];
 
-	/* Translate only curated non-unique display names; preserve uniques. */
-    const char *name_zh = (angdroid_zh_tw_enabled() &&
-        !rf_has(race->flags, RF_UNIQUE)) ?
-        angdroid_zh_tw_monster_list_name(race->name) : NULL;
-    if (!rf_has(race->flags, RF_UNIQUE)) {
-        if (!name_zh) textblock_append(tb, "The ");
-    } else if (OPT(player, purple_uniques)) {
+	/* Localize the recall heading using the same curated source names
+	 * as the monster knowledge list.  Never modify race identities or
+	 * the original unique/purple display handling. */
+	const bool is_unique = rf_has(race->flags, RF_UNIQUE);
+	const char *name_zh = NULL;
+	if (angdroid_zh_tw_enabled()) {
+		name_zh = is_unique ?
+			angdroid_zh_tw_unique_monster_name(race->name) :
+			angdroid_zh_tw_monster_list_name(race->name);
+	}
+	if (!is_unique) {
+		/* Preserve the original English 'The ' for unmapped races. */
+		if (!name_zh) textblock_append(tb, "The ");
+	} else if (OPT(player, purple_uniques)) {
 		standard_attr = COLOUR_VIOLET;
 		if (!(optional_attr & 0x80))
 			optional_attr = COLOUR_VIOLET;

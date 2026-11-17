@@ -28,6 +28,8 @@
 #include "player-timed.h"
 #include "player-util.h"
 #include "trap.h"
+#include "droid.h"
+#include "zh-tw-trap-activation-messages.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -527,7 +529,8 @@ extern void hit_trap(struct loc grid, int delayed)
 
 		/* Give a message */
 		if (trap->kind->msg)
-			msg("%s", trap->kind->msg);
+			msg("%s", angdroid_trap_activation_message(
+                    trap->kind->msg, angdroid_zh_tw_enabled()));
 
 		/* Test for save due to flag */
 		for (flag = of_next(trap->kind->save_flags, FLAG_START);
@@ -551,10 +554,12 @@ extern void hit_trap(struct loc grid, int delayed)
 		/* Save, or fire off the trap */
 		if (saved) {
 			if (trap->kind->msg_good)
-				msg("%s", trap->kind->msg_good);
+				msg("%s", angdroid_trap_activation_message(
+                    trap->kind->msg_good, angdroid_zh_tw_enabled()));
 		} else {
 			if (trap->kind->msg_bad)
-				msg("%s", trap->kind->msg_bad);
+				msg("%s", angdroid_trap_activation_message(
+                    trap->kind->msg_bad, angdroid_zh_tw_enabled()));
 			effect = trap->kind->effect;
 			effect_do(effect, source_trap(trap), NULL, &ident, false, 0, 0, 0, NULL);
 
@@ -564,7 +569,8 @@ extern void hit_trap(struct loc grid, int delayed)
 			/* Do any extra effects */
 			if (trap->kind->effect_xtra && one_in_(2)) {
 				if (trap->kind->msg_xtra)
-					msg("%s", trap->kind->msg_xtra);
+					msg("%s", angdroid_trap_activation_message(
+                    trap->kind->msg_xtra, angdroid_zh_tw_enabled()));
 				effect = trap->kind->effect_xtra;
 				effect_do(effect, source_trap(trap), NULL, &ident, false,
 						  0, 0, 0, NULL);

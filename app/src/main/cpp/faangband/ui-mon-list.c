@@ -26,6 +26,11 @@
 #include "ui-output.h"
 #include "ui-prefs.h"
 #include "ui-term.h"
+#include "droid.h"
+#include "../curses/unicode_display.h"
+#include "../angband/monster-list-compact-layout.h"
+#include "../angband/zh-tw-monster-list-ui.h"
+#include "../angband/zh-tw-list-location.h"
 
 /**
  * Format a section of the monster list: a header followed by monster list
@@ -62,7 +67,9 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 	int index;
 	int total;
 	char line_buffer[200];
-	const char *punctuation = (lines_to_display == 0) ? "." : ":";
+	const bool zh_tw = angdroid_zh_tw_enabled();
+	const char *punctuation = (lines_to_display == 0) ?
+		(zh_tw ? "。" : ".") : (zh_tw ? "：" : ":");
 	const char *others = (show_others) ? "other " : "";
 	size_t max_line_length = 0;
 
@@ -72,8 +79,9 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 	total = list->distinct_entries;
 
 	if (list->total_monsters[section] == 0) {
-		max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
-								  "%s no monsters.\n", prefix);
+		strnfmt(line_buffer, sizeof(line_buffer),
+			zh_tw ? "%s沒有怪物。\n" : "%s no monsters.\n", prefix);
+		max_line_length = angdroid_utf8_display_columns(line_buffer);
 
 		if (tb != NULL)
 			textblock_append(tb, "%s", line_buffer);
@@ -85,19 +93,24 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 		return;
 	}
 
-	max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
-							  "%s %d %smonster%s%s\n",
-							  prefix,
-							  list->total_monsters[section],
-							  others,
-							  PLURAL(list->total_monsters[section]),
-							  punctuation);
+	if (zh_tw) {
+		strnfmt(line_buffer, sizeof(line_buffer),
+			"%s有 %d 隻%s怪物%s\n", prefix,
+			list->total_monsters[section], show_others ? "其他" : "",
+			punctuation);
+	} else {
+		strnfmt(line_buffer, sizeof(line_buffer),
+			"%s %d %smonster%s%s\n", prefix,
+			list->total_monsters[section], others,
+			PLURAL(list->total_monsters[section]), punctuation);
+	}
+	max_line_length = angdroid_utf8_display_columns(line_buffer);
 
 	if (tb != NULL)
 		textblock_append(tb, "%s", line_buffer);
 
 	for (index = 0; index < total && line_count < lines_to_display; index++) {
-		char asleep[20] = { '\0' };
+		char asleep[72] = { '\0' };
 		char location[20] = { '\0' };
 		uint8_t line_attr;
 		size_t full_width;
@@ -111,63 +124,72 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 		if (list->entries[index].count[section] == 0)
 			continue;
 
-		/* Only display directions for the case of a single monster. */
+		/* Safe signed-to-unsigned row width conversion. Hide the optional
+		 * distance rather than cutting the monster name on a short screen. */
 		if (list->entries[index].count[section] == 1) {
-			const char *direction1 =
-				(list->entries[index].dy[section] <= 0)	? "N" : "S";
-			const char *direction2 =
-				(list->entries[index].dx[section] <= 0) ? "W" : "E";
-			strnfmt(location, sizeof(location), " %d %s %d %s",
-					abs(list->entries[index].dy[section]), direction1,
-					abs(list->entries[index].dx[section]), direction2);
+			angdroid_list_relative_location(location, sizeof(location),
+				list->entries[index].dy[section],
+				list->entries[index].dx[section], angdroid_zh_tw_enabled());
 		}
-
-		/* Get width available for monster name and sleep tag: 2 for char and
-		 * space; location includes padding; last -1 for some reason? */
-		full_width = max_width - 2 - utf8_strlen(location) - 1;
+		{
+			struct angdroid_monster_row_budget budget =
+				angdroid_monster_row_fit(max_width,
+					angdroid_utf8_display_columns(location));
+			full_width = budget.name_columns;
+			if (!budget.show_location) location[0] = '\0';
+		}
 
 		asleep_in_section = list->entries[index].asleep[section];
 		neutral_in_section = list->entries[index].neutral[section];
 		count_in_section = list->entries[index].count[section];
 
 		if (count_in_section > 1) {
-			if (asleep_in_section > 0) {
-				if (neutral_in_section > 0) {
-					strnfmt(asleep, sizeof(asleep), " (%d asleep, %d neutral)",
-							asleep_in_section, neutral_in_section);
-				} else {
-					strnfmt(asleep, sizeof(asleep), " (%d asleep)",
-							asleep_in_section);
-				}
+			if (asleep_in_section > 0 && neutral_in_section > 0) {
+				strnfmt(asleep, sizeof(asleep),
+					zh_tw ? "（%d 隻睡眠、%d 隻中立）" :
+					" (%d asleep, %d neutral)",
+					asleep_in_section, neutral_in_section);
+			} else if (asleep_in_section > 0) {
+				strnfmt(asleep, sizeof(asleep),
+					zh_tw ? "（%d 隻睡眠中）" : " (%d asleep)",
+					asleep_in_section);
 			} else if (neutral_in_section > 0) {
-					strnfmt(asleep, sizeof(asleep), " (%d neutral)",
-							neutral_in_section);
+				strnfmt(asleep, sizeof(asleep),
+					zh_tw ? "（%d 隻中立）" : " (%d neutral)",
+					neutral_in_section);
 			}
-		} else {
-			if (asleep_in_section == 1) {
-				if (neutral_in_section == 1) {
-					strnfmt(asleep, sizeof(asleep), " (asleep, neutral)");
-				} else {
-					strnfmt(asleep, sizeof(asleep), " (asleep)");
-				}
-			} else if (neutral_in_section == 1) {
-				strnfmt(asleep, sizeof(asleep), " (neutral)");
-			}
+		} else if (asleep_in_section == 1 && neutral_in_section == 1) {
+			strnfmt(asleep, sizeof(asleep), "%s",
+				zh_tw ? "（睡眠中、中立）" : " (asleep, neutral)");
+		} else if (asleep_in_section == 1) {
+			strnfmt(asleep, sizeof(asleep), "%s",
+				zh_tw ? "（睡眠中）" : " (asleep)");
+		} else if (neutral_in_section == 1) {
+			strnfmt(asleep, sizeof(asleep), "%s",
+				zh_tw ? "（中立）" : " (neutral)");
 		}
 
-		/* Clip the monster name to fit, and append the sleep tag. */
-		name_width = MIN(full_width - utf8_strlen(asleep), sizeof(line_buffer));
+		/* Leave room for the name. Tags are dropped, not partially printed,
+		 * if the terminal cannot show both. */
+		{
+			size_t tag_columns = angdroid_utf8_display_columns(asleep);
+			if (!angdroid_monster_sleep_fits(full_width, tag_columns)) {
+				asleep[0] = '\0';
+				tag_columns = 0;
+			}
+			name_width = full_width - tag_columns;
+		}
 		get_mon_name(line_buffer, sizeof(line_buffer),
-					 list->entries[index].race,
-					 list->entries[index].p_race,
-					 list->entries[index].count[section]);
-		utf8_clipto(line_buffer, name_width);
+			list->entries[index].race,
+			list->entries[index].p_race,
+			list->entries[index].count[section]);
+		angdroid_utf8_clip_columns(line_buffer, name_width);
 		my_strcat(line_buffer, asleep, sizeof(line_buffer));
 
 		/* Calculate the width of the line for dynamic sizing; use a fixed max
 		 * width for location and monster char. */
 		max_line_length = MAX(max_line_length,
-							  utf8_strlen(line_buffer) + 12 + 2);
+							  angdroid_utf8_display_columns(line_buffer) + 12 + 2);
 
 		/* textblock_append_pict will safely add the monster symbol,
 		 * regardless of ASCII/graphics mode. */
@@ -182,7 +204,8 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 			/* Hack - Because monster race strings are UTF8, we have to add
 			 * additional padding for any raw bytes that might be consolidated
 			 * into one displayed character. */
-			full_width += strlen(line_buffer) - utf8_strlen(line_buffer);
+			full_width = angdroid_utf8_printf_field_bytes(
+				line_buffer, full_width);
 			line_attr = monster_list_entry_line_color(&list->entries[index]);
 			textblock_append_c(tb, line_attr, "%-*s%s\n",
 				(int) full_width, line_buffer, location);
@@ -209,8 +232,8 @@ static void monster_list_format_section(const monster_list_t *list, textblock *t
 	}
 
 	if (tb != NULL)
-		textblock_append(tb, "%6s...and %d others.\n", " ",
-						 remaining_monster_total);
+		textblock_append(tb, zh_tw ? "%6s……另有 %d 隻怪物。\n" :
+			"%6s...and %d others.\n", " ", remaining_monster_total);
 }
 
 /**
@@ -234,13 +257,14 @@ static bool monster_list_format_special(const monster_list_t *list, textblock *t
 {
 	if (player->timed[TMD_IMAGE] > 0) {
 		/* Hack - message needs newline to calculate width properly. */
-		const char *message = "Your hallucinations are too wild to see things clearly.\n";
+		const bool zh_tw = angdroid_zh_tw_enabled();
+		const char *message = angdroid_monster_list_hallucination_text(zh_tw);
 
 		if (max_height_result != NULL)
 			*max_height_result = 1;
 
 		if (max_width_result != NULL)
-			*max_width_result = strlen(message);
+			*max_width_result = angdroid_monster_list_hallucination_columns(zh_tw);
 
 		if (tb != NULL)
 			textblock_append_c(tb, COLOUR_ORANGE, "%s", message);
@@ -317,7 +341,8 @@ static void monster_list_format_textblock(const monster_list_t *list, textblock 
 
 	monster_list_format_section(list, tb, MONSTER_LIST_SECTION_LOS,
 								los_lines_to_display, max_width,
-								"You can see", false, &max_los_line);
+								angdroid_zh_tw_enabled() ? "視野內" : "You can see",
+								false, &max_los_line);
 
 	if (list->total_entries[MONSTER_LIST_SECTION_ESP] > 0) {
 		bool show_others = list->total_monsters[MONSTER_LIST_SECTION_LOS] > 0;
@@ -327,6 +352,7 @@ static void monster_list_format_textblock(const monster_list_t *list, textblock 
 
 		monster_list_format_section(list, tb, MONSTER_LIST_SECTION_ESP,
 									esp_lines_to_display, max_width,
+									angdroid_zh_tw_enabled() ? "感知範圍內" :
 									"You are aware of", show_others,
 									&max_esp_line);
 	}
@@ -371,7 +397,7 @@ void monster_list_show_subwindow(int height, int width)
 	monster_list_t *list;
 	int i;
 
-	if (height < 1 || width < 1)
+	if (height < 1 || width < 7)
 		return;
 
 	tb = textblock_new();
@@ -410,11 +436,12 @@ void monster_list_show_interactive(int height, int width)
 	monster_list_t *list;
 	size_t max_width = 0, max_height = 0;
 	int safe_height, safe_width;
+	struct angdroid_monster_list_popup popup;
 	region r;
 	int sort_exp = 0;
 	struct keypress ch;
 
-	if (height < 1 || width < 1)
+	if (height < 7 || width < 12)
 		return;
 
 	// Repeat
@@ -437,10 +464,17 @@ void monster_list_show_interactive(int height, int width)
 		 */
 		monster_list_format_textblock(list, NULL, 1000, 1000, &max_height,
 									  &max_width);
-		safe_height = MIN(height - 3, (int) max_height + 3);
-		safe_width = MIN(width - 40, (int) max_width);
+		/* Always use positive terminal geometry, including narrow phones. */
+		if (!angdroid_monster_list_popup_fit(width, height,
+				max_width, max_height, &popup)) {
+			textblock_free(tb);
+			monster_list_free(list);
+			return;
+		}
+		safe_height = popup.height;
+		safe_width = popup.width;
 		r.col = -safe_width;
-		r.row = 1;
+		r.row = popup.row;
 		r.width = safe_width;
 		r.page_rows = safe_height;
 
@@ -457,12 +491,10 @@ void monster_list_show_interactive(int height, int width)
 
 		char buf[300];
 
-		if (sort_exp) {
-			my_strcpy(buf, "Press 'x' to turn OFF 'sort by exp'", sizeof(buf));
-		}
-		else {
-			my_strcpy(buf, "Press 'x' to turn ON 'sort by exp'", sizeof(buf));
-		}
+		soft_kbd_flash("x");
+		angdroid_utf8_copy_complete(buf, sizeof(buf),
+			angdroid_monster_list_sort_hint(angdroid_zh_tw_enabled(),
+				sort_exp));
 
 		ch = textui_textblock_show(tb, r, buf);
 

@@ -22,6 +22,7 @@
 #include "ui-menu.h"
 #include "ui-output.h"
 #include "ui-spoil.h"
+#include "../angband/zh-tw-ui.h"
 
 
 static void spoiler_menu_act(const char *title, int row)
@@ -44,6 +45,10 @@ static void spoiler_menu_act(const char *title, int row)
 
 
 static struct menu *spoil_menu = NULL;
+
+/* The action table is kept alive because menu_new_action() stores its pointer.
+ * The displayed labels change with the language, but command IDs, callbacks
+ * and spoiler filenames remain the game's original data. */
 static menu_action spoil_actions[] =
 {
 	{ 0, 0, "Brief Object Info (obj-desc.spo)", spoiler_menu_act },
@@ -52,22 +57,40 @@ static menu_action spoil_actions[] =
 	{ 0, 0, "Full Monster Info (mon-info.spo)", spoiler_menu_act },
 };
 
+static void fa_spoiler_set_labels(bool zh_tw)
+{
+	spoil_actions[0].name = zh_tw ?
+		"物品摘要 (obj-desc.spo)" : "Brief Object Info (obj-desc.spo)";
+	spoil_actions[1].name = zh_tw ?
+		"神器摘要 (artifact.spo)" : "Brief Artifact Info (artifact.spo)";
+	spoil_actions[2].name = zh_tw ?
+		"怪物摘要 (mon-desc.spo)" : "Brief Monster Info (mon-desc.spo)";
+	spoil_actions[3].name = zh_tw ?
+		"完整怪物資訊 (mon-info.spo)" : "Full Monster Info (mon-info.spo)";
+	if (spoil_menu)
+		spoil_menu->title = zh_tw ? "產生遊戲資料檔" : "Create spoilers";
+}
+
 
 /**
  * Display menu for generating spoiler files.
  */
 void do_cmd_spoilers(void)
 {
+	if (!Term || Term->wid <= 0 || Term->hgt <= 0)
+		return;
 	if (!spoil_menu) {
 		spoil_menu = menu_new_action(spoil_actions,
 			N_ELEMENTS(spoil_actions));
 		spoil_menu->selections = all_letters_nohjkl;
-		spoil_menu->title = "Create spoilers";
 	}
 
+	/* Refresh cached menu labels on every visit, including a language
+	 * switch without restarting the game. */
+	fa_spoiler_set_labels(angdroid_zh_tw_enabled());
 	screen_save();
 	clear_from(0);
 	menu_layout(spoil_menu, &SCREEN_REGION);
 	menu_select(spoil_menu, 0, false);
-	screen_load();
+	if (Term) screen_load();
 }

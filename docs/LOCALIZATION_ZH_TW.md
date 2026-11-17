@@ -523,3 +523,228 @@ sh scripts/verify-zh-tw.sh --android zh-tw-validation-131.log
 ```
 
 驗收場景：開啟施法選單 → 點一次 A（未施法）→ **2 秒內切到背景又返回** → 再點 A，必須只當新的第一次觸控、不能立即施法；然後合法再點 A 才確認。相同場景需測試通知欄失焦、旋轉畫面、瀏覽模式、Enter／法術字母及其他虛擬按鈕。
+
+## 第 238 批 — FAangband 物品操作與野外探索繁體中文（2026-11-13）
+
+- `faangband/cmd-obj.c`：將既有字典實際接入 36 處背包／裝備／使用道具／學習法術的提示與錯誤訊息，並接通 12 種一般回饋及一項啟動回饋。新增對物品使用失敗、未能卸下裝備、燃料與刻字、法力不足、施法學習失敗、物品使用後敘述等動態句子的繁中分支；英文語系仍採原有字串及格式。補正原本英文的燃料來源提示拼字重複。
+- `faangband/cmd-cave.c`：把 39 組既有翻譯接入 56 處可見探索訊息，包括門鎖、蜘蛛網、路線提示、障礙、怪物與地城階梯；另新增 16 組城鎮搬家、野外路徑、上下樓梯、離開特殊樓層確認及設陷阱的繁中字典。九種帶參數的怪物／陷阱事件保留原始英文格式，並有獨立繁中格式字串。
+- 挖掘指令：針對原版 `with your hands`、`with your weapon`、`with your swap digger` 三種工具提示加上繁中語序，讓清除碎石、挖掘、發現物品、挖通通道與失敗時的七種敘述不必混入英文介系詞。挖掘成功率、工具切換、地形變更及物品生成邏輯沒有改動。
+- 所有中文只在 `angdroid_zh_tw_enabled()` 開啟時顯示；英文模式、`cmd_get_item` 選擇條件、快捷鍵、裝備與陷阱 ID、角色歷史紀錄及存檔格式保持不變。尚未翻譯的動態效果描述仍保留英文回退。
+- 新增 `tests/test_faangband_item_command_messages_locale_source.py`、`tests/test_faangband_exploration_command_locale_source.py` 和純 C99 雙語字典測試 `tests/native/test_fa_item_command_translation.c`，由 `scripts/test-fa-item-command-translation.sh` 和 `scripts/verify-zh-tw.sh` 串接。
+- **驗證限制**：已在 GitHub Draft PR #146 提交並進行來源與接線核對；尚未在完整 repository checkout 執行這些新測試，也尚未確認最新 Android NDK／Gradle 編譯、模擬器或實機遊戲畫面。這些修改不能當作正式版驗收完成。
+
+## 第 239 批 — FAangband 地城寶物／危險感覺繁體中文（2026-11-13）
+
+- **遊戲內原有資料維持英文**：`faangband/cmd-cave.c` 中 `obj_feeling_text[11]`（寶物）與 `mon_feeling_text[10]`（怪物危險）陣列的 21 個英文來源字串和感覺代碼、顯示時機均保留；僅在 UI 輸出時使用共用 `angdroid_game_ui_text()` 對照，避免影響存檔、判斷、其他遊戲變體或英文模式。
+- **新增 21 組繁體中文句子**：涵蓋強大物品、上等寶物、幾乎沒有寶物、怪物極危險與安全寧靜等地城感覺。單獨發現寶物時顯示「你感覺到：…。」；探索不足時的怪物危險訊息直接顯示「…。」；兩類已知時按照原本的 `yet/and` 條件，以中文「，但／，而且」連接兩個詞句，避免顯示英文介系詞或英式標點。城鎮提示及主題樓層的 `level->typ` 來源內容保持既有行為。
+- **順序安全修正**：把寶物／危險索引範圍檢查移到 `obj_only`、探索不足分支**之前**，避免異常感覺代碼在檢查前被索引。沒有改變探索門檻 `cave->feeling_squares < z_info->feeling_need`、`disturb(player)`、角色狀態或遊戲規則。
+- **離線驗證檔案**：`tests/native/test_fa_dungeon_feelings_locale.c` 以 C99 直接包含正式 `zh-tw-ui.h`，對照 21 組中英字典、未知字串回退、獨立與組合範例；`scripts/test-fa-dungeon-feelings-locale.sh` 使用 `-std=c99 -Wall -Wextra -Werror -pedantic`；`tests/test_faangband_dungeon_feelings_locale_source.py` 對照正式感覺陣列與字典／C99 資料，檢查英文保留、中文輸出、合併條件、索引檢查順序，已接入 `scripts/verify-zh-tw.sh`。
+- **目前驗證限制**：程式碼及測試已提交到原 Draft PR #146，但尚未在完整 checkout 上執行本批 Python／C99 腳本、完整 Android NDK／Gradle 建置與手機實測。未取得實機畫面確認前，不視為已完成發行驗收。
+
+## 第 240 批 — FAangband 九種主題樓層提示繁體中文（2026-11-13）
+
+- **確認來源**：`variant_lib/faangband/gamedata/themed.txt` 共 9 組 `name:`／`message:`。原始 `message:` 經 `generate.c::parse_themed_message()` 存入 `struct vault::typ`，並由 `cmd-cave.c::display_feeling()` 顯示。一般 vault 的 `typ` 另有用途，因此只改此顯示點。
+- **九組繁中譯文**：元素戰場、巨龍、凶狼荒野、烏頓烈焰與惡魔、哥布林戰鼓、軍閥爭戰、巴拉希爾、伊甸人、Haudh-en-Ndengin。特定地名與人名保留可辨識的專名；展示文字透過 `angdroid_game_ui_text(level->typ, angdroid_zh_tw_enabled())` 查表，**沒有更改 themed.txt、樓層識別、房間模板、生成機率、存檔格式或英文顯示**。未命中的訊息原樣回退英文。
+- **回歸守護**：擴充 `test_fa_dungeon_feelings_locale.c`，以正式翻譯 header 對照 9 組並檢查英文回退；`test_faangband_dungeon_feelings_locale_source.py` 會從 `themed.txt` 自動擷取全部 `message:`，確認字典和 C99 測試一一對應，並檢查 `generate.c` 的解析器及真正顯示端。沿用既有 `scripts/test-fa-dungeon-feelings-locale.sh` 和 `scripts/verify-zh-tw.sh`。
+- **驗證界線**：本批需區分 GitHub 來源比對與實際測試執行；尚未進行完整 Android NDK／Gradle 建置或手機實測。PR #146 維持 Draft，不合併 master，不主動執行 GitHub Actions。
+
+## 第 241 批 — FAangband 怪物行動與世界環境提示繁體中文（2026-11-13）
+
+- **來源與範圍**：只修改 `faangband/mon-move.c`（怪物混亂撞地形、撞門、推擠、撿拾／壓碎物品、幽靈發言、驚醒）、`game-world.c`（物品充能通知、日夜、黑息、飢餓、回城／傳送／深層下降）、`cave-square.c`（符文、樓梯建立失敗、誘餌消失）的玩家可見訊息。
+- **字典**：共新增 **19 組** `angdroid_game_ui_text()` 英文來源對照；包含 `terrain.txt` 中的 3 組 `confused-msg:` 與原本預設的 `stumbles`。資料檔中的英文 `confused-msg:` 不改動，僅顯示端轉成中文。未知地形描述保持英文句型，不會硬套中文標點。
+- **含變數訊息**：保留原本怪物／物品名稱、拾取判斷、門鎖處理、更新旗標、聲音類別、掉落與消除操作；僅以繁中條件格式翻譯動作和詞序。原本玩家幽靈自訂說話內容保留原文。
+- **相容性**：未修改 `terrain.txt`、怪物 ID、RNG 呼叫、時間推移、效果數值、存檔資料、模式或遊戲判定；英文模式仍保留既有格式字串。
+- **測試**：`test_fa_monster_world_locale.c` 使用正式共用翻譯 header 檢查全部 19 組、英文原樣回退及動態格式範例；`test_faangband_monster_world_messages_locale_source.py` 核對資料檔、顯示端、關鍵英文格式、分支守護及測試接線。已接入 `scripts/verify-zh-tw.sh`。
+- **驗證界線**：GitHub 來源比對不等同完整 C99／Python 或 Android APK／模擬器測試。維持原 Draft PR #146、不執行 GitHub Actions、不合併 master。
+
+
+## 第 242 批 — FAangband 近戰後果、偷竊與幽靈挑戰繁體中文（2026-11-13）
+
+- **13 組玩家受擊／偷竊固定字串**：`mon-blows.c` 的酸、電、火、冰傷害提示；生命力維持與流失；背包能量吸收；錢袋、偷竊未成功與所有錢幣被偷；背包成功防護等，透過 `angdroid_game_ui_text()` 顯示中英文字。保留英文來源與狀態邏輯。
+- **14 組幽靈挑戰**：`game-world.c` 的 `challenge_text[14]` 保持英文原有順序，僅顯示時翻譯；仍呼叫 `randint0(14)` **恰好一次**，沒有更動隨機序列，幽靈名稱與種族名稱保留原始值。英文格式 `"%s, the %s %s"` 不變。
+- **動態傷害／偷竊／吃掉食物**：修正 `%d` 傷害與被偷錢幣顯示，以及分堆或整件物品被偷、怪物偷竊失敗、食物被吃掉等帶 `%s`／`%c` 的訊息。遊戲中原本的 `context->obvious`、`gear_object_for_use()`、`monster_carry()`、`player_exp_lose()`、效果與傷害計算、損失金額及背包標籤都不動。帶有 `monster_blow_method_action()` 的動態戰鬥動詞仍需另行依遊戲資料來源審查，未擅自改寫。
+- **離線檢查**：新增 `test_faangband_melee_ghost_locale.c`、`test-fa-melee-ghost-locale.sh` 與 `test_faangband_melee_ghost_locale_source.py`，驗證正式字典 27 組英文來源、原英文模式、未知值回退、14 組幽靈來源、動態格式與 RNG 呼叫位置；接入 `verify-zh-tw.sh`。
+- **限制**：純原始碼比對與來源回歸檔案不等於完整 C99／Python 套件已在 checkout 執行，也不是 Android NDK／Gradle／實機驗收；仍維持 Draft PR #146，未合併 master、未執行 GitHub Actions。
+
+## 第 243 批 — FAangband 怪物近戰動態動詞與抵抗訊息（2026-11-13）
+
+- 已核對 `variant_lib/faangband/gamedata/blow_methods.txt`，確認 `act:` 共 **57** 條且沒有重複。涵蓋 17 種基本近戰、8 種羞辱與 32 種怪物牢騷；把這 **57** 組模板逐一納入共用顯示字典，保留每條 `{target}`、`{oftarget}` 標記，**不修改遊戲原始資料**。此外翻譯恐懼／麻痺抵抗成功的 **2** 條 `save_msg`。
+- 將 `monster_blow_method_action()` 的實作抽成內部顯示格式函式，正式公開 API 仍回傳原英文動詞；只有繁中 UI 顯示時翻譯抽出的模板，再替換目標怪物名、玩家的「你／你的」代碼。未命中的字典保留原英文動作與原英文空白／句點。
+- 繁中句子移除英文動詞前的空白，使用中文句號；已包含句尾「！」「？」「。」的模板不額外加句號。傷害顯示 `(%d)`、怪物訊息種類、`string_free(act)` 釋放路徑保留。
+- `randint0(method->num_messages)` 仍只在所選動作函式呼叫一次；怪物招式候選數目、選擇順序、傷害／效果／AI／存檔資料均維持。
+- 加入來源覆蓋與實際翻譯表 C99 測試，接入 `scripts/verify-zh-tw.sh`。離線靜態來源核對不等於完整 C99/Android APK 測試已執行；維持原 Draft PR #146，不執行 Actions、也不合併 `master`。
+
+## 第 244 批 — FAangband 怪物訊息與受傷叫聲（2026-11-13）
+
+- 已直接比對 `list-mon-message.h` 的 **58 條非空訊息**與 `pain.txt` 的 **84 筆痛苦訊息（其中 65 條唯一）**，完整新增 **123 個**中文顯示對照；`list-mon-message.h`、`pain.txt` 的怪物 ID、訊息編號與英文原文一律保留。
+- `mon-msg.c` 在 `get_message_text()` 中查找原始英文模板，接著使用既有的單複數 `[singular|plural]` 展開器；摩瑞亞特殊死亡訊息保留「一聲／數聲」數量區分。資料未命中翻譯時回退原英文句型，避免將英文動作與中文主詞硬湊在一起。
+- `get_subject()` 僅在該筆訊息成功翻譯時使用中文主詞、怪物數量及「（畫面外）」標記；原英文路徑仍保留 `The`、複數拼法、空格及 `(offscreen)`。不更動已決定的可見性、訊息堆疊、傷害與聲音種類。中文群體傷害數字改顯示「（平均 %d）」；原英文依舊是 `(average %d)`。
+- 顯示文字緩衝區由 60 bytes 增至 256 bytes，以容納已核對的 UTF-8 翻譯，避免中文在一般句子中被截成半個字；怪物名稱、種族名稱、回合處理與狀態不變。
+- 新增 C99 正式翻譯表雙語回歸測試，以及 Python 對照原始資料完整覆蓋的來源檢查，並接入 `scripts/verify-zh-tw.sh`。此回合的 GitHub 靜態核對不等於已完整執行 C99、Python 或 Android 實機驗證。
+
+## 第 245 批 — FAangband 怪物清單窄螢幕及回憶顯示（2026-11-13）
+
+- **確認原有問題**：`faangband/ui-mon-list.c` 原先直接使用 `max_width - 2 - utf8_strlen(location) - 1` 及 `full_width - utf8_strlen(asleep)`；在窄視窗時，負欄數轉為 `size_t` 會造成無號下溢，導致名稱截斷與 `printf` 欄寬異常。現在採用專案已實作的 `angdroid_monster_row_fit()` 和 `angdroid_monster_sleep_fits()`：位置與睡眠／中立標記都是可省略的，優先保留怪物名稱。
+- **互動視窗**：原本的 `safe_width = MIN(width - 40, ...)` 在手機少於 40 欄時可能為負；改採 `angdroid_monster_list_popup_fit()`，在小於 12 欄或 7 行時安全不開啟；靜態怪物子窗小於 7 欄時不繪製，避免不完整符號欄位。
+- **UTF-8 與欄寬**：距離以 `angdroid_list_relative_location()` 完整輸出「北／南／東／西」；`angdroid_utf8_display_columns()` 計算真正終端欄位、`angdroid_utf8_clip_columns()` 不切斷漢字、`angdroid_utf8_printf_field_bytes()` 把顯示欄寬轉為 C `printf` field bytes。英文位置格式不變，無法放下完整距離時只省略距離而非截半。
+- **繁中清單資訊**：可見／感知區段標題、怪物數量、睡眠或中立狀態、幻覺訊息、隱藏其他怪物數量與按 `x` 切換經驗排序提示改為繁中；未變動怪物是否可見、排序計算、數量統計、顏色或圖示。
+- **名稱與回憶**：`mon-desc.c::get_mon_name()` 在繁中模式產生「%d 隻」與玩家幽靈 `[U] 姓名（種族）` 字串，利用 `angdroid_utf8_copy_complete()` 確保狹小輸出緩衝區不截斷中文字；英文模式維持原格式。`ui-mon-lore.c` 的一般怪物／幽靈回憶標題改用適當繁中格式，並新增 2 組「完全了解怪物」及任務怪物提示翻譯。遊戲資料、怪物唯一性標記、知識判定、紫色獨特怪物設定均保留。
+- **測試**：新增 `tests/native/test_faangband_monster_list_locale.c` 與 `scripts/test-fa-monster-list-locale.sh`，以正式共用 layout、方向、顯示欄函式測試短寬度、狹窄視窗、中文字元及英文回退；新增 `tests/test_faangband_monster_list_locale_source.py` 保護分支接線與回憶顯示邏輯，並接入 `scripts/verify-zh-tw.sh`。
+- **驗證界線**：GitHub 來源檢查不是已在完整 checkout 執行 C99／Python 套件、Android SDK/NDK APK 或實機驗證。維持原 Draft PR #146，不執行 Actions，也不合併 `master`。
+
+## 第 246 批 — FAangband 怪物回憶動態資訊中文化（2026-11-13）
+
+- **不修改遊戲資料和知識判定**：在 `app/src/main/cpp/faangband/mon-lore.c` 對繁體中文畫面新增顯示分支，原有英文組句保留；不改 `lore->flags`、`lore->armour_known`、`lore->drop_known`、`lore->sleep_known`、`lore->pkills`／`deaths`、怪物種族、AI、掉落設定、回合與存檔。英文模式仍走原來的分支。
+- **擊殺紀錄**：唯一怪物生死、祖先死亡、玩家本次或歷代擊殺、從未交戰等分支以完整中文句子表示；維持 `RF_UNIQUE`、`race->max_num` 與 `lore` 紀錄的判斷與紅色警示。
+- **血量、護甲與命中率**：僅在 `lore->armour_known` 時顯示；保留 `race->avg_hp`／`race->ac`、`hit_chance()`、`random_chance_scaled(..., 100)` 及原本的藍色數值。唯一怪物與普通怪物區分「生命值／平均生命值」。
+- **經驗值**：繼續在 `race->rarity` 合法時描述，沿用原本的整數與百分位小數公式；繁中版不強行組合英文的 `a/an`、`st/nd/rd/th`，而顯示「擊敗這隻怪物可獲得 X 點經驗值（以 N 級角色計算）」。`player->lev` 和經驗值公式不變。
+- **掉落物品**：僅在 `lore->drop_known` 時輸出，沿用原本 `mon_create_drop_count(..., &nspec)`、`RF_ONLY_ITEM`／`RF_ONLY_GOLD`、`RF_DROP_GOOD`／`RF_DROP_GREAT`。1 件、1 至 2 件、最多 N 件、特定物品數量分開顯示；維持原數量、品級及來源資訊。
+- **警戒、朋友與移動**：只有已知 `sleep_known` 時顯示警戒／聽力距離（原 `10 * race->hearing` 不變）；成群狩獵仍由 `RF_GROUP_AI` 決定。移動描述依既有 `RFT_RACE_A`／`RFT_RACE_N`、`RF_FORCE_DEPTH`、`RF_RAND_25/50`、`RF_NEVER_MOVE`、`OPT(player, effective_speed)` 決定，新增完整中文句子並保留速度倍數與玩家速度比較。
+- **30 個顯示詞彙**：共 **11** 條警戒程度、**9** 條速度描述與 **10** 條怪物類型或形容詞加入 `angband/zh-tw-ui.h`。仍使用 `angdroid_game_ui_text()` 做顯示替換，沒有變更 `list-mon-race-flags.h` 原始資料與數值門檻。
+- **離線測試**：新增 `tests/native/test_faangband_lore_display_locale.c`／`scripts/test-fa-lore-display-locale.sh` 的嚴格 C99 正式字典測試，以及 `tests/test_faangband_lore_display_locale_source.py` 的原始資料對照／公式／可見性／英文分支檢查，已接入 `scripts/verify-zh-tw.sh`。
+- **後續未涵蓋**：`lore_append_abilities()` 的旗標能力串列、`lore_append_spells()`、`lore_append_attack()` 的法術與近戰詳細文法仍須逐個來源核對；本批不宣稱所有怪物知識全文已翻譯。
+- **驗證界線**：可從 GitHub 執行定向原始碼一致性核對；這不同於完整 C99／Python 回歸、Android NDK／Gradle 或實機／模擬器建置驗證。維持同一 Draft PR #146，不觸發 GitHub Actions，不合併 `master`。
+
+## 第 247 批 — FAangband 怪物能力、弱點、抗性與免疫（2026-11-13）
+
+- 直接核對 `app/src/main/cpp/faangband/list-mon-race-flags.h`：`RFT_ALTER`、`RFT_DET`、`RFT_VULN`、`RFT_VULN_I`、`RFT_RES`、`RFT_PROT` 共有 **35 筆英文描述，33 條唯一詞彙**（`fire`、`cold` 同時作為弱點及抗性，須共用字典鍵），全部加入正式 `app/src/main/cpp/angband/zh-tw-ui.h` 顯示對照。原始遊戲旗標、數值與資料檔完全不改。
+- `lore_append_clause()` 保留 `rf_count()`、`rf_next()` 與原始色彩顯示，僅在繁中模式透過 `angdroid_game_ui_text(describe_race_flag(flag), zh_tw)` 對已選取的旗標翻譯，按中文句法選擇「、」「與」「或」，將句尾 `.  ` 轉為「。  」；英文模式的逗號、and/or、空格與原英文描述保留。
+- 新增純顯示 `faangband/mon-lore-display.h`：`angdroid_fa_lore_separator()` 與 `angdroid_fa_lore_sentence_end()`，可由不依賴遊戲引擎的 C99 測試直接檢驗中文字串串接及後備分支。
+- `lore_append_abilities()` 沿用全部 `known_flags` 和 `lore->flags` 資料過濾：開門／穿牆／拾取物品、隱形／冷血／心靈感應、快速繁殖／再生／飛行／領地性、發光／散播黑暗、火／寒冷／毒與其他元素的弱點、抗性、不抗性，以及恐懼／暈眩／混亂／睡眠等防護均以中文句型顯示。
+- **保護原始推理與資訊揭露**：保留 `RFT_VULN`、`RFT_VULN_I`、`RFT_RES`、`RFT_PROT` 與 `rf_inter(..., known_flags)` 的完整順序，對原始 `describe_race_flag()` 的字串相等比較、非弱點視作抗性、已知不抗性、`RF_UNDEAD` 移除 `RF_IM_NETHER` 等特殊規則不變。不會因繁中顯示提前揭露未知抗性。
+- `start` 緩衝區由 40 增至 96 bytes，容納中文句子片語而不因 UTF-8 編碼長度超出；只有訊息顯示發生變化，不影響戰鬥、怪物學識、AI、存檔與能力運作。
+- 新增 `tests/native/test_faangband_lore_abilities_locale.c`（正式字典全部 33 組中英回退及「、／與／或」邊界）、`scripts/test-fa-lore-abilities-locale.sh`（主機嚴格 C99）、`tests/test_faangband_lore_abilities_locale_source.py`（35 筆原始旗標、33 組翻譯對照、知識旗標過濾、亡靈例外、回歸測試接線），並更新 `scripts/verify-zh-tw.sh`。
+- **驗證限制**：本批 GitHub 靜態原始碼一致性核對不等於已在完整 checkout 執行 C99／Python 回歸、NDK／Gradle 或 Android 實機測試。維持原 Draft PR #146，不執行 GitHub Actions、不合併 `master`。
+
+## 第 248 批 — FAangband 法術與近戰回憶中文化（2026-11-13）
+
+- **實際資料覆蓋**：依 `variant_lib/faangband/gamedata/monster_spell.txt` 的 **116 條不重複 `lore:` 法術回憶文字**、`blow_methods.txt` 的 **19 條 `desc:` 動作文字**及 `blow_effects.txt` 的 **26 條 `desc:` 攻擊效果**核對，三份資料合計 **156 個不重複英文字串**（交叉重複 5 組）。由於同名 `attack`、`fire` 等詞可能出現在其他遊戲畫面，這批新建 **`faangband/mon-lore-terms.h` 的專用顯示詞表**，而不是把通用詞放進共用 `angband/zh-tw-ui.h`；遊戲原始資料檔維持英文，供解析器與遊戲規則使用。
+- **法術與吐息**：`mon-lore.c::lore_append_spell_clause()` 在原有 `rsf_next()`、`spell_color()`、`mon_spell_lore_damage(..., know_hp)` 之後翻譯已選定的回憶描述；中文「或／、」連接多個招式，傷害顯示為中文括號，英文模式保留原空格與 `(%d)`。
+- **施法頻率與知識限制**：`lore_append_spells()` 的先天攻擊、吐息、其他法術三組仍依 `lore->spell_flags`、`RST_INNATE`、`RST_BREATH` 與 `rf_has(known_flags, RF_SMART)` 篩選。對 `lore->innate_freq_known`、`lore->spell_freq_known` 仍顯示確定頻率，對只觀測到施法的 `lore->cast_innate`、`lore->cast_spell` 仍顯示估計頻率，計算 `100 / race->freq_*` 與 `100 / approx_frequency` 不變。新增顯示層 `lore_append_spell_frequency()`，中文說「每 N 次施放 1 次」或「約每 N 次施放 1 次」，英文原 `1 time in N` 格式不動。缺少先天施法頻率但已有招式資料時，繁中補句尾，避免與下一句黏接；`ref_race` 仍在退出前還原。
+- **近戰回憶**：`lore_append_attack()` 的 `RF_NEVER_BLOW`、`lore->blow_known[i]`、招式定義檢查、已知／總攻擊數量完全保留。顯示「牠能擊打／咬……，效果為……（2d6，75%）」等文字；`dice.base`、`dice.dice`、`dice.sides`、`dice.m_bonus`、`hit_chance()`、`random_chance_scaled(..., 100)`、`randcalc(..., AVERAGE)` 與 `total_centidamage / 100` 不變。當仍有未知招式時，平均傷害的「至少」標記保留，避免將局部已知資訊誤說成完整資訊。
+- **雙語與色彩隔離**：同一個 `angdroid_fa_lore_term()` 僅在繁中模式讀取 FAangband 專用對照，英文模式回傳原指標；未知來源不會被錯誤套用別處的中文翻譯。原數值及語句的 `COLOUR_L_GREEN`、`COLOUR_L_RED`、`COLOUR_L_BLUE` 與 `blow_color()` 色彩運算保留。
+- **回歸測試**：新增 `tests/native/test_faangband_lore_spells_attacks_locale.c`（156 條正式 C99 翻譯字典、英文原字串回退、中文句型）、`scripts/test-fa-lore-spells-attacks-locale.sh`、`tests/test_faangband_lore_spells_attacks_locale_source.py`（三份正式 gamedata 完整來源集合、未知攻擊保護、傷害／施法頻率公式、英文文字回退）。已接入 `scripts/verify-zh-tw.sh`。
+- **驗證界線**：Github 重新讀取程式碼後的靜態一致性核對與資料來源交叉對照，**不是**完整 checkout 實際執行的 C99／Python 回歸、NDK／Gradle 或模擬器／實機驗證。PR #146 維持 Draft，不觸發 Actions，不合併 `master`。
+
+## 第 249 批 — FAangband 怪物實際施法通知中文化（2026-11-13）
+
+- **精確核對正式來源**：`variant_lib/faangband/gamedata/monster_spell.txt` 目前有 **116 條 message-vis**、**116 筆 message-invis（80 條唯一）**、**11 條 message-miss** 與 **15 筆 message-save（14 條唯一）**，總計 **221 條唯一訊息模板**。四種通知分別建立完整繁體中文顯示對照，所有 `{name}`、`{pronoun}`、`{target}`、`{type}`、`{oftype}` 佔位符完整保留。未變更 `monster_spell.txt`、`mon-init.c` 或怪物法術數值與效果。
+- **局部詞表避免汙染其他 UI**：`faangband/mon-spell-messages-visible-zh-tw.h` 包含 116 條可見施法模板；`faangband/mon-spell-messages-other-zh-tw.h` 包含 80 條視野外、11 條未命中、14 條抵抗成功模板；`faangband/mon-spell-message-locale.h` 將兩份字典合成僅供 FAangband 施法通知使用的 `angdroid_fa_spell_message_locale()`，無對照或語言模式為英文時直接回傳原始字串，種族自訂的未知 `MON_ALTMSG` 也不會被猜測翻譯。
+- **正確的時序**：`mon-spell.c::spell_message()` 仍先依 `seen`、`hits` 及 `MON_ALTMSG_UNSEEN`／`MON_ALTMSG_MISS`／`MON_ALTMSG_SEEN` 選擇正式訊息；原始空字串／無法顯示的訊息仍直接返回。**選擇完成後、展開動態佔位符前**才對整條模板做精確翻譯；只有成功命中翻譯的訊息，才使用中文「這隻」、目標「你」、所有格「牠的」及 `{oftype}` 的中文括號，未翻譯的自訂英文仍走原語法。
+- **不洩漏視野外資訊**：保留 `if (!seen && t_mon) return;` 的「視野外對其他怪物施法不顯示」分支；其餘視野外訊息仍以「某個東西」「你聽見……」等未指明施法者的句子呈現。可見施法者和攻擊目標仍由原本的 `monster_desc()` 及 `MDESC` 旗標提供，僅一般非唯一、非幽靈名稱可在已翻譯的句型下去除英文 `the` 冠詞。唯一怪物、玩家幽靈名字與來源識別資訊不改。
+- **命中、傷害、抵抗不變**：`spell_tag_lookup()`、`msgt(spell->msgt, ...)`、`check_hit()`／`test_hit()`、`randint0(100) < player->state.skills[SKILL_SAVE]`、`spell_check_for_fail_rune()`、`effect_do()` 全部保留。成功抵抗的 `save_message` 只在既有擲骰成功分支內經翻譯後顯示；未命中仍採用原本的 `message-miss` 優先順序和傷害規則。鞭擊的 `{type}`／`{oftype}` 維持原 `projections[type].lash_desc` 來源，只在已翻譯的訊息做 FAangband 專屬顯示對照。
+- **防止未來資料拼接失效**：`mon-init.c` 的 `message-*` parser 使用字串追加，若同個怪物法術 power-cutoff 出現多次相同欄位，實際執行期模板可能和單行來源不一致。新增 Python 來源檢查要求每個 `name`／`power-cutoff` 之間，每個 `message-*` 類別最多一筆，來源更新後不能默默失去翻譯。
+- **回歸測試**：新增 `tests/native/test_faangband_spell_messages_locale.c`（221 條正式中英精確對照、未知字串指標回退、一般怪物主詞、可見／未命中／抵抗範例）、`scripts/test-fa-spell-messages-locale.sh`（host C99 `-std=c99 -Wall -Wextra -Werror -pedantic`）、`tests/test_faangband_spell_messages_locale_source.py`（四種資料的完整來源比對、佔位符一致性、視野與空字串遮蔽、特殊覆寫、抵抗與法術效果先後順序），已接進 `scripts/verify-zh-tw.sh`。
+- **驗證範圍**：GitHub 原始碼／資料的靜態核對不能取代完整本機 checkout 執行 C99／Python、Android NDK／Gradle 建置或實機驗收。沿用 Draft PR #146，所有本批 commit 帶 `[skip ci]`，未執行 GitHub Actions，未合併 `master`。
+
+## 第 250 批 — FAangband 種族專屬施法訊息與長訊息 UTF-8 安全（2026-11-13）
+
+- **已確認覆寫資料來源**：`variant_lib/faangband/gamedata/monster.txt` 目前有 **49 筆**種族專屬 `message-*` 施法覆寫（`message-vis` 3 筆、`message-invis` 46 筆、`message-miss` 0 筆），合併相同文字後為 **17 條唯一字串**。來源示例：`Something slurps.`、`{name} caws three times.`、`The baleful presence of {name} inspires your enemies.`。其中包括視野外只能聽到的咆哮、嘶嘶聲與其他含糊描述。
+- **避免重複翻譯字典**：既有 `app/src/main/cpp/angband/zh-tw-mon-spell-alt.inc` 已有完全對應這 **17 個精確來源**的中文對照。本批新增 `faangband/mon-spell-messages-alternate-zh-tw.h`，透過 `#include "../angband/zh-tw-mon-spell-alt.inc"` 直接重用；`mon-spell-message-locale.h` 在上批的 221 條通用施法模板都無匹配時才查種族專屬字典。沒有修改 `monster.txt` 或建立兩份各自維護的翻譯清單，未知／空白自訂模板仍按原文／原本遮蔽規則處理。
+- **保留完整顯示時序**：`mon-spell.c::spell_message()` 繼續先由 `seen`、`hits`、`MON_ALTMSG_SEEN/UNSEEN/MISS` 與 `level->message/blind_message/miss_message` 選出唯一有效模板，且視野外對其他怪物施法的隱藏規則不變。選完原模板後才翻譯，然後由原有的 `spell_tag_lookup()` 展開 `{name}`、`{pronoun}`、`{target}`、`{type}`、`{oftype}`。原來源資料、訊息種類 `spell->msgt`、傷害與命中規則不變。
+- **中文主詞與 UTF-8**：`angdroid_fa_spell_subject()` 改用 `angdroid_utf8_copy_complete()`／`angdroid_utf8_append_complete()` 製作「這隻」與怪物名稱，以字元為單位限制 byte buffer，避免 UTF-8 漢字從中間截斷。相應的 `mon-spell.c` 暫存怪物名稱從 80 bytes 增至 256 bytes；在已成功翻譯的中文模板中，不再套入為英文 `RF_NAME_COMMA` 設計的尾端英文逗號。
+- **長訊息完整字元輸出**：原施法通知以 `strnfcat()` 寫入 1024-byte buffer，若最終長字串在漢字中間達到限制，可能把不完整 UTF-8 送入 `msgt()`。現在只對**已成功翻譯**的中文訊息在輸出前使用另一份 `safe_buf[sizeof(buf)]` 並以 `angdroid_utf8_copy_complete()` 整理；未翻譯的英文（包括未知種族專屬通知）維持原輸出分支。此保護針對 byte 邊界；終端換行與可見欄寬仍由原文字介面負責。
+- **測試接線**：新增 `tests/native/test_faangband_spell_alternates_utf8.c`（正式來源的 17 條中文對照、英文與未知字串回退、狹窄 3／4／9／10-byte 主詞與完整 UTF-8 複製）、`scripts/test-fa-spell-alternates-utf8.sh`（host 嚴格 C99）及 `tests/test_faangband_spell_alternates_utf8_source.py`（49 筆原資料、17 條來源鍵及相同佔位符、`MON_ALTMSG` 選擇／隱藏分支、名稱／UTF-8、訊息順序、原 C99 runner），並納入 `scripts/verify-zh-tw.sh`。同步更新上批 Python guard，避免把舊的 `snprintf()` 誤判為唯一合格的主詞輸出。
+- **驗證界線**：本批從 GitHub 重新讀取正式來源後可做靜態一致性核對；這仍**不是**已在完整 checkout 執行 C99/Python 腳本、Android Gradle／NDK 編譯或模擬器／實機驗證。維持原 Draft PR #146、所有提交帶 `[skip ci]`、未執行 GitHub Actions、不合併 `master`。
+
+## 第 251 批 — FAangband 鞭擊屬性與特殊怪物名稱（2026-11-13）
+
+- **實際來源差異**：`variant_lib/faangband/gamedata/projection.txt` 的 `lash-desc:` 共有 **25 個唯一屬性描述**。第 249 批 `mon-spell.c` 誤用怪物回憶的 `mon-lore-terms.h` 翻譯 `{type}`／`{oftype}`，只涵蓋部分相同字串，會讓 `venom`、`dislocation`、`living fire`、`meteoric iron` 等在已中文化的施法句子中仍然出現英文。
+- **修正**：沿用既有 `angband/zh-tw-mon-spell-lash.h` 完整的 **25 組**來源精確翻譯，不重建詞表。在 FAangband `mon-spell.c` 改為 `#include "../angband/zh-tw-mon-spell-lash.h"`，並在 `SPELL_TAG_TYPE` 與 `SPELL_TAG_OF_TYPE` 的兩處 `projections[type].lash_desc` 顯示路徑呼叫 `angdroid_mon_spell_lash(type_name, localized)`。沒有改 `projection.txt`、`projections[]`、法術傷害、吐息類型、已知／未知資訊判定；未翻譯與英文模式保留原來源字串。
+- **特殊唯一怪物**：第 249 批原先只有 `RF_UNIQUE` 檢查，可能無法正確涵蓋變形為其他外觀的唯一怪物。現在施法者及目標名稱都採用原 `monster_desc.c` 使用的 `monster_is_shape_unique()` 判斷，避免將其專有名稱誤加「這隻」或剝除英文字冠詞。玩家幽靈走獨立分支，不與普通怪物冠詞邏輯混用。
+- **玩家幽靈名稱中文化**：`mon-desc.c` 對玩家幽靈原有 `<玩家名稱>, the <怪物種族>`（可能加 ` (offscreen)`）格式。新增純顯示層 `angdroid_fa_spell_ghost_subject()`：只有完整比對原始玩家名稱、字面 `, the `、原種族名稱、合法畫面外尾註時才改為 `<玩家名稱>（<種族>）`，畫面外尾註改為 `（畫面外）`。玩家原名、怪物種族、幽靈識別及視野判斷不改；無法精確比對的特殊來源繼續原文回退。
+- **UTF-8 小容量與標點**：幽靈名稱透過 `angdroid_utf8_copy_complete()` 與 `angdroid_utf8_append_complete()` 組句，不在漢字位元組中截斷。若容量無法容納完整 `（種族）` 及選配的 `（畫面外）`，寧可顯示可容納的原玩家名稱，而不輸出不完整的括號。英文模式及未匹配的特殊格式不變。
+- **離線回歸**：新增 `tests/native/test_faangband_spell_lash_ghost_locale.c`（來源 25 組中文鞭擊屬性、英文原指標回退、幽靈原名與含逗號專名、畫面外尾註、極窄 UTF-8 buffer）、`scripts/test-fa-spell-lash-ghost-locale.sh`（host C99 嚴格參數）、`tests/test_faangband_spell_lash_ghost_locale_source.py`（依正式 projection 的來源值比對現有詞表、`monster_desc()` 與 `monster_is_shape_unique()`、替換佔位符與緩衝安全）。更新前兩批的來源守護斷言，並納入 `scripts/verify-zh-tw.sh`。
+- **驗證限制**：GitHub 來源靜態核對不等於完整 checkout 的 C99／Python 直接執行、Android Gradle／NDK 建置、模擬器或實機測試。本批沿用 Draft PR #146，Commit 均標註 `[skip ci]`，不執行 GitHub Actions，不合併 `master`。
+
+## 第 252 批 — FAangband 畫面外施法通知與空鞭擊屬性防護（2026-11-13）
+
+- **已確認的顯示問題**：`faangband/mon-desc.c::monster_desc()` 在怪物不位於玩家畫面面板時，會附加英文 ` (offscreen)`。第 251 批只處理玩家幽靈的 `<幽靈玩家名>, the <種族> (offscreen)`，一般怪物及變形唯一怪物在成功翻譯的施法句子中仍可能殘留英文字尾。本批新加純顯示函式 `angdroid_fa_spell_offscreen_subject()`，僅在字串精確以 ` (offscreen)` 結尾且繁中顯示開啟時，轉為「（畫面外）」。只改顯示字串，不更動 `panel_contains()`、`monster_is_visible()`、`seen` 與 `MON_ALTMSG` 分支。
+- **已保留真實怪物身分**：`mon-spell.c` 的施法者和怪物目標兩處先經原 `monster_desc()`，如有需要分別套用正常怪物 `angdroid_fa_spell_subject()` 或玩家幽靈的 `angdroid_fa_spell_ghost_subject()`，最後才以獨立 `cn_offscreen[320]` 處理尾端註記。變形唯一怪物仍依 `monster_is_shape_unique()` 保留專有名稱、一般怪物仍使用原已知名稱、幽靈名字與種族不變。不在視野內的施法者對其他怪物施法時仍直接不顯示。
+- **狹窄空間完整 UTF-8 輸出**：若顯示暫存容量不足以放入整個名稱及「（畫面外）」，改使用 `angdroid_utf8_copy_complete()` 只複製可容納的完整名稱前綴，後接完整中文註記。不允許半個漢字、孤立的中文括號或不完整 `(offscreen)`。容量極小、無法完整容納尾註時則回傳原來源，避免憑空改寫部分文字；英文模式及沒有畫面外尾註的字串回傳原指標。
+- **可選鞭擊屬性安全性**：此前 `SPELL_TAG_TYPE` 直接把 `projections[type].lash_desc` 送給 `strnfcat("%s")`，未先排除 `NULL`；`SPELL_TAG_OF_TYPE` 已有空值保護。現在補齊 `SPELL_TAG_TYPE` 的 `if (type_name)`，屬性不存在時不會傳入空指標。原 `angdroid_mon_spell_lash()` 25 種正式屬性翻譯與英文回退不受影響。此修正僅處理可選顯示屬性，沒有改 `projection.txt`、`lash_type`、招式命中或傷害。
+- **回歸測試**：延伸現有 `tests/native/test_faangband_spell_lash_ghost_locale.c` 的 C99 測試，加入一般怪物、專有名稱、既已完整中文化的幽靈、不含尾註、英文模式、NULL、0／16-byte 小空間、20／25-byte 中文名稱前綴等例子。同步更新 `tests/test_faangband_spell_lash_ghost_locale_source.py` 的正式原始碼守護，要求 `SPELL_TAG_TYPE` 空值檢查、兩處畫面外轉換及正式安全拷貝；仍由 `scripts/verify-zh-tw.sh` 接入離線流程。
+- **驗證限制**：GitHub 來源靜態核對不等於實際執行 C99／Python、NDK／Gradle 或手機不同面板寬度的互動驗證；這一批僅保證設計上不切割 UTF-8 字元，並未宣稱測過所有終端換行模式。維持 Draft PR #146，Commit 加 `[skip ci]`，不執行 GitHub Actions、不合併 `master`。
+
+## 第 253 批 — FAangband 連續動態標籤的 1024-byte 訊息容量保護（2026-11-13）
+
+- **先依正式詞表計算風險**：從 `mon-spell-messages-visible-zh-tw.h`（116 條）、`mon-spell-messages-other-zh-tw.h`（105 條）及 `zh-tw-mon-spell-alt.inc`（17 條）讀回所有 **238 條繁中顯示模板**；每條最多 **2 個** `{name}`／`{target}`／`{pronoun}`／`{type}`／`{oftype}` 動態佔位符。原 `mon-spell.c::spell_message()` 使用 `buf[1024]`，`monster_desc()` 的名字暫存最大 256 bytes，兩段中文名稱／畫面外轉換暫存最大 320 bytes。以每個動態欄位一律先預留 **320 bytes** 估算，**現有最壞模板需 679 bytes，低於 1023 bytes 的有效文字容量**，目前詞表不會觸發容量不足回退。
+- **封閉將來新增模板的風險**：`mon-spell-message-locale.h` 新增不修改遊戲資料的純判斷函式 `angdroid_fa_spell_template_fits(message, capacity, max_expansion_bytes)`，逐 byte 計算固定中文內容，遇到 `{…}` 則從剩餘容量扣除 320 bytes、最後保留 NUL，避免以「標籤數 × 固定值」做可能溢位的乘法。空字串／不完整標籤／恰好邊界的情形都有對應測試。
+- **先選擇訊息、再預留容量**：`mon-spell.c` 仍先執行 `seen`／`hits`／種族覆寫 `MON_ALTMSG`／空訊息遮蔽、之後才套用完整模板翻譯。**只有整條模板真的翻譯成功**時，先用 `sizeof(buf)` 和 320-byte 最大顯示欄位檢查完整替換能否容納。若未來新模板超過容量，維持 `spell->msgt` 分類且顯示完整中性提示「施法訊息過長，已省略詳細內容。」後直接返回，不輸出半個名字、半段 `{target}` 或消失的中文標點；不會額外透露視野外施法者。英文來源和未知自訂模板仍完全使用原本的 `strnfcat()` 分支。
+- **離線回歸**：新增 `tests/native/test_faangband_spell_template_budget.c` 與 `scripts/test-fa-spell-template-budget.sh`（host C99 嚴格模式），驗證兩個／三個／四個標籤、UTF-8 多位元組固定文字、原模板最長 679-byte 邊界、空字串、NULL、不完整佔位符、剛好容納的 NUL。新增 `tests/test_faangband_spell_template_budget_source.py`，以正式 **238 條**來源精確驗證中英佔位符一致性、至多兩個佔位符、逐條中文 byte 預算不超過 1023、保守最大值 679，以及實際訊息流程中的檢查順序。兩項均接入 `scripts/verify-zh-tw.sh`。
+- **相容性與限制**：不調整原始模板、遊戲狀態、法術命中／傷害、`msgt` 訊息類型、英語模式或終端分欄渲染。本批的 GitHub 原始碼靜態核對不等同於完整 checkout 的 host C99／Python 回歸、Android NDK／Gradle、模擬器或實機測試；不執行 GitHub Actions，不合併 `master`，仍使用 Draft PR #146 與 `[skip ci]` 提交。
+
+## 第 254 批 — FAangband 施法錯誤提示與動態戰鬥通知（2026-11-13）
+
+- **三種尚未中文化的施法異常提示**：`mon-spell.c::spell_message()` 在已選定正確 `MON_ALTMSG`／預設法術訊息之後，若 `level->blind_message`、`level->miss_message` 或 `level->message` 缺失，原本會顯示英文 `No message-invis`／`No message-miss`／`No message-vis` 與 `Please report this bug.`。現在繁中模式分別顯示「缺少視野外施法訊息，請回報此問題。」、「怪物 XXX 的法術 N 缺少未命中訊息，請回報此問題。」與「怪物 XXX 的法術 N 缺少可見施法訊息，請回報此問題。」；英文模式原有提示與參數仍保留。
+- **視野外身份保護**：特別修正 `message-invis` 的除錯訊息。此情況已知施法者不可見，繁中缺失提示只表示訊息來源有問題，**不顯示怪物種族名稱，也不顯示可反推招式的法術編號**。保留 `if (!seen && t_mon) return;`、空字串遮蔽、原種族覆寫優先順序，並在該異常後立即返回；不改法術命中與效果。
+- **怪物變形／恢復形態**：`mon-util.c::monster_change_shape()` 及 `monster_revert_shape()` 原有兩條 `"%s %s", m_name, "shimmers and changes!"` 直接顯示英文。新增共用純顯示函式 `message_monster_changes_shape()`：仍先由原 `monster_desc()` 取得玩家應看見的名稱，在繁中模式輸出「…的外形閃爍並改變了！」。一般怪物使用中文主詞，變形唯一怪物保留專有名稱，玩家幽靈維持原玩家名稱和種族，畫面外尾註沿用上批 UTF-8 安全處理；英文原句與原 `MSG_GENERIC` 類別不變。兩個原函式的 `monster_is_obvious(mon)`、形態選取／重設、生命條及怪物列表重繪、格子亮度刷新沒有改動。
+- **偽裝揭露**：`mon-util.c::become_aware()` 的 `"The %s was really a monster!"` 在繁中改為「原來%s是一隻怪物！」，原物品名稱 `object_desc()` 與 `square_isseen(c, obj->grid)` 閘門保留。未被看到的偽裝揭露仍不會因此新增訊息。
+- **Soul Siphon 法力回饋與一般擊殺通知**：`player_kill_monster()` 的「You gain mana.」、「You absorb too much mana!」，以及可見／不可見／非生物怪物的三種 `You have killed/destroyed/slain %s.` 都加入繁中句型。怪物名字仍來自 `monster_desc()`，一般名稱只在確定適合時轉成「這隻…／牠」，**不將已知唯一怪物改寫成普通怪物，也不揭露不可見怪物的真名**。保持 `monster_is_visible(mon)`、`monster_is_destroyed(mon)`、`soundfx`、法力計算、傷害、經驗、掉落、任務與唯一怪物歷史記錄完全不變；自訂 `note`（例如特殊遠程傷害的英文組合字串）由其他傷害訊息來源負責，本批未猜測翻譯。
+- **回歸守護**：新增 `tests/test_faangband_combat_messages_locale_source.py`，從正式 `mon-spell.c`、`mon-util.c` 讀取三類診斷、無身分洩漏的視野外分支、雙向形態切換的單一共用顯示函式、偽裝可見判定、Soul Siphon、一般擊殺英文回退與原遊戲狀態閘門。已接入 `scripts/verify-zh-tw.sh`；沿用既有 C99 中文名稱／UTF-8 回歸腳本。
+- **驗證界線**：程式碼與來源的 GitHub 靜態核對並非完整 checkout 下的 Python/C99 執行、Android NDK／Gradle APK 建置、模擬器或實機驗證。仍使用 Draft PR #146，所有提交包含 `[skip ci]`，未執行 GitHub Actions，未合併 `master`。
+
+## 第 255 批 — FAangband 玩家／怪物偷竊與競技場擊敗訊息（2026-11-13）
+
+- **玩家偷竊與怪物互偷共八種顯示路徑**：在 `mon-util.c::steal_monster_item()` 完整檢查正式原始碼後，為「目標沒有可偷物品」、「偷得金幣」、「背包放不下而掉落物品」、「偷竊失手但仍可逃」、「失手驚動目標」、「Hit and Run 遁入陰影」、「怪物互相偷取失敗／成功」加入繁體中文顯示，並保留全部英文原句和原本的 `msg()` 時序。金額仍使用 `obj->pval`，掉落物品使用原 `object_desc()`，財寶標籤在中文模式僅將原 `treasure` 顯示為「財寶」。
+- **不動偷取判定與效果**：`guard`、`steal_skill`、`monster_reaction`、`randint1()`、`react_to_slay()`、`obj->held_m_idx`、`pile_excise()`、`monster_carry()`、`object_grab()`、`drop_near()`、`inven_carry()`、`lore->thefts++`、`monster_wake()`、`mon_dec_timed()`、`EF_WAKE`、`EF_TELEPORT` 及敵對目標更新均沿用原邏輯。翻譯不更動物品是否能被偷、財寶金額、醒來與敵對機率、逃跑距離。
+- **匿名代稱與動態怪物名稱**：新增 `monster_theft_display_name()`，只轉換由原 `monster_desc(..., MDESC_TARG／MDESC_STANDARD)` 決定、玩家當時可以看到的文字。普通怪物在繁中模式使用「這隻…」，`monster_is_shape_unique()` 保留變形唯一怪物的專有名稱，玩家幽靈保留原玩家名及種族，畫面外尾註沿用安全 UTF-8 中文轉換。擴充原 `angdroid_fa_spell_subject()`，以精確比對處理 `someone/Someone→某個身影`、`him/Him→他`、`her/Her→她`；不查詢未知怪物真名，不繞過 `monster_desc()` 的可見性限制。新增 `tests/native/test_faangband_spell_alternates_utf8.c` 的相應 C99 測試案例及小容量 UTF-8 邊界。
+- **只翻譯已確認來源的特殊擊殺 note**：`kill_arena_monster()` 明確傳入 `player_kill_monster(..., " is defeated!")`，因此只針對這個**完全相同**的 `note`，在繁中顯示「…被擊敗了！」；透過原 `monster_desc()` 決定怪物身份、必要時去除英文 `MDESC_COMMA` 文法，保留原 `soundfx`、唯一怪物判定與 `notice_stuff()`。未命中的自訂 `note` 和其他來源如遠程攻擊仍完全使用原 `"%s%s"`，不猜測語義或改變外部字串資料；`project-mon.c` 通常以空字串 `""` 交給 `mon_take_hit()`，讓已有的 `add_monster_message()` 先控制投射擊殺的訊息順序，因此依舊不重複輸出擊殺通知。
+- **回歸與界線**：新增 `tests/test_faangband_theft_locale_source.py` 從正式 `mon-util.c`、`mon-desc.h`、`project-mon.c` 讀回中英偷竊訊息、匿名代稱、原判定和副作用，以及競技場 `" is defeated!"` 與投射攻擊空 `note` 的保留。註冊到 `scripts/verify-zh-tw.sh`。本批以 GitHub 原始碼對照進行靜態核對；**尚未**在完整 checkout 執行 Python／C99、Android Gradle／NDK、模擬器或實機測試。PR #146 保持 Draft，所有 Commit 帶 `[skip ci]`，未執行 GitHub Actions，也未合併 `master`。
+
+## 第 256 批 — FAangband 實際戰鬥攻擊提示中文化（2026-11-13）
+
+- **優先處理仍常見的戰鬥英文**：第 255 批 `mon-util.c` 的偷竊與擊殺訊息已涵蓋主要固定句型；這次檢查 `faangband/mon-attack.c` 後確認另有六類繁中模式仍直接輸出英文：怪物施法失敗（`tries to cast a spell, but fails`）、Power Siphon 回復法力（`You gain mana.`）、邪惡防護擊退（`is repelled.`）、閃避提示（`You evade the attack!`）、怪物未命中玩家（`misses you.`）及怪物互毆未命中（`misses %s.`）。現已補足繁中句型；英文原句保留在 `else` 分支，無其他模式變動。
+- **錯誤診斷同時中文化**：`make_attack_normal()` 和 `monster_attack_monster()` 原本各有一條 `ERROR: Effect handler not found for %s.`，繁中模式改為「錯誤：找不到%s的攻擊效果處理器。」；原效果識別碼 `effect->name` 原樣保留，並沒有更動 `melee_handler_for_blow_effect()`、`effect_handler(&context)` 或攻擊擲骰。
+- **只轉換玩家已能看到的名字**：新設 `monster_attack_display_name()`，顯示前再次使用原 `monster_desc(..., MDESC_STANDARD／MDESC_TARG)`，保留原引擎的 `seen`／匿名代稱邏輯。一般怪物走中文「這隻…」，唯一怪物沿用 `monster_is_shape_unique()` 保留專名；玩家幽靈使用正式保存名稱及種族，未知／不可見怪物只使用原 `someone`／`something` 等匿名代稱，畫面外註記以完整 UTF-8 中文輸出。**永遠不直接把 `mon->race->name` 當作看不見怪物的顯示名稱**。原 `m_name`、`ddesc` 照舊傳入傷害、致死、melee effect handler，不改其他效果的顯示上下文。
+- **不修改戰鬥規則**：`monster_spell_failrate(mon)`／`randint0(100) < failrate`、`do_mon_spell()`、`PF_POWER_SIPHON`／魔力量和重繪、`TMD_PROTEVIL`／善惡與抵抗機率、`player_avoid_blow()`／閃避抽樣、`check_hit()`／`test_hit()`、`method->miss`／可見性、`disturb()`、物理傷害、眩暈、`lore->blows`、擊殺計數與 Blink Away 等流程全部不變。本批僅新增依語言選擇的文字呈現。
+- **新增原始碼回歸守護**：`tests/test_faangband_mon_attack_locale_source.py` 核對六組中英成對顯示、兩條攻擊效果診斷、`monster_desc()` 知識／專名分支、玩家與怪物互毆兩種 miss 條件，以及所有原重要運算閘門，已納入 `scripts/verify-zh-tw.sh`。繼續沿用前幾批正式 C99 的怪物主詞及 UTF-8 安全測試。
+- **驗證限制**：原始碼靜態核對與新增 Python 守護不代表整個 C99/NDK/Gradle 專案已編譯；Android 模擬器與實機驗收仍須後續環境執行。全部提交帶 `[skip ci]`，沿用同一個 Draft PR #146，不執行 GitHub Actions、不合併 `master`。
+
+## 第 257 批 — FAangband 近戰動作主詞、目標及所有格（2026-11-14）
+
+- **正式來源審查**：`mon-blows.c` 已使用 `angdroid_game_ui_text()` 翻譯怪物的近戰動作，`mon-msg.c` 也已有通用的怪物狀態中文訊息；但 `display_blow_message_vs_player()`、`display_blow_message_vs_monster()` 仍以原英文 `m_name` 加在中文動詞前，並且在 `BLOW_TAG_TARGET`／`BLOW_TAG_OF_TARGET` 的怪物目標分支仍使用英文 `MDESC_COMMA` 或 `MDESC_POSS` 的語法。導致中文句型中仍有 `The orc`、`the troll`、英文所有格，特別是在怪物互毆時。
+- **完整對照既有 57 種近戰動作**：由 `variant_lib/faangband/gamedata/blow_methods.txt` 取得 **57 條不重複 `act:` 模板**，與 `app/src/main/cpp/angband/zh-tw-ui.h` 現有精確翻譯逐條交叉比對：**57/57 全部已有繁中翻譯**，包含 `{target}`、`{oftarget}`、`{has}`，每條最多一個動態標籤，標籤名稱不變。單條動作以 UTF-8 固定文字加 320-byte 目標名稱預留，最大 **344 bytes**；連同 320-byte 施攻者主詞及傷害與標點仍小於原本的 1024-byte 格式化容量。沒有建立重複翻譯字典或修改 `blow_methods.txt`。
+- **只在成功中文化的近戰動作中修正文法**：`faangband/mon-blows.c` 新增局部純顯示輔助 `monster_blow_display_subject()`。它會由原本的 `monster_desc()` 並遵守 `MDESC_STANDARD`／`MDESC_TARG`、`monster_is_visible()`、`monster_is_shape_unique()`、`RF_PLAYER_GHOST`、原玩家幽靈名稱及画面外尾註，安全處理「這隻…」、匿名「牠／某個身影」、唯一怪物專名及 UTF-8 完整字元。未翻譯時仍直接使用原英文 `m_name`，不重寫遊戲中的 monster 名稱欄位，也不暴露不可見目標。
+- **三種近戰標籤**：`BLOW_TAG_TARGET` 在繁中模式不再要求英文的尾端 `MDESC_COMMA`，改使用由 `monster_desc(...,MDESC_TARG)` 得到的中文安全目標；`BLOW_TAG_OF_TARGET` 則用目標名字後接「的」，例如「辱罵了這隻巨魔的母親！」。沒有目標怪物時仍顯示原先既有的「你／你的」；`BLOW_TAG_HAS` 既有的「有」保持不變。**英文 `MDESC_TARG|MDESC_POSS`、英文逗號、原 public API `monster_blow_method_action()` 及 `string_free(act)` 均保留。**
+- **八個實際近戰效果入口**：對玩家的四處及對其他怪物的四處 `display_blow_message_vs_player()/vs_monster()` 呼叫，改將原 `context->mon` 傳入顯示端，**只在 `translated` 成立時**對施攻者再使用安全名稱呈現；原傳給近戰 handler 的 `context->m_name`、`context->ddesc` 不改。傷害顯示、`method->msgt`、`show_damage` 與 `take_hit()`／`mon_take_nonplayer_hit()` 流程保持不變；中文傷害括號改用全形「（數字）」、英文仍 `(number)`。
+- **一次動作只有一次 RNG**：正式函式 `monster_blow_method_action_for_display()` 仍先執行一次 `randint0(method->num_messages)` 以選擇動作，新增中文主詞輔助沒有 RNG；英文公開函式 `monster_blow_method_action()` 仍使用 `zh_tw=false` 的原邏輯。不存在因額外翻譯而重新抽取一次攻擊動作的問題；不改命中率、效果、傷害、物品偷取與怪物知識紀錄。
+- **離線回歸**：新增 `tests/native/test_faangband_blow_action_subject_locale.c` 以正式來源完整的 **57 個**中英動作配對，直接呼叫 production `angdroid_game_ui_text()`、檢查英文回退、匿名目標與 UTF-8 小字元空間；`scripts/test-fa-blow-action-subject-locale.sh` 使用嚴格 host C99 參數執行。新增 `tests/test_faangband_blow_action_subject_locale_source.py`，以正式資料核對 57/57 翻譯與標籤、344-byte 上限、所有八個 callsite、一次 RNG、英文分支、原 `monster_desc()` 可見性與 CJK 主詞／所有格順序。全部接入 `scripts/verify-zh-tw.sh`。
+- **驗證範圍**：在本環境可透過 GitHub 讀回程式與來源做靜態一致性核對，但完整 checkout 的 C99／Python 腳本、Android SDK/NDK／Gradle 建置與實機測試尚未實際執行。所有提交附 `[skip ci]`，維持原 Draft PR #146，不執行 GitHub Actions、不合併 `master`。
+
+## 第 258 批 — FAangband 怪物群體訊息與 UTF-8 完整字元（2026-11-14）
+
+- **確定兩處實際缺陷**：`mon-msg.c::get_subject()` 在繁中模式直接以 `strnfmt()`／`my_strcat()` 拼接怪物名稱、`p_race`、幽靈名稱與「（畫面外）」，在固定 256-byte 緩衝區邊界可能把中文字截成不完整 UTF-8，還可能丟掉整個畫面外註記。另一方面，`add_monster_message_show_damage()` 新增訊息時原本沒有設定 `mon_msg[size_mon_msg].p_race`，但 `stack_message()` 明確把 `p_race` 視為群體分組鍵，`show_message()` 也需要它來顯示帶玩家種族前綴的怪物名稱。未初始化／重用的陣列欄位可能造成訊息不合併或顯示錯誤前綴。
+- **先修訊息分組資料**：帶傷害的新增訊息現在與原 `add_monster_message()` 一樣明確設定 `p_race = mon->player_race`。不修改 `message_flags()`、`stack_message()` 的比對條件、數量及傷害累加、`MAX_STORED_MON_MSG`、通知優先級、死亡音效類別或怪物可見性。
+- **繁中群體主詞改為完整 UTF-8 組裝**：新增 FAangband 專屬純顯示輔助 `mon-msg-utf8.h::angdroid_fa_mon_msg_chinese_subject()`。沿用原選定的 `race->name`／`race->plural`、`p_race->name`、玩家幽靈的保存名稱、`RF_UNIQUE`、`RF_PLAYER_GHOST`、`RF_NAME_COMMA`、`invisible`／`offscreen`／`count`，使用 `angdroid_utf8_copy_complete()`／`angdroid_utf8_append_complete()`，在接上長名稱之前保留整個「（畫面外）」所需 byte 空間。玩家幽靈的「（種族）」只有在完整可容納時才加，避免窄緩衝區留下未閉合括號；隱形目標仍只能顯示「牠」或「N 隻怪物」，不暴露真名。繁中以外的 `get_subject()` **全部原程式碼與英文空格、逗號、複數回退不動**。
+- **修正長中文狀態訊息的 UTF-8 截斷**：`get_message_text()` 原本在 `pos < buflen - 1` 時逐個 byte 複製並停止解析，可能停在漢字中間或在 `[singular|plural]` 標記未關閉時提早中斷。新的翻譯分支仍保留 `msg_repository` 與 7 種正式 `pain` 訊息來源及原中英對照，先依相同的 `[singular|plural]` 狀態機選擇文字，再以 `angdroid_utf8_next_scalar()` 將**整個 UTF-8 字元**複製到剩餘 byte 容量，不足時停止寫入但繼續讀完來源與標記，無效 UTF-8 來源則以 ASCII `?` 替代。未翻譯的英文仍逐 byte 複製原字串，文字資料和狀態效果不變。
+- **帶傷害訊息標點**：單筆翻譯後的 `MON_MSG_FLAG_DAMAGE` 現在使用「（%d）」；多筆群體仍使用既有「（平均 %d）」與完全相同的平均傷害整數計算，英文依舊是原 `(%d)`、`(average %d)`。沒有修改 `msg_type` 或其他 UI 偏好。
+- **C99／Python 離線回歸**：新增 `tests/native/test_faangband_mon_msg_utf8.c` 和 `scripts/test-fa-mon-msg-utf8.sh`，直接編譯正式 C99 顯示函式，涵蓋 1／多隻怪物、`p_race` 前綴、唯一怪物、玩家幽靈、匿名與畫面外訊息、中文逗號、長種族名稱、4／7／16／32-byte 邊界與完整 UTF-8 檢查。新增 `tests/test_faangband_mon_msg_utf8_source.py`，核對同一個 `p_race` 分組欄位在兩個建立入口的初始化、原 stack 及傷害公式、7 個疼痛階級來源、單複數狀態機與新 Unicode 複製規則。兩者均納入 `scripts/verify-zh-tw.sh`。
+- **驗證限制**：本批透過 GitHub 重新取得正式來源、程式及測試進行靜態一致性核對，並不等於完整 checkout 已實際編譯執行正式 C99／Python、Android NDK／Gradle APK、模擬器或實機驗證。PR #146 保持 Draft，全部提交帶 `[skip ci]`；不執行 GitHub Actions，不合併 `master`。
+
+## 第 259 批 — FAangband 群體訊息中文逗號與修飾名稱（2026-11-14）
+
+- **第 258 批的新顯示函式檢查**：`mon-msg-utf8.h::angdroid_fa_mon_msg_chinese_subject()` 原先先加 `RF_NAME_COMMA` 的「，」，最後才加「（畫面外）」，導致中文顯示像「這隻獸人，（畫面外）受傷了。」；這是英文來源標點順序直接沿用中文造成的可見文法問題。現在將**畫面外註記放在名詞內、中文逗號放在註記之後**，正確顯示「這隻獸人（畫面外），受傷了。」；英文 `get_subject()` 的逗號和 `(offscreen)` 順序完全不改。
+- **預留完整中文尾註及標點**：新輔助函式依 `offscreen`、`invisible`、`RF_NAME_COMMA` 預留可完整容納的 UTF-8 byte 容量，將 `reserved_bytes` 從名稱可用的空間扣除，再用 `angdroid_utf8_append_complete()` 安全附加「（畫面外）」及「，」。避免超長怪物名稱把尾註或中文逗號擠出緩衝區，也不會截出部分漢字。
+- **避免冗長修飾詞吃掉真正種族**：群體名稱有可選的 `p_race->name`（例如「半精靈」）時，只有在**修飾詞、空格及完整 `race->name`／`race->plural` 都能放下**，才加該修飾詞；剩餘空間不足時直接保留真正的怪物種類，而非顯示「這隻[修飾詞] 」就截斷。可見性、特殊唯一怪物、玩家幽靈及 `p_race` 的實際遊戲資料均不變；該規則只作用於繁中顯示。
+- **容量研究結果：不需要擴大訊息緩衝區**：從正式 `list-mon-message.h` 的 **58 條**訊息、`pain.txt` **65 條**不重複疼痛訊息與 `zh-tw-ui.h` 的正式翻譯逐條核對，**123/123 條**已有中文對照；最長翻譯來源只有 **42 UTF-8 bytes**（含單複數選擇標記），低於 `show_message()` 的 `body[256]`。原 `subject[256]` + `body[256]` 再加傷害文字，也低於 `message.c::msgt()` 使用的 **1024-byte** 格式化緩衝區。因此沒有為不存在的傳輸溢位而調整原訊息類別、繪圖換行或新增第二套 formatter。
+- **回歸測試**：擴充 `tests/native/test_faangband_mon_msg_utf8.c`，涵蓋單隻／群體、正常／畫面外兩種逗號排列，窄 `32-byte` 下省略過長 `p_race` 但保留怪物種類及完整「（畫面外），」；保留足夠空間時同時顯示原修飾詞和怪物種類。同步更新 `tests/test_faangband_mon_msg_utf8_source.py` 與原有 `tests/test_faangband_monster_messages_locale_source.py` 的斷言，並將來源 123 條最大 UTF-8 byte 長度與 `message.c::msgt()` 的 1024-byte 緩衝區檢查納入離線守護。
+- **驗證範圍**：本批未修改戰鬥數值、死亡／傷害音效、訊息入列／堆疊、原英文 grammar 或存檔。GitHub 上的來源靜態核對不等於完整 checkout 已執行 C99／Python、Android NDK／Gradle 或手機實測。維持 Draft PR #146，提交均包含 `[skip ci]`，不執行 GitHub Actions，也不合併 `master`。
+
+## 第 260 批 — FAangband 極窄怪物訊息禁止單獨註記及不完整主詞（2026-11-14）
+
+- **實際缺陷**：第 259 批雖然會替「（畫面外）」及中文逗號預留 byte，但在極小 `capacity` 下，預留後的主詞空間可能不到一個完整 UTF-8 字元，造成只顯示「（畫面外）」或「（畫面外），」；大量怪物、長玩家幽靈名字或唯一怪物專名則可能留下不完整數量或半段名字。尤其 `get_subject()` 以 `subject[256]` 呼叫時正常不會發生，但此共用純顯示函式仍應對所有容量保持可預期行為，避免未來重用時引入顯示錯誤。
+- **修正顯示策略**：`mon-msg-utf8.h` 新增 `angdroid_fa_mon_msg_can_append()`、`angdroid_fa_mon_msg_append()`、`angdroid_fa_mon_msg_generic()`。所有構成主詞的字元群組視為**不可被截斷的完整單位**：完整玩家幽靈名稱、完整唯一怪物專名、完整怪物種族、完整 `N 隻` 數量與完整中文標點。空間不足時，先忽略可選的玩家種族修飾詞／幽靈種族括號，再必要時退回一般完整「這隻怪物」、「怪物」或「牠」等不揭露額外身份的名詞，而不是印出 `N` 的一部分、半個專名或只有「這隻」。
+- **畫面外尾註安全門檻**：只有 `capacity` 同時足以放下最短完整主詞「牠」、整個「（畫面外）」及 NUL 時才保留該註記；`RF_NAME_COMMA` 的「，」也只有在剩餘容量還能保留完整最短主詞、完整逗號及終止字元時才顯示。若不足，優先保留主詞，省略可選裝飾。附加順序仍是「怪物主詞（畫面外），」，原英文 `get_subject()`、遊戲中的 `invisible/offscreen` 決策、`RF_NAME_COMMA` 身份、訊息合併與傷害數值均不更改。
+- **退回邊界案例**：已更新 `tests/native/test_faangband_mon_msg_utf8.c`：正常的 7-byte 及 4-byte 主詞改為完整種族「獸人」或安全代稱「牠」，不再允許只有「這隻」或單個「這」。新增 **1–32 byte × 6 種場景**的細密邊界測試，覆蓋普通怪物、匿名個體、`INT_MAX` 匿名群體、已知多隻怪物、超長唯一怪物專名及玩家幽靈。每筆檢查 NUL、完整 UTF-8、不單獨輸出「（畫面外）」或逗號、完整中式括號及中文逗號次序；另明確檢查 17、19、22、25、31-byte 容量邊界。C99 用 `<limits.h>` 的 `INT_MAX`，不依賴固定 int 寬度。
+- **測試與授權界線**：同步更新 `tests/test_faangband_mon_msg_utf8_source.py`、`tests/test_faangband_monster_messages_locale_source.py` 對新原子化顯示策略的原始碼守護，沿用已註冊於 `scripts/verify-zh-tw.sh` 的 host C99 `test-fa-mon-msg-utf8.sh`。這些只處理純顯示文字、不更動 `mon-msg.c` 的原分組/音效/訊息排序，也不更動存檔、戰鬥或規則。GitHub 來源靜態核對不等於實際執行 C99/Python、Android NDK/Gradle 建置與實機測試。本批續用 Draft PR #146，提交包含 `[skip ci]`，未執行 GitHub Actions，也不合併 `master`。
+
+## 第 261 批 — FAangband 異常 UTF-8 名稱與極大群體平均傷害（2026-11-14）
+
+- **先確認主詞資料的安全界線**：`mon-msg-utf8.h` 前幾批雖使用 `angdroid_utf8_append_complete()` 保證不輸出截斷的漢字，但在檢查「完整怪物姓名能否放下」時只使用 `strlen()`，無法辨識來源本身已經不是合法 UTF-8 的名稱。共用拷貝工具會將損壞 byte 替換成 `?`，若這些錯誤發生在已知唯一怪物、玩家幽靈或種族名中，可能變成身份不完整而具誤導性的訊息。
+- **正式程式增加完整 UTF-8 驗證**：加入 `angdroid_fa_mon_msg_valid_utf8()`，逐個以已存在的 `angdroid_utf8_next_scalar()` 驗證完整字串；只拒絕單 byte 的非法高位序列與截斷序列，**不拒絕正確以三個 byte 編碼的 Unicode U+FFFD**。由 `angdroid_fa_mon_msg_can_append()` 統一檢查「內容完整合法」及「整個來源字串 fits」，避免輸出半段錯誤怪物名稱。來源資料異常時保留原既有的非洩漏回退：「這隻怪物」、「怪物」、「牠」或「幽靈」；玩家種族修飾詞損壞則省略該修飾詞，不影響真正怪物種類。
+- **複數資料回退**：`count > 1` 時，如果 `race->plural` 為 NULL、空字串或含無效 UTF-8，改回原本有效的 `race->name`，而不是顯示亂碼或在仍有已知種族時只輸出泛用的「怪物」。`count`、`race`、`plural` 都沒有被更動，只是選擇顯示哪一段完整字串。
+- **`INT_MAX` 群體的平均傷害計算風險**：原 `mon-msg.c::show_message()` 使用 `msg->damage / msg->count + (msg->damage % msg->count >= (msg->count + 1)/2 ? 1 : 0)`，在極大群體數量 `count == INT_MAX` 時，`count + 1` 會產生 signed-int overflow（C 中屬未定義行為）。新增純顯示 `angdroid_fa_mon_msg_average_damage()`，以 `count / 2 + count % 2` 代替 `(count + 1) / 2`，對合法正數 count 數學上完全等價，原平均傷害的四捨五入結果不變。對資料不合法的 `count <= 0` 回傳 0，避免除以零。本批沒有修改 `stack_message()`、`msg->damage` 原計數／累加，也沒有更改戰鬥實際傷害。
+- **新增 C99 邊界測試**：擴充 `tests/native/test_faangband_mon_msg_utf8.c`：檢查截斷兩 byte、overlong、非法高位 byte 的種族／玩家幽靈／複數／玩家種族修飾詞，驗證有效的三 byte U+FFFD 仍可顯示；原 C99 `valid_utf8()` 也修改成與正式 `angdroid_utf8_next_scalar()` 相同的無效 byte 判斷。平均傷害新增 `5/2 → 3`、`4/2 → 2`、`INT_MAX/INT_MAX → 1`、`INT_MAX/2`、負 damage、零或負群體數量等測試。
+- **修正舊回歸守護與詞表解析**：更新 `tests/test_faangband_mon_msg_utf8_source.py`、`tests/test_faangband_monster_messages_locale_source.py`，改以正式新 helper 驗證原平均傷害四捨五入，而不是斷言舊的 `(count+1)/2` 來源；同時修正第 259 批 Python source guard 中誤加重複反斜線的正規表達式，讓它能真正解析 `list-mon-message.h` 與 `zh-tw-ui.h` 原始 123 條中英詞表。已由原 `scripts/verify-zh-tw.sh` 接入離線守護。
+- **驗證限制**：本批從 GitHub 讀回正式修改檔案進行靜態核對；仍無法在目前環境取得完整 GitHub checkout，因此不能宣稱已實際執行完整 C99／Python、Android NDK／Gradle、模擬器／實機驗收。所有 Commit 仍帶 `[skip ci]`，PR #146 保持 Draft，不執行 GitHub Actions，也不合併 `master`。

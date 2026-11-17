@@ -191,6 +191,12 @@ struct term
 	int wid;
 	int hgt;
 
+	/* Increments when the logical screen contents are cleared, restored
+	 * or resized; distinct from a physical repaint of the same cells. */
+	uint32_t content_generation;
+	/* Unique across term_init() calls even when a term* address is reused. */
+	uint64_t instance_id;
+
 	int y1;
 	int y2;
 
@@ -395,6 +401,7 @@ extern errr Term_key_push(int k);
 extern errr Term_event_push(const ui_event *ke);
 extern errr Term_inkey(ui_event *ch, bool wait, bool take);
 
+extern errr Term_discard_saved_screens(term *t);
 extern errr Term_save(void);
 extern errr Term_load(void);
 extern errr Term_load_all(void);

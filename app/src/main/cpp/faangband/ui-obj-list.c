@@ -25,6 +25,11 @@
 #include "ui-obj-list.h"
 #include "ui-output.h"
 #include "z-textblock.h"
+#include "droid.h"
+#include "../curses/unicode_display.h"
+#include "../angband/object-list-compact-layout.h"
+#include "../angband/zh-tw-list-location.h"
+#include "obj-list-row-budget.h"
 
 /**
  * Format a section of the object list: a header followed by object list entry
@@ -54,14 +59,16 @@ static void object_list_format_section(const object_list_t *list,
 									   object_list_section_t section,
 									   int lines_to_display, int max_width,
 									   const char *prefix, bool show_others,
-									   size_t *max_width_result)
+									   bool show_overflow, size_t *max_width_result)
 {
-	int remaining_object_total = 0;
+	int remaining_object_total;
 	int line_count = 0;
 	int entry_index;
 	int total;
 	char line_buffer[200];
-	const char *punctuation = (lines_to_display == 0) ? "." : ":";
+	const bool zh_tw = angdroid_zh_tw_enabled();
+	const char *punctuation = (lines_to_display == 0) ?
+		(zh_tw ? "。" : ".") : (zh_tw ? "：" : ":");
 	const char *others = (show_others) ? "other " : "";
 	size_t max_line_length = 0;
 
@@ -72,8 +79,9 @@ static void object_list_format_section(const object_list_t *list,
 
 	if (list->total_entries[section] == 0) {
 		max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
-								  "%s no objects.\n", prefix);
+			zh_tw ? "%s沒有物品。\n" : "%s no objects.\n", prefix);
 
+		max_line_length = angdroid_utf8_display_columns(line_buffer);
 		if (tb != NULL)
 			textblock_append(tb, "%s", line_buffer);
 
@@ -84,12 +92,18 @@ static void object_list_format_section(const object_list_t *list,
 		return;
 	}
 
-	max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
-							  "%s %d %sobject%s%s\n", prefix,
-							  list->total_entries[section], others,
-							  PLURAL(list->total_entries[section]),
-							  punctuation);
+	if (zh_tw) {
+		max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
+			"%s有 %d 件%s物品%s\n", prefix, list->total_entries[section],
+			show_others ? "其他" : "", punctuation);
+	} else {
+		max_line_length = strnfmt(line_buffer, sizeof(line_buffer),
+			"%s %d %sobject%s%s\n", prefix,
+			list->total_entries[section], others,
+			PLURAL(list->total_entries[section]), punctuation);
+	}
 
+	max_line_length = angdroid_utf8_display_columns(line_buffer);
 	if (tb != NULL)
 		textblock_append(tb, "%s", line_buffer);
 
@@ -98,32 +112,36 @@ static void object_list_format_section(const object_list_t *list,
 		char location[20] = { '\0' };
 		uint8_t line_attr;
 		size_t full_width;
-		const char *direction_y = (list->entries[entry_index].dy <= 0) ? "N" : "S";
-		const char *direction_x = (list->entries[entry_index].dx <= 0) ? "W" : "E";
-
 		line_buffer[0] = '\0';
 
 		if (list->entries[entry_index].count[section] == 0)
 			continue;
 
 		/* Build the location string. */
-		strnfmt(location, sizeof(location), " %d %s %d %s",
-				abs(list->entries[entry_index].dy), direction_y,
-				abs(list->entries[entry_index].dx), direction_x);
+		angdroid_list_relative_location(location, sizeof(location),
+			list->entries[entry_index].dy, list->entries[entry_index].dx,
+			zh_tw);
 
-		/* Get width available for object name: 2 for char and space; location
-		 * includes padding; last -1 for some reason? */
-		full_width = max_width - 2 - utf8_strlen(location) - 1;
+		/* Display the optional distance only when there is room for the
+		 * item count prefix and at least two wide name characters.
+		 * The name is more important than the item's exact location. */
+		{
+			struct angdroid_object_row_budget budget =
+				angdroid_object_row_fit(max_width,
+					angdroid_utf8_display_columns(location));
+			full_width = budget.name_columns;
+			if (!budget.show_location) location[0] = '\0';
+		}
 
 		/* Add the object count and clip the object name to fit. */
 		object_list_format_name(&list->entries[entry_index], line_buffer,
 								sizeof(line_buffer));
-		utf8_clipto(line_buffer, full_width);
+		angdroid_utf8_clip_columns(line_buffer, full_width);
 
 		/* Calculate the width of the line for dynamic sizing; use a fixed max
 		 * width for location and object char. */
 		max_line_length = MAX(max_line_length,
-							  utf8_strlen(line_buffer) + 12 + 2);
+							  angdroid_utf8_display_columns(line_buffer) + 12 + 2);
 
 		/* textblock_append_pict will safely add the object symbol, regardless
 		 * of ASCII/graphics mode. */
@@ -144,12 +162,10 @@ static void object_list_format_section(const object_list_t *list,
 		/* Add the left-aligned and padded object name which will align the
 		 * location to the right. */
 		if (tb != NULL) {
-			/*
-			 * Hack - Because object name strings are UTF8, we have to add
-			 * additional padding for any raw bytes that might be consolidated
-			 * into one displayed character.
-			 */
-			full_width += strlen(line_buffer) - utf8_strlen(line_buffer);
+			/* printf pads UTF-8 byte lengths, but the terminal reserves
+			 * two columns for common CJK glyphs. Convert field width here. */
+			full_width = angdroid_utf8_printf_field_bytes(
+				line_buffer, full_width);
 			line_attr = object_list_entry_line_attribute(&list->entries[entry_index]);
 			textblock_append_c(tb, line_attr, "%-*s%s\n",
 				(int) full_width, line_buffer, location);
@@ -163,18 +179,16 @@ static void object_list_format_section(const object_list_t *list,
 	if (max_width_result != NULL)
 		*max_width_result = max_line_length;
 
-	/* Bail since we don't have enough room to display the remaining count or
-	 * since we've displayed them all. */
-	if (lines_to_display <= 0 ||
-		lines_to_display >= list->total_entries[section])
-		return;
-
-	/* Count the remaining objects, starting where we left off in the above
-	 * loop. */
-	remaining_object_total = total - entry_index;
+	/* The same distinct object can appear in both LOS and non-LOS. Never
+	 * count the other section's hidden rows in this section's summary.
+	 * The row planner explicitly reserves a line for this summary. */
+	remaining_object_total = angdroid_fa_list_undisplayed(
+		list->total_entries[section], line_count);
+	if (!show_overflow || remaining_object_total <= 0) return;
 
 	if (tb != NULL)
-		textblock_append(tb, "%6s...and %d others.\n", " ", remaining_object_total);
+		textblock_append(tb, zh_tw ? "%6s……另有 %d 件物品。\n" :
+			"%6s...and %d others.\n", " ", remaining_object_total);
 }
 
 /**
@@ -227,67 +241,49 @@ static void object_list_format_textblock(const object_list_t *list,
 										 size_t *max_height_result,
 										 size_t *max_width_result)
 {
-	int header_lines = 1;
-	int lines_remaining;
-	int los_lines_to_display;
-	int no_los_lines_to_display;
+	struct angdroid_fa_object_rows budget;
+	int near_total, distant_total;
 	size_t max_los_line = 0;
 	size_t max_no_los_line = 0;
 
-	if (list == NULL || list->entries == NULL)
-		return;
-
+	if (list == NULL || list->entries == NULL) return;
 	if (object_list_format_special(list, tb, max_lines, max_width,
-								   max_height_result, max_width_result))
+		max_height_result, max_width_result)) return;
+
+	near_total = list->total_entries[OBJECT_LIST_SECTION_LOS];
+	distant_total = list->total_entries[OBJECT_LIST_SECTION_NO_LOS];
+
+	/* Preferred height describes the complete list, independent of the
+	 * number of rows that currently fit a phone viewport. */
+	if (max_height_result)
+		*max_height_result = (size_t)1 + near_total +
+			(distant_total > 0 ? (size_t)(2 + distant_total) : 0);
+
+	/* A zero-height popup must not append even a header. Also avoid the
+	 * previous signed/unsigned underflow when the LOS count is large. */
+	if (max_lines <= 0) {
+		if (max_width_result) *max_width_result = 0;
 		return;
-
-	los_lines_to_display = list->total_entries[OBJECT_LIST_SECTION_LOS];
-	no_los_lines_to_display = list->total_entries[OBJECT_LIST_SECTION_NO_LOS];
-                                                          
-	if (list->total_entries[OBJECT_LIST_SECTION_NO_LOS] > 0)
-		header_lines += 2;
-
- 	if (max_height_result != NULL)
-		*max_height_result = header_lines + los_lines_to_display + 
-			no_los_lines_to_display;
-
-	lines_remaining = max_lines - header_lines - 
-		list->total_entries[OBJECT_LIST_SECTION_LOS];
-
-	/* Remove non-los lines as needed */
-	if (lines_remaining < list->total_entries[OBJECT_LIST_SECTION_NO_LOS])
-		no_los_lines_to_display = MAX(lines_remaining - 1, 0);
-
-	/* If we don't even have enough room for the NO_LOS header, start removing
-	 * LOS lines, leaving one for the "...others". */
-	if (lines_remaining < 0)
-		los_lines_to_display = list->total_entries[OBJECT_LIST_SECTION_LOS] -
-                        abs(lines_remaining) - 1;
-
-	/* Display only headers if we don't have enough space. */
-	if (header_lines >= max_lines) {
-		los_lines_to_display = 0;
-		no_los_lines_to_display = 0;
 	}
-        
+	budget = angdroid_fa_list_row_budget(
+		max_lines, near_total, distant_total);
+
 	object_list_format_section(list, tb, OBJECT_LIST_SECTION_LOS,
-							   los_lines_to_display, max_width,
-							   "You can see", false, &max_los_line);
+		budget.near_rows, max_width,
+		angdroid_zh_tw_enabled() ? "視野內" : "You can see",
+		false, budget.near_overflow, &max_los_line);
 
-	if (list->total_entries[OBJECT_LIST_SECTION_NO_LOS] > 0) {
-         bool show_others = list->total_objects[OBJECT_LIST_SECTION_LOS] > 0;
-
-         if (tb != NULL)
-			 textblock_append(tb, "\n");
-
-         object_list_format_section(list, tb, OBJECT_LIST_SECTION_NO_LOS,
-									no_los_lines_to_display, max_width,
-									"You are aware of", show_others,
-									&max_no_los_line);
+	/* Never output a blank divider and a distant header without at least
+	 * one associated item row in the currently visible textblock. */
+	if (budget.show_distant) {
+		bool show_others = list->total_objects[OBJECT_LIST_SECTION_LOS] > 0;
+		if (tb) textblock_append(tb, "\n");
+		object_list_format_section(list, tb, OBJECT_LIST_SECTION_NO_LOS,
+			budget.distant_rows, max_width,
+			angdroid_zh_tw_enabled() ? "感知範圍內" : "You are aware of",
+			show_others, budget.distant_overflow, &max_no_los_line);
 	}
-
-                                                                        
-	if (max_width_result != NULL)
+	if (max_width_result)
 		*max_width_result = MAX(max_los_line, max_no_los_line);
 }
 
@@ -306,7 +302,7 @@ void object_list_show_subwindow(int height, int width)
 	textblock *tb;
 	object_list_t *list;
 
-	if (height < 1 || width < 1)
+	if (height < 1 || width < 7)
 		return;
 
 	tb = textblock_new();
@@ -337,8 +333,9 @@ void object_list_show_interactive(int height, int width)
 	size_t max_width = 0, max_height = 0;
 	int safe_height, safe_width;
 	region r;
+	struct angdroid_object_list_popup popup;
 
-	if (height < 1 || width < 1)
+	if (height < 7 || width < 12)
 		return;
 
 	tb = textblock_new();
@@ -357,10 +354,19 @@ void object_list_show_interactive(int height, int width)
 	 */
 	object_list_format_textblock(list, NULL, 1000, 1000, &max_height,
 								 &max_width);
-	safe_height = MIN(height - 2, (int)max_height + 2);
-	safe_width = MIN(width - 13, (int)max_width);
-	r.col = -safe_width;
-	r.row = 1;
+	/* Reject zero/negative rectangles before region_calculate() can
+	 * reinterpret them as remaining screen space. The textblock pager
+	 * needs one content row plus two footer rows below the top bar. */
+	if (!angdroid_object_list_popup_fit(width, height,
+			max_width, max_height, &popup)) {
+		textblock_free(tb);
+		object_list_free(list);
+		return;
+	}
+	safe_height = popup.height;
+	safe_width = popup.width;
+	r.col = popup.col;
+	r.row = popup.row;
 	r.width = safe_width;
 	r.page_rows = safe_height;
 

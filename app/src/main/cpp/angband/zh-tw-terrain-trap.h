@@ -5,6 +5,7 @@
 #define ANGDROID_ZH_TW_TERRAIN_TRAP_H
 #include <stddef.h>
 #include <string.h>
+#include "zh-tw-faangband-traps.h"
 
 struct angdroid_terrain_trap_pair { const char *en; const char *zh; };
 static inline const char *angdroid_terrain_trap_lookup(
@@ -46,6 +47,23 @@ static inline const char *angdroid_terrain_name(const char *en, int zh_tw)
         { "permanent wall", "永久牆" },
         { "lava", "熔岩" },
         { "pile of passable rubble", "可通行的瓦礫堆" },
+        /* FAangband wilderness and regional terrain feature names. */
+        { "Travelling Merchant", "流動商人" },
+        { "easy path north", "北方平緩小徑" },
+        { "hard path north", "北方崎嶇小徑" },
+        { "easy path east", "東方平緩小徑" },
+        { "hard path east", "東方崎嶇小徑" },
+        { "easy path south", "南方平緩小徑" },
+        { "hard path south", "南方崎嶇小徑" },
+        { "easy path west", "西方平緩小徑" },
+        { "hard path west", "西方崎嶇小徑" },
+        { "water", "水域" },
+        { "lowland trees", "低地樹林" },
+        { "highland trees", "高地樹林" },
+        { "grass", "草地" },
+        { "road", "道路" },
+        { "empty space", "虛空" },
+        { "sand dune", "沙丘" },
     };
     return angdroid_terrain_trap_lookup(en, zh_tw, terrain_names,
                                        sizeof terrain_names / sizeof terrain_names[0]);
@@ -81,6 +99,23 @@ static inline const char *angdroid_terrain_lore(
         { "permanent wall", "大多數牆壁都能挖通，唯獨這種牆無法穿透。地城周圍的邊界與部分特殊房間就是由這種牆構成。" },
         { "lava", "一池閃耀火光的滾燙熔岩；踏入其中非常危險！" },
         { "pile of passable rubble", "會遮擋視線，阻擋投射物、魔法箭及射線，也會縮小範圍法術的影響半徑。可挖掘或用魔法清除，玩家與怪物仍可穿過。" },
+        /* FAangband-only terrain lore shown in the knowledge browser. */
+        { "Travelling Merchant", "這位商人四處旅行，收購各式有價值的物品，並販售基本物資、武器與防具。" },
+        { "easy path north", "通往相鄰地區的小徑。" },
+        { "hard path north", "通往相鄰地區的小徑。" },
+        { "easy path east", "通往相鄰地區的小徑。" },
+        { "hard path east", "通往相鄰地區的小徑。" },
+        { "easy path south", "通往相鄰地區的小徑。" },
+        { "hard path south", "通往相鄰地區的小徑。" },
+        { "easy path west", "通往相鄰地區的小徑。" },
+        { "hard path west", "通往相鄰地區的小徑。" },
+        { "water", "火焰性質且無法飛行的怪物不能穿過水域，多數其他怪物會減速；攜帶物品過重時，你也會減速。水中雙方更容易被擊中，也更難閃避；多數法術，尤其水系法術會增強，但火系法術威力大幅降低。水也可能蒸發。" },
+        { "lowland trees", "會讓不熟悉德魯伊技巧的角色，以及不會飛行或穿牆的非自然怪物移動緩慢。樹木會阻擋視線、飛射武器、魔法飛彈與射線，縮小範圍法術半徑，並為林中的角色與怪物提供近戰、遠程及魔法防護。樹木可能燃燒。" },
+        { "highland trees", "會讓不熟悉德魯伊技巧的角色，以及不會飛行或穿牆的非自然怪物移動緩慢。樹木會阻擋視線、飛射武器、魔法飛彈與射線，縮小範圍法術半徑，並為林中的角色與怪物提供近戰、遠程及魔法防護。樹木可能燃燒。" },
+        { "grass", "所有生物都能輕鬆穿越的開闊草地，只會出現在荒野，也可能藏有陷阱。" },
+        { "road", "開闊的道路，任何生物都能通行，也可放置陷阱或物品，不會遮擋視線。" },
+        { "empty space", "下方是虛空；只有能飛行的生物才能安全穿越，不會墜落。法術與飛射武器都能通過。" },
+        { "sand dune", "會阻擋視線、飛射武器、魔法飛彈與射線，也會縮小範圍法術的影響半徑。" },
     };
     const char *translated;
     if (!original || !zh_tw || !terrain_name) return original;
@@ -88,6 +123,32 @@ static inline const char *angdroid_terrain_lore(
     translated = angdroid_terrain_trap_lookup(terrain_name, zh_tw,
         terrain_lore, sizeof terrain_lore / sizeof terrain_lore[0]);
     return translated == terrain_name ? original : translated;
+}
+
+
+/* Only the user-visible confirmation prompt is localized; no movement rules,
+ * terrain flags or death-cause strings are changed. */
+static inline const char *angdroid_terrain_warning(const char *en, int zh_tw)
+{
+    static const struct angdroid_terrain_trap_pair prompts[] = {
+        { "The lava will scald you!  Really step in? ", "熔岩會燙傷你！確定要踏入嗎？ " },
+        { "Lava blocks your path.  Step into it? ", "熔岩擋住了前方的路。確定要踏入嗎？ " },
+        { "It's a cliff! Really step off it?", "前方是懸崖！確定要踏出去嗎？" },
+        { "You have come to a cliff.  Step off it?", "你已來到懸崖邊。確定要踏出去嗎？" },
+    };
+    return angdroid_terrain_trap_lookup(en, zh_tw, prompts,
+        sizeof prompts / sizeof prompts[0]);
+}
+
+/* Damage notification for the non-fiery FAangband chasm/empty-space feature. */
+static inline const char *angdroid_terrain_hurt_message(const char *en,
+    int zh_tw)
+{
+    static const struct angdroid_terrain_trap_pair messages[] = {
+        { "You fall into darkness!", "你墜入黑暗之中！" },
+    };
+    return angdroid_terrain_trap_lookup(en, zh_tw, messages,
+        sizeof messages / sizeof messages[0]);
 }
 
 static inline const char *angdroid_trap_name(const char *en, int zh_tw)
@@ -134,8 +195,10 @@ static inline const char *angdroid_trap_name(const char *en, int zh_tw)
         { "knife trap", "刀刃陷阱" },
         { "petrifying trap", "石化陷阱" },
     };
-    return angdroid_terrain_trap_lookup(en, zh_tw, trap_names,
-                                       sizeof trap_names / sizeof trap_names[0]);
+    const char *translated = angdroid_terrain_trap_lookup(en, zh_tw,
+        trap_names, sizeof trap_names / sizeof trap_names[0]);
+    return translated != en ? translated :
+        angdroid_faangband_trap_name(en, zh_tw);
 }
 
 static inline const char *angdroid_trap_lore(const char *en, int zh_tw)
@@ -178,7 +241,9 @@ static inline const char *angdroid_trap_lore(const char *en, int zh_tw)
         { "A trap designed to bleed you to death.", "設計來讓你流血致死的陷阱。" },
         { "A trap that stuns you and gives you stoneskin.", "會使你暈眩，並讓你獲得石膚效果的陷阱。" },
     };
-    return angdroid_terrain_trap_lookup(en, zh_tw, trap_lore,
-                                       sizeof trap_lore / sizeof trap_lore[0]);
+    const char *translated = angdroid_terrain_trap_lookup(en, zh_tw,
+        trap_lore, sizeof trap_lore / sizeof trap_lore[0]);
+    return translated != en ? translated :
+        angdroid_faangband_trap_lore(en, zh_tw);
 }
 #endif

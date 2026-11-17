@@ -51,6 +51,32 @@ int main(void)
         assert(angdroid_menu_action_item_index(0, 4, INT_MIN, stale) == -1);
     }
 
+    /* Empty shops must stop advertising stock-only shortcuts, while all
+     * other menu modes and a restocked shop preserve the existing keys. */
+    {
+        const char *stock_only = "pglx";
+        const char *usable = "s?=Iie";
+        const char *key;
+        int flags, count;
+        for (flags = 0; flags <= 255; ++flags) {
+            for (count = 0; count <= 3; ++count) {
+                int masked = (flags & 0x80) && count == 0;
+                for (key = stock_only; *key; ++key)
+                    assert(angdroid_menu_empty_shop_key_visible(
+                        flags, 0x80, count, *key) == !masked);
+                for (key = usable; *key; ++key)
+                    assert(angdroid_menu_empty_shop_key_visible(
+                        flags, 0x80, count, *key));
+            }
+        }
+        assert(angdroid_menu_empty_shop_key_visible(
+            0x80, 0x80, -1, 's'));
+        assert(!angdroid_menu_empty_shop_key_visible(
+            0x80, 0x80, -1, 'p'));
+        assert(angdroid_menu_empty_shop_key_visible(
+            0, 0x80, 0, 'p'));
+    }
+
     puts("PASS: selected action state and filtered menu callback index bounds");
     return 0;
 }

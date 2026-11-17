@@ -1294,7 +1294,7 @@ void do_cmd_change_name(void)
 					if(arg_force_name)
 						msg("%s", angdroid_character_sheet_text("You are not allowed to change your name!", angdroid_zh_tw_enabled()));
 					else {
-					char namebuf[32] = "";
+					char namebuf[PLAYER_NAME_LEN] = "";
 
 					/* Set player name */
 					if (get_character_name(namebuf, sizeof namebuf))

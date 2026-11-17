@@ -35,4 +35,17 @@ static inline int angdroid_menu_columns_hit(
     return index < count ? (int)index : -1;
 }
 
+/* "Back" is a tap in the left margin ALONGSIDE the active rows, not
+ * anywhere above them. In a shop, the owner/header occupies those top
+ * rows: tapping it and dismissing its context menu must not exit the shop.
+ * Reject negative native coordinates and use widened row subtraction. */
+static inline int angdroid_menu_back_margin_hit(
+    int row, int col, int origin_row, int origin_col, int page_rows)
+{
+    return row >= 0 && col >= 0 && origin_row >= 0 &&
+        origin_col > 0 && page_rows > 0 &&
+        col < origin_col && row >= origin_row &&
+        (int64_t)row - origin_row < page_rows;
+}
+
 #endif

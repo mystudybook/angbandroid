@@ -51,6 +51,7 @@
 #include "trap.h"
 #include "droid.h"
 #include "zh-tw-ui.h"
+#include "zh-tw-terrain-trap.h"
 
 /**
  * Go up one level
@@ -1166,13 +1167,15 @@ void move_player(int dir, bool disarm)
 			 * third of hp.
 			 */
 			if (player->upkeep->running && dam_taken) {
-				if (!get_check(feat->run_msg)) {
+				if (!get_check(angdroid_terrain_warning(feat->run_msg,
+					angdroid_zh_tw_enabled()))) {
 					player->upkeep->running = 0;
 					step = false;
 				}
 			} else {
 				if (dam_taken > player->chp / 3) {
-					step = get_check(feat->walk_msg);
+					step = get_check(angdroid_terrain_warning(feat->walk_msg,
+						angdroid_zh_tw_enabled()));
 				}
 			}
 		}

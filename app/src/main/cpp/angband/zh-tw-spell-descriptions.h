@@ -8,6 +8,7 @@
 
 #include <stddef.h>
 #include <string.h>
+#include "zh-tw-faangband-spells.h"
 
 static inline const char *angdroid_zh_tw_spell_description(
     const char *name, const char *english, int zh_tw)
@@ -175,7 +176,11 @@ static inline const char *angdroid_zh_tw_spell_description(
             return map[i].zh;
         }
     }
-    return english;
+    {
+        const char *fa_description =
+            angdroid_zh_tw_faangband_spell_description(name, english);
+        return fa_description ? fa_description : english;
+    }
 }
 
 #endif

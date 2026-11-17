@@ -45,9 +45,13 @@
 #include "zh-tw-curse.h"
 #include "zh-tw-item-abilities.h"
 #include "zh-tw-artifact-lore.h"
+#include "zh-tw-faangband-artifact-lore.h"
+#include "zh-tw-faangband-artifact-variants.h"
 #include "zh-tw-ego-lore.h"
 #include "zh-tw-kind-lore.h"
 #include "zh-tw-monsters.h"
+#include "zh-tw-unique-monsters.h"
+#include "item-origin-display.h"
 
 /**
  * Describes the number of blows possible for given stat bonuses
@@ -2231,7 +2235,8 @@ static bool describe_effect(textblock *tb, const struct object *obj,
 static bool describe_origin(textblock *tb, const struct object *obj, bool terse)
 {
 	char loot_spot[80];
-	char name[80];
+	char name_buffer[256];
+	const char *name = name_buffer;
 	int origin;
 	const char *dropper = NULL;
 	const char *article;
@@ -2268,15 +2273,11 @@ static bool describe_origin(textblock *tb, const struct object *obj, bool terse)
 		dropper = "monster lost to history";
 	}
 	article = is_a_vowel(dropper[0]) ? "an " : "a ";
-	if (unique)
-		my_strcpy(name, dropper, sizeof(name));
-	else {
-		my_strcpy(name, article, sizeof(name));
-		my_strcat(name, dropper, sizeof(name));
-	}
-	if (comma) {
-		my_strcat(name, ",", sizeof(name));
-	}
+	/* Display only: never let a too-long, possibly multibyte source
+	 * be cut inside a name by a fixed-size English origin buffer. */
+	if (!angdroid_item_origin_monster_name(name_buffer,
+			sizeof(name_buffer), dropper, article, unique, comma))
+		name = dropper;
 
 	/* Only format the already-known item origin for display; keep the
 	 * canonical origin enum, monster data and exported records intact. */
@@ -2294,8 +2295,12 @@ static bool describe_origin(textblock *tb, const struct object *obj, bool terse)
 
 		if (!obj->origin_race) {
 			zh_dropper = "已不可考的怪物";
-		} else if (!unique) {
-			found = angdroid_zh_tw_monster_list_name(dropper);
+		} else {
+			/* A revealed unique source also has a Chinese display name.
+			 * Unknown names remain canonical English, never guessed. */
+			found = unique
+				? angdroid_zh_tw_unique_monster_name(dropper)
+				: angdroid_zh_tw_monster_list_name(dropper);
 			if (found) zh_dropper = found;
 		}
 
@@ -2380,8 +2385,18 @@ static void describe_flavor_text(textblock *tb, const struct object *obj,
 		obj->known->artifact && obj->artifact->text) {
 		const char *flavor = obj->artifact->text;
 		if (zh_tw) {
+			bool allow_standard = true;
+			/* An identical artifact name can have different source lore
+			 * in the two variants. A source-text mismatch keeps English. */
 			const char *translated =
-				angdroid_zh_tw_artifact_flavor(obj->artifact->name);
+				angdroid_zh_tw_faangband_variant_artifact_lore(
+					obj->artifact->name, flavor, &allow_standard);
+			if (!translated && allow_standard)
+				translated = angdroid_zh_tw_artifact_flavor(
+					obj->artifact->name);
+			if (!translated && allow_standard)
+				translated = angdroid_zh_tw_faangband_artifact_flavor(
+					obj->artifact->name);
 			if (translated) flavor = translated;
 		}
 		textblock_append(tb, "%s\n\n", flavor);

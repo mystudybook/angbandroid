@@ -23,6 +23,7 @@
 #include "droid.h"
 #include "zh-tw-monsters.h"
 #include "zh-tw-unique-monsters.h"
+#include "zh-tw-monster-list-render.h"
 
 /**
  * Perform simple English pluralization on a monster name.
@@ -58,10 +59,10 @@ void get_mon_name(char *buf, size_t buflen,
 			? angdroid_zh_tw_unique_monster_name(race->name)
 			: angdroid_zh_tw_monster_list_name(race->name);
 		if (translated) {
-			if (is_unique)
-				strnfmt(buf, buflen, "[U] %s", translated);
-			else
-				strnfmt(buf, buflen, "%3d %s", num, translated);
+			/* Only display text is localized.  Never split a UTF-8 glyph
+			 * when the monster list provides a small name buffer. */
+			angdroid_zh_tw_monster_list_copy(buf, buflen,
+				translated, is_unique, num);
 			return;
 		}
 	}

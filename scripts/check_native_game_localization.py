@@ -158,8 +158,8 @@ def main():
            "Original Angband item-kind catalog incomplete: "
            + ", ".join(sorted(real_item_names - item_translated_names)[:15]))
     # Every non-unique source monster (excluding the <player> placeholder)
-    # must have a display-only Chinese label. Unique monster proper names
-    # deliberately retain their canonical name and purple rendering.
+    # and every curated unique has a display-only Chinese label. Canonical
+    # race identities, purple rendering and game records remain unchanged.
     monster_records = []
     current_name = None
     current_unique = False
@@ -221,7 +221,7 @@ def main():
            "Unique monster names must cover all 101 canonical source names")
     expect('"zh-tw-unique-monsters.h"' in mon
            and 'angdroid_zh_tw_unique_monster_name(race->name)' in mon
-           and 'strnfmt(buf, buflen, "[U] %s", translated)' in mon
+           and 'angdroid_zh_tw_monster_list_copy(buf, buflen,' in mon
            and 'strnfmt(buf, buflen, "[U] %s", race->name)' in mon,
            "Unique names must stay display-only in monster lists")
     # Translating an unidentified visual label must not reveal the kind.
@@ -244,7 +244,9 @@ def main():
     expect('"zh-tw-flavor-names.h"' in obj
            and "if (!easy_know && !kind->aware && kind->flavor)" in obj
            and "angdroid_zh_tw_flavor_name(flavor)" in obj
-           and "my_strcpy(buf, localized ? localized : flavor, max);" in obj
+           and "angdroid_utf8_copy_complete(buf, max, localized);" in obj
+           and "angdroid_utf8_copy_complete(buf, max, translated);" in obj
+           and "my_strcpy(buf, flavor, max);" in obj
            and "show_flavor && obj->kind->flavor" in obj
            and "angdroid_zh_tw_flavor_name(obj->kind->flavor->text)" in obj
            and "if (localized_flavor) modstr = localized_flavor;" in obj
@@ -762,7 +764,9 @@ def main():
            and "localized ? localized : race->text" in monster_lore,
            "Monster flavor display-only mapping or fallback missing")
     expect("angdroid_zh_tw_monster_list_name(race->name)" in monster_lore_ui
-           and "name_zh ? name_zh : race->name" in monster_lore_ui,
+           and "angdroid_zh_tw_unique_monster_name(race->name)" in monster_lore_ui
+           and "name_zh ? name_zh : race->name" in monster_lore_ui
+           and "else if (OPT(player, purple_uniques))" in monster_lore_ui,
            "Monster lore title translation or unique fallback missing")
     expect("test_monster_lore_locale.c" in native_tests,
            "Monster lore host test not registered")
@@ -1581,7 +1585,8 @@ def main():
     expect('"zh-tw-knowledge-menu.h"' in knowledge_ui and
            'pre_store_actions[j].label, angdroid_zh_tw_enabled()' in knowledge_ui and
            'post_store_actions[j].label, angdroid_zh_tw_enabled()' in knowledge_ui and
-           'angdroid_knowledge_store_label(localized,' in knowledge_ui and
+           'angdroid_knowledge_store_label_for_menu(localized,' in knowledge_ui
+           and 'angdroid_knowledge_store_label(out, capacity,' in knowledge_menu_header and
            'main_knowledge_menu.m.cmd_keys = main_knowledge_menu.storekeys;' in knowledge_ui and
            'handle_store_shortcuts' in knowledge_ui,
            "Knowledge menu labels must be translated without altering store keys")

@@ -30,6 +30,19 @@ static inline const char *angdroid_melee_verb_zh_tw(const char *english)
 {
     static const struct angdroid_combat_label pairs[] = {
         {"punch", "揮拳擊中了"},
+        /* Shape-change attack verbs in both Angband and FAangband. */
+        {"bite", "咬住了"},
+        {"claw", "用利爪抓傷了"},
+        {"clout", "猛擊了"},
+        {"crush", "重壓了"},
+        {"cuff", "掌擊了"},
+        {"peck", "啄擊了"},
+        {"scratch", "抓傷了"},
+        {"slash", "劈砍了"},
+        {"strike", "擊打了"},
+        {"swipe", "猛抓了"},
+        {"tear", "撕裂了"},
+        {"thump", "重捶了"},
         {"hit", "擊中了"},
         {"fail to harm", "未能傷害"},
         {"dissolve", "以強酸腐蝕了"},

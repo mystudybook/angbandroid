@@ -50,6 +50,19 @@
 #include "ui-options.h"
 #include "ui-output.h"
 #include "ui-prefs.h"
+#include "droid.h"
+#include "../angband/object-list-text.h"
+#include "../angband/inventory-equip-mention.h"
+#include "../angband/item-selection-layout.h"
+#include "../angband/item-picker-switch-keys.h"
+#include "../angband/item-picker-start-source.h"
+#include "../angband/item-picker-tag-guard.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
+#include "../angband/zh-tw-inscription-confirm.h"
+#include "../angband/zh-tw-ignore-quality-action.h"
+#include "../angband/ignore-named-action-locale.h"
+#include "obj-desc-item-zh-tw.h"
 
 /**
  * ------------------------------------------------------------------------
@@ -64,7 +77,7 @@ struct object_menu_data {
 	char label[80];
 	char equip_label[80];
 	struct object *object;
-	char o_name[80];
+	char o_name[256];
 	char key;
 };
 
@@ -74,6 +87,7 @@ static int num_head;
 static size_t max_len;
 static int ex_width;
 static int ex_offset;
+static olist_detail_t olist_render_mode;
 
 /**
  * ------------------------------------------------------------------------
@@ -136,107 +150,134 @@ wchar_t object_char(const struct object *obj)
  * Used by show_inven(), show_equip(), show_quiver() and show_floor().
  * Mode flags are documented in object.h
  */
-static void show_obj(int obj_num, int row, int col, bool cursor,
-					 olist_detail_t mode)
+/* Keep at least twelve terminal cells for the item shortcut/name on
+ * narrow screens. Extra columns are optional and never overlap CJK text. */
+static olist_detail_t fa_object_list_visible_extras(
+    olist_detail_t mode, int width)
 {
-	int attr;
-	int label_attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
-	int ex_offset_ctr;
-	char buf[80];
-	struct object *obj = items[obj_num].object;
-	bool show_label = mode & (OLIST_WINDOW | OLIST_DEATH) ? true : false;
-	int label_size = show_label ? strlen(items[obj_num].label) : 0;
-	int equip_label_size = strlen(items[obj_num].equip_label);
+    angdroid_object_list_extras fit = angdroid_object_list_fit_extras(
+        width, 12, (mode & OLIST_PRICE) != 0, (mode & OLIST_FAIL) != 0,
+        (mode & OLIST_RECHARGE) != 0, (mode & OLIST_WEIGHT) != 0);
+    if (!fit.price) mode &= ~OLIST_PRICE;
+    if (!fit.fail) mode &= ~OLIST_FAIL;
+    if (!fit.recharge) mode &= ~OLIST_RECHARGE;
+    if (!fit.weight) mode &= ~OLIST_WEIGHT;
+    return mode;
+}
 
-	/* Clear the line */
-	prt("", row + obj_num, MAX(col - 1, 0));
+/* Numeric columns are fixed-width; never print a partial price/failure or
+ * cross the active menu row boundary on a phone or after rotation. */
+static void fa_object_list_put_detail(const char *text, int row, int col,
+                                     int offset, int row_width, int reserved)
+{
+    size_t columns;
+    if (!Term || !text || row < 0 || row >= Term->hgt ||
+        col < 0 || col >= Term->wid) return;
+    row_width = MIN(row_width, Term->wid - col);
+    columns = angdroid_utf8_display_columns(text);
+    if (angdroid_object_list_detail_fits(
+            offset, row_width, reserved, columns))
+        put_str(text, row, col + offset);
+}
 
-	/* If we have no label then we won't display anything */
-	if (!strlen(items[obj_num].label)) return;
+/* Display one item: coordinate and truncation units are terminal cells,
+ * never raw UTF-8 bytes. Do not mutate the saved o_name on render. */
+static void show_obj(int obj_num, int row, int col, bool cursor,
+                     olist_detail_t mode, int row_width)
+{
+    int attr;
+    int label_attr = cursor ? COLOUR_L_BLUE : COLOUR_WHITE;
+    int ex_offset_ctr;
+    char buf[80];
+    char label[sizeof(items[obj_num].label)];
+    char equip_label[sizeof(items[obj_num].equip_label)];
+    char name[sizeof(items[obj_num].o_name)];
+    struct object *obj = items[obj_num].object;
+    bool show_label = (mode & (OLIST_WINDOW | OLIST_DEATH)) != 0;
+    size_t available, label_size, equip_label_size;
 
-	/* Print the label */
-	if (show_label)
-		c_put_str(label_attr, items[obj_num].label, row + obj_num, col);
+    if (!Term || col < 0 || col >= Term->wid ||
+        row + obj_num < 0 || row + obj_num >= Term->hgt)
+        return;
+    row_width = MIN(row_width, Term->wid - col);
+    if (row_width <= 0) return;
+    prt("", row + obj_num, MAX(col - 1, 0));
+    if (!items[obj_num].label[0]) return;
 
-	/* Print the equipment label */
-	c_put_str(label_attr, items[obj_num].equip_label, row + obj_num,
-			  col + label_size);
+    available = angdroid_object_list_cell_budget(ex_offset, row_width);
+    label_size = angdroid_menu_copy_columns(label, sizeof(label),
+        show_label ? items[obj_num].label : "", available);
+    equip_label_size = angdroid_menu_copy_columns(
+        equip_label, sizeof(equip_label), items[obj_num].equip_label,
+        available - label_size);
+    (void)angdroid_menu_copy_columns(
+        name, sizeof(name), items[obj_num].o_name,
+        available - label_size - equip_label_size);
 
-	/* Limit object name */
-	if (label_size + equip_label_size + strlen(items[obj_num].o_name) >
-		(size_t)ex_offset) {
-		int truncate = ex_offset - label_size - equip_label_size;
+    if (label[0])
+        c_put_str(label_attr, label, row + obj_num, col);
+    if (equip_label[0])
+        c_put_str(label_attr, equip_label, row + obj_num,
+            col + (int)label_size);
 
-		if (truncate < 0) truncate = 0;
-		if ((size_t)truncate > sizeof(items[obj_num].o_name) - 1)
-			truncate = sizeof(items[obj_num].o_name) - 1;
+    if (obj) {
+        attr = obj->kind->base->attr;
+        if (tval_is_book_k(obj->kind) &&
+            player_object_to_book(player, obj) == NULL)
+            attr = COLOUR_SLATE;
+    } else {
+        attr = COLOUR_SLATE;
+    }
+    if (name[0])
+        c_put_str(attr, name, row + obj_num,
+            col + (int)(label_size + equip_label_size));
+    if (!obj) return;
 
-		items[obj_num].o_name[truncate] = '\0';
-	}
+    /* Keep each field's reserved offset even if the field is unavailable. */
+    ex_offset_ctr = ex_offset;
 
-	/* Item kind determines the color of the output */
-	if (obj) {
-		attr = obj->kind->base->attr;
+    if (mode & OLIST_PRICE) {
+        struct store *store = store_at(cave, player->grid);
+        if (store) {
+            int price = price_item(store, obj, true, obj->number);
+            strnfmt(buf, sizeof(buf), "%6d au", price);
+            fa_object_list_put_detail(buf, row + obj_num, col,
+                ex_offset_ctr, row_width, 9);
+        }
+        ex_offset_ctr += 9;
+    }
 
-		/* Unreadable books are a special case */
-		if (tval_is_book_k(obj->kind) &&
-			(player_object_to_book(player, obj) == NULL)) {
-			attr = COLOUR_SLATE;
-		}
-	} else {
-		attr = COLOUR_SLATE;
-	}
+    if (mode & OLIST_FAIL) {
+        if (obj_can_fail(obj)) {
+            int fail = (9 + get_use_device_chance(obj)) / 10;
+            if (object_effect_is_known(obj))
+                strnfmt(buf, sizeof(buf), "%4d%% fail", fail);
+            else
+                my_strcpy(buf, "    ? fail", sizeof(buf));
+            fa_object_list_put_detail(buf, row + obj_num, col,
+                ex_offset_ctr, row_width, 10);
+        }
+        ex_offset_ctr += 10;
+    }
 
-	/* Object name */
-	c_put_str(attr, items[obj_num].o_name, row + obj_num,
-			  col + label_size + equip_label_size);
+    if (mode & OLIST_RECHARGE) {
+        int fail = 1000 / recharge_failure_chance(
+            obj, player->upkeep->recharge_pow);
+        if (object_effect_is_known(obj))
+            strnfmt(buf, sizeof(buf), "%2d.%1d%% fail", fail / 10, fail % 10);
+        else
+            my_strcpy(buf, "    ? fail", sizeof(buf));
+        fa_object_list_put_detail(buf, row + obj_num, col,
+            ex_offset_ctr, row_width, 10);
+        ex_offset_ctr += 10;
+    }
 
-	/* If we don't have an object, we can skip the rest of the output */
-	if (!obj) return;
-
-	/* Extra fields */
-	ex_offset_ctr = ex_offset;
-
-	/* Price */
-	if (mode & OLIST_PRICE) {
-		struct store *store = store_at(cave, player->grid);
-		if (store) {
-			int price = price_item(store, obj, true, obj->number);
-
-			strnfmt(buf, sizeof(buf), "%6d au", price);
-			put_str(buf, row + obj_num, col + ex_offset_ctr);
-			ex_offset_ctr += 9;
-		}
-	}
-
-	/* Failure chance for magic devices and activations */
-	if (mode & OLIST_FAIL && obj_can_fail(obj)) {
-		int fail = (9 + get_use_device_chance(obj)) / 10;
-		if (object_effect_is_known(obj))
-			strnfmt(buf, sizeof(buf), "%4d%% fail", fail);
-		else
-			my_strcpy(buf, "    ? fail", sizeof(buf));
-		put_str(buf, row + obj_num, col + ex_offset_ctr);
-		ex_offset_ctr += 10;
-	}
-
-	/* Failure chances for recharging an item; see effect_handler_RECHARGE */
-	if (mode & OLIST_RECHARGE) {
-		int fail = 1000 / recharge_failure_chance(obj, player->upkeep->recharge_pow);
-		if (object_effect_is_known(obj))
-			strnfmt(buf, sizeof(buf), "%2d.%1d%% fail", fail / 10, fail % 10);
-		else
-			my_strcpy(buf, "    ? fail", sizeof(buf));
-		put_str(buf, row + obj_num, col + ex_offset_ctr);
-		ex_offset_ctr += 10;
-	}
-
-	/* Weight */
-	if (mode & OLIST_WEIGHT) {
-		int weight = obj->number * object_weight_one(obj);
-		strnfmt(buf, sizeof(buf), "%4d.%1d lb", weight / 10, weight % 10);
-		put_str(buf, row + obj_num, col + ex_offset_ctr);
-	}
+    if (mode & OLIST_WEIGHT) {
+        int weight = obj->number * object_weight_one(obj);
+        strnfmt(buf, sizeof(buf), "%4d.%1d lb", weight / 10, weight % 10);
+        fa_object_list_put_detail(buf, row + obj_num, col,
+            ex_offset_ctr, row_width, 9);
+    }
 }
 
 /**
@@ -301,25 +342,17 @@ static void build_obj_list(int last, struct object **list, item_tester tester,
 
 		/* Show full slot labels for equipment (or quiver in subwindow) */
 		if (equip) {
-			const char *mention = equip_mention(player, i);
-			size_t u8len = utf8_strlen(mention);
-
-			if (u8len < 14) {
-				strnfmt(buf, sizeof(buf), "%s%*s", mention,
-					(int)(14 - u8len), " ");
-			} else {
-				char *mention_copy = string_make(mention);
-
-				if (u8len > 14) {
-					utf8_clipto(mention_copy, 14);
-				}
-				strnfmt(buf, sizeof(buf), "%s", mention_copy);
-				string_free(mention_copy);
-			}
-			my_strcpy(items[num_obj].equip_label, buf,
-					  sizeof(items[num_obj].equip_label));
+			/* This is a 14-terminal-cell label, not fourteen Unicode
+			 * scalars; never clip in the middle of a Chinese glyph. */
+			angdroid_inventory_equip_mention(
+				items[num_obj].equip_label,
+				sizeof(items[num_obj].equip_label),
+				equip_mention(player, i));
 		} else if ((in_term || dead) && quiver) {
-			strnfmt(buf, sizeof(buf), "Slot %-9d: ", i);
+			if (angdroid_zh_tw_enabled())
+                strnfmt(buf, sizeof(buf), "箭袋位置 %d：", i);
+            else
+                strnfmt(buf, sizeof(buf), "Slot %-9d: ", i);
 			my_strcpy(items[num_obj].equip_label, buf,
 					  sizeof(items[num_obj].equip_label));
 		} else {
@@ -352,9 +385,15 @@ static void set_obj_names(bool terse, const struct player *p)
 			if ((i < num_head) || streq(items[i].label, "In quiver"))
 				strnfmt(items[i].o_name, sizeof(items[i].o_name), "%s", "");
 			else
-				strnfmt(items[i].o_name, sizeof(items[i].o_name), "(nothing)");
+				strnfmt(items[i].o_name, sizeof(items[i].o_name), "%s",
+                    angdroid_game_ui_text("(nothing)",
+                        angdroid_zh_tw_enabled()));
 		} else {
-			if (terse) {
+			/* ODESC_TERSE deliberately bypasses translations in
+			 * obj-desc.c. Do not silently revert to English only because a
+			 * Chinese phone has fewer than 50 terminal columns: the row
+			 * renderer now clips complete wide glyphs by terminal cells. */
+			if (terse && !angdroid_zh_tw_enabled()) {
 				object_desc(items[i].o_name,
 					sizeof(items[i].o_name), obj,
 					ODESC_PREFIX | ODESC_FULL | ODESC_TERSE,
@@ -362,14 +401,15 @@ static void set_obj_names(bool terse, const struct player *p)
 			} else {
 				object_desc(items[i].o_name,
 					sizeof(items[i].o_name), obj,
-					ODESC_PREFIX | ODESC_FULL, p);
+					ODESC_PREFIX | ODESC_FULL | (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), p);
 			}
 		}
 
 		/* Max length of label + object name */
 		max_len = MAX(max_len,
-					  strlen(items[i].label) + strlen(items[i].equip_label) +
-					  strlen(items[i].o_name));
+					  angdroid_utf8_display_columns(items[i].label) +
+					  angdroid_utf8_display_columns(items[i].equip_label) +
+					  angdroid_utf8_display_columns(items[i].o_name));
 	}
 }
 
@@ -403,10 +443,13 @@ static void show_obj_list(olist_detail_t mode)
 	if (mode & OLIST_QUIVER && player->upkeep->quiver[0] != NULL)
 		max_len = MAX(max_len, 24);
 
-	/* Width of extra fields */
+	/* Narrow terminals must reserve name cells before optional price,
+	 * device failure, recharge and weight columns. */
+	mode = fa_object_list_visible_extras(mode, Term->wid);
 	if (mode & OLIST_WEIGHT) ex_width += 9;
 	if (mode & OLIST_PRICE) ex_width += 9;
 	if (mode & OLIST_FAIL) ex_width += 10;
+	if (mode & OLIST_RECHARGE) ex_width += 10;
 
 	/* Determine beginning row and column */
 	if (in_term) {
@@ -422,11 +465,12 @@ static void show_obj_list(olist_detail_t mode)
 	}
 
 	/* Column offset of the first extra field */
-	ex_offset = MIN(max_len, (size_t)(Term->wid - 1 - ex_width - col));
+	ex_offset = angdroid_object_list_name_offset(
+		Term->wid, col, ex_width, max_len);
 
 	/* Output the list */
 	for (i = 0; i < num_obj; i++)
-		show_obj(i, row, col, false, mode);
+		show_obj(i, row, col, false, mode, Term->wid - col);
 
 	/* For the inventory: print the quiver count */
 	if (mode & OLIST_QUIVER) {
@@ -435,7 +479,8 @@ static void show_obj_list(olist_detail_t mode)
 
 		/* Quiver may take multiple lines */
 		for (j = 0; j < quiver_slots; j++, i++) {
-			const char *fmt = "in Quiver: %d missile%s";
+			const char *fmt = angdroid_zh_tw_enabled() ?
+                "箭袋：%d 支彈藥%s" : "in Quiver: %d missile%s";
 			char letter = all_letters_nohjkl[in_term ? i - 1 : i];
 
 			/* Number of missiles in this "slot" */
@@ -453,8 +498,15 @@ static void show_obj_list(olist_detail_t mode)
 
 			/* Print the count */
 			strnfmt(tmp_val, sizeof(tmp_val), fmt, count,
-					count == 1 ? "" : "s");
-			c_put_str(COLOUR_L_UMBER, tmp_val, row + i, col + 3);
+                    angdroid_zh_tw_enabled() ? "" :
+                    (count == 1 ? "" : "s"));
+			if (Term && col + 3 < Term->wid) {
+                char visible[128];
+                angdroid_menu_copy_columns(visible, sizeof(visible),
+                    tmp_val, (size_t)(Term->wid - col - 3));
+                if (visible[0])
+                    c_put_str(COLOUR_L_UMBER, visible, row + i, col + 3);
+            }
 		}
 	}
 
@@ -607,7 +659,8 @@ static item_tester tester_m;
 static region area = { 20, 1, -1, -2 };
 static struct object *selection;
 static const char *prompt;
-static char header[80];
+/* UTF-8 item-list headers can exceed the English-only 80-byte buffer. */
+static char header[288];
 static int i1, i2;
 static int e1, e2;
 static int q1, q2;
@@ -617,6 +670,7 @@ static struct object **floor_list;
 static struct object **throwing_list;
 static olist_detail_t olist_mode = 0;
 static int item_mode;
+static int item_prompt_columns;
 static cmd_code item_cmd;
 static bool newmenu = false;
 static bool allow_all = false;
@@ -664,7 +718,12 @@ bool get_item_allow(const struct object *obj, unsigned char ch, cmd_code cmd,
 		if (!verb)
 			verb = "do that with";
 
-		strnfmt(prompt_buf, sizeof(prompt_buf), "Really %s", verb);
+        /* Inscription confirmation is display-only; the original !*
+         * and !key checks and repeated n confirmations are untouched.
+         * Unknown verbs retain their original English wording. */
+        if (!angdroid_inscription_confirm_prefix(prompt_buf,
+                sizeof(prompt_buf), verb, angdroid_zh_tw_enabled()))
+            strnfmt(prompt_buf, sizeof(prompt_buf), "Really %s", verb);
 
 		/* Prompt for confirmation n times */
 		while (n--) {
@@ -763,8 +822,8 @@ static bool get_tag(struct object **tagged_obj, char tag, cmd_code cmd,
  */
 static void menu_header(void)
 {
-	char tmp_val[75];
-	char out_val[75];
+	char tmp_val[80];
+	char out_val[256];
 
 	bool use_inven = ((item_mode & USE_INVEN) ? true : false);
 	bool use_equip = ((item_mode & USE_EQUIP) ? true : false);
@@ -774,7 +833,7 @@ static void menu_header(void)
 	/* Viewing inventory */
 	if (player->upkeep->command_wrk == USE_INVEN) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Inven:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Inven:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (i1 <= i2) {
@@ -788,21 +847,21 @@ static void menu_header(void)
 
 		/* Indicate legality of equipment */
 		if (use_equip)
-			my_strcat(out_val, " / for Equip,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Equip,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing equipment */
 	else if (player->upkeep->command_wrk == USE_EQUIP) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Equip:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Equip:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (e1 <= e2) {
@@ -816,21 +875,21 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing quiver */
 	else if (player->upkeep->command_wrk == USE_QUIVER) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Quiver:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Quiver:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (q1 <= q2) {
@@ -843,19 +902,19 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory or equipment */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 		else if (use_equip)
-			my_strcat(out_val, " / for Equip,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Equip,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing throwing */
 	else if (player->upkeep->command_wrk == SHOW_THROWING) {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Throwing items:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Throwing items:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (throwing_num) {
@@ -869,21 +928,21 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of the "floor" */
 		if (allow_floor)
-			my_strcat(out_val, " - for floor,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" - for floor,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Viewing floor */
 	else {
 		/* Begin the header */
-		strnfmt(out_val, sizeof(out_val), "Floor:");
+		strnfmt(out_val, sizeof(out_val), "%s", angdroid_game_ui_text("Floor:", angdroid_zh_tw_enabled()));
 
 		/* List choices */
 		if (f1 <= f2) {
@@ -897,17 +956,18 @@ static void menu_header(void)
 
 		/* Indicate legality of inventory or equipment */
 		if (use_inven)
-			my_strcat(out_val, " / for Inven,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Inven,", angdroid_zh_tw_enabled()), sizeof(out_val));
 		else if (use_equip)
-			my_strcat(out_val, " / for Equip,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" / for Equip,", angdroid_zh_tw_enabled()), sizeof(out_val));
 
 		/* Indicate legality of quiver */
 		if (use_quiver)
-			my_strcat(out_val, " | for Quiver,", sizeof(out_val));
+			my_strcat(out_val, angdroid_game_ui_text(" | for Quiver,", angdroid_zh_tw_enabled()), sizeof(out_val));
 	}
 
 	/* Finish the header */
-	my_strcat(out_val, " ESC", sizeof(out_val));
+	my_strcat(out_val, angdroid_game_ui_text(" ESC",
+		angdroid_zh_tw_enabled()), sizeof(out_val));
 
 	/* Build the header */
 	strnfmt(header, sizeof(header), "(%s)", out_val);
@@ -921,7 +981,11 @@ static char get_item_tag(struct menu *menu, int oid)
 {
 	struct object_menu_data *choice = menu_priv(menu);
 
-	return choice[oid].key;
+	/* Empty equipment slots are visible with SHOW_EMPTY, but should
+	 * never display an actionable item tag or read an invalid index. */
+	if (!angdroid_item_picker_row_in_range(oid, menu->count))
+		return 0;
+	return choice[oid].object ? choice[oid].key : 0;
 }
 
 /**
@@ -931,6 +995,8 @@ static int get_item_validity(struct menu *menu, int oid)
 {
 	struct object_menu_data *choice = menu_priv(menu);
 
+	if (!angdroid_item_picker_row_in_range(oid, menu->count))
+		return 0;
 	return (choice[oid].object != NULL) ? 1 : 0;
 }
 
@@ -941,7 +1007,7 @@ static void get_item_display(struct menu *menu, int oid, bool cursor, int row,
 					  int col, int width)
 {
 	/* Print it */
-	show_obj(oid, row - oid, col, cursor, olist_mode);
+	show_obj(oid, row - oid, col, cursor, olist_render_mode, width);
 }
 
 /**
@@ -955,7 +1021,11 @@ static bool get_item_action(struct menu *menu, const ui_event *event, int oid)
 	int mode = OPT(player, rogue_like_commands) ? KEYMAP_MODE_ROGUE : KEYMAP_MODE_ORIG;
 
 	if (event->type == EVT_SELECT) {
-		if (choice[oid].object && get_item_allow(choice[oid].object, cmd_lookup_key(item_cmd, mode),
+		/* A delayed tap or Enter must never dereference a removed slot.
+		 * Blank equipment placeholders cannot be selected. */
+		if (angdroid_item_picker_row_in_range(oid, menu->count) &&
+			choice[oid].object &&
+			get_item_allow(choice[oid].object, cmd_lookup_key(item_cmd, mode),
 						   item_cmd, is_harmless))
 			selection = choice[oid].object;
 	}
@@ -1007,69 +1077,118 @@ static bool get_item_action(struct menu *menu, const ui_event *event, int oid)
  */
 static void item_menu_browser(int oid, void *data, const region *local_area)
 {
-	char tmp_val[80];
-	int count, j, i = num_obj;
-	int quiver_slots = (player->upkeep->quiver_cnt + z_info->quiver_slot_size - 1)
-		/ z_info->quiver_slot_size;
+	int i = num_obj, j, quiver_slots, col, max_columns;
+	char tmp_val[80], label[16], visible[80];
 
-	/* Set up to output below the menu */
-	text_out_hook = text_out_to_screen;
-	text_out_wrap = 0;
-	text_out_indent = local_area->col - 1;
-	text_out_pad = 1;
-	prt("", local_area->row + local_area->page_rows, MAX(0, local_area->col - 1));
-	Term_gotoxy(local_area->col, local_area->row + local_area->page_rows);
+	/* The quiver footer must be outside the selectable item rows, even
+	 * after scrolling, switching item lists, or Android screen rotation.
+	 * Do not move the cursor or print outside the terminal. */
+	if (!Term || !local_area || local_area->page_rows <= 0)
+		return;
+	col = local_area->col;
+	if (col < 0 || col >= Term->wid)
+		return;
+	max_columns = MIN(local_area->width, Term->wid - col);
+	if (max_columns <= 0 || !(olist_mode & OLIST_QUIVER) ||
+		player->upkeep->command_wrk != USE_INVEN)
+		return;
 
-	/* If we're printing pack slots the quiver takes up */
-	if (olist_mode & OLIST_QUIVER && player->upkeep->command_wrk == USE_INVEN) {
-		/* Quiver may take multiple lines */
-		for (j = 0; j < quiver_slots; j++, i++) {
-			const char *fmt = "in Quiver: %d missile%s\n";
-			char letter = all_letters_nohjkl[i];
+	/* No overflow even when the quiver contains INT_MAX missiles;
+	 * a zero-sized slot never produces a drawable footer. */
+	quiver_slots = angdroid_item_quiver_footer_slots(
+		player->upkeep->quiver_cnt, z_info->quiver_slot_size);
+	if (quiver_slots <= 0)
+		return;
+	for (j = 0; j < quiver_slots; ++j, ++i) {
+		int line = angdroid_item_selection_footer_row(local_area->row,
+			local_area->page_rows, Term->hgt, j);
+		int count;
+		size_t label_cols;
+		if (line < 0 || i >= (int)strlen(all_letters_nohjkl))
+			break;
+		if (j == quiver_slots - 1)
+			count = player->upkeep->quiver_cnt -
+				z_info->quiver_slot_size * (quiver_slots - 1);
+		else
+			count = z_info->quiver_slot_size;
 
-			/* Number of missiles in this "slot" */
-			if (j == quiver_slots - 1)
-				count = player->upkeep->quiver_cnt - (z_info->quiver_slot_size *
-													  (quiver_slots - 1));
-			else
-				count = z_info->quiver_slot_size;
-
-			/* Print the (disabled) label */
-			strnfmt(tmp_val, sizeof(tmp_val), "%c) ", letter);
-			text_out_c(COLOUR_SLATE, tmp_val, local_area->row + i, local_area->col);
-
-			/* Print the count */
-			strnfmt(tmp_val, sizeof(tmp_val), fmt, count,
-					count == 1 ? "" : "s");
-			text_out_c(COLOUR_L_UMBER, tmp_val, local_area->row + i, local_area->col + 3);
-		}
+		prt("", line, MAX(col - 1, 0));
+		strnfmt(label, sizeof(label), "%c) ", all_letters_nohjkl[i]);
+		label_cols = angdroid_menu_copy_columns(
+			visible, sizeof(visible), label, (size_t)max_columns);
+		if (visible[0])
+			c_put_str(COLOUR_SLATE, visible, line, col);
+		if (angdroid_zh_tw_enabled())
+			strnfmt(tmp_val, sizeof(tmp_val), "箭袋：%d 支彈藥", count);
+		else
+			strnfmt(tmp_val, sizeof(tmp_val),
+				"in Quiver: %d missile%s",
+				count, count == 1 ? "" : "s");
+		(void)angdroid_menu_copy_columns(visible, sizeof(visible),
+			tmp_val, (size_t)max_columns - label_cols);
+		if (visible[0])
+			c_put_str(COLOUR_L_UMBER, visible, line,
+				col + (int)label_cols);
 	}
-
-	/* Always print a blank line */
-	prt("", local_area->row + i, MAX(0, local_area->col - 1));
-
-	/* Blank out whole tiles */
-	while ((tile_height > 1) && ((local_area->row + i) % tile_height != 0)) {
-		i++;
-		prt("", local_area->row + i, MAX(0, local_area->col - 1));
-	}
-
-	text_out_pad = 0;
-	text_out_indent = 0;
 }
 
 /**
  * Display list items to choose from
  */
+/* Recompute menu coordinates on terminal rotation.  Item names, labels
+ * and prompts use terminal columns, and optional details yield to the name
+ * on phones with fewer cells.  No item identity or selection keys change. */
+static void fa_item_menu_resize(struct menu *m)
+{
+    int width, height;
+    bool footer;
+    angdroid_item_selection_layout layout;
+
+    Term_get_size(&width, &height);
+    olist_render_mode = fa_object_list_visible_extras(olist_mode, width);
+    ex_width = 0;
+    if (olist_render_mode & OLIST_PRICE) ex_width += 9;
+    if (olist_render_mode & OLIST_FAIL) ex_width += 10;
+    if (olist_render_mode & OLIST_RECHARGE) ex_width += 10;
+    if (olist_render_mode & OLIST_WEIGHT) ex_width += 9;
+
+    footer = (olist_mode & OLIST_QUIVER) &&
+        player->upkeep->command_wrk == USE_INVEN &&
+        player->upkeep->quiver_cnt > 0;
+    if (!angdroid_item_selection_region(width, height,
+            item_prompt_columns, max_len,
+            angdroid_utf8_display_columns(header), ex_width,
+            angdroid_item_selection_viewport_count(
+                m->count, m->switch_keys && m->switch_keys[0]),
+            footer, &layout)) {
+        area.col = 0;
+        area.row = 1;
+        area.width = 0;
+        area.page_rows = 0;
+        menu_layout(m, &area);
+        return;
+    }
+
+    area.col = layout.col;
+    area.row = layout.row;
+    area.width = layout.width;
+    area.page_rows = layout.page_rows;
+    ex_offset = angdroid_object_list_name_offset(
+        width, area.col, ex_width, max_len);
+    menu_layout(m, &area);
+}
+
 static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 {
 	menu_iter menu_f = { get_item_tag, get_item_validity, get_item_display,
-						 get_item_action, 0 };
+						 get_item_action, fa_item_menu_resize };
 	struct menu *m = menu_new(MN_SKIN_OBJECT, &menu_f);
 	ui_event evt = { 0 };
-	int ex_offset_ctr = 0;
-	int row, inscrip;
+	int inscrip;
 	struct object *obj = NULL;
+	char switch_keys[4];
+	int row;
+	int selectable_objects = 0;
 
 	/* Set up the menu */
 	menu_setpriv(m, num_obj, items);
@@ -1077,9 +1196,44 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 		m->selections = "0123456789";
 	else
 		m->selections = all_letters_nohjkl;
-	m->switch_keys = "/|-";
+	/* A switch key may otherwise leave the modal picker after an
+	 * invalid target (for example an empty quiver). Show only keys that
+	 * really lead to another allowed tab. Physical and soft keys agree. */
+	angdroid_item_picker_switch_keys(
+		switch_keys,
+		((((item_mode & USE_INVEN) != 0) || allow_all) &&
+			player->upkeep->command_wrk != USE_INVEN) ||
+		((((item_mode & USE_EQUIP) != 0) || allow_all) &&
+			player->upkeep->command_wrk != USE_EQUIP),
+		((q1 <= q2) || allow_all) &&
+			player->upkeep->command_wrk != USE_QUIVER,
+		((f1 <= f2) || allow_all) &&
+			player->upkeep->command_wrk != USE_FLOOR);
+	/* NULL also prevents a zero-valued key event from matching the
+	 * terminator of an otherwise empty switch-key string. */
+	m->switch_keys = switch_keys[0] ? switch_keys : NULL;
+	/* SHOW_EMPTY can display several equipment slot placeholders
+	 * while none has a real object. In that case count > 0 but the
+	 * cursor is -1, so ordinary action dispatch would drop / | - and
+	 * incorrectly cancel the picker instead of switching sources.
+	 * Let keyboard switches pass through with oid=-1, just as with a
+	 * truly zero-row picker. Invalid slots cannot emit EVT_SELECT. */
+	for (row = 0; row < num_obj; ++row) {
+		if (items[row].object)
+			++selectable_objects;
+	}
 	m->flags = (MN_PVT_TAGS | MN_INSCRIP_TAGS);
+	if (angdroid_item_picker_allow_blank_switch(
+			selectable_objects, m->switch_keys))
+		m->flags |= MN_ALLOW_EMPTY_INPUT;
 	m->browse_hook = item_menu_browser;
+	/* The quiver summary has its own reserved terminal rows, even when
+	 * the current inventory is empty or contains only placeholders.
+	 * item_menu_browser() never dereferences the incoming oid. */
+	if ((mode & OLIST_QUIVER) &&
+		player->upkeep->command_wrk == USE_INVEN &&
+		player->upkeep->quiver_cnt > 0)
+		m->flags |= MN_BROWSE_WITHOUT_SELECTION;
 
 	/* Get inscriptions */
 	m->inscriptions = mem_zalloc(10 * sizeof(char));
@@ -1104,36 +1258,10 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	if (mode & OLIST_QUIVER && player->upkeep->quiver[0] != NULL)
 		max_len = MAX(max_len, 24);
 
-	if (olist_mode & OLIST_WEIGHT) {
-		ex_width += 9;
-		ex_offset_ctr += 9;
-	}
-	if (olist_mode & OLIST_PRICE) {
-		ex_width += 9;
-		ex_offset_ctr += 9;
-	}
-	if (olist_mode & OLIST_FAIL) {
-		ex_width += 10;
-		ex_offset_ctr += 10;
-	}
-
-	/* Set up the menu region */
-	area.page_rows = m->count;
-	area.row = 1;
-	area.col = MIN(Term->wid - 1 - (int) max_len - ex_width, prompt_size - 2);
-	if (area.col <= 3)
-		area.col = 0;
-	ex_offset = MIN(max_len, (size_t)(Term->wid - 1 - ex_width - area.col));
-	while (strlen(header) < max_len + ex_width + ex_offset_ctr) {
-		my_strcat(header, " ", sizeof(header));
-		if (strlen(header) > sizeof(header) - 2) break;
-	}
-	area.width = MAX(max_len, strlen(header));
-
-	for (row = area.row; row < area.row + area.page_rows; row++)
-		prt("", row, MAX(0, area.col - 1));
-
-	menu_layout(m, &area);
+	/* Device rotation and Chinese labels change the available cell width.
+	 * The shared region helper clamps dimensions and rows to the terminal. */
+	item_prompt_columns = prompt_size;
+	fa_item_menu_resize(m);
 
 	/* Choose */
 	evt = menu_select(m, 0, true);
@@ -1145,6 +1273,7 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 	/* Deal with menu switch */
 	if (evt.type == EVT_SWITCH && !newmenu) {
 		bool left = evt.key.code == ARROW_LEFT;
+		int original_source = player->upkeep->command_wrk;
 
 		if (player->upkeep->command_wrk == USE_EQUIP) {
 			if (left) {
@@ -1198,7 +1327,9 @@ static struct object *item_menu(cmd_code cmd, int prompt_size, int mode)
 			}
 		}
 
-		newmenu = true;
+		/* An arrow with no reachable source must not rebuild the
+		 * identical empty picker indefinitely. */
+		newmenu = (player->upkeep->command_wrk != original_source);
 	}
 
 	/* Result */
@@ -1255,6 +1386,8 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 	bool allow_equip = false;
 	bool allow_quiver = false;
 	bool allow_floor = false;
+	bool equip_has_item = false;
+	int equipped_slot;
 
 	bool toggle = false;
 
@@ -1334,6 +1467,19 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 	else if (item_mode & USE_EQUIP)
 		item_mode -= USE_EQUIP;
 
+	/* With CMD_NULL, equipment slots are intentionally not trimmed to
+	 * allow SHOW_EMPTY. A slot range is not proof that an actual object
+	 * exists. Only count a tester-eligible equipped object as populated. */
+	if (allow_equip) {
+		for (equipped_slot = e1; equipped_slot <= e2; ++equipped_slot) {
+			struct object *equipped = slot_object(player, equipped_slot);
+			if (equipped && object_test(tester, equipped)) {
+				equip_has_item = true;
+				break;
+			}
+		}
+	}
+
 	/* Restrict quiver indexes */
 	q1 = 0;
 	q2 = z_info->quiver_size - 1;
@@ -1380,37 +1526,36 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 
 	/* Require at least one legal choice */
 	if (allow_inven || allow_equip || allow_quiver || allow_floor) {
-		/* Use throwing menu if at all possible */
+		soft_kbd_linger_snapshot outer_keys;
+		/* Parent hints return only after cancellation of the entire picker,
+		 * never between inventory/equipment/quiver/floor tabs. */
+		soft_kbd_save_linger(&outer_keys);
+		/* Throwing remains an explicit higher-priority view. Otherwise
+		 * begin with an allowed tab containing at least one real item,
+		 * instead of inheriting a now-empty inventory page. */
 		if (show_throwing && throwing_num) {
 			player->upkeep->command_wrk = SHOW_THROWING;
-
-			/* Start where requested if possible */
-		} else if ((player->upkeep->command_wrk == USE_EQUIP) && allow_equip)
-			player->upkeep->command_wrk = USE_EQUIP;
-		else if ((player->upkeep->command_wrk == USE_INVEN) && allow_inven)
-			player->upkeep->command_wrk = USE_INVEN;
-		else if ((player->upkeep->command_wrk == USE_QUIVER) && allow_quiver)
-			player->upkeep->command_wrk = USE_QUIVER;
-		else if ((player->upkeep->command_wrk == USE_FLOOR) && allow_floor)
-			player->upkeep->command_wrk = USE_FLOOR;
-
-		/* If we are obviously using the quiver then start on quiver */
-		else if (quiver_tags && allow_quiver && (cmd != CMD_USE))
-			player->upkeep->command_wrk = USE_QUIVER;
-
-		/* Otherwise choose whatever is allowed */
-		else if (use_inven && allow_inven)
-			player->upkeep->command_wrk = USE_INVEN;
-		else if (use_equip && allow_equip)
-			player->upkeep->command_wrk = USE_EQUIP;
-		else if (use_quiver && allow_quiver)
-			player->upkeep->command_wrk = USE_QUIVER;
-		else if (use_floor && allow_floor)
-			player->upkeep->command_wrk = USE_FLOOR;
-
-		/* If nothing to choose, use (empty) inventory */
-		else
-			player->upkeep->command_wrk = USE_INVEN;
+		} else {
+			angdroid_item_picker_start_options start = {
+				player->upkeep->command_wrk,
+				{ USE_INVEN, USE_EQUIP, USE_QUIVER, USE_FLOOR },
+				(allow_inven ? ANGDROID_PICKER_INVEN : 0u) |
+				(allow_equip ? ANGDROID_PICKER_EQUIP : 0u) |
+				(allow_quiver ? ANGDROID_PICKER_QUIVER : 0u) |
+				(allow_floor ? ANGDROID_PICKER_FLOOR : 0u),
+				(i1 <= i2 ? ANGDROID_PICKER_INVEN : 0u) |
+				(equip_has_item ? ANGDROID_PICKER_EQUIP : 0u) |
+				(q1 <= q2 ? ANGDROID_PICKER_QUIVER : 0u) |
+				(f1 <= f2 ? ANGDROID_PICKER_FLOOR : 0u),
+				(use_inven ? ANGDROID_PICKER_INVEN : 0u) |
+				(use_equip ? ANGDROID_PICKER_EQUIP : 0u) |
+				(use_quiver ? ANGDROID_PICKER_QUIVER : 0u) |
+				(use_floor ? ANGDROID_PICKER_FLOOR : 0u),
+				quiver_tags && cmd != CMD_USE
+			};
+			player->upkeep->command_wrk =
+				angdroid_item_picker_initial_source(&start);
+		}
 
 		while (true) {
 			int j;
@@ -1477,17 +1622,31 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 							   olist_mode);
 
 			/* Show the prompt */
+			/* The prompt and header share one terminal row. UTF-8 bytes
+			 * are not terminal columns; clip each visible segment. */
 			menu_header();
-			if (pmt) {
-				prt(pmt, 0, 0);
-				prt(header, 0, strlen(pmt) + 1);
+			if (pmt && Term && Term->wid > 0) {
+				char clipped[256];
+				size_t left = angdroid_menu_copy_columns(
+					clipped, sizeof(clipped), pmt,
+					(size_t)Term->wid);
+				int second_col = (int)left + 1;
+				prt("", 0, 0);
+				if (clipped[0])
+					c_put_str(COLOUR_WHITE, clipped, 0, 0);
+				if (second_col < Term->wid) {
+					angdroid_menu_copy_columns(clipped, sizeof(clipped),
+						header, (size_t)(Term->wid - second_col));
+					if (clipped[0])
+						c_put_str(COLOUR_WHITE, clipped, 0, second_col);
+				}
 			}
 
 			/* No menu change request */
 			newmenu = false;
 
 			/* Get an item choice */
-			*choice = item_menu(cmd, MAX(pmt ? strlen(pmt) : 0, 15), mode);
+			*choice = item_menu(cmd, MAX(pmt ? (int)angdroid_utf8_display_columns(pmt) : 0, 15), mode);
 
 			/* Fix the screen */
 			screen_load();
@@ -1505,6 +1664,7 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
 				break;
 			}
 		}
+		soft_kbd_restore_linger(&outer_keys, *choice == NULL);
 	} else {
 		/* Warning if needed */
 		if (str) msg("%s", str);
@@ -1533,11 +1693,11 @@ bool textui_get_item(struct object **choice, const char *pmt, const char *str,
  */
 void display_object_recall(struct object *obj)
 {
-	char header_buf[120];
+	char header_buf[256];
 
 	textblock *tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL | (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	clear_from(0);
 	textui_textblock_place(tb, SCREEN_REGION, header_buf);
@@ -1567,14 +1727,14 @@ void display_object_kind_recall(struct object_kind *kind)
  */
 void display_object_recall_interactive(struct object *obj)
 {
-	char header_buf[120];
+	char header_buf[256];
 	textblock *tb;
 
 	event_signal(EVENT_MESSAGE_FLUSH);
 
 	tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL, player);
+		ODESC_PREFIX | ODESC_FULL | (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 	textui_textblock_show(tb, SCREEN_REGION, header_buf);
 	textblock_free(tb);
 }
@@ -1584,7 +1744,7 @@ void display_object_recall_interactive(struct object *obj)
  */
 void textui_obj_examine(void)
 {
-	char header_buf[120];
+	char header_buf[256];
 
 	textblock *tb;
 	region local_area = { 0, 0, 0, 0 };
@@ -1592,7 +1752,9 @@ void textui_obj_examine(void)
 	struct object *obj;
 
 	/* Select item */
-	if (!get_item(&obj, "Examine which item?", "You have nothing to examine.",
+	if (!get_item(&obj,
+            angdroid_game_ui_text("Examine which item?", angdroid_zh_tw_enabled()),
+            angdroid_game_ui_text("You have nothing to examine.", angdroid_zh_tw_enabled()),
 			CMD_NULL, NULL, (USE_EQUIP | USE_INVEN | USE_QUIVER | USE_FLOOR | IS_HARMLESS)))
 		return;
 
@@ -1602,7 +1764,7 @@ void textui_obj_examine(void)
 	/* Display info */
 	tb = object_info(obj, OINFO_NONE);
 	object_desc(header_buf, sizeof(header_buf), obj,
-		ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL, player);
+		ODESC_PREFIX | ODESC_FULL | ODESC_CAPITAL | (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
 
 	textui_textblock_show(tb, local_area, header_buf);
 	textblock_free(tb);
@@ -1626,11 +1788,12 @@ enum {
 
 void textui_cmd_ignore_menu(struct object *obj)
 {
-	char out_val[160];
+	char out_val[256];
 
 	struct menu *m;
 	region r;
 	int selected;
+    soft_kbd_linger_snapshot parent_keys;
 	uint8_t value;
 	int type;
 
@@ -1642,9 +1805,11 @@ void textui_cmd_ignore_menu(struct object *obj)
 
 	/* Basic ignore option */
 	if (!(obj->known->notice & OBJ_NOTICE_IGNORE)) {
-		menu_dynamic_add(m, "This item only", IGNORE_THIS_ITEM);
+		menu_dynamic_add(m, angdroid_game_ui_text(
+            "This item only", angdroid_zh_tw_enabled()), IGNORE_THIS_ITEM);
 	} else {
-		menu_dynamic_add(m, "Unignore this item", UNIGNORE_THIS_ITEM);
+		menu_dynamic_add(m, angdroid_game_ui_text(
+            "Unignore this item", angdroid_zh_tw_enabled()), UNIGNORE_THIS_ITEM);
 	}
 
 	/* Flavour-aware ignore */
@@ -1653,16 +1818,19 @@ void textui_cmd_ignore_menu(struct object *obj)
 		bool ignored = kind_is_ignored_aware(obj->kind) ||
 				kind_is_ignored_unaware(obj->kind);
 
-		char tmp[70];
-		object_desc(tmp, sizeof(tmp), obj,
-			ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL, player);
-		if (!ignored) {
-			strnfmt(out_val, sizeof out_val, "All %s", tmp);
-			menu_dynamic_add(m, out_val, IGNORE_THIS_FLAVOR);
-		} else {
-			strnfmt(out_val, sizeof out_val, "Unignore all %s", tmp);
-			menu_dynamic_add(m, out_val, UNIGNORE_THIS_FLAVOR);
-		}
+		char tmp[192];
+        object_desc(tmp, sizeof(tmp), obj,
+            ODESC_NOEGO | ODESC_BASE | ODESC_PLURAL | (angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0), player);
+		/* Keep the same kinds/IDs and display only known appearance.
+         * The entire localized label must fit or use a generic fallback. */
+        if (!angdroid_ignore_named_action_text(out_val,
+                sizeof(out_val), tmp, ignored, angdroid_zh_tw_enabled()))
+            my_strcpy(out_val, angdroid_game_ui_text(
+                ignored ? "Unignore items of this type"
+                        : "Ignore items of this type",
+                angdroid_zh_tw_enabled()), sizeof(out_val));
+        menu_dynamic_add(m, out_val,
+            ignored ? UNIGNORE_THIS_FLAVOR : IGNORE_THIS_FLAVOR);
 	}
 
 	type = ignore_type_of(obj);
@@ -1671,19 +1839,32 @@ void textui_cmd_ignore_menu(struct object *obj)
 	if (obj->known->ego && type != ITYPE_MAX) {
 		struct ego_desc choice;
 		struct ego_item *ego = obj->ego;
-		char tmp[80] = "";
+		char tmp[160] = "";
+        const char *localized;
+        const char *ego_display;
 
 		choice.e_idx = ego->eidx;
 		choice.itype = type;
 		choice.short_name = "";
 		(void) ego_item_name(tmp, sizeof(tmp), &choice);
-		if (!ego_is_ignored(choice.e_idx, choice.itype)) {
-			strnfmt(out_val, sizeof out_val, "All %s", tmp + 4);
-			menu_dynamic_add(m, out_val, IGNORE_THIS_EGO);
-		} else {
-			strnfmt(out_val, sizeof out_val, "Unignore all %s", tmp + 4);
-			menu_dynamic_add(m, out_val, UNIGNORE_THIS_EGO);
-		}
+        localized = angdroid_faangband_known_ego_ui_name(
+            ego->name, angdroid_zh_tw_enabled());
+        /* The original formatted English label uses a four-byte prefix.
+         * Never skip four UTF-8 bytes in a translated name. */
+        ego_display = localized ? localized :
+            (strlen(tmp) >= 4 ? tmp + 4 : ego->name);
+        {
+            bool ignored = ego_is_ignored(choice.e_idx, choice.itype);
+            if (!angdroid_ignore_named_action_text(out_val,
+                    sizeof(out_val), ego_display, ignored,
+                    angdroid_zh_tw_enabled()))
+                my_strcpy(out_val, angdroid_game_ui_text(
+                    ignored ? "Unignore items of this type"
+                            : "Ignore items of this type",
+                    angdroid_zh_tw_enabled()), sizeof(out_val));
+            menu_dynamic_add(m, out_val,
+                ignored ? UNIGNORE_THIS_EGO : IGNORE_THIS_EGO);
+        }
 	}
 
 	/* Quality ignoring */
@@ -1693,26 +1874,53 @@ void textui_cmd_ignore_menu(struct object *obj)
 		value = IGNORE_MAX;
 
 	if (value != IGNORE_MAX && type != ITYPE_MAX) {
-		strnfmt(out_val, sizeof out_val, "All %s %s",
-				quality_values[value].name, ignore_name_for_type(type));
+		if (!angdroid_ignore_quality_action_text(
+                out_val, sizeof(out_val), quality_values[value].name,
+                ignore_name_for_type(type), angdroid_zh_tw_enabled()))
+            my_strcpy(out_val, angdroid_game_ui_text(
+                "Quality ignore menu", angdroid_zh_tw_enabled()),
+                sizeof(out_val));
 
 		menu_dynamic_add(m, out_val, IGNORE_THIS_QUALITY);
 	}
 
-	/* Work out display region */
-	r.width = menu_dynamic_longest_entry(m) + 3 + 2; /* +3 for tag, 2 for pad */
-	r.col = 80 - r.width;
+	/* A rotated phone can temporarily have fewer rows than the popup.
+     * Do not build a menu that writes outside the terminal. The menu
+     * scrolls when its count exceeds the visible page rows. */
+    if (!Term || Term->wid < 3 || Term->hgt < 4 || m->count <= 0) {
+        menu_dynamic_free(m);
+        return;
+    }
+
+	/* Fit translated labels within the actual terminal columns. */
+	r.width = (int)MIN(menu_dynamic_longest_entry(m) + 3 + 2,
+        (size_t)MAX(1, Term->wid - 2));
+	r.col = MAX(0, Term->wid - r.width - 1);
 	r.row = 1;
-	r.page_rows = m->count;
+    r.page_rows = MIN(m->count, MAX(1, Term->hgt - 3));
 
 	screen_save();
 	menu_layout(m, &r);
 	region_erase_bordered(&r);
 
-	prt("(Enter to select, ESC) Ignore:", 0, 0);
-	selected = menu_dynamic_select(m);
+    /* This prompt shares the row with a phone-sized popup. Clip whole
+     * UTF-8 glyphs instead of letting prt() spill onto the next row. */
+    {
+        char prompt_visible[128];
+        const char *prompt = angdroid_game_ui_text(
+            "(Enter to select, ESC) Ignore:", angdroid_zh_tw_enabled());
+        angdroid_menu_copy_columns(prompt_visible, sizeof(prompt_visible),
+            prompt, (size_t)(Term->wid - 1));
+        prt(prompt_visible, 0, 0);
+    }
+    /* The popup temporarily owns the Android hint strip, not its caller.
+     * Restore a lingering parent only on Escape, never after an action. */
+    soft_kbd_save_linger(&parent_keys);
+    selected = menu_dynamic_select(m);
 
-	screen_load();
+    screen_load();
+    soft_kbd_replace("");
+    soft_kbd_restore_linger(&parent_keys, selected < 0);
 
 	if (selected == IGNORE_THIS_ITEM) {
 		obj->known->notice |= OBJ_NOTICE_IGNORE;
@@ -1743,8 +1951,8 @@ void textui_cmd_ignore(void)
 	struct object *obj;
 
 	/* Get an item */
-	const char *q = "Ignore which item? ";
-	const char *s = "You have nothing to ignore.";
+	const char *q = angdroid_game_ui_text("Ignore which item? ", angdroid_zh_tw_enabled());
+	const char *s = angdroid_game_ui_text("You have nothing to ignore.", angdroid_zh_tw_enabled());
 	if (!get_item(&obj, q, s, CMD_IGNORE, NULL,
 				  USE_INVEN | USE_QUIVER | USE_EQUIP | USE_FLOOR))
 		return;

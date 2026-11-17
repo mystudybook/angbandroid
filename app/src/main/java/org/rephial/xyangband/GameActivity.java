@@ -139,6 +139,10 @@ public class GameActivity extends LocalizedActivity {
 
 		if (state == null) {
 			state = new StateManager(this);
+		} else {
+			/* Keep the running native game and screen snapshots, but never
+			 * let its retained StateManager hold the destroyed Activity. */
+			state.rebindContext(this);
 		}
 
 		if (dialog == null) {
@@ -317,6 +321,13 @@ public class GameActivity extends LocalizedActivity {
 	{
 		Log.d("Angband", "Activity DESTROY");
 
+		/* The native game may survive an Activity recreation. Detach
+		 * only this Activity's view: a newer Activity could already
+		 * have linked its replacement by the time onDestroy runs. */
+		if (term != null && state != null &&
+				state.nativew.unlinkIfLinked(term)) {
+			term.onViewReplaced();
+		}
 		super.onDestroy();
 	}
 
@@ -547,6 +558,9 @@ public class GameActivity extends LocalizedActivity {
 
 			if (term != null) {
 
+				/* Native playback survives layout changes, but touch state
+				 * and delayed repeat callbacks belong to this old view. */
+				term.onViewReplaced();
 				term.unloadTiles();
 
 				oldPlugin = term.pluginName;

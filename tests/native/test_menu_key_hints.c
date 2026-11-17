@@ -1,8 +1,68 @@
 #include <assert.h>
 #include <stddef.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 #include "../../app/src/main/cpp/angband/menu-key-hints.h"
+
+/* Fixed command keys are guaranteed room even after hundreds of tags.
+ * Duplicate key labels must not consume a second slot before de-duplication. */
+static void test_unique_reserved_hints(void)
+{
+    size_t capacity;
+    for (capacity = 1; capacity <= 256; ++capacity) {
+        char storage[260];
+        char *buf = storage + 1;
+        size_t used = 0, limit;
+        unsigned char seen[256] = {0};
+        size_t i;
+
+        memset(storage, '#', sizeof(storage));
+        buf[0] = '\0';
+        used = angdroid_menu_hint_append_keys_unique(
+            buf, used, capacity, "001");
+        limit = angdroid_menu_hint_tag_capacity(
+            capacity, used, "p?z", "I");
+
+        for (i = 0; i < 700; ++i)
+            used = angdroid_menu_hint_append_unique(
+                buf, used, limit, (char)('a' + i % 26));
+        used = angdroid_menu_hint_append_keys_unique(
+            buf, used, capacity, "p?z");
+        used = angdroid_menu_hint_append_keys_unique(
+            buf, used, capacity, "Ipz");
+
+        assert(storage[0] == '#');
+        assert(storage[capacity + 1] == '#');
+        assert(used == strlen(buf));
+        assert(used < capacity);
+        for (i = 0; i < used; ++i) {
+            unsigned char key = (unsigned char)buf[i];
+            assert(!seen[key]);
+            seen[key] = 1;
+        }
+        if (capacity >= 35) {
+            assert(strchr(buf, 'p') != NULL);
+            assert(strchr(buf, '?') != NULL);
+            assert(strchr(buf, 'z') != NULL);
+            assert(strchr(buf, 'I') != NULL);
+        }
+    }
+    {
+        char buf[4] = "";
+        size_t n = 0;
+        n = angdroid_menu_hint_append_unique(buf, n, sizeof(buf), 'x');
+        n = angdroid_menu_hint_append_unique(buf, n, sizeof(buf), 'x');
+        n = angdroid_menu_hint_append_unique(buf, n, sizeof(buf), '\0');
+        assert(n == 1 && strcmp(buf, "x") == 0);
+        assert(angdroid_menu_hint_append_unique(NULL, n, 4, 'y') == n);
+        assert(angdroid_menu_hint_append_unique(buf, SIZE_MAX, 4, 'y') == SIZE_MAX);
+        assert(angdroid_menu_hint_append_keys_unique(
+            buf, n, sizeof(buf), NULL) == n);
+        assert(angdroid_menu_hint_tag_capacity(0, 0, "x", "y") == 0);
+        assert(angdroid_menu_hint_tag_capacity(4, 4, "x", "y") == 0);
+    }
+}
 
 int main(void)
 {
@@ -29,6 +89,7 @@ int main(void)
     assert(angdroid_menu_hint_append(NULL, 0, sizeof(hints), 'z') == 0);
     assert(angdroid_menu_hint_append(hints, length, 0, 'z') == length);
 
-    puts("PASS: filtered menu shortcuts and bounded keyboard hints");
+    test_unique_reserved_hints();
+    puts("PASS: filtered menu shortcuts, fixed-key reservation and unique hints");
     return 0;
 }

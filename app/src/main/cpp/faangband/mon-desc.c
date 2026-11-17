@@ -20,6 +20,8 @@
 #include "game-input.h"
 #include "mon-desc.h"
 #include "mon-predicate.h"
+#include "../curses/unicode_display.h"
+#include "../angband/zh-tw-ui.h"
 
 /**
  * Perform simple English pluralization on a monster name.
@@ -45,6 +47,26 @@ void get_mon_name(char *buf, size_t buflen, const struct monster_race *race,
 				  const struct player_race *p_race, int num)
 {
 	assert(race != NULL);
+
+	/* Display-only grammar. Keep race names and identifiers unchanged;
+	 * copy complete UTF-8 scalars if the output buffer is narrow. */
+	if (angdroid_zh_tw_enabled()) {
+		char formatted[1024];
+		if (rf_has(race->flags, RF_PLAYER_GHOST)) {
+			strnfmt(formatted, sizeof(formatted), "[U] %s（%s）",
+				cave->ghost->name, race->name);
+		} else if (rf_has(race->flags, RF_UNIQUE)) {
+			strnfmt(formatted, sizeof(formatted), "[U] %s", race->name);
+		} else if (p_race) {
+			strnfmt(formatted, sizeof(formatted), "%3d 隻%s %s",
+				num, p_race->name, race->name);
+		} else {
+			strnfmt(formatted, sizeof(formatted), "%3d 隻%s",
+				num, race->name);
+		}
+		angdroid_utf8_copy_complete(buf, buflen, formatted);
+		return;
+	}
 
     /* Unique and ghost names don't have a number */
 	if (rf_has(race->flags, RF_PLAYER_GHOST)) {

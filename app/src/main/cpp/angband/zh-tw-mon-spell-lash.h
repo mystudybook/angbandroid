@@ -9,6 +9,9 @@ static inline const char *angdroid_mon_spell_lash(const char *english,
     static const struct { const char *en; const char *zh; } map[] = {
         { "acid", "酸液" },
         { "lightning", "閃電" },
+        /* FAangband dragon breath lash descriptions. */
+        { "dragonfire", "龍焰" },
+        { "hellfire", "地獄火" },
         { "fire", "火焰" },
         { "frost", "冰霜" },
         { "venom", "毒液" },

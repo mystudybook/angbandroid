@@ -79,6 +79,27 @@ class KnowledgeGlyphCodepointSourceTest(unittest.TestCase):
         self.assertIn("screen_save();", rune)
         self.assertIn("screen_load();", rune)
 
+    def test_existing_inscriptions_reject_lossy_prefills(self):
+        obj = UI.split("static void o_xtra_act(", 1)[1].split(
+            "\n\n/**\n * Display known objects", 1)[0]
+        rune = UI.split("static void rune_xtra_act(", 1)[1].split(
+            "\n\n/**\n * Display rune knowledge.", 1)[0]
+        self.assertIn('#include "knowledge-note-prefill.h"', UI)
+        for block in (obj, rune):
+            self.assertIn('angdroid_knowledge_note_prefill(', block)
+            self.assertIn('knowledge_note_edit_unavailable();', block)
+            self.assertIn('screen_load();', block)
+        self.assertLess(obj.index('knowledge_note_edit_unavailable();'),
+                        obj.index('if (askfor_aux(text, sizeof(text), NULL))'))
+        self.assertLess(rune.index('knowledge_note_edit_unavailable();'),
+                        rune.index('if (askfor_aux(note_text, sizeof(note_text), NULL))'))
+        self.assertIn('get_autoinscription(k, k->aware)', obj)
+        self.assertIn('quark_str(rune_note(oid))', rune)
+        self.assertNotIn('strnfmt(text, sizeof(text), "%s",', obj)
+        self.assertNotIn('strnfmt(note_text, sizeof(note_text), "%s",', rune)
+        self.assertIn('tests/native/test_knowledge_note_prefill.c', RUN)
+        self.assertIn('"$BUILD_DIR/test_knowledge_note_prefill"', RUN)
+
     def test_native_regression_registered(self):
         self.assertIn("tests/native/test_knowledge_glyph_codepoint.c", RUN)
         self.assertIn("test_knowledge_glyph_codepoint", RUN)

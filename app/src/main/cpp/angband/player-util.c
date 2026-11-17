@@ -46,6 +46,7 @@
 
 #include "droid.h"
 #include "zh-tw-player-feedback.h"
+#include "zh-tw-terrain-trap.h"
 #include "zh-tw-shape-lore.h"
 
 /**
@@ -976,6 +977,17 @@ void player_take_terrain_damage(struct player *p, struct loc grid)
 			square_feat(cave, grid)->hurt_msg, angdroid_zh_tw_enabled()),
 			dam_text);
 		inven_damage(p, PROJ_FIRE, dam_taken);
+	} else if (square_feat(cave, grid)->hurt_msg &&
+			square_feat(cave, grid)->hurt_msg[0]) {
+		/* Show non-fire environmental damage, for example falling into
+		 * FAangband's empty space.  Do not alter the canonical death cause. */
+		char dam_text[32] = "";
+		if (dam_reduced > 0 && OPT(p, show_damage)) {
+			strnfmt(dam_text, sizeof(dam_text), " (%d)", dam_reduced);
+		}
+		msg("%s%s", angdroid_terrain_hurt_message(
+			square_feat(cave, grid)->hurt_msg, angdroid_zh_tw_enabled()),
+			dam_text);
 	}
 	take_hit(p, dam_reduced, square_feat(cave, grid)->die_msg);
 }

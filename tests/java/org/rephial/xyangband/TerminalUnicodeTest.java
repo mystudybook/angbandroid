@@ -25,6 +25,7 @@ public final class TerminalUnicodeTest {
         expect(0x20000, 2);
         expect(0x303F, 1);
         expect(0xE000, 1); // Game special-key/private-use area.
-        System.out.println("PASS: East Asian terminal width classification (14 cases)");
+        expect(0x1F431, 1); // Match native terminal cell width for cat emoji.
+        System.out.println("PASS: East Asian terminal width classification (15 cases)");
     }
 }

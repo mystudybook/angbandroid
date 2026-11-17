@@ -25,6 +25,7 @@
 #include "ui-prefs.h"
 #include "ui-term.h"
 #include "z-textblock.h"
+#include "../angband/zh-tw-ui.h"
 
 /**
  * Place a monster recall title into a textblock.
@@ -51,10 +52,15 @@ void lore_title(textblock *tb, const struct monster_race *race)
 	standard_attr = race->d_attr;
 	optional_attr = monster_x_attr[race->ridx];
 
-	/* A title (use "The" for non-uniques) */
-	if (!rf_has(race->flags, RF_UNIQUE))
-		textblock_append(tb, "The ");
-	else if (OPT(player, purple_uniques)) {
+	/* Keep the historical unique-colour path; only screen title grammar
+	 * changes. Player ghosts never need a Chinese leading "The". */
+	const bool zh_tw = angdroid_zh_tw_enabled();
+	if (!rf_has(race->flags, RF_UNIQUE)) {
+		if (zh_tw && !rf_has(race->flags, RF_PLAYER_GHOST))
+			textblock_append(tb, "這隻");
+		else if (!zh_tw)
+			textblock_append(tb, "The ");
+	} else if (OPT(player, purple_uniques)) {
 		standard_attr = COLOUR_VIOLET;
 		if (!(optional_attr & 0x80))
 			optional_attr = COLOUR_VIOLET;
@@ -62,7 +68,8 @@ void lore_title(textblock *tb, const struct monster_race *race)
 
 	/* Dump the name and then append standard attr/char info */
 	if (rf_has(race->flags, RF_PLAYER_GHOST)) {
-		textblock_append(tb, "%s, the %s", cave->ghost->name, race->name);
+		textblock_append(tb, zh_tw ? "%s（%s）" : "%s, the %s",
+			cave->ghost->name, race->name);
 	} else {
 		textblock_append(tb, "%s", race->name);
 	}
@@ -146,7 +153,9 @@ void lore_description(textblock *tb, const struct monster_race *race,
 
 	/* Do we know everything */
 	if (lore_is_fully_known(race))
-		textblock_append(tb, "You know everything about this monster.");
+		textblock_append(tb, "%s", angdroid_game_ui_text(
+			"You know everything about this monster.",
+			angdroid_zh_tw_enabled()));
 
 	/* Player ghosts may have unique descriptions. */
 	if (rf_has(race->flags, RF_PLAYER_GHOST) && (cave->ghost->string_type == 2))
@@ -154,7 +163,9 @@ void lore_description(textblock *tb, const struct monster_race *race,
 
 	/* Notice "Quest" monsters */
 	if (quest_unique_monster_check(race))
-		textblock_append(tb, "You feel an intense desire to kill this monster...  ");
+		textblock_append(tb, "%s", angdroid_game_ui_text(
+			"You feel an intense desire to kill this monster...  ",
+			angdroid_zh_tw_enabled()));
 
 	textblock_append(tb, "\n");
 }

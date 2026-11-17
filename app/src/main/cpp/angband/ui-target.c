@@ -48,6 +48,8 @@
 #include "droid.h"
 #include "zh-tw-ui.h"
 #include "zh-tw-target-help.h"
+#include "zh-tw-target-monster.h"
+#include "zh-tw-target-world.h"
 
 /*
  * Holds state passed between target_set_interactive_aux() and the handlers
@@ -348,8 +350,21 @@ static ui_event target_recall_loop_object(struct object *obj, int y, int x,
 				cave->objects[obj->oidx],
 				ODESC_PREFIX | ODESC_FULL, p);
 
-			/* Describe the object */
-			if (p->wizard) {
+			/* Keep object_desc() and knowledge/awareness unchanged. */
+			if (angdroid_zh_tw_enabled()) {
+				const char *intro = angdroid_target_world_intro(s1, true);
+				const char *link = angdroid_target_world_link(s2, true);
+				if (p->wizard)
+					strnfmt(out_val, TARGET_OUT_VAL_SIZE,
+						"%s%s%s%s，%s（%d:%d，噪音=%d，氣味=%d）。",
+						intro, link, s3, o_name, coords, y, x,
+						(int)cave->noise.grids[y][x],
+						(int)cave->scent.grids[y][x]);
+				else
+					strnfmt(out_val, TARGET_OUT_VAL_SIZE,
+						"%s%s%s%s，%s。", intro, link, s3,
+						o_name, coords);
+			} else if (p->wizard) {
 				strnfmt(out_val, TARGET_OUT_VAL_SIZE,
 						"%s%s%s%s, %s (%d:%d, noise=%d, scent=%d).", s1, s2, s3,
 						o_name, coords, y, x, (int)cave->noise.grids[y][x],
@@ -359,6 +374,8 @@ static ui_event target_recall_loop_object(struct object *obj, int y, int x,
 						"%s%s%s%s, %s.", s1, s2, s3, o_name, coords);
 			}
 
+			angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
+				angdroid_zh_tw_enabled());
 			prt(out_val, 0, 0);
 			move_cursor_relative(y, x);
 			press = inkey_m();
@@ -425,14 +442,30 @@ static bool aux_reinit(struct chunk *c, struct player *p,
 static bool aux_hallucinate(struct chunk *c, struct player *p,
 		struct target_aux_state *auxst)
 {
-	const char *name_strange = "something strange";
+	const char *name_strange = angdroid_target_world_hallucination(
+		angdroid_zh_tw_enabled());
 	char out_val[TARGET_OUT_VAL_SIZE];
 
 	if (!p->timed[TMD_IMAGE]) return false;
 
 	/* Hallucination messes things up */
-	/* Display a message */
-	if (p->wizard) {
+	/* Display a message: leave the same unknown identity visible. */
+	if (angdroid_zh_tw_enabled()) {
+		if (p->wizard)
+			strnfmt(out_val, sizeof(out_val),
+				"%s%s%s，%s（%d:%d，噪音=%d，氣味=%d）。",
+				angdroid_target_world_intro(auxst->phrase1, true),
+				angdroid_target_world_link(auxst->phrase2, true),
+				name_strange, auxst->coord_desc,
+				auxst->grid.y, auxst->grid.x,
+				(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+				(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+		else
+			strnfmt(out_val, sizeof(out_val), "%s%s%s，%s。",
+				angdroid_target_world_intro(auxst->phrase1, true),
+				angdroid_target_world_link(auxst->phrase2, true),
+				name_strange, auxst->coord_desc);
+	} else if (p->wizard) {
 		strnfmt(out_val, sizeof(out_val),
 			"%s%s%s, %s (%d:%d, noise=%d, scent=%d).",
 			auxst->phrase1,
@@ -450,6 +483,8 @@ static bool aux_hallucinate(struct chunk *c, struct player *p,
 			name_strange,
 			auxst->coord_desc);
 	}
+	angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
+		angdroid_zh_tw_enabled());
 	prt(out_val, 0, 0);
 	move_cursor_relative(auxst->grid.y, auxst->grid.x);
 
@@ -485,7 +520,8 @@ static bool aux_monster(struct chunk *c, struct player *p,
 	/* Not boring */
 	auxst->boring = false;
 
-	/* Get the monster name ("a kobold") */
+	/* Keep monster_desc() untouched for visibility, pronouns and grammar.
+	 * Only its display copy may use an exact, visible translated race name. */
 	monster_desc(m_name, sizeof(m_name), mon, MDESC_IND_VIS);
 
 	/* Track this monster's race and health */
@@ -502,34 +538,52 @@ static bool aux_monster(struct chunk *c, struct player *p,
 			auxst->press = inkey_m();
 		} else {
 			char buf[80];
+			char name_zh[160], status_zh[160];
+			const bool zh_tw = angdroid_zh_tw_enabled();
 
-			/* Describe the monster */
+			/* Translate only the visible monster's on-screen text. */
 			look_mon_desc(buf, sizeof(buf),
 				square(c, auxst->grid)->mon);
+			if (zh_tw) {
+				angdroid_target_monster_display(name_zh, sizeof(name_zh),
+					m_name, mon->race->name,
+					rf_has(mon->race->flags, RF_UNIQUE), true);
+				angdroid_target_monster_status(status_zh,
+					sizeof(status_zh), buf, true);
+			}
 
-			/* Describe, and prompt for recall */
+			/* Preserve the original English layout in English mode. */
 			if (p->wizard) {
+				if (zh_tw)
+					strnfmt(out_val, sizeof(out_val),
+						"%s%s%s（%s），%s（%d:%d，噪音=%d，氣味=%d）。",
+						angdroid_target_monster_intro(auxst->phrase1, true),
+						auxst->phrase2, name_zh, status_zh,
+						auxst->coord_desc, auxst->grid.y, auxst->grid.x,
+						(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+						(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+				else
+					strnfmt(out_val, sizeof(out_val),
+						"%s%s%s (%s), %s (%d:%d, noise=%d, scent=%d).",
+						auxst->phrase1, auxst->phrase2, m_name, buf,
+						auxst->coord_desc, auxst->grid.y, auxst->grid.x,
+						(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+						(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+			} else if (zh_tw) {
 				strnfmt(out_val, sizeof(out_val),
-					"%s%s%s (%s), %s (%d:%d, noise=%d, scent=%d).",
-					auxst->phrase1,
-					auxst->phrase2,
-					m_name,
-					buf,
-					auxst->coord_desc,
-					auxst->grid.y,
-					auxst->grid.x,
-					(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
-					(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+					"%s%s%s（%s），%s。",
+					angdroid_target_monster_intro(auxst->phrase1, true),
+					auxst->phrase2, name_zh, status_zh,
+					auxst->coord_desc);
 			} else {
 				strnfmt(out_val, sizeof(out_val),
 					"%s%s%s (%s), %s.",
-					auxst->phrase1,
-					auxst->phrase2,
-					m_name,
-					buf,
-					auxst->coord_desc);
+					auxst->phrase1, auxst->phrase2,
+					m_name, buf, auxst->coord_desc);
 			}
 
+			angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
+				angdroid_zh_tw_enabled());
 			prt(out_val, 0, 0);
 
 			/* Place cursor */
@@ -607,6 +661,8 @@ static bool aux_monster(struct chunk *c, struct player *p,
 				(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
 				(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
 
+			angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
+				angdroid_zh_tw_enabled());
 			prt(out_val, 0, 0);
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
 			auxst->press = inkey_m();
@@ -666,7 +722,24 @@ static bool aux_trap(struct chunk *c, struct player *p,
 	/* Interact */
 	while (1) {
 		/* Describe, and prompt for recall */
-		if (p->wizard) {
+		if (angdroid_zh_tw_enabled()) {
+			const char *name_zh = angdroid_target_world_trap_name(
+				trap->kind->name, true);
+			const char *desc_zh = angdroid_target_world_trap_desc(
+				trap->kind->desc, true);
+			if (p->wizard)
+				strnfmt(out_val, sizeof(out_val),
+					"%s%s，%s（%d:%d，噪音=%d，氣味=%d）。",
+					angdroid_target_world_intro(auxst->phrase1, true),
+					name_zh, auxst->coord_desc,
+					auxst->grid.y, auxst->grid.x,
+					(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+					(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+			else
+				strnfmt(out_val, sizeof(out_val), "%s%s，%s。",
+					angdroid_target_world_intro(auxst->phrase1, true),
+					desc_zh, auxst->coord_desc);
+		} else if (p->wizard) {
 			strnfmt(out_val, sizeof(out_val),
 				"%s%s%s%s, %s (%d:%d, noise=%d, scent=%d).",
 				auxst->phrase1,
@@ -687,6 +760,8 @@ static bool aux_trap(struct chunk *c, struct player *p,
 				auxst->coord_desc);
 		}
 
+		angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
+			angdroid_zh_tw_enabled());
 		prt(out_val, 0, 0);
 
 		/* Place cursor */
@@ -739,7 +814,21 @@ static bool aux_object(struct chunk *c, struct player *p,
 	if (floor_num > 1) {
 		while (1) {
 			/* Describe the pile */
-			if (p->wizard) {
+			if (angdroid_zh_tw_enabled()) {
+				if (p->wizard)
+					strnfmt(out_val, sizeof(out_val),
+						"%s一堆物品（%d 件），%s（%d:%d，噪音=%d，氣味=%d）。",
+						angdroid_target_world_pile_intro(auxst->phrase1, true),
+						floor_num, auxst->coord_desc,
+						auxst->grid.y, auxst->grid.x,
+						(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+						(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+				else
+					strnfmt(out_val, sizeof(out_val),
+						"%s一堆物品（%d 件），%s。",
+						angdroid_target_world_pile_intro(auxst->phrase1, true),
+						floor_num, auxst->coord_desc);
+			} else if (p->wizard) {
 				strnfmt(out_val, sizeof(out_val),
 					"%s%sa pile of %d objects, %s (%d:%d, noise=%d, scent=%d).",
 					auxst->phrase1,
@@ -759,6 +848,8 @@ static bool aux_object(struct chunk *c, struct player *p,
 					auxst->coord_desc);
 			}
 
+			angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
+				angdroid_zh_tw_enabled());
 			prt(out_val, 0, 0);
 			move_cursor_relative(auxst->grid.y, auxst->grid.x);
 			auxst->press = inkey_m();
@@ -785,6 +876,8 @@ static bool aux_object(struct chunk *c, struct player *p,
 						| OLIST_GOLD), NULL);
 
 					/* Describe the pile */
+					angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
+						angdroid_zh_tw_enabled());
 					prt(out_val, 0, 0);
 					auxst->press = inkey_m();
 
@@ -863,8 +956,22 @@ static bool aux_terrain(struct chunk *c, struct player *p,
 	/* Pick prefix for the name */
 	lphrase3 = square_apparent_look_prefix(p->cave, auxst->grid);
 
-	/* Display a message */
-	if (p->wizard) {
+	/* Only translate the apparent feature, never a hidden terrain ID. */
+	if (angdroid_zh_tw_enabled()) {
+		const char *name_zh = angdroid_target_world_terrain(name, true);
+		if (p->wizard)
+			strnfmt(out_val, sizeof(out_val),
+				"%s%s，%s（%d:%d，噪音=%d，氣味=%d）。",
+				angdroid_target_world_intro(auxst->phrase1, true),
+				name_zh, auxst->coord_desc,
+				auxst->grid.y, auxst->grid.x,
+				(int)c->noise.grids[auxst->grid.y][auxst->grid.x],
+				(int)c->scent.grids[auxst->grid.y][auxst->grid.x]);
+		else
+			strnfmt(out_val, sizeof(out_val), "%s%s，%s。",
+				angdroid_target_world_intro(auxst->phrase1, true),
+				name_zh, auxst->coord_desc);
+	} else if (p->wizard) {
 		strnfmt(out_val, sizeof(out_val),
 			"%s%s%s%s, %s (%d:%d, noise=%d, scent=%d).",
 			auxst->phrase1,
@@ -886,6 +993,8 @@ static bool aux_terrain(struct chunk *c, struct player *p,
 			auxst->coord_desc);
 	}
 
+	angdroid_target_world_utf8_trim(out_val, TARGET_OUT_VAL_SIZE,
+		angdroid_zh_tw_enabled());
 	prt(out_val, 0, 0);
 	move_cursor_relative(auxst->grid.y, auxst->grid.x);
 	auxst->press = inkey_m();
@@ -956,6 +1065,9 @@ static ui_event target_set_interactive_aux(int y, int x, int mode)
 	auxst.grid.x = x;
 	auxst.grid.y = y;
 	coords_desc(auxst.coord_desc, sizeof(auxst.coord_desc), y, x);
+	/* Convert only the display copy; target grid coordinates stay intact. */
+	angdroid_target_world_localize_coords(auxst.coord_desc,
+		sizeof(auxst.coord_desc), angdroid_zh_tw_enabled());
 
 	/* Apply the handlers in order until done */
 	ihandler = 0;

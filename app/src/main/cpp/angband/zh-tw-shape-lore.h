@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <string.h>
 #include "zh-tw-object-info.h"
+#include "zh-tw-faangband-shapes.h"
 
 struct angdroid_shape_pair { const char *en; const char *zh; };
 
@@ -33,8 +34,10 @@ static inline const char *angdroid_shape_name(const char *english, int zh_tw)
         { "vampire", "吸血鬼" },
         { "werewolf", "狼人" },
     };
-    return angdroid_shape_lookup(english, zh_tw, map,
+    const char *translated = angdroid_shape_lookup(english, zh_tw, map,
         sizeof(map) / sizeof(map[0]));
+    return translated != english ? translated :
+        angdroid_faangband_shape_name(english, zh_tw);
 }
 
 static inline const char *angdroid_shape_class(const char *english, int zh_tw)
@@ -110,7 +113,9 @@ static inline const char *angdroid_shape_misc_desc(const char *english, int zh_t
         { "Gives immunity to traps", "免疫陷阱效果" },
         { "You are made of rock.", "你的身體由岩石構成。" },
     };
-    return angdroid_shape_lookup(english, zh_tw, map,
+    const char *translated = angdroid_shape_lookup(english, zh_tw, map,
         sizeof(map) / sizeof(map[0]));
+    return translated != english ? translated :
+        angdroid_faangband_shape_ability_desc(english, zh_tw);
 }
 #endif

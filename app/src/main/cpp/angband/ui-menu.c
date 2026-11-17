@@ -25,12 +25,16 @@
 #include "menu-key-hints.h"
 #include "menu-visible-tags.h"
 #include "menu-valid-cursor.h"
+#include "menu-shortcut-code.h"
+#include "menu-column-navigation.h"
+#include "menu-scroll-viewport.h"
 #include "menu-column-width.h"
 #include "menu-hit-test.h"
 #include "menu-compact-layout.h"
 #include "menu-popup-layout.h"
 #include "menu-text-fit.h"
 #include "menu-action-guard.h"
+#include "item-picker-switch-keys.h"
 #include "menu-dynamic-choice.h"
 
 #include "droid.h"
@@ -62,6 +66,8 @@ static void display_menu_row(struct menu *menu, int pos, int top,
 static bool menu_calc_size(struct menu *menu);
 static bool is_valid_row(struct menu *menu, int cursor);
 static bool no_valid_row(struct menu *menu, int count);
+static int
+menu_navigation_is_valid(void *context, int row);
 
 
 /* Native Term_putstr(n) limits codepoints, not screen columns. Menu text
@@ -216,22 +222,15 @@ static void display_scrolling(struct menu *menu, int cursor, int *top, region *l
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 	int i;
 
-	/* Keep a certain distance from the top when possible */
-	if ((cursor <= *top) && (*top > 0))
-		*top = cursor - 1;
-
-	/* Keep a certain distance from the bottom when possible */
-	if (cursor >= *top + (rows_per_page - 1))
-		*top = cursor - (rows_per_page - 1) + 1;
-
-	/* Limit the top to legal places */
-	*top = MIN(*top, n - rows_per_page);
-	*top = MAX(*top, 0);
+	/* Screen rotation, stock shrink and filters may change how many
+	 * rows fit. Keep the selected row visible and clamp stale offsets. */
+	*top = angdroid_menu_scroll_clamp_top(
+		*top, cursor, n, rows_per_page);
 
 	for (i = 0; i < rows_per_page; i++) {
 		/* Blank all lines */
 		Term_erase(col, row + i, loc->width);
-		if (i < n) {
+		if (*top < n && i < n - *top) {
 			/* Redraw the line if it's within the number of menu items */
 			bool is_curs = (i == cursor - *top);
 			display_menu_row(menu, i + *top, *top, is_curs, row + i, col,
@@ -239,8 +238,14 @@ static void display_scrolling(struct menu *menu, int cursor, int *top, region *l
 		}
 	}
 
-	if (menu->cursor >= 0)
-		Term_gotoxy(col + menu->cursor_x_offset, row + cursor - *top);
+	/* A fully disabled/empty view has cursor -1. Do not move the
+	 * terminal cursor off-screen during a rotation or after filtering. */
+	if (cursor >= *top && cursor < n &&
+		cursor - *top < rows_per_page &&
+		menu->cursor_x_offset >= 0 &&
+		menu->cursor_x_offset < loc->width)
+		Term_gotoxy(col + menu->cursor_x_offset,
+			row + cursor - *top);
 }
 
 static char scroll_get_tag(struct menu *menu, int pos)
@@ -304,22 +309,15 @@ static void object_skin_display(struct menu *menu, int cursor, int *top, region 
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 	int i;
 
-	/* Keep a certain distance from the top when possible */
-	if ((cursor <= *top) && (*top > 0))
-		*top = cursor - 1;
-
-	/* Keep a certain distance from the bottom when possible */
-	if (cursor >= *top + (rows_per_page - 1))
-		*top = cursor - (rows_per_page - 1) + 1;
-
-	/* Limit the top to legal places */
-	*top = MIN(*top, n - rows_per_page);
-	*top = MAX(*top, 0);
+	/* Screen rotation, stock shrink and filters may change how many
+	 * rows fit. Keep the selected row visible and clamp stale offsets. */
+	*top = angdroid_menu_scroll_clamp_top(
+		*top, cursor, n, rows_per_page);
 
 	for (i = 0; i < rows_per_page; i++) {
 		/* Blank all lines */
 		Term_erase(col, row + i, loc->width);
-		if (i < n) {
+		if (*top < n && i < n - *top) {
 			/* Redraw the line if it's within the number of menu items */
 			bool is_curs = (i == cursor - *top);
 			display_menu_row(menu, i + *top, *top, is_curs, row + i, col,
@@ -327,8 +325,14 @@ static void object_skin_display(struct menu *menu, int cursor, int *top, region 
 		}
 	}
 
-	if (menu->cursor >= 0)
-		Term_gotoxy(col + menu->cursor_x_offset, row + cursor - *top);
+	/* A fully disabled/empty view has cursor -1. Do not move the
+	 * terminal cursor off-screen during a rotation or after filtering. */
+	if (cursor >= *top && cursor < n &&
+		cursor - *top < rows_per_page &&
+		menu->cursor_x_offset >= 0 &&
+		menu->cursor_x_offset < loc->width)
+		Term_gotoxy(col + menu->cursor_x_offset,
+			row + cursor - *top);
 }
 
 static char object_skin_get_tag(struct menu *menu, int pos)
@@ -404,26 +408,36 @@ static void display_columns(struct menu *menu, int cursor, int *top, region *loc
 	int cols;
 	int colw;
 
-	if (rows_per_page <= 0 || n <= 0)
+	if (rows_per_page <= 0 || loc->width <= 0)
 		return;
-	cols = 1 + (n - 1) / rows_per_page;
 
+	/* A changed filter or rotated viewport can leave old columns behind.
+	 * Clear the whole active region even when it now has no items. */
+	for (r = 0; r < rows_per_page; ++r)
+		Term_erase(col, row + r, loc->width);
+	if (n <= 0)
+		return;
+
+	cols = 1 + (n - 1) / rows_per_page;
 	colw = angdroid_menu_fit_column_width(23, loc->width, 0, cols);
 
-	for (c = 0; c < cols; c++) {
-		for (r = 0; r < rows_per_page; r++) {
-			int pos = c * rows_per_page + r;
-			bool is_cursor = (pos == cursor);
-
-			if (pos < n)
-				display_menu_row(menu, pos, 0, is_cursor,
-						row + r, col + c * colw, colw);
+	/* Never render columns beyond the physical available terminal cells. */
+	for (c = 0; c < cols && c < loc->width / colw; ++c) {
+		int base = c * rows_per_page;
+		for (r = 0; r < rows_per_page && r < n - base; ++r) {
+			int pos = base + r;
+			display_menu_row(menu, pos, 0, pos == cursor,
+				row + r, col + c * colw, colw);
 		}
 	}
 
-	if (menu->cursor >= 0)
-		Term_gotoxy(col + (cursor / rows_per_page) * colw + menu->cursor_x_offset,
-				row + (cursor % rows_per_page) - *top);
+	if (cursor >= 0 && cursor < n) {
+		int dx = (cursor / rows_per_page) * colw +
+			menu->cursor_x_offset;
+		int dy = cursor % rows_per_page;
+		if (dx >= 0 && dx < loc->width)
+			Term_gotoxy(col + dx, row + dy);
+	}
 }
 
 static char column_get_tag(struct menu *menu, int pos)
@@ -434,24 +448,21 @@ static char column_get_tag(struct menu *menu, int pos)
 static ui_event column_process_direction(struct menu *m, int dir)
 {
 	ui_event out = EVENT_EMPTY;
+	int count = m->filter_list ? m->filter_count : m->count;
+	int next;
 
-	int n = m->filter_list ? m->filter_count : m->count;
+	if (count <= 0 || m->active.page_rows <= 0)
+		return out;
 
-	region *loc = &m->active;
-	int rows_per_page = loc->page_rows;
-	int cols = (n + rows_per_page - 1) / rows_per_page;
-
-	if (ddx[dir])
-		m->cursor += ddx[dir] * rows_per_page;
-	if (ddy[dir])
-		m->cursor += ddy[dir];
-
-	/* Adjust to the correct locations (roughly) */
-	if (m->cursor > n)
-		m->cursor = m->cursor % rows_per_page;
-	else if (m->cursor < 0)
-		m->cursor = (rows_per_page * cols) + m->cursor;
-
+	/* Move by the actual column-major grid, not a linear cursor offset.
+	 * The partially filled last column and hidden/disabled rows are
+	 * skipped without selecting an absent or unpainted cell. */
+	next = angdroid_menu_column_next_valid(
+		m->cursor, count, m->active.page_rows, ddx[dir], ddy[dir],
+		m, menu_navigation_is_valid);
+	if (next < 0 || next == m->cursor)
+		return out;
+	m->cursor = next;
 	out.type = EVT_MOVE;
 	return out;
 }
@@ -492,16 +503,27 @@ static bool no_valid_row(struct menu *menu, int count)
 	int i;
 
 	for (i = 0; i < count; i++)
-		if (is_valid_row(menu, i))
+		if (menu_navigation_is_valid(menu, i))
 			return false;
 
+	/* Hidden rows are not painted or navigable with arrow keys. */
 	return true;
 }
 
 /* Adapt the menu's validity callback to bounded navigation. */
 static int menu_navigation_is_valid(void *context, int row)
 {
-	return is_valid_row((struct menu *)context, row);
+	struct menu *menu = (struct menu *)context;
+	int count = menu->filter_list ? menu->filter_count : menu->count;
+	int oid = angdroid_menu_action_item_index(
+		row, count, menu->count, menu->filter_list);
+
+	if (oid < 0)
+		return false;
+	/* Hidden entries can have explicit tags, but direction keys must not
+	 * navigate to screen cells that were never rendered. */
+	return !menu->row_funcs->valid_row ||
+		menu->row_funcs->valid_row(menu, oid) == MN_ROW_VALID;
 }
 
 /* 
@@ -513,11 +535,18 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 	int i;
 	int n = menu->filter_list ? menu->filter_count : menu->count;
 
+	/* A key tag is one byte. Do not turn a Unicode/special key into
+	 * an unrelated ASCII tag by truncating it to char, and never
+	 * match a zero key against an empty C-string terminator. */
+	if (!angdroid_menu_shortcut_is_byte(key.code))
+		return -1;
+
 	if (menu->flags & MN_CASELESS_TAGS)
 		key.code = toupper((unsigned char) key.code);
 
-	if ((menu->flags & MN_INSCRIP_TAGS) && isdigit((unsigned char)key.code)
-		&& menu->inscriptions[D2I(key.code)])
+	if ((menu->flags & MN_INSCRIP_TAGS) && menu->inscriptions &&
+		isdigit((unsigned char)key.code) &&
+		menu->inscriptions[D2I(key.code)])
 		key.code = menu->inscriptions[D2I(key.code)];
 
 	if (menu->flags & MN_NO_TAGS) {
@@ -530,7 +559,14 @@ static int get_cursor_key(struct menu *menu, int top, struct keypress key)
 		int end = angdroid_menu_visible_tag_end(
 				n, top, menu->active.page_rows, paged);
 		for (i = first; i < end; i++) {
-			char c = menu->skin->get_tag(menu, i);
+			char c;
+
+			/* A relative key must match a painted row. Hidden/disabled
+			 * entries have no visible relative tag; they remain available
+			 * through intentionally assigned explicit tags. */
+			if (!menu_navigation_is_valid(menu, i))
+				continue;
+			c = menu->skin->get_tag(menu, i);
 
 			if ((menu->flags & MN_CASELESS_TAGS) && c)
 				c = toupper((unsigned char) c);
@@ -659,7 +695,15 @@ void menu_refresh(struct menu *menu, bool reset_screen)
 	int oid;
 	region *loc = &menu->active;
 
-	if (loc->width <= 0 || loc->page_rows <= 0)
+	/* Android can report a resize between two input events. The old
+	 * region may still have positive dimensions yet extend beyond the
+	 * *new* terminal (or Term may be absent). Never draw through stale
+	 * coordinates; the resize event rebuilds the item menu geometry. */
+	if (!Term || loc->col < 0 || loc->row < 0 ||
+		loc->width <= 0 || loc->page_rows <= 0 ||
+		loc->col >= Term->wid || loc->row >= Term->hgt ||
+		loc->width > Term->wid - loc->col ||
+		loc->page_rows > Term->hgt - loc->row)
 		return;
 
 	/* No filtered entry may be read while Android's resized surface is inactive. */
@@ -683,7 +727,12 @@ void menu_refresh(struct menu *menu, bool reset_screen)
 		menu_put_clipped(menu->decoration_col, menu->prompt_row,
 			loc->width, COLOUR_WHITE, menu->prompt);
 
-	if (menu->browse_hook && oid >= 0)
+	/* A quiver footer is purely decorative and is placed after the
+	 * selectable item rows. Draw it even if an empty inventory or an
+	 * all-placeholder equipment page has cursor -1. Other browse
+	 * callbacks still receive only valid object indices. */
+	if (menu->browse_hook &&
+		(oid >= 0 || (menu->flags & MN_BROWSE_WITHOUT_SELECTION)))
 		menu->browse_hook(oid, menu->menu_data, loc);
 
 	menu->skin->display_list(menu, menu->cursor, &menu->top, loc);
@@ -706,9 +755,11 @@ bool menu_handle_mouse(struct menu *menu, const ui_event *in,
 	if (in->mouse.button == 2) {
 		out->type = EVT_ESCAPE;
 	} else if (!region_inside(&menu->active, in)) {
-		/* A click to the left of the active region is 'back' */
-		if (!region_inside(&menu->active, in)
-				&& in->mouse.x < menu->active.col) {
+		/* The left margin acts as Back only next to list rows.
+		 * Shop headers above the list have their own context actions. */
+		if (angdroid_menu_back_margin_hit(
+				in->mouse.y, in->mouse.x, menu->active.row,
+				menu->active.col, menu->active.page_rows)) {
 			out->type = EVT_ESCAPE;
 		} else if (menu->context_hook) {
 			return (*menu->context_hook)(menu, in, out);
@@ -719,7 +770,10 @@ bool menu_handle_mouse(struct menu *menu, const ui_event *in,
 		new_cursor = menu->skin->get_cursor(in->mouse.y, in->mouse.x,
 				count, menu->top, &menu->active);
 	
-		if (is_valid_row(menu, new_cursor)) {
+		/* The hit-test returns a screen row, not an explicit tag.
+		 * Hidden rows exist in the model but were never drawn; a tap
+		 * on their blank cells must never activate their action. */
+		if (menu_navigation_is_valid(menu, new_cursor)) {
 			if (new_cursor == menu->cursor || !(menu->flags & MN_DBL_TAP))
 				out->type = EVT_SELECT;
 			else
@@ -793,8 +847,21 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 		/* Escape stops us here */
 		out->type = EVT_ESCAPE;
 	} else if (count <= 0) {
-		/* Menus with no rows can't be navigated or used, so eat keypresses */
-		eat = true;
+		/* Empty item pickers retain a blank display row so keyboard
+		 * arrows can move to an available inventory/equipment source.
+		 * Never activate a missing item or enable this path for stores. */
+		if ((menu->flags & MN_ALLOW_EMPTY_INPUT) &&
+			menu->skin == &menu_skin_object && menu->switch_keys) {
+			int dir = target_dir(in->key);
+			if (dir && angdroid_item_picker_blank_arrow_switch(
+					menu->flags, MN_ALLOW_EMPTY_INPUT, true,
+					menu->switch_keys != NULL, ddx[dir], ddy[dir]))
+				*out = menu->skin->process_dir(menu, dir);
+			else
+				eat = true;
+		} else {
+			eat = true;
+		}
 	} else if (in->key.code == ' ') {
 		/* Keep the last item reachable even when the next page starts
 		 * exactly at count - 1. Skip disabled rows without selecting
@@ -840,6 +907,14 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 				assert(out->type != EVT_MOVE ||
 					(menu->cursor >= 0 && menu->cursor < count));
 			}
+		} else if (dir && angdroid_item_picker_blank_arrow_switch(
+				menu->flags, MN_ALLOW_EMPTY_INPUT,
+				menu->skin == &menu_skin_object,
+				menu->switch_keys != NULL, ddx[dir], ddy[dir])) {
+			/* SHOW_EMPTY may draw slot labels without any selectable
+			 * object. Keep the item-picker source arrows working even
+			 * when count > 0 but every row is invalid. */
+			*out = menu->skin->process_dir(menu, dir);
 		}
 	}
 
@@ -849,37 +924,49 @@ bool menu_handle_keypress(struct menu *menu, const ui_event *in,
 static void keys_to_ui(struct menu *menu)
 {
 	char buf[256] = "";
+	size_t used = 0;
+	size_t tag_capacity;
+	int cursor;
+	int n = menu->filter_list ? menu->filter_count : menu->count;
+	int first = 0, end = n;
 
-	if (menu->inscriptions) {
-		int i, j;
-		char used[20];
-		for (i = 0, j = 0; i < 10; i++) {
-			if (menu->inscriptions[i]) {
-				used[j++] = ('0' + i);
-			}
-		}
-		used[j] = '\0';
-		my_strcat(buf, used, sizeof(buf));
+	/* When a rotation temporarily invalidates the native item viewport,
+	 * do not keep advertising keys from its previous visible page. */
+	if (menu->preferred_skin == &menu_skin_object &&
+		(!Term || menu->active.col < 0 || menu->active.row < 0 ||
+		menu->active.width <= 0 || menu->active.page_rows <= 0 ||
+		menu->active.col >= Term->wid ||
+		menu->active.row >= Term->hgt ||
+		menu->active.width > Term->wid - menu->active.col ||
+		menu->active.page_rows > Term->hgt - menu->active.row)) {
+		soft_kbd_replace("");
+		return;
 	}
 
-	int cursor;
-	size_t current = 0;
-	char temp[256] = "";
-	int n = menu->filter_list ? menu->filter_count : menu->count;
-	int first = 0;
-	int end = n;
+	/* Inscription digits should be present even if the menu has hundreds
+	 * of other tags. Append unique keys now, before reserving commands. */
+	if (menu->inscriptions) {
+		int i;
+		for (i = 0; i < 10; ++i) {
+			if (menu->inscriptions[i])
+				used = angdroid_menu_hint_append_unique(
+					buf, used, sizeof(buf), (char)('0' + i));
+		}
+	}
 
-	/* Relative tags are regenerated for the current page. Sending tags
-	 * from offscreen rows makes the Android keyboard offer wrong keys. */
+	/* Commands and screen-switch keys must not disappear when a long
+	 * inventory fills the Android shortcut strip. Relative tags are
+	 * generated only for the current scrolling page. */
+	tag_capacity = angdroid_menu_hint_tag_capacity(
+		sizeof(buf), used, menu->cmd_keys, menu->switch_keys);
 	if (menu->flags & MN_REL_TAGS) {
 		int paged = (menu->skin != &menu_skin_column);
 		first = angdroid_menu_visible_tag_first(n, menu->top, paged);
 		end = angdroid_menu_visible_tag_end(
-				n, menu->top, menu->active.page_rows, paged);
+			n, menu->top, menu->active.page_rows, paged);
 	}
 
-	for (cursor = first; cursor < end; cursor++) {
-
+	for (cursor = first; cursor < end; ++cursor) {
 		int oid = angdroid_menu_action_item_index(
 			cursor, n, menu->count, menu->filter_list);
 		menu_row_validity_t row_valid = MN_ROW_VALID;
@@ -887,49 +974,46 @@ static void keys_to_ui(struct menu *menu)
 
 		if (oid < 0)
 			continue;
-
-		if (menu->row_funcs->valid_row) {
+		if (menu->row_funcs->valid_row)
 			row_valid = menu->row_funcs->valid_row(menu, oid);
-		}
-
-		if (row_valid != MN_ROW_VALID) {
+		if (row_valid != MN_ROW_VALID)
 			continue;
-		}
 
 		if (!(menu->flags & MN_NO_TAGS)) {
-			if (menu->flags & MN_REL_TAGS) {
+			if (menu->flags & MN_REL_TAGS)
 				sel = menu->skin->get_tag(menu, cursor);
-			}
-			else if (menu->selections && !(menu->flags & MN_PVT_TAGS)) {
+			else if (menu->selections && !(menu->flags & MN_PVT_TAGS))
 				sel = angdroid_menu_tag_at(menu->selections, cursor);
-			}
-			else if (menu->row_funcs->get_tag) {
+			else if (menu->row_funcs->get_tag)
 				sel = menu->row_funcs->get_tag(menu, oid);
-			}
 		}
-
-		if (sel != 0) {
-			current = angdroid_menu_hint_append(temp, current,
-					sizeof(temp), sel);
-		}
+		if (sel)
+			used = angdroid_menu_hint_append_unique(
+				buf, used, tag_capacity, sel);
 	}
-	temp[current] = '\0';
-	my_strcat(buf, temp, sizeof(buf));
 
 	if (menu->cmd_keys) {
-		my_strcat(buf, menu->cmd_keys, sizeof(buf));
+		if ((menu->flags & MN_ALLOW_EMPTY_INPUT) && n <= 0) {
+			const char *key = menu->cmd_keys;
+			for (; *key; ++key) {
+				if (angdroid_menu_empty_shop_key_visible(
+					menu->flags, MN_ALLOW_EMPTY_INPUT, n, *key))
+					used = angdroid_menu_hint_append_unique(
+						buf, used, sizeof(buf), *key);
+			}
+		} else {
+			used = angdroid_menu_hint_append_keys_unique(
+				buf, used, sizeof(buf), menu->cmd_keys);
+		}
 	}
-	if (menu->switch_keys) {
-		my_strcat(buf, menu->switch_keys, sizeof(buf));
-	}
+	used = angdroid_menu_hint_append_keys_unique(
+		buf, used, sizeof(buf), menu->switch_keys);
 
+	/* Keep the legacy de-dup normalization as a harmless final guard.
+	 * The bounded appends above already eliminate duplicates before
+	 * they consume room reserved for fixed controls. */
 	strdeldup(buf);
-
-	//plog_fmt("Keys %s\n", buf);
-
-	if (strlen(buf) > 0) {
-		soft_kbd_flash(buf);
-	}
+	soft_kbd_replace(buf);
 }
 
 /**
@@ -947,6 +1031,8 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 	/* A zero-sized Android surface during rotation is not a valid menu.
 	 * Exit cleanly rather than calling layout arithmetic with zero rows. */
 	if (menu->active.width <= 0 || menu->active.page_rows <= 0) {
+		if (menu->skin == &menu_skin_object)
+			soft_kbd_replace("");
 		in.type = EVT_ESCAPE;
 		return in;
 	}
@@ -954,6 +1040,10 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 	notify |= (EVT_SELECT | EVT_ESCAPE | EVT_SWITCH);
 	if (popup)
 		screen_save();
+
+	/* A stale cursor from an earlier filtered view is not a valid initial
+	 * choice. A disabled-only view must keep its cursor at -1. */
+	menu_ensure_cursor_valid(menu);
 
 	/* Stop on first unhandled event */
 	while (!(in.type & notify)) {
@@ -974,9 +1064,11 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 		if (in.type == EVT_MOUSE) {
 			if (region_inside(&menu->active, &in)) {
 				menu_handle_mouse(menu, &in, &out);
-				if (out.type == EVT_SELECT && !no_act) {
-					/* The callback may return false to bubble the event
-					 * upstream. Never invoke it again for this one tap. */
+				if (out.type == EVT_SELECT && !no_act &&
+					(menu->flags & MN_MOUSE_ROW_ACTION)) {
+					/* Store rows need raw mouse coordinates. Inventory
+					 * and equipment rows instead need EVT_SELECT below.
+					 * Never dispatch both to the same row handler. */
 					touch_select_dispatched = true;
 					if (menu_handle_action(menu, &in))
 						continue;
@@ -988,17 +1080,29 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 			}
 		} else if (in.type == EVT_KBRD) {
 			/* Command key */
-			if (!no_act && menu->cmd_keys &&
+			/* Only a real single-byte key can match a C key string.
+			 * strchr(str, 0) would otherwise match its terminator,
+			 * and truncating a Unicode/special key could alias a command. */
+			if (!no_act && angdroid_menu_shortcut_is_byte(in.key.code) &&
+				menu->cmd_keys &&
 				strchr(menu->cmd_keys, (char)in.key.code) &&
 				menu_handle_action(menu, &in))
 				continue;
 
 			/* Switch key */
-			if (!no_act && menu->switch_keys &&
+			/* Only a real single-byte key can match a C key string.
+			 * strchr(str, 0) would otherwise match its terminator,
+			 * and truncating a Unicode/special key could alias a command. */
+			if (!no_act && angdroid_menu_shortcut_is_byte(in.key.code) &&
+				menu->switch_keys &&
 				strchr(menu->switch_keys, (char)in.key.code)) {
 				menu_handle_action(menu, &in);
 				if (popup)
 					screen_load();
+				/* Switching item sources must not retain the old page's
+				 * Android ribbon before the new picker is created. */
+				if (menu->skin == &menu_skin_object)
+					soft_kbd_replace("");
 				return in;
 			}
 
@@ -1019,12 +1123,25 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 				if (!menu_calc_size(menu)) {
 					if (popup)
 						screen_load();
+					if (menu->skin == &menu_skin_object)
+						soft_kbd_replace("");
 					in.type = EVT_ESCAPE;
 					return in;
 				}
 			}
 			if (!resized_before_calc && menu->row_funcs->resize)
 				menu->row_funcs->resize(menu);
+			/* The resize callback may re-layout an item menu onto a
+			 * smaller or temporarily inactive Android terminal surface. */
+			if (menu->active.width <= 0 || menu->active.page_rows <= 0) {
+				if (popup)
+					screen_load();
+				if (menu->skin == &menu_skin_object)
+					soft_kbd_replace("");
+				in.type = EVT_ESCAPE;
+				return in;
+			}
+			menu_ensure_cursor_valid(menu);
 		}
 
 		/* Redraw menu here if cursor has moved */
@@ -1042,12 +1159,18 @@ ui_event menu_select(struct menu *menu, int notify, bool popup)
 		if (notify & out.type) {
 			if (popup)
 				screen_load();
+			/* All normal object-picker exits own their final hint cleanup,
+			 * even if the input event came from an injected key or tap. */
+			if (menu->skin == &menu_skin_object)
+				soft_kbd_replace("");
 			return out;
 		}
 	}
 
 	if (popup)
 		screen_load();
+	if (menu->skin == &menu_skin_object)
+		soft_kbd_replace("");
 	return in;
 }
 

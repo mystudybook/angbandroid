@@ -1,0 +1,764 @@
+#!/usr/bin/env python3
+"""Host-compile the real terminal clear/save/load/load_all/redraw functions.
+
+Pulls unchanged function bodies from each engine's actual ui-term.c. Only
+window allocation, terminal hardware refresh and unrelated game dependencies
+are mocked. No source checkout or Android NDK is necessary beyond host C99.
+"""
+import argparse
+import importlib.util
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+LIFECYCLE_GENERATOR = ROOT / "tests/native/generate_compact_term_lifecycle_host.py"
+spec = importlib.util.spec_from_file_location("term_lifecycle_extract", LIFECYCLE_GENERATOR)
+if not spec or not spec.loader:
+    raise RuntimeError("Unable to load native lifecycle extractor")
+lifecycle = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(lifecycle)
+
+SIGNATURES = (
+    "static errr term_win_copy(term_win *s, term_win *f, int w, int h)",
+    "static void term_win_copy_resized(term_win *dest, term_win *src,\n        int copy_w, int copy_h, int old_w)",
+    "errr term_init(term *t, int w, int h, int k)",
+    "errr term_nuke(term *t)",
+    "static void term_win_clamp_cursor(term_win *win, int w, int h)",
+    "errr Term_discard_saved_screens(term *t)",
+    "errr Term_resize(int w, int h)",
+    "errr Term_clear(void)",
+    "errr Term_erase(int x, int y, int n)",
+    "errr Term_save(void)",
+    "errr Term_load(void)",
+    "errr Term_load_all(void)",
+    "errr Term_redraw(void)",
+)
+
+PRELUDE = r'''/* Generated real ui-term.c screen / term functions, minimal host mocks. */
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <wchar.h>
+#include <limits.h>
+#include "app/src/main/cpp/angband/compact-player-viewport.h"
+#include "app/src/main/cpp/curses/term-resize-cjk.h"
+
+#define SIDEBAR_LEFT 1
+#define COLOUR_WHITE 1
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define EVT_RESIZE 1
+#define EVENT_EMPTY {0}
+typedef int errr;
+typedef struct ui_event { int type; } ui_event;
+typedef struct term_win term_win;
+typedef struct term term;
+struct term_win {
+    int width, height;
+    bool cu, cv;
+    int cx, cy, cnx, cny;
+    int **a, **ta;
+    wchar_t **c, **tc;
+    term_win *next;
+};
+struct term {
+    bool active_flag, mapped_flag, total_erase, fixed_shape;
+    uint64_t instance_id;
+    uint32_t content_generation;
+    int wid, hgt, y1, y2, sidebar_mode;
+    uint8_t saved;
+    uint16_t key_head, key_tail, key_size;
+    ui_event *key_queue;
+    int *x1, *x2;
+    term_win *old, *scr, *mem, *tmp;
+    void (*nuke_hook)(term *);
+};
+static term *Term;
+static unsigned long checks, allocations, releases, fresh_count, resize_events;
+static bool trace_screen_replay;
+static unsigned replay_frame_count;
+static wchar_t replay_terrain[2], replay_fg_edge[2], replay_bg_edge[2];
+#define CHECK(x) do { assert(x); ++checks; } while (0)
+static void *mem_alloc(size_t n) {
+    void *p = malloc(n ? n : 1);
+    assert(p);
+    ++allocations;
+    return p;
+}
+static void *mem_zalloc(size_t n) {
+    void *p = calloc(1, n ? n : 1);
+    assert(p);
+    ++allocations;
+    return p;
+}
+static void mem_free(void *p) {
+    if (p) { ++releases; free(p); }
+}
+static void term_win_init(term_win *win, int w, int h) {
+    int y;
+    assert(win && w > 0 && h > 0);
+    win->width = w;
+    win->height = h;
+    win->a = mem_zalloc((size_t)h * sizeof(*win->a));
+    win->c = mem_zalloc((size_t)h * sizeof(*win->c));
+    win->ta = mem_zalloc((size_t)h * sizeof(*win->ta));
+    win->tc = mem_zalloc((size_t)h * sizeof(*win->tc));
+    for (y = 0; y < h; ++y) {
+        win->a[y] = mem_zalloc((size_t)w * sizeof(**win->a));
+        win->c[y] = mem_zalloc((size_t)w * sizeof(**win->c));
+        win->ta[y] = mem_zalloc((size_t)w * sizeof(**win->ta));
+        win->tc[y] = mem_zalloc((size_t)w * sizeof(**win->tc));
+    }
+}
+static void term_win_nuke(term_win *win) {
+    int y;
+    /* Each snapshot retains its own dimensions through a resize. */
+    assert(win && Term);
+    for (y = 0; y < win->height; ++y) {
+        mem_free(win->a[y]); mem_free(win->c[y]);
+        mem_free(win->ta[y]); mem_free(win->tc[y]);
+    }
+    mem_free(win->a); mem_free(win->c);
+    mem_free(win->ta); mem_free(win->tc);
+    win->a = NULL; win->c = NULL; win->ta = NULL; win->tc = NULL;
+}
+static errr Term_fresh(void) {
+    ++fresh_count;
+    if (trace_screen_replay) {
+        assert(Term && replay_frame_count < 2);
+        assert(Term->wid >= 4 && Term->hgt >= 1);
+        replay_terrain[replay_frame_count] = Term->scr->tc[0][1];
+        replay_fg_edge[replay_frame_count] = Term->scr->c[0][3];
+        replay_bg_edge[replay_frame_count] = Term->scr->tc[0][3];
+        ++replay_frame_count;
+    }
+    return 0;
+}
+static errr Term_event_push(const ui_event *event) {
+    CHECK(event && event->type == EVT_RESIZE);
+    ++resize_events;
+    return 0;
+}
+static void on_nuke(term *t) {
+    assert(t->instance_id == 0);
+}
+
+/* Minimal cursor and pair-aware writer mocks for the genuine Term_erase()
+ * body. The foreground and terrain grid is real; only dirty row hardware
+ * and unrelated terminal output hooks are replaced in the host. */
+static errr Term_gotoxy(int x, int y) {
+    if (x < 0 || x >= Term->wid || y < 0 || y >= Term->hgt) return -1;
+    Term->scr->cx = x;
+    Term->scr->cy = y;
+    Term->scr->cu = false;
+    return 0;
+}
+static void erase_wide_partner(term *t, int x, int y) {
+    int partner = angdroid_wide_partner_column(t->wid, x,
+            t->scr->c[y], t->scr->a[y]);
+    if (partner >= 0) {
+        t->scr->c[y][partner] = L' ';
+        t->scr->a[y][partner] = COLOUR_WHITE;
+        if (partner < t->x1[y]) t->x1[y] = partner;
+        if (partner > t->x2[y]) t->x2[y] = partner;
+        if (y < t->y1) t->y1 = y;
+        if (y > t->y2) t->y2 = y;
+    }
+}
+#ifdef MOCK_FA_ERASE
+static void Term_clear_wide_neighbor(term *t, int x, int y,
+        wchar_t incoming, int attr) {
+    (void)incoming; (void)attr;
+    erase_wide_partner(t, x, y);
+}
+#else
+static void Term_queue_char(term *t, int x, int y, int a, wchar_t c,
+        int ta, wchar_t tc) {
+    (void)ta; (void)tc;
+    erase_wide_partner(t, x, y);
+    t->scr->a[y][x] = a;
+    t->scr->c[y][x] = c;
+    if (x < t->x1[y]) t->x1[y] = x;
+    if (x > t->x2[y]) t->x2[y] = x;
+    if (y < t->y1) t->y1 = y;
+    if (y > t->y2) t->y2 = y;
+}
+#endif
+'''
+
+TESTS = r'''
+static void set_screen(wchar_t ch, int attr) {
+    int x, y;
+    for (y = 0; y < Term->hgt; ++y)
+        for (x = 0; x < Term->wid; ++x) {
+            Term->scr->c[y][x] = ch;
+            Term->scr->a[y][x] = attr;
+            Term->scr->tc[y][x] = ch;
+            Term->scr->ta[y][x] = attr + 1;
+        }
+}
+static void expect_screen(wchar_t ch, int attr) {
+    int x, y;
+    for (y = 0; y < Term->hgt; ++y)
+        for (x = 0; x < Term->wid; ++x) {
+            CHECK(Term->scr->c[y][x] == ch);
+            CHECK(Term->scr->a[y][x] == attr);
+            CHECK(Term->scr->tc[y][x] == ch);
+            CHECK(Term->scr->ta[y][x] == attr + 1);
+        }
+}
+static void expect_blank_screen(void) {
+    int x, y;
+    for (y = 0; y < Term->hgt; ++y)
+        for (x = 0; x < Term->wid; ++x) {
+            CHECK(Term->scr->c[y][x] == L' ');
+            CHECK(Term->scr->a[y][x] == COLOUR_WHITE);
+            CHECK(Term->scr->tc[y][x] == 0);
+            CHECK(Term->scr->ta[y][x] == 0);
+        }
+}
+
+static void verify_no_saved_load(term *t) {
+    int dirty_before = Term->y1;
+    uint32_t version_before = Term->content_generation;
+    uint8_t saved_before = Term->saved;
+    CHECK(!Term->mem);
+    CHECK(Term_load() == -1);
+    CHECK(Term->content_generation == version_before);
+    CHECK(Term->saved == saved_before);
+    CHECK(Term->y1 == dirty_before);
+    CHECK(Term_load_all() == -1);
+    CHECK(Term->content_generation == version_before);
+    CHECK(Term->saved == saved_before);
+    CHECK(Term->y1 == dirty_before);
+    CHECK(!Term->mem);
+    (void)t;
+}
+
+static void single_snapshot(term *t) {
+    uint32_t version;
+    uint64_t instance = t->instance_id;
+    unsigned long fresh_before = fresh_count;
+    Term = t;
+    set_screen(L'甲', 3);
+    version = Term->content_generation;
+    CHECK(Term_save() == 0);
+    CHECK(Term->saved == 1);
+    CHECK(Term->content_generation == version); /* Saving is non-destructive */
+    CHECK(Term_clear() == 0);
+    CHECK(Term->content_generation == version + 1);
+    CHECK(Term->total_erase);
+    CHECK(Term->y1 == 0 && Term->y2 == Term->hgt - 1);
+    expect_blank_screen();
+    CHECK(Term_load() == 0);
+    CHECK(Term->content_generation == version + 2);
+    CHECK(Term->saved == 0);
+    CHECK(Term->mem == NULL);
+    expect_screen(L'甲', 3);
+    CHECK(Term->instance_id == instance);
+    CHECK(Term_redraw() == 0);
+    CHECK(fresh_count == fresh_before + 1);
+    CHECK(Term->content_generation == version + 2);
+    verify_no_saved_load(t);
+}
+
+static void nested_snapshot(term *t) {
+    uint32_t version;
+    unsigned long fresh_before;
+    Term = t;
+    set_screen(L'甲', 1);
+    CHECK(Term_save() == 0); /* Oldest */
+    set_screen(L'乙', 2);
+    CHECK(Term_save() == 0); /* Newest */
+    set_screen(L'丙', 3);
+    version = Term->content_generation;
+    fresh_before = fresh_count;
+    CHECK(Term->saved == 2);
+    CHECK(Term_load_all() == 0);
+    CHECK(Term->content_generation == version + 2);
+    CHECK(fresh_count == fresh_before + 2);
+    CHECK(Term->saved == 1);
+    CHECK(Term->mem != NULL);
+    expect_screen(L'乙', 2);
+    CHECK(Term_load() == 0); /* Restore original older snapshot */
+    CHECK(Term->saved == 0);
+    expect_screen(L'甲', 1);
+    verify_no_saved_load(t);
+}
+
+
+static void resize_nested_snapshot(term *t) {
+    int x, y, old_w = t->wid, old_h = t->hgt;
+    uint32_t before = Term->content_generation;
+    unsigned long events = resize_events;
+    Term = t;
+    set_screen(L'甲', 1);
+    CHECK(Term_save() == 0);
+    set_screen(L'乙', 2);
+    CHECK(Term_save() == 0);
+    set_screen(L'丙', 3);
+    CHECK(Term->saved == 2);
+    CHECK(Term_resize(old_w, old_h) == 1);
+    CHECK(Term_resize(0, old_h) == -1);
+    t->fixed_shape = true;
+    CHECK(Term_resize(old_w + 2, old_h + 1) == -1);
+    t->fixed_shape = false;
+    CHECK(Term->content_generation == before);
+    CHECK(resize_events == events);
+    CHECK(Term_resize(old_w + 2, old_h + 1) == 0);
+    CHECK(Term->content_generation == before + 1);
+    CHECK(resize_events == events + 1);
+    CHECK(Term->saved == 2);
+    CHECK(Term->mem && Term->mem->next && !Term->mem->next->next);
+    for (y = 0; y < Term->hgt; ++y) {
+        for (x = 0; x < Term->wid; ++x) {
+            bool inside = x < old_w && y < old_h;
+            CHECK(Term->scr->c[y][x] == (inside ? L'丙' : 0));
+            CHECK(Term->mem->c[y][x] == (inside ? L'乙' : 0));
+            CHECK(Term->mem->next->c[y][x] == (inside ? L'甲' : 0));
+            CHECK(Term->scr->a[y][x] == (inside ? 3 : 0));
+            CHECK(Term->mem->a[y][x] == (inside ? 2 : 0));
+            CHECK(Term->mem->next->a[y][x] == (inside ? 1 : 0));
+        }
+    }
+    /* Push an additional snapshot at the larger size, then shrink all
+     * frames back to the original size before restoring either layer. */
+    set_screen(L'丁', 4);
+    CHECK(Term_save() == 0);
+    CHECK(Term->saved == 3);
+    set_screen(L'戊', 5);
+    CHECK(Term_resize(old_w, old_h) == 0);
+    CHECK(Term->content_generation == before + 2);
+    CHECK(resize_events == events + 2);
+    CHECK(Term->saved == 3);
+    expect_screen(L'戊', 5);
+    CHECK(Term_load() == 0);
+    CHECK(Term->saved == 2);
+    expect_screen(L'丁', 4);
+    CHECK(Term_load_all() == 0);
+    CHECK(Term->saved == 1);
+    expect_screen(L'乙', 2);
+    CHECK(Term_load() == 0);
+    CHECK(Term->saved == 0 && Term->mem == NULL);
+    expect_screen(L'甲', 1);
+    verify_no_saved_load(t);
+}
+
+
+static void cursor_shrink_guard(term *t) {
+    int w = t->wid, h = t->hgt;
+    term_win *win;
+    Term = t;
+    CHECK(t->saved == 0 && t->mem == NULL && t->tmp == NULL);
+    set_screen(L'甲', 7);
+    CHECK(Term_save() == 0);
+    win = t->tmp = mem_zalloc(sizeof(*t->tmp));
+    term_win_init(win, w, h);
+    CHECK(Term_resize(w + 3, h + 4) == 0);
+    /* Simulate an active cursor, a displayed cursor, a saved cursor
+     * and a temporary cursor located outside the upcoming smaller grid. */
+    t->old->cx = w + 1; t->old->cy = h + 2;
+    t->old->cv = true; t->old->cu = false;
+    t->scr->cx = w + 2; t->scr->cy = h + 3;
+    t->scr->cv = true; t->scr->cu = false;
+    t->mem->cx = w; t->mem->cy = h;
+    t->mem->cv = true; t->mem->cu = false;
+    t->tmp->cx = -7; t->tmp->cy = -3;
+    t->tmp->cv = true; t->tmp->cu = false;
+    CHECK(Term_resize(w, h) == 0);
+    CHECK(t->old->cu && t->old->cx == w - 1 && t->old->cy == h - 1);
+    CHECK(t->scr->cu && t->scr->cx == w - 1 && t->scr->cy == h - 1);
+    CHECK(t->mem->cu && t->mem->cx == w - 1 && t->mem->cy == h - 1);
+    CHECK(t->tmp->cu && t->tmp->cx == 0 && t->tmp->cy == 0);
+    /* Restoration must not reintroduce an out-of-bounds cursor. */
+    CHECK(Term_load() == 0);
+    CHECK(t->saved == 0 && t->mem == NULL);
+    CHECK(t->scr->cu && t->scr->cx == w - 1 && t->scr->cy == h - 1);
+    CHECK(Term_resize(w + 1, h + 1) == 0);
+    CHECK(t->scr->cu && t->scr->cx == w - 1 && t->scr->cy == h - 1);
+    CHECK(Term_resize(w, h) == 0);
+}
+
+
+static void cursor_bounds_matrix(void) {
+    const int widths[] = {1, 2, 80, 255, 1024, INT_MAX};
+    const int coords[] = {INT_MIN, -4, -1, 0, 1, 2, 80, 255, INT_MAX};
+    unsigned wi, hi, xi, yi;
+    for (wi = 0; wi < sizeof(widths)/sizeof(widths[0]); ++wi)
+    for (hi = 0; hi < sizeof(widths)/sizeof(widths[0]); ++hi)
+    for (xi = 0; xi < sizeof(coords)/sizeof(coords[0]); ++xi)
+    for (yi = 0; yi < sizeof(coords)/sizeof(coords[0]); ++yi) {
+        int w = widths[wi], h = widths[hi];
+        int x = coords[xi], y = coords[yi];
+        int want_x = x < 0 ? 0 : (x >= w ? w - 1 : x);
+        int want_y = y < 0 ? 0 : (y >= h ? h - 1 : y);
+        term_win one = {0};
+        one.cx = x; one.cy = y; one.cv = true;
+        one.cnx = 2; one.cny = 3;
+        term_win_clamp_cursor(&one, w, h);
+        CHECK(one.cx == want_x && one.cy == want_y);
+        CHECK(one.cx >= 0 && one.cx < w);
+        CHECK(one.cy >= 0 && one.cy < h);
+        CHECK(one.cu == (x < 0 || x >= w || y < 0 || y >= h));
+        CHECK(one.cv && one.cnx == 2 && one.cny == 3);
+        term_win_clamp_cursor(&one, w, h);
+        CHECK(one.cx == want_x && one.cy == want_y);
+    }
+}
+
+
+static void fill_edge_pair(term_win *win, int x, int h) {
+    int y;
+    for (y = 0; y < h; ++y) {
+        win->c[y][x] = L'漢';
+        win->c[y][x + 1] = ANGDROID_TEXT_CONTINUATION;
+        win->a[y][x] = win->a[y][x + 1] = 1;
+        win->tc[y][x] = L'語';
+        win->tc[y][x + 1] = ANGDROID_TEXT_CONTINUATION;
+        win->ta[y][x] = win->ta[y][x + 1] = 1;
+    }
+}
+static void expect_clipped_edge(term_win *win, int x, int h) {
+    int y;
+    for (y = 0; y < h; ++y) {
+        CHECK(win->c[y][x] == L'?');
+        CHECK(win->tc[y][x] == L'?');
+        CHECK(win->c[y][x] != ANGDROID_TEXT_CONTINUATION);
+        CHECK(win->tc[y][x] != ANGDROID_TEXT_CONTINUATION);
+    }
+}
+static void resized_cjk_snapshot_edges(void) {
+    term t;
+    unsigned long before_alloc = allocations, before_free = releases;
+    Term = &t;
+    CHECK(term_init(&t, 5, 2, 8) == 0);
+    Term = &t;
+    t.tmp = mem_zalloc(sizeof(*t.tmp));
+    term_win_init(t.tmp, t.wid, t.hgt);
+    fill_edge_pair(t.old, 3, t.hgt);
+    fill_edge_pair(t.scr, 3, t.hgt);
+    fill_edge_pair(t.tmp, 3, t.hgt);
+    t.tmp->c[0][1] = ANGDROID_TEXT_CONTINUATION;
+    t.tmp->tc[0][1] = ANGDROID_TEXT_CONTINUATION;
+    CHECK(Term_save() == 0);
+    CHECK(Term_save() == 0);
+    CHECK(Term_resize(4, 2) == 0);
+    CHECK(t.saved == 2 && t.mem && t.mem->next);
+    expect_clipped_edge(t.old, 3, t.hgt);
+    expect_clipped_edge(t.scr, 3, t.hgt);
+    expect_clipped_edge(t.tmp, 3, t.hgt);
+    expect_clipped_edge(t.mem, 3, t.hgt);
+    expect_clipped_edge(t.mem->next, 3, t.hgt);
+    CHECK(t.tmp->c[0][1] == L' ');
+    CHECK(t.tmp->tc[0][1] == L' ');
+    CHECK(Term_load() == 0);
+    CHECK(t.saved == 1);
+    expect_clipped_edge(t.scr, 3, t.hgt);
+    CHECK(Term_resize(6, 2) == 0);
+    CHECK(t.saved == 1);
+    expect_clipped_edge(t.scr, 3, t.hgt);
+    CHECK(t.scr->c[0][4] == 0 && t.scr->c[0][5] == 0);
+    CHECK(t.scr->tc[0][4] == 0 && t.scr->tc[0][5] == 0);
+    CHECK(Term_load_all() == 0);
+    CHECK(t.saved == 0 && t.mem == NULL);
+    expect_clipped_edge(t.scr, 3, t.hgt);
+    CHECK(term_nuke(&t) == 0);
+    CHECK(allocations - before_alloc == releases - before_free);
+}
+
+
+static void erase_and_scroll_overlay_replay(void) {
+    term t;
+    unsigned long fresh_before = fresh_count;
+    size_t before_alloc = allocations, before_free = releases;
+    int x, y;
+    Term = &t;
+    CHECK(term_init(&t, 6, 3, 8) == 0);
+    Term = &t;
+    for (y = 0; y < t.hgt; ++y) {
+        for (x = 0; x < t.wid; ++x) {
+            t.scr->c[y][x] = L' ';
+            t.scr->a[y][x] = COLOUR_WHITE;
+            t.scr->tc[y][x] = 0;
+            t.scr->ta[y][x] = 0;
+        }
+        t.scr->c[y][3] = L'漢';
+        t.scr->c[y][4] = ANGDROID_TEXT_CONTINUATION;
+        t.scr->a[y][3] = t.scr->a[y][4] = 2;
+        t.scr->tc[y][3] = L'風';
+        t.scr->tc[y][4] = ANGDROID_TEXT_CONTINUATION;
+        t.scr->ta[y][3] = t.scr->ta[y][4] = 2;
+    }
+    /* A visually blank foreground can still have saved map terrain. */
+    t.scr->tc[0][1] = L'樹';
+    t.scr->ta[0][1] = 4;
+    CHECK(Term_save() == 0); /* Underlying screen */
+    CHECK(Term_erase(1, 0, 1) == 0);
+    CHECK(t.scr->c[0][1] == L' ');
+    CHECK(t.scr->tc[0][1] == 0 && t.scr->ta[0][1] == 0);
+    CHECK(Term_save() == 0); /* Newer overlay */
+    /* Copy complete rows, like a scrolled text view. This row movement is
+     * a test scenario, not a claim that the game calls a Term_scroll API. */
+    for (y = 0; y < t.hgt - 1; ++y) {
+        memcpy(t.scr->c[y], t.scr->c[y + 1], (size_t)t.wid * sizeof(wchar_t));
+        memcpy(t.scr->a[y], t.scr->a[y + 1], (size_t)t.wid * sizeof(int));
+        memcpy(t.scr->tc[y], t.scr->tc[y + 1], (size_t)t.wid * sizeof(wchar_t));
+        memcpy(t.scr->ta[y], t.scr->ta[y + 1], (size_t)t.wid * sizeof(int));
+    }
+    for (x = 0; x < t.wid; ++x) {
+        t.scr->c[2][x] = L'.';
+        t.scr->a[2][x] = 1;
+        t.scr->tc[2][x] = 0;
+        t.scr->ta[2][x] = 0;
+    }
+    CHECK(Term_resize(4, 3) == 0);
+    CHECK(t.saved == 2 && t.mem && t.mem->next);
+    for (y = 0; y < 2; ++y) {
+        CHECK(t.scr->c[y][3] == L'?');
+        CHECK(t.scr->tc[y][3] == L'?');
+    }
+    CHECK(t.scr->c[2][3] == L'.');
+    CHECK(t.scr->tc[2][3] == 0);
+    for (y = 0; y < t.hgt; ++y) {
+        CHECK(t.mem->c[y][3] == L'?');
+        CHECK(t.mem->tc[y][3] == L'?');
+        CHECK(t.mem->next->c[y][3] == L'?');
+        CHECK(t.mem->next->tc[y][3] == L'?');
+    }
+    replay_frame_count = 0;
+    trace_screen_replay = true;
+    CHECK(Term_load_all() == 0);
+    trace_screen_replay = false;
+    CHECK(fresh_count == fresh_before + 2);
+    CHECK(replay_frame_count == 2);
+    CHECK(replay_terrain[0] == L'樹'); /* Oldest saved screen replayed first */
+    CHECK(replay_terrain[1] == 0);     /* Newer overlay erased the terrain */
+    CHECK(replay_fg_edge[0] == L'?' && replay_bg_edge[0] == L'?');
+    CHECK(replay_fg_edge[1] == L'?' && replay_bg_edge[1] == L'?');
+    CHECK(t.saved == 1 && t.mem && !t.mem->next);
+    for (y = 0; y < t.hgt; ++y) {
+        CHECK(t.scr->c[y][3] == L'?');
+        CHECK(t.scr->tc[y][3] == L'?');
+    }
+    CHECK(t.scr->tc[0][1] == 0 && t.scr->ta[0][1] == 0);
+    CHECK(Term_load() == 0); /* Older screen still has the map terrain. */
+    CHECK(t.saved == 0 && t.mem == NULL);
+    CHECK(t.scr->tc[0][1] == L'樹' && t.scr->ta[0][1] == 4);
+    for (y = 0; y < t.hgt; ++y) {
+        CHECK(t.scr->c[y][3] == L'?');
+        CHECK(t.scr->tc[y][3] == L'?');
+    }
+    /* Erasing the continuation must clear the original leading cell. */
+    CHECK(Term_resize(6, 3) == 0);
+    t.scr->c[1][1] = L'甲'; t.scr->a[1][1] = 2;
+    t.scr->c[1][2] = ANGDROID_TEXT_CONTINUATION; t.scr->a[1][2] = 2;
+    CHECK(Term_erase(2, 1, INT_MAX) == 0);
+    CHECK(t.scr->c[1][1] == L' ' && t.scr->c[1][2] == L' ');
+    CHECK(t.scr->a[1][1] == COLOUR_WHITE);
+    CHECK(Term_erase(-1, 0, INT_MAX) == -1);
+    CHECK(Term_erase(t.wid, 0, INT_MAX) == -1);
+    /* The saturated count never touches columns before the start. */
+    t.scr->c[0][0] = L'Z';
+    t.scr->a[0][0] = 7;
+    CHECK(Term_erase(1, 0, INT_MAX) == 0);
+    CHECK(t.scr->c[0][0] == L'Z' && t.scr->a[0][0] == 7);
+    CHECK(Term_erase(1, 0, INT_MIN) == 0);
+    CHECK(t.scr->c[0][0] == L'Z');
+    CHECK(term_nuke(&t) == 0);
+    CHECK(allocations - before_alloc == releases - before_free);
+}
+
+
+static void abandoned_session_snapshot_reset(void) {
+    term t;
+    uint32_t old_generation;
+    unsigned long alloc_start = allocations, free_start = releases;
+    unsigned n;
+    Term = &t;
+    CHECK(term_init(&t, 8, 3, 8) == 0);
+    Term = &t;
+    CHECK(Term_discard_saved_screens(NULL) == -1);
+    CHECK(Term_discard_saved_screens(&t) == 1);
+    set_screen(L'舊', 3);
+    for (n = 0; n < UINT8_MAX; ++n) CHECK(Term_save() == 0);
+    CHECK(t.mem && t.saved == UINT8_MAX);
+    set_screen(L'新', 4); /* The requested screen must remain intact. */
+    old_generation = t.content_generation;
+    CHECK(Term_discard_saved_screens(&t) == 0);
+    CHECK(t.mem == NULL && t.saved == 0);
+    CHECK(t.content_generation == old_generation + 1);
+    CHECK(t.total_erase);
+    expect_screen(L'新', 4);
+    CHECK(Term_load() == -1);
+    CHECK(Term_load_all() == -1);
+    CHECK(Term_discard_saved_screens(&t) == 1);
+    CHECK(t.content_generation == old_generation + 1);
+    CHECK(Term_save() == 0); /* New character gets a fresh screen frame. */
+    set_screen(L'乙', 5);
+    CHECK(Term_load() == 0);
+    expect_screen(L'新', 4);
+    CHECK(term_nuke(&t) == 0);
+    CHECK(Term_discard_saved_screens(&t) == -1);
+    CHECK(allocations - alloc_start == releases - free_start);
+}
+
+static void discard_other_active_terminal(void) {
+    term primary, secondary;
+    unsigned long start_alloc = allocations, start_free = releases;
+    uint32_t primary_version, secondary_version;
+    Term = &primary;
+    CHECK(term_init(&primary, 6, 2, 8) == 0);
+    Term = &secondary;
+    CHECK(term_init(&secondary, 4, 3, 8) == 0);
+    Term = &primary;
+    set_screen(L'甲', 2);
+    CHECK(Term_save() == 0);
+    primary_version = primary.content_generation;
+    Term = &secondary;
+    set_screen(L'乙', 3);
+    CHECK(Term_save() == 0);
+    secondary_version = secondary.content_generation;
+    /* The caller can discard another initialized Term even when Term
+     * still refers to the first terminal (as textui_init() does). */
+    Term = &primary;
+    CHECK(Term_discard_saved_screens(&secondary) == 0);
+    CHECK(secondary.mem == NULL && secondary.saved == 0);
+    CHECK(secondary.content_generation == secondary_version + 1);
+    CHECK(primary.mem != NULL && primary.saved == 1);
+    CHECK(primary.content_generation == primary_version);
+    CHECK(Term_discard_saved_screens(&primary) == 0);
+    CHECK(primary.mem == NULL && primary.saved == 0);
+    CHECK(primary.content_generation == primary_version + 1);
+    CHECK(term_nuke(&primary) == 0);
+    Term = &secondary;
+    CHECK(term_nuke(&secondary) == 0);
+    CHECK(allocations - start_alloc == releases - start_free);
+}
+
+static void snapshot_depth_limit(void) {
+    term t;
+    unsigned i;
+    term_win *top;
+    size_t allocated = allocations, freed = releases;
+    Term = &t;
+    CHECK(term_init(&t, 2, 1, 8) == 0);
+    for (i = 0; i < UINT8_MAX; ++i) {
+        CHECK(Term_save() == 0);
+        CHECK(Term->saved == i + 1);
+    }
+    top = Term->mem;
+    CHECK(Term_save() == -1);
+    CHECK(Term->saved == UINT8_MAX && Term->mem == top);
+    CHECK(Term_resize(3, 2) == 0);
+    CHECK(Term->saved == UINT8_MAX);
+    CHECK(Term_load() == 0);
+    CHECK(Term->saved == UINT8_MAX - 1 && Term->mem != NULL);
+    /* Destructor must free all remaining saved frames. */
+    CHECK(term_nuke(&t) == 0);
+    CHECK(t.saved == 0 && t.mem == NULL);
+    CHECK(allocations - allocated == releases - freed);
+}
+
+static void run_screen(int width, int height) {
+    term t;
+    size_t prev_alloc = allocations, prev_release = releases;
+    uint64_t previous_id = 0;
+    unsigned pass;
+    for (pass = 0; pass < 3; ++pass) {
+        Term = &t;
+        CHECK(term_init(&t, width, height, 8) == 0);
+        CHECK(t.instance_id != 0);
+        if (previous_id) CHECK(t.instance_id != previous_id);
+        previous_id = t.instance_id;
+        Term = &t;
+        CHECK(t.content_generation == 0);
+        /* A fresh term at the same address cannot inherit an old cursor,
+         * temporary frame, saved depth, or prior rendered screen cells. */
+        CHECK(t.saved == 0 && t.mem == NULL && t.tmp == NULL);
+        CHECK(!t.scr->cu && !t.scr->cv);
+        CHECK(t.scr->cx == 0 && t.scr->cy == 0);
+        CHECK(t.old->cx == 0 && t.old->cy == 0);
+        CHECK(t.scr->c[0][0] == 0 && t.old->c[0][0] == 0);
+        CHECK(t.scr->a[0][0] == 0 && t.old->a[0][0] == 0);
+        verify_no_saved_load(&t);
+        single_snapshot(&t);
+        nested_snapshot(&t);
+        resize_nested_snapshot(&t);
+        cursor_shrink_guard(&t);
+        t.nuke_hook = on_nuke;
+        t.active_flag = true;
+        CHECK(term_nuke(&t) == 0);
+        CHECK(t.instance_id == 0);
+        CHECK(allocations - prev_alloc == releases - prev_release);
+    }
+}
+
+int main(void) {
+    run_screen(1, 1);
+    run_screen(5, 3);
+    run_screen(12, 2);
+    run_screen(80, 24);
+    snapshot_depth_limit();
+    abandoned_session_snapshot_reset();
+    discard_other_active_terminal();
+    resized_cjk_snapshot_edges();
+    erase_and_scroll_overlay_replay();
+    cursor_bounds_matrix();
+    printf("PASS: real %s Term_clear/save/load/load_all (%lu assertions)\n",
+           ENGINE_NAME, checks);
+    return 0;
+}
+'''
+
+
+def generate(engine: str) -> str:
+    src = (ROOT / "app/src/main/cpp" / engine / "ui-term.c").read_text(
+        encoding="utf-8")
+    extracts = [lifecycle.extract_function(src, signature) for signature in SIGNATURES]
+    for sig, body in zip(SIGNATURES, extracts):
+        if sig == "errr Term_erase(int x, int y, int n)":
+            if "if (n > w - x) n = w - x;" not in body:
+                raise ValueError("Term_erase must clip without adding signed x+n")
+            if "scr_taa[x] == 0 && scr_tcc[x] == 0" not in body:
+                raise ValueError("Term_erase must clear stale background terrain")
+        if sig == "errr Term_resize(int w, int h)" and body.count("term_win_copy_resized(") != 4:
+            raise ValueError("All four resized window categories must repair clipped CJK pairs")
+        if sig.startswith("static void term_win_copy_resized(") and body.count(
+                "angdroid_term_repair_resized_cjk_row(") != 2:
+            raise ValueError("Both foreground and terrain CJK layers must be repaired")
+        if sig == "errr Term_resize(int w, int h)" and body.count("term_win_clamp_cursor(") != 5:
+            raise ValueError("Resize must clamp old, scr, all saves and temporary cursor copies")
+        if sig == "errr Term_discard_saved_screens(term *t)":
+            for required in ("while (t->mem)", "t->saved = 0;",
+                             "++t->content_generation;", "t->total_erase = true;"):
+                if required not in body:
+                    raise ValueError("Discard must free all old snapshots and repaint")
+        if sig == "errr Term_save(void)" and "if (Term->saved == UINT8_MAX) return (-1);" not in body:
+            raise ValueError("Snapshot stack must enforce its uint8_t depth limit")
+        if sig == "errr term_nuke(term *t)" and "while (t->mem)" not in body:
+            raise ValueError("Term destruction must release every saved frame")
+        if sig in ("errr Term_load(void)", "errr Term_load_all(void)"):
+            if "if (!Term->mem) return (-1);" not in body:
+                raise ValueError(f"{sig} must guard absent saved screens")
+            if body.index("if (!Term->mem) return (-1);") > body.index(
+                    "Term->saved--;"):
+                raise ValueError(f"{sig} changes saved counter before checking")
+    return (
+        ("#define MOCK_FA_ERASE 1\n" if engine == "faangband" else "")
+        + PRELUDE + "\nstatic uint64_t angdroid_term_instance_sequence;\n\n"
+        + "\n\n".join(extracts) + "\n#define ENGINE_NAME \"" + engine + "\"\n"
+        + TESTS
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("engine", choices=("angband", "faangband"))
+    parser.add_argument("output", type=Path)
+    args = parser.parse_args()
+    args.output.write_text(generate(args.engine), encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()

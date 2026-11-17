@@ -29,6 +29,8 @@
 #include "player-timed.h"
 #include "project.h"
 #include "target.h"
+#include "droid.h"
+#include "zh-tw-target-monster.h"
 
 /**
  * Is the target set?
@@ -503,7 +505,8 @@ bool target_set_closest(int mode, monster_predicate pred)
 
 	/* If nothing was prepared, then return */
 	if (point_set_size(targets) < 1) {
-		msg("No Available Target.");
+		msg("%s", angdroid_zh_tw_enabled() ? "沒有可鎖定的目標。" :
+            "No Available Target.");
 		point_set_dispose(targets);
 		return false;
 	}
@@ -513,15 +516,24 @@ bool target_set_closest(int mode, monster_predicate pred)
 	
 	/* Target the monster, if possible */
 	if (!target_able(mon)) {
-		msg("No Available Target.");
+		msg("%s", angdroid_zh_tw_enabled() ? "沒有可鎖定的目標。" :
+            "No Available Target.");
 		point_set_dispose(targets);
 		return false;
 	}
 
-	/* Target the monster */
+	/* Target the monster.  The source description and game identity remain
+	 * English; the Chinese name is built only for the visible notification. */
 	monster_desc(m_name, sizeof(m_name), mon, MDESC_CAPITAL | MDESC_COMMA);
-	if (!(mode & TARGET_QUIET))
-		msg("%s is targeted.", m_name);
+	if (!(mode & TARGET_QUIET)) {
+		char zh_name[160];
+		if (angdroid_zh_tw_enabled() && angdroid_target_monster_display(
+				zh_name, sizeof(zh_name), m_name, mon->race->name,
+				rf_has(mon->race->flags, RF_UNIQUE), true))
+			msg("已鎖定%s。", zh_name);
+		else
+			msg("%s is targeted.", m_name);
+	}
 
 	/* Set up target information */
 	monster_race_track(player->upkeep, mon->race);

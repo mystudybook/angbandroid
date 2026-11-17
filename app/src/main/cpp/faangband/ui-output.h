@@ -94,6 +94,7 @@ void prt(const char *str, int row, int col);
  * Screen loading/saving
  * ------------------------------------------------------------------------ */
 extern int16_t screen_save_depth;
+void screen_reset_overlay_state(void);
 void screen_save(void);
 void screen_load(void);
 void screen_load_all(void);

@@ -51,6 +51,9 @@ const uint8_t *textblock_attrs(textblock *tb);
 
 size_t textblock_calculate_lines(textblock *tb, size_t **line_starts,
 								 size_t **line_lengths, size_t width);
+/* Screen-only wrapping in actual Unicode terminal display cells. */
+size_t textblock_calculate_display_lines(textblock *tb, size_t **line_starts,
+        size_t **line_lengths, size_t width);
 
 void textblock_to_file(textblock *tb, ang_file *f, int indent, int wrap_at);
 

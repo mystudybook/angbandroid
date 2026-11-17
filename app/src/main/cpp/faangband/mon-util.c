@@ -26,8 +26,12 @@
 #include "mon-lore.h"
 #include "mon-make.h"
 #include "mon-msg.h"
+#include "mon-fear-health.h"
+#include "mon-damage-hp.h"
 #include "mon-predicate.h"
 #include "mon-spell.h"
+#include "mon-spell-message-locale.h"
+#include "../angband/zh-tw-ui.h"
 #include "mon-summon.h"
 #include "mon-timed.h"
 #include "mon-util.h"
@@ -765,8 +769,12 @@ void become_aware(struct chunk *c, struct monster *mon)
 			object_desc(o_name, sizeof(o_name), obj, ODESC_BASE, player);
 
 			/* Print a message */
-			if (square_isseen(c, obj->grid))
-				msg("The %s was really a monster!", o_name);
+			if (square_isseen(c, obj->grid)) {
+				if (angdroid_zh_tw_enabled())
+					msg("原來%s是一隻怪物！", o_name);
+				else
+					msg("The %s was really a monster!", o_name);
+			}
 
 			/* Clear the mimicry */
 			obj->mimicking_m_idx = 0;
@@ -1052,8 +1060,10 @@ static void player_kill_monster(struct monster *mon, struct player *p,
 {
 	int32_t div, new_exp, new_exp_frac;
 	struct monster_lore *lore = get_lore(mon->race);
-	char m_name[80];
+	char m_name[256];
 	char buf[80];
+	char zh_name[320];
+	const char *display_name;
 	int desc_mode = MDESC_DEFAULT | ((note) ? MDESC_COMMA : 0);
 
 	/* Assume normal death sound */
@@ -1082,11 +1092,17 @@ static void player_kill_monster(struct monster *mon, struct player *p,
 		monster_is_living(mon) && !monster_is_stupid(mon) &&
 		!rf_has(mon->race->flags, RF_DEMON)) {
 		int gain = 2 + (mon->maxhp / 30);
-		msg("You gain mana.");
+		if (angdroid_zh_tw_enabled())
+			msg("你獲得了法力。");
+		else
+			msg("You gain mana.");
 
 		/* If there is a lot of excess mana, it can do damage */
 		if (player->csp + gain - player->msp > player->lev) {
-			msg("You absorb too much mana!");
+			if (angdroid_zh_tw_enabled())
+				msg("你吸收了過多法力！");
+			else
+				msg("You absorb too much mana!");
 			take_hit(player, damroll(2, 8), "mana burn");
 		}
 		player->csp = MIN(player->csp + gain, player->msp);
@@ -1101,23 +1117,65 @@ static void player_kill_monster(struct monster *mon, struct player *p,
 			/* Make sure to flush any monster messages first */
 			notice_stuff(p);
 
-			/* Death by Missile attack */
-			my_strcap(m_name);
-			msgt(soundfx, "%s%s", m_name, note);
+			/* Most death notes originate in other attack handlers and
+			 * stay untouched. Only the arena's exact source phrase is
+			 * translated here, after the original visibility selection. */
+			if (angdroid_zh_tw_enabled() && streq(note, " is defeated!")) {
+				char offscreen_name[320];
+				monster_desc(m_name, sizeof(m_name), mon, MDESC_DEFAULT);
+				display_name = m_name;
+				if (rf_has(mon->race->flags, RF_PLAYER_GHOST) &&
+					cave->ghost) {
+					display_name = angdroid_fa_spell_ghost_subject(m_name,
+						cave->ghost->name, mon->race->name,
+						true, zh_name, sizeof(zh_name));
+				} else if (!monster_is_shape_unique(mon)) {
+					display_name = angdroid_fa_spell_subject(m_name,
+						true, zh_name, sizeof(zh_name));
+				}
+				display_name = angdroid_fa_spell_offscreen_subject(
+					display_name, true, offscreen_name,
+					sizeof(offscreen_name));
+				msgt(soundfx, "%s被擊敗了！", display_name);
+			} else {
+				/* Original missile/special-note display path. */
+				my_strcap(m_name);
+				msgt(soundfx, "%s%s", m_name, note);
+			}
 		}
 	} else {
 		/* Make sure to flush any monster messages first */
 		notice_stuff(p);
 
-		if (!monster_is_visible(mon))
+		/* monster_desc already controls what the player can identify.
+		 * Only translate its generic grammar, not a true unique name. */
+		display_name = m_name;
+		if (angdroid_zh_tw_enabled() &&
+			(!monster_is_shape_unique(mon) ||
+			streq(m_name, "it") || streq(m_name, "something"))) {
+			display_name = angdroid_fa_spell_subject(m_name,
+				true, zh_name, sizeof(zh_name));
+		}
+
+		if (!monster_is_visible(mon)) {
 			/* Death by physical attack -- invisible monster */
-			msgt(soundfx, "You have killed %s.", m_name);
-		else if (monster_is_destroyed(mon))
+			if (angdroid_zh_tw_enabled())
+				msgt(soundfx, "你擊殺了%s。", display_name);
+			else
+				msgt(soundfx, "You have killed %s.", m_name);
+		} else if (monster_is_destroyed(mon)) {
 			/* Death by Physical attack -- non-living monster */
-			msgt(soundfx, "You have destroyed %s.", m_name);
-		else
+			if (angdroid_zh_tw_enabled())
+				msgt(soundfx, "你摧毀了%s。", display_name);
+			else
+				msgt(soundfx, "You have destroyed %s.", m_name);
+		} else {
 			/* Death by Physical attack -- living monster */
-			msgt(soundfx, "You have slain %s.", m_name);
+			if (angdroid_zh_tw_enabled())
+				msgt(soundfx, "你擊敗了%s。", display_name);
+			else
+				msgt(soundfx, "You have slain %s.", m_name);
+		}
 	}
 
 	/* Player level */
@@ -1202,6 +1260,9 @@ static bool monster_scared_by_damage(struct monster *mon, int dam)
 {
 	int current_fear = mon->m_timed[MON_TMD_FEAR];
 
+	/* Never pass healing or zero damage to randint1(). */
+	if (dam <= 0) return false;
+
 	/* Pain can reduce or cancel existing fear, or cause fear */
 	if (current_fear) {
 		int tmp = randint1(dam);
@@ -1216,8 +1277,13 @@ static bool monster_scared_by_damage(struct monster *mon, int dam)
 			return false;
 		}
 	} else if (monster_can_be_scared(mon)) {
-		/* Percentage of fully healthy */
-		int percentage = (100L * mon->hp) / mon->maxhp;
+		int percentage;
+
+		/* A corrupted zero/negative max HP must not divide by zero.
+		 * Valid monsters keep the original integer percentage and RNG. */
+		if (!angdroid_fa_mon_fear_health_percentage(
+				mon->hp, mon->maxhp, &percentage))
+			return false;
 
 		/* Run (sometimes) if at 10% or less of max hit points... */
 		bool low_hp = randint1(10) >= percentage;
@@ -1271,8 +1337,9 @@ bool mon_take_nonplayer_hit(int dam, struct monster *t_mon,
 	/* Wake the monster up, doesn't become aware of the player */
 	monster_wake(t_mon, false, 0);
 
-	/* Hurt the monster */
-	t_mon->hp -= dam;
+	/* Keep the resulting 16-bit HP within range even when an int
+	 * damage amount greatly exceeds a monster's remaining health. */
+	t_mon->hp = angdroid_fa_mon_hp_after_damage(t_mon->hp, dam);
 
 	/* Dead or damaged monster */
 	if (t_mon->hp < 0) {
@@ -1341,8 +1408,9 @@ bool mon_take_hit(struct monster *mon, struct player *p, int dam, bool *fear,
 	/* Covering tracks is no longer possible */
 	p->timed[TMD_COVERTRACKS] = 0;
 
-	/* Hurt it */
-	mon->hp -= dam;
+	/* Compute the remaining HP without signed-int overflow or a
+	 * 16-bit narrowing wrap that could turn a lethal hit into healing. */
+	mon->hp = angdroid_fa_mon_hp_after_damage(mon->hp, dam);
 	if (mon->hp < 0) {
 		/* Deal with arena monsters */
 		if (p->upkeep->arena_level) {
@@ -1482,6 +1550,28 @@ struct object *get_random_monster_object(struct monster *mon)
     return pick;
 }
 
+/*
+ * Localize an already resolved monster_desc() result for theft notices.
+ * The engine must keep ownership of identity and visibility: unseen
+ * monsters remain anonymous, shape-unique monsters retain their names.
+ */
+static const char *monster_theft_display_name(const struct monster *mon,
+		const char *source, char translated[320], char offscreen[320])
+{
+	const char *shown = source;
+
+	if (!angdroid_zh_tw_enabled()) return source;
+	if (rf_has(mon->race->flags, RF_PLAYER_GHOST) && cave->ghost) {
+		shown = angdroid_fa_spell_ghost_subject(source,
+			cave->ghost->name, mon->race->name, true,
+			translated, 320);
+	} else if (!monster_is_shape_unique(mon)) {
+		shown = angdroid_fa_spell_subject(source, true, translated, 320);
+	}
+
+	return angdroid_fa_spell_offscreen_subject(shown, true, offscreen, 320);
+}
+
 /**
  * Player or monster midx steals an item from a monster
  *
@@ -1493,10 +1583,15 @@ void steal_monster_item(struct monster *mon, int midx)
 	struct object *obj = get_random_monster_object(mon);
 	struct monster_lore *lore = get_lore(mon->race);
 	struct monster *thief = NULL;
-	char m_name[80];
+	char m_name[256];
+	char zh_m_name[320];
+	char offscreen_m_name[320];
+	const char *target_name;
 
-	/* Get the target monster name (or "it") */
+	/* The selected monster name already respects the player's visibility. */
 	monster_desc(m_name, sizeof(m_name), mon, MDESC_TARG);
+	target_name = monster_theft_display_name(mon, m_name,
+		zh_m_name, offscreen_m_name);
 
 	if (midx < 0) {
 		/* Base monster protection and player stealing skill */
@@ -1509,7 +1604,10 @@ void steal_monster_item(struct monster *mon, int midx)
 
 		/* No object */
 		if (!obj) {
-			msg("You can find nothing to steal from %s.", m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("你無法從%s身上找到可偷的東西。", target_name);
+			else
+				msg("You can find nothing to steal from %s.", m_name);
 			if (one_in_(3)) {
 				/* Monster notices */
 				monster_wake(mon, false, 100);
@@ -1538,7 +1636,10 @@ void steal_monster_item(struct monster *mon, int midx)
 			obj->held_m_idx = 0;
 			pile_excise(&mon->held_obj, obj);
 			if (tval_is_money(obj)) {
-				msg("You steal %d gold pieces worth of treasure.", obj->pval);
+				if (angdroid_zh_tw_enabled())
+					msg("你偷到了價值 %d 枚金幣的財寶。", obj->pval);
+				else
+					msg("You steal %d gold pieces worth of treasure.", obj->pval);
 				player->au += obj->pval;
 				player->upkeep->redraw |= (PR_GOLD);
 				delist_object(cave, obj);
@@ -1555,7 +1656,10 @@ void steal_monster_item(struct monster *mon, int midx)
 						ODESC_PREFIX | ODESC_FULL,
 						player);
 					drop_near(cave, &obj, 0, player->grid, true, true);
-					msg("You drop %s.", o_name);
+					if (angdroid_zh_tw_enabled())
+						msg("你丟下了%s。", o_name);
+					else
+						msg("You drop %s.", o_name);
 				} else {
 					inven_carry(player, obj, true, true);
 				}
@@ -1572,19 +1676,30 @@ void steal_monster_item(struct monster *mon, int midx)
 
 			object_see(player, obj);
 			if (tval_is_money(obj)) {
-				(void)strnfmt(o_name, sizeof(o_name), "treasure");
+				(void)strnfmt(o_name, sizeof(o_name), "%s",
+					angdroid_zh_tw_enabled() ? "財寶" : "treasure");
 			} else {
 				object_desc(o_name, sizeof(o_name), obj,
 					ODESC_PREFIX | ODESC_FULL, player);
 			}
-			msg("You fail to steal %s from %s.", o_name, m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("你沒能從%s身上偷到%s。", target_name, o_name);
+			else
+				msg("You fail to steal %s from %s.", o_name, m_name);
 			/* Monster wakes, may notice */
 			monster_wake(mon, true, 50);
 		} else {
 			/* Bungled it */
 			monster_wake(mon, true, 100);
-			monster_desc(m_name, sizeof(m_name), mon, MDESC_STANDARD);
-			msg("%s cries out in anger!", m_name);
+			monster_desc(m_name, sizeof(m_name), mon,
+				angdroid_zh_tw_enabled()
+					? (MDESC_STANDARD & ~MDESC_COMMA) : MDESC_STANDARD);
+			target_name = monster_theft_display_name(mon, m_name,
+				zh_m_name, offscreen_m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("%s憤怒地叫喊！", target_name);
+			else
+				msg("%s cries out in anger!", m_name);
 			effect_simple(EF_WAKE, source_monster(mon->midx), "", 0, 0, 0, 0, 0,
 						  NULL);
 
@@ -1595,7 +1710,10 @@ void steal_monster_item(struct monster *mon, int midx)
 		/* Player hit and run */
 		if (player->timed[TMD_ATT_RUN]) {
 			const char *near = "20";
-			msg("You vanish into the shadows!");
+			if (angdroid_zh_tw_enabled())
+				msg("你消失在陰影中！");
+			else
+				msg("You vanish into the shadows!");
 			effect_simple(EF_TELEPORT, source_player(), near, 0, 0, 0, 0, 0,
 						  NULL);
 			(void) player_clear_timed(player, TMD_ATT_RUN, false,
@@ -1603,18 +1721,32 @@ void steal_monster_item(struct monster *mon, int midx)
 		}
 	} else {
 		/* Get the thief details */
-		char t_name[80];
+		char t_name[256];
+		char zh_t_name[320];
+		char offscreen_t_name[320];
+		const char *thief_name;
 		thief = cave_monster(cave, midx);
 		assert(thief);
-		monster_desc(t_name, sizeof(t_name), thief, MDESC_STANDARD);
+		monster_desc(t_name, sizeof(t_name), thief,
+			angdroid_zh_tw_enabled()
+				? (MDESC_STANDARD & ~MDESC_COMMA) : MDESC_STANDARD);
+		thief_name = monster_theft_display_name(thief, t_name,
+			zh_t_name, offscreen_t_name);
 
 		/* Try to steal */
 		if (!obj || react_to_slay(obj, thief)) {
 			/* Fail to steal */
-			msg("%s tries to steal something from %s, but fails.", t_name,
-				m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("%s試圖從%s身上偷東西，但失敗了。", thief_name,
+					target_name);
+			else
+				msg("%s tries to steal something from %s, but fails.", t_name,
+					m_name);
 		} else {
-			msg("%s steals something from %s!", t_name, m_name);
+			if (angdroid_zh_tw_enabled())
+				msg("%s從%s身上偷走了東西！", thief_name, target_name);
+			else
+				msg("%s steals something from %s!", t_name, m_name);
 
 			/* Steal and carry */
 			obj->held_m_idx = 0;
@@ -1649,6 +1781,39 @@ static bool monster_base_shape_okay(struct monster_race *race)
 	if (race->base != shape_base) return false;
 
 	return true;
+}
+
+/*
+ * Translate only the visible monster shapechange notice; keep identity,
+ * shape selection and the original MSG_GENERIC sound category unchanged.
+ */
+static void message_monster_changes_shape(const struct monster *mon)
+{
+	char original_name[256];
+	char translated_name[320];
+	char offscreen_name[320];
+	const char *display_name;
+	bool zh_tw = angdroid_zh_tw_enabled();
+	int mode = zh_tw ? (MDESC_STANDARD & ~MDESC_COMMA) : MDESC_STANDARD;
+
+	monster_desc(original_name, sizeof(original_name), mon, mode);
+	if (!zh_tw) {
+		msgt(MSG_GENERIC, "%s %s", original_name, "shimmers and changes!");
+		return;
+	}
+
+	display_name = original_name;
+	if (rf_has(mon->race->flags, RF_PLAYER_GHOST)) {
+		display_name = angdroid_fa_spell_ghost_subject(original_name,
+			cave->ghost->name, mon->race->name, true,
+			translated_name, sizeof(translated_name));
+	} else if (!monster_is_shape_unique(mon)) {
+		display_name = angdroid_fa_spell_subject(original_name,
+			true, translated_name, sizeof(translated_name));
+	}
+	display_name = angdroid_fa_spell_offscreen_subject(display_name,
+		true, offscreen_name, sizeof(offscreen_name));
+	msgt(MSG_GENERIC, "%s的外形閃爍並改變了！", display_name);
 }
 
 /**
@@ -1722,9 +1887,7 @@ bool monster_change_shape(struct monster *mon)
 
 	/* Print a message immediately, update visuals */
 	if (monster_is_obvious(mon)) {
-		char m_name[80];
-		monster_desc(m_name, sizeof(m_name), mon, MDESC_STANDARD);
-		msgt(MSG_GENERIC, "%s %s", m_name, "shimmers and changes!");
+		message_monster_changes_shape(mon);
 		if (player->upkeep->health_who == mon)
 			player->upkeep->redraw |= (PR_HEALTH);
 
@@ -1762,9 +1925,7 @@ bool monster_revert_shape(struct monster *mon)
 {
 	if (mon->original_race) {
 		if (monster_is_obvious(mon)) {
-			char m_name[80];
-			monster_desc(m_name, sizeof(m_name), mon, MDESC_STANDARD);
-			msgt(MSG_GENERIC, "%s %s", m_name, "shimmers and changes!");
+			message_monster_changes_shape(mon);
 			if (player->upkeep->health_who == mon)
 				player->upkeep->redraw |= (PR_HEALTH);
 

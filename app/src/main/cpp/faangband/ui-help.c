@@ -22,6 +22,42 @@
 #include "ui-input.h"
 #include "ui-output.h"
 #include "ui-term.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
+
+
+/* Translate only the help viewer chrome; filenames, menu hook tags,
+ * searching and the contents of user-supplied help files stay unchanged. */
+static void fa_help_prt(const char *message, int row)
+{
+	char visible[1024];
+	if (!Term || !message || row < 0 || row >= Term->hgt ||
+		Term->wid <= 0) return;
+	angdroid_menu_copy_columns(visible, sizeof(visible), message,
+		(size_t)Term->wid);
+	prt(visible, row, 0);
+}
+
+/* Search offsets are UTF-8 bytes, but terminal coordinates are columns.
+ * Derive highlight positions from the corresponding display prefix. */
+static void fa_help_highlight(const char *line, size_t offset,
+	size_t length, int row, int columns)
+{
+	char prefix[1024], match[1024], visible[1024];
+	size_t col;
+	if (!Term || !line || row < 0 || row >= Term->hgt ||
+		offset >= sizeof(prefix) || length == 0 ||
+		length >= sizeof(match) || columns <= 0) return;
+	memcpy(prefix, line, offset);
+	prefix[offset] = '\0';
+	col = angdroid_utf8_display_columns(prefix);
+	if (col >= (size_t)columns) return;
+	memcpy(match, line + offset, length);
+	match[length] = '\0';
+	angdroid_menu_copy_columns(visible, sizeof(visible), match,
+		(size_t)columns - col);
+	if (visible[0]) c_put_str(COLOUR_YELLOW, visible, row, (int)col);
+}
 
 /**
  * Make a string lower case.
@@ -138,7 +174,8 @@ bool show_file(const char *name, const char *what, int line, int mode)
 
 	/* Look in "help" */
 	if (!fff) {
-		strnfmt(caption, sizeof(caption), "Help file '%s'", name);
+		strnfmt(caption, sizeof(caption), angdroid_zh_tw_enabled() ?
+			"說明文件「%s」" : "Help file '%s'", name);
 
 		path_build(path, sizeof(path), ANGBAND_DIR_HELP, name);
 		fff = file_open(path, MODE_READ, FTYPE_TEXT);
@@ -147,7 +184,8 @@ bool show_file(const char *name, const char *what, int line, int mode)
 	/* Oops */
 	if (!fff) {
 		/* Message */
-		msg("Cannot open '%s'.", name);
+		msg(angdroid_zh_tw_enabled() ? "無法開啟「%s」。" :
+			"Cannot open '%s'.", name);
 		event_signal(EVENT_MESSAGE_FLUSH);
 
 		/* Oops */
@@ -212,6 +250,10 @@ bool show_file(const char *name, const char *what, int line, int mode)
 
 	/* Display the file */
 	while (true) {
+		/* Refresh dimensions after phone rotation; avoid invalid rows. */
+		if (!Term) break;
+		Term_get_size(&wid, &hgt);
+		if (wid <= 0 || hgt < 5) break;
 		/* Clear screen */
 		Term_clear();
 
@@ -296,7 +338,7 @@ bool show_file(const char *name, const char *what, int line, int mode)
 			find = NULL;
 
 			/* Dump the line */
-			Term_putstr(0, i+2, -1, COLOUR_WHITE, buf);
+			fa_help_prt(buf, i+2);
 
 			/* Highlight "shower" */
 			if (strlen(shower)) {
@@ -306,9 +348,9 @@ bool show_file(const char *name, const char *what, int line, int mode)
 				while ((str = strstr(str, shower)) != NULL) {
 					int len = strlen(shower);
 
-					/* Display the match */
-					Term_putstr(str-lc_buf, i+2, len, COLOUR_YELLOW,
-								&buf[str-lc_buf]);
+					/* UTF-8 byte offsets are not screen cell positions. */
+					fa_help_highlight(buf, (size_t)(str - lc_buf),
+						(size_t)len, i+2, wid);
 
 					/* Advance */
 					str += len;
@@ -329,20 +371,28 @@ bool show_file(const char *name, const char *what, int line, int mode)
 
 
 		/* Show a general "title" */
-		prt(format("[%s, %s, Line %d-%d/%d]", buildid,
-		           caption, line, line + hgt - 4, size), 0, 0);
+		fa_help_prt(angdroid_zh_tw_enabled() ?
+			format("[%s，%s，行 %d-%d/%d]", buildid,
+				caption, line, line + hgt - 4, size) :
+			format("[%s, %s, Line %d-%d/%d]", buildid,
+				caption, line, line + hgt - 4, size), 0);
 
 
 		/* Prompt */
 		if (menu) {
 			/* Menu screen */
-			prt("[Press a Letter, or ESC to exit.]", hgt - 1, 0);
+			fa_help_prt(angdroid_zh_tw_enabled() ?
+				"[按字母選擇，ESC 離開]" :
+				"[Press a Letter, or ESC to exit.]", hgt - 1);
 		} else if (size <= hgt - 4) {
 			/* Small files */
-			prt("[Press ESC to exit.]", hgt - 1, 0);
+			fa_help_prt(angdroid_zh_tw_enabled() ?
+				"[按 ESC 離開]" : "[Press ESC to exit.]", hgt - 1);
 		} else {
 			/* Large files */
-			prt("[Press Space to advance, or ESC to exit.]", hgt - 1, 0);
+			fa_help_prt(angdroid_zh_tw_enabled() ?
+				"[空白鍵下一頁，ESC 離開]" :
+				"[Press Space to advance, or ESC to exit.]", hgt - 1);
 		}
 
 		/* Get a keypress */
@@ -358,7 +408,7 @@ bool show_file(const char *name, const char *what, int line, int mode)
 		/* Try showing */
 		if (ch.code == '&') {
 			/* Get "shower" */
-			prt("Show: ", hgt - 1, 0);
+			fa_help_prt(angdroid_zh_tw_enabled() ? "標示： " : "Show: ", hgt - 1);
 			(void)askfor_aux(shower, sizeof(shower), NULL);
 
 			/* Make the "shower" lowercase */
@@ -368,7 +418,7 @@ bool show_file(const char *name, const char *what, int line, int mode)
 		/* Try finding */
 		if (ch.code == '/') {
 			/* Get "finder" */
-			prt("Find: ", hgt - 1, 0);
+			fa_help_prt(angdroid_zh_tw_enabled() ? "搜尋： " : "Find: ", hgt - 1);
 			if (askfor_aux(finder, sizeof(finder), NULL)) {
 				/* Find it */
 				find = finder;
@@ -387,7 +437,7 @@ bool show_file(const char *name, const char *what, int line, int mode)
 		if (ch.code == '#') {
 			char tmp[80] = "0";
 
-			prt("Goto Line: ", hgt - 1, 0);
+			fa_help_prt(angdroid_zh_tw_enabled() ? "跳至行： " : "Goto Line: ", hgt - 1);
 			if (askfor_aux(tmp, sizeof(tmp), NULL))
 				line = atoi(tmp);
 		}
@@ -402,7 +452,7 @@ bool show_file(const char *name, const char *what, int line, int mode)
 				my_strcpy(ftmp, "index.txt", sizeof(ftmp));
 			}
 
-			prt("Goto File: ", hgt - 1, 0);
+			fa_help_prt(angdroid_zh_tw_enabled() ? "開啟文件： " : "Goto File: ", hgt - 1);
 			if (askfor_aux(ftmp, sizeof(ftmp), NULL)) {
 				if (!show_file(ftmp, NULL, 0, mode))
 					ch.code = ESCAPE;
@@ -469,6 +519,7 @@ bool show_file(const char *name, const char *what, int line, int mode)
  */
 void do_cmd_help(void)
 {
+	if (!Term) return;
 	/* Save screen */
 	screen_save();
 
@@ -477,7 +528,7 @@ void do_cmd_help(void)
 		"r_index.txt" : "index.txt", NULL, 0, 0);
 
 	/* Load screen */
-	screen_load();
+	if (Term) screen_load();
 }
 
 

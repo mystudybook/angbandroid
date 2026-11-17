@@ -20,6 +20,8 @@
 #include "effects-info.h"
 #include "ui-effect.h"
 #include "ui-menu.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/menu-text-fit.h"
 
 
 /**
@@ -34,8 +36,10 @@
 static struct menu *effect_menu_new(struct effect *effect, int count,
 		bool allow_random)
 {
-	struct menu *m = menu_new(MN_SKIN_SCROLL,
-		menu_find_iter(MN_ITER_STRINGS));
+	struct menu *m;
+	/* A selection without visible rows cannot be used on mobile. */
+	if (!Term || Term->wid < 8 || Term->hgt < 4) return NULL;
+	m = menu_new(MN_SKIN_SCROLL, menu_find_iter(MN_ITER_STRINGS));
 	int width = 0;
 	region loc = { 0, 1, -99, -99 };
 	int ms_count = 0;
@@ -53,10 +57,12 @@ static struct menu *effect_menu_new(struct effect *effect, int count,
 		 */
 		ms = mem_alloc((count + 1) * sizeof(*ms));
 		if (allow_random) {
-			ms[ms_count] =
-				string_make("one of the following at random");
-			width = MAX(width, (int)MIN(strlen(ms[ms_count])
-				+ 3, (size_t)(Term->wid)));
+			ms[ms_count] = string_make(angdroid_zh_tw_enabled() ?
+				"隨機選擇以下其中一個" : "one of the following at random");
+			/* UTF-8 bytes are not the terminal width of Chinese. */
+			width = MAX(width, (int)MIN(
+				angdroid_utf8_display_columns(ms[ms_count]) + 3,
+				(size_t)Term->wid));
 			++ms_count;
 		}
 	} else {
@@ -74,11 +80,15 @@ static struct menu *effect_menu_new(struct effect *effect, int count,
 			}
 			mem_free(ms);
 			mem_free(m);
-			msg("Mismatched count and effect list passed to effect_menu_new().  Please report this bug.");
+			msg("%s", angdroid_zh_tw_enabled() ?
+				"效果選單的項目數量不一致，請回報此問題。" :
+				"Mismatched count and effect list passed to effect_menu_new().  Please report this bug.");
 			return NULL;
 		}
 		ms[ms_count] = string_make(buf);
-		width = MAX(width, (int)MIN(len + 3, (size_t)(Term->wid)));
+		width = MAX(width, (int)MIN(
+			angdroid_utf8_display_columns(ms[ms_count]) + 3,
+			(size_t)Term->wid));
 		++ms_count;
 		effect = effect_next(effect);
 	}
@@ -103,7 +113,8 @@ static int effect_menu_select(struct menu *m, const char *prompt,			bool allow_r
 
 	screen_save();
 	region_erase_bordered(&m->active);
-	prt((prompt) ? prompt : "Which effect? ", 0, 0);
+	prt(prompt ? prompt : (angdroid_zh_tw_enabled() ?
+		"選擇效果：" : "Which effect? "), 0, 0);
 	out = menu_select(m, 0, false);
 	if (out.type & EVT_SELECT) {
 		selection = m->cursor;

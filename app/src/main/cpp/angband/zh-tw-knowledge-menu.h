@@ -41,4 +41,18 @@ static inline const char *angdroid_knowledge_store_label(
     }
     return out;
 }
+
+/* Do not turn a long custom shop name into an English menu instruction.
+ * The numbered Chinese label preserves selection identity and shortcut. */
+static inline const char *angdroid_knowledge_store_label_for_menu(
+    char *out, size_t capacity, const char *name, int store_number,
+    const char *shortcut, int zh_tw)
+{
+    const char *label = angdroid_knowledge_store_label(out, capacity,
+        name, store_number, shortcut, zh_tw);
+    if (!label && zh_tw)
+        label = angdroid_knowledge_store_label(out, capacity,
+            NULL, store_number, shortcut, zh_tw);
+    return label;
+}
 #endif

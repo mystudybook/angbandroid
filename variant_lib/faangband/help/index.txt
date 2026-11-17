@@ -1,22 +1,19 @@
-This is a short in-game reference to available commands and the symbols
-you might encounter in-game.  For more detailed help, please see:
+這裡提供遊戲內指令與地圖符號的簡易參考。
+更詳細的官方說明（英文）請參閱：
 
    https://faangband.readthedocs.io/en/latest/
 
+請選擇想閱讀的說明文件：
 
-Please choose one of the following help files:
+    (a) 指令與快捷鍵
+    (b) 地圖符號
 
-    (a) Available commands
-    (b) Available symbols
-
-
-
-
-Browser/help commands:
-  #     go to line         %  go to file         ?  go to last file/main menu
-  SPACE advance 1 page     -  back up 1 page     /  search for text
-  RET   advance 1 line     =  back up 1 line     &  show (highlight) some text
-  +     advance 1/2 page   _  back up 1/2 page   !  toggle case sensitivity
+說明瀏覽器操作：
+  # 跳至指定行     % 開啟文件      ? 返回上一層
+  空白鍵 下一頁    - 上一頁        / 搜尋文字
+  Enter 下一行     & 標示文字      ! 切換大小寫搜尋
+  方向鍵 上下移動  PgUp 上頁      PgDn 下頁
+  Home 第一行      End 最後一行   ESC 離開
 
 .. menu:: [a] commands.txt
 

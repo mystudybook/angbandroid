@@ -28,6 +28,8 @@
 #include "mon-lore.h"
 #include "mon-make.h"
 #include "mon-msg.h"
+#include "mon-predicate.h"
+#include "mon-spell-message-locale.h"
 #include "mon-util.h"
 #include "obj-desc.h"
 #include "obj-gear.h"
@@ -40,11 +42,40 @@
 #include "player-timed.h"
 #include "player-util.h"
 #include "project.h"
+#include "../angband/zh-tw-ui.h"
 
 /**
  * ------------------------------------------------------------------------
  * Monster blow methods
  * ------------------------------------------------------------------------ */
+
+/*
+ * FAangband-specific display name for already translated melee actions.
+ * Keep the English monster_desc() path unchanged when no action translation
+ * was found. Visible shape-unique monsters retain their own names; unseen
+ * targets keep the identity supplied by monster_desc(MDESC_TARG).
+ */
+static const char *monster_blow_display_subject(const struct monster *mon,
+		int mode, char original[256], char translated[320],
+		char offscreen[320])
+{
+	const char *shown;
+
+	monster_desc(original, 256, mon, mode & ~MDESC_COMMA);
+	shown = original;
+	if (rf_has(mon->race->flags, RF_PLAYER_GHOST) && cave->ghost) {
+		shown = angdroid_fa_spell_ghost_subject(original,
+			cave->ghost->name, mon->race->name,
+			true, translated, 320);
+	}
+	if (shown == original &&
+		(!monster_is_shape_unique(mon) || !monster_is_visible(mon))) {
+		shown = angdroid_fa_spell_subject(original, true,
+			translated, 320);
+	}
+	return angdroid_fa_spell_offscreen_subject(shown, true,
+		offscreen, 320);
+}
 
 typedef enum {
 	BLOW_TAG_NONE,
@@ -71,7 +102,13 @@ static blow_tag_t blow_tag_lookup(const char *tag)
  * We fill in the monster name and/or pronoun where necessary in
  * the message to replace instances of {name} or {pronoun}.
  */
-char *monster_blow_method_action(const struct blow_method *method, int midx)
+/*
+ * Display-only locale variant. Keep monster_blow_method_action() returning
+ * the original English action for non-UI callers.
+ */
+static char *monster_blow_method_action_for_display(
+		const struct blow_method *method, int midx, bool zh_tw,
+		bool *was_translated)
 {
 	const char punct[] = ".!?;:,'";
 	char buf[1024] = "\0";
@@ -94,7 +131,10 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 	while (choice--) {
 		msg = msg->next;
 	}
-	in_cursor = msg->act_msg;
+	/* Translate the selected template before substituting its target tags. */
+	in_cursor = angdroid_game_ui_text(msg->act_msg, zh_tw);
+	bool translated = (in_cursor != msg->act_msg);
+	if (was_translated) *was_translated = translated;
 
 	/* Add info to the message */
 	next = strchr(in_cursor, '{');
@@ -114,8 +154,14 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 
 			switch (blow_tag_lookup(tag)) {
 				case BLOW_TAG_TARGET: {
-					char m_name[80];
-					if (midx > 0) {
+					char m_name[256];
+					if (midx > 0 && translated) {
+						char zh_name[320], offscreen[320];
+						const char *shown = monster_blow_display_subject(
+							t_mon, MDESC_TARG,
+							m_name, zh_name, offscreen);
+						strnfcat(buf, sizeof(buf), &end, "%s", shown);
+					} else if (midx > 0) {
 						int mdesc_mode = MDESC_TARG;
 
 						if (!strchr(punct, *in_cursor)) {
@@ -127,27 +173,37 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 						strnfcat(buf, sizeof(buf),
 							&end, "%s", m_name);
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "you");
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							translated ? "你" : "you");
 					}
 					break;
 				}
 				case BLOW_TAG_OF_TARGET: {
-					char m_name[80];
-					if (midx > 0) {
+					char m_name[256];
+					if (midx > 0 && translated) {
+						char zh_name[320], offscreen[320];
+						const char *shown = monster_blow_display_subject(
+							t_mon, MDESC_TARG,
+							m_name, zh_name, offscreen);
+						strnfcat(buf, sizeof(buf), &end, "%s的", shown);
+					} else if (midx > 0) {
 						monster_desc(m_name,
 							sizeof(m_name), t_mon,
 							MDESC_TARG | MDESC_POSS);
 						strnfcat(buf, sizeof(buf), &end, "%s", m_name);
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "your");
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							translated ? "你的" : "your");
 					}
 					break;
 				}
 				case BLOW_TAG_HAS: {
 					if (midx > 0) {
-						strnfcat(buf, sizeof(buf), &end, "has");
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							translated ? "有" : "has");
 					} else {
-						strnfcat(buf, sizeof(buf), &end, "have");
+						strnfcat(buf, sizeof(buf), &end, "%s",
+							translated ? "有" : "have");
 					}
 					break;
 				}
@@ -165,6 +221,12 @@ char *monster_blow_method_action(const struct blow_method *method, int midx)
 	}
 	strnfcat(buf, 1024, &end, "%s", in_cursor);
 	return string_make(buf);
+}
+
+/* Public API remains English and preserves the existing RNG draw count. */
+char *monster_blow_method_action(const struct blow_method *method, int midx)
+{
+	return monster_blow_method_action_for_display(method, midx, false, NULL);
 }
 
 /**
@@ -192,25 +254,38 @@ int blow_index(const char *name)
  * \param damage is the amount of damage from the blow.
  */
 static void display_blow_message_vs_player(const struct blow_method *method,
-		const char *m_name, struct player *p, int damage)
+		const struct monster *mon, const char *m_name,
+		struct player *p, int damage)
 {
-	char *act = monster_blow_method_action(method, -1);
+	bool translated = false;
+	char subject[256], zh_subject[320], offscreen_subject[320];
+	const char *shown = m_name;
+	char *act = angdroid_zh_tw_enabled() ?
+		monster_blow_method_action_for_display(method, -1, true,
+			&translated) : monster_blow_method_action(method, -1);
 
 	if (act) {
-		const char *fullstop = ".";
+		const char *fullstop = translated ? "。" : ".";
+		if (translated)
+			shown = monster_blow_display_subject(mon, MDESC_STANDARD,
+				subject, zh_subject, offscreen_subject);
 
-		if (suffix(act, "'") || suffix(act, "!")) {
+		if (suffix(act, "'") || suffix(act, "!") ||
+			(translated && (suffix(act, "。") || suffix(act, "！") ||
+				suffix(act, "？")))) {
 			fullstop = "";
 		}
 		if (damage > 0 && OPT(p, show_damage)) {
-			msgt(method->msgt, "%s %s%s (%d)", m_name, act,
-				fullstop, damage);
+			msgt(method->msgt, translated ? "%s%s%s（%d）" :
+				"%s %s%s (%d)", shown, act, fullstop, damage);
 		} else {
-			msgt(method->msgt, "%s %s%s", m_name, act, fullstop);
+			msgt(method->msgt, translated ? "%s%s%s" :
+				"%s %s%s", shown, act, fullstop);
 		}
 		string_free(act);
 	} else if (damage > 0 && OPT(p, show_damage)) {
-		msgt(method->msgt, "You take %d damage.", damage);
+		msgt(method->msgt, angdroid_zh_tw_enabled() ?
+			"你受到了 %d 點傷害。" : "You take %d damage.", damage);
 	}
 }
 
@@ -223,17 +298,28 @@ static void display_blow_message_vs_player(const struct blow_method *method,
  * structure representing the target, it is mon->midx).
  */
 static void display_blow_message_vs_monster(const struct blow_method *method,
-		const char *m_name, int t_idx)
+		const struct monster *mon, const char *m_name, int t_idx)
 {
-	char *act = monster_blow_method_action(method, t_idx);
+	bool translated = false;
+	char subject[256], zh_subject[320], offscreen_subject[320];
+	const char *shown = m_name;
+	char *act = angdroid_zh_tw_enabled() ?
+		monster_blow_method_action_for_display(method, t_idx, true,
+			&translated) : monster_blow_method_action(method, t_idx);
 
 	if (act) {
-		const char *fullstop = ".";
+		const char *fullstop = translated ? "。" : ".";
+		if (translated)
+			shown = monster_blow_display_subject(mon, MDESC_STANDARD,
+				subject, zh_subject, offscreen_subject);
 
-		if (suffix(act, "'") || suffix(act, "!")) {
+		if (suffix(act, "'") || suffix(act, "!") ||
+			(translated && (suffix(act, "。") || suffix(act, "！") ||
+				suffix(act, "？")))) {
 			fullstop = "";
 		}
-		msgt(method->msgt, "%s %s%s", m_name, act, fullstop);
+		msgt(method->msgt, translated ? "%s%s%s" :
+			"%s %s%s", shown, act, fullstop);
 		string_free(act);
 	}
 }
@@ -280,13 +366,24 @@ static void steal_player_item(melee_effect_handler_context_t *context)
 			monster_desc(m_name, sizeof(m_name), context->mon, MDESC_STANDARD);
 
 			/* Fail to steal */
-			msg("%s tries to steal %s %s, but fails.", m_name,
-				(split ? "one of your" : "your"), o_name);
+			if (angdroid_zh_tw_enabled()) {
+				msg(split ? "%s想偷走你的一件%s，但失敗了。" :
+					"%s想偷走你的%s，但失敗了。", m_name, o_name);
+			} else {
+				msg("%s tries to steal %s %s, but fails.", m_name,
+					(split ? "one of your" : "your"), o_name);
+			}
 		} else {
 			/* Message */
-			msg("%s %s (%c) was stolen!",
-				(split ? "One of your" : "Your"), o_name,
-				gear_to_label(context->p, obj));
+			if (angdroid_zh_tw_enabled()) {
+				msg(split ? "你的一件%s（%c）被偷走了！" :
+					"你的%s（%c）被偷走了！",
+					o_name, gear_to_label(context->p, obj));
+			} else {
+				msg("%s %s (%c) was stolen!",
+					(split ? "One of your" : "Your"), o_name,
+					gear_to_label(context->p, obj));
+			}
 
 			/* Steal and carry */
 			stolen = gear_object_for_use(context->p, obj, 1,
@@ -385,7 +482,8 @@ static bool monster_damage_target(melee_effect_handler_context_t *context,
 		int reduced = player_apply_damage_reduction(context->p,
 			context->damage);
 
-		display_blow_message_vs_player(context->method, context->m_name,
+		display_blow_message_vs_player(context->method,
+			context->mon, context->m_name,
 			context->p, reduced);
 		take_hit(context->p, reduced, context->ddesc);
 		if (context->p->is_dead) return true;
@@ -393,7 +491,7 @@ static bool monster_damage_target(melee_effect_handler_context_t *context,
 		bool dead;
 
 		display_blow_message_vs_monster(context->method,
-			context->m_name, context->t_mon->midx);
+			context->mon, context->m_name, context->t_mon->midx);
 		dead = mon_take_nonplayer_hit(context->damage, context->t_mon,
 			MON_MSG_NONE, MON_MSG_DIE);
 		return (dead || no_further_monster_effect);
@@ -427,13 +525,17 @@ static void melee_effect_elemental(melee_effect_handler_context_t *context,
 
 	if (context->p) {
 		switch (type) {
-			case PROJ_ACID: msg("You are covered in acid!");
+			case PROJ_ACID: msg("%s", angdroid_game_ui_text("You are covered in acid!",
+					angdroid_zh_tw_enabled()));
 				break;
-			case PROJ_ELEC: msg("You are struck by electricity!");
+			case PROJ_ELEC: msg("%s", angdroid_game_ui_text("You are struck by electricity!",
+					angdroid_zh_tw_enabled()));
 				break;
-			case PROJ_FIRE: msg("You are enveloped in flames!");
+			case PROJ_FIRE: msg("%s", angdroid_game_ui_text("You are enveloped in flames!",
+					angdroid_zh_tw_enabled()));
 				break;
-			case PROJ_COLD: msg("You are covered with frost!");
+			case PROJ_COLD: msg("%s", angdroid_game_ui_text("You are covered with frost!",
+					angdroid_zh_tw_enabled()));
 				break;
 		}
 	}
@@ -469,12 +571,12 @@ static void melee_effect_elemental(melee_effect_handler_context_t *context,
 				context->damage);
 
 			display_blow_message_vs_player(context->method,
-				context->m_name, context->p, reduced);
+			context->mon, context->m_name, context->p, reduced);
 			take_hit(context->p, reduced, context->ddesc);
 		} else {
 			assert(context->t_mon);
 			display_blow_message_vs_monster(context->method,
-				context->m_name, context->t_mon->midx);
+			context->mon, context->m_name, context->t_mon->midx);
 			(void) mon_take_nonplayer_hit(context->damage,
 				context->t_mon, hurt_msg, die_msg);
 		}
@@ -540,7 +642,8 @@ static void melee_effect_timed(melee_effect_handler_context_t *context,
 	} else if (save && randint0(100) < context->p->state.skills[SKILL_SAVE]) {
 		/* Attempt a saving throw if desired. */
 		if (save_msg != NULL) {
-			msg("%s", save_msg);
+			msg("%s", angdroid_game_ui_text(save_msg,
+				angdroid_zh_tw_enabled()));
 		}
 		context->obvious = true;
 	} else {
@@ -599,7 +702,7 @@ static void melee_effect_experience(melee_effect_handler_context_t *context,
 			context->damage);
 
 		display_blow_message_vs_player(context->method,
-			context->m_name, context->p, reduced);
+			context->mon, context->m_name, context->p, reduced);
 		take_hit(context->p, reduced, context->ddesc);
 		context->obvious = true;
 		update_smart_learn(context->mon, context->p, OF_HOLD_LIFE, 0, -1);
@@ -607,22 +710,25 @@ static void melee_effect_experience(melee_effect_handler_context_t *context,
 	} else {
 		assert(context->t_mon);
 		display_blow_message_vs_monster(context->method,
-			context->m_name, context->t_mon->midx);
+			context->mon, context->m_name, context->t_mon->midx);
 		(void) mon_take_nonplayer_hit(context->damage, context->t_mon,
 									  MON_MSG_NONE, MON_MSG_DIE);
 		return;
 	}
 
 	if (player_of_has(context->p, OF_HOLD_LIFE) && (randint0(100) < chance)) {
-		msg("You keep hold of your life force!");
+		msg("%s", angdroid_game_ui_text("You keep hold of your life force!",
+			angdroid_zh_tw_enabled()));
 	} else {
 		int32_t d = drain_amount +
 			(context->p->exp/100) * z_info->life_drain_percent;
 		if (player_of_has(context->p, OF_HOLD_LIFE)) {
-			msg("You feel your life slipping away!");
+			msg("%s", angdroid_game_ui_text("You feel your life slipping away!",
+			angdroid_zh_tw_enabled()));
 			player_exp_lose(context->p, d / 10, false);
 		} else {
-			msg("You feel your life draining away!");
+			msg("%s", angdroid_game_ui_text("You feel your life draining away!",
+			angdroid_zh_tw_enabled()));
 			player_exp_lose(context->p, d, false);
 		}
 	}
@@ -639,11 +745,11 @@ static void melee_effect_handler_NONE(melee_effect_handler_context_t *context)
 {
 	if (context->p) {
 		display_blow_message_vs_player(context->method,
-			context->m_name, context->p, 0);
+			context->mon, context->m_name, context->p, 0);
 	} else {
 		assert(context->t_mon);
 		display_blow_message_vs_monster(context->method,
-			context->m_name, context->t_mon->midx);
+			context->mon, context->m_name, context->t_mon->midx);
 	}
 	context->obvious = true;
 	context->damage = 0;
@@ -745,7 +851,8 @@ static void melee_effect_handler_DRAIN_CHARGES(melee_effect_handler_context_t *c
 		if (unpower) {
 			int heal = context->rlev * unpower;
 
-			msg("Energy drains from your pack!");
+			msg("%s", angdroid_game_ui_text("Energy drains from your pack!",
+			angdroid_zh_tw_enabled()));
 
 			context->obvious = true;
 
@@ -789,7 +896,8 @@ static void melee_effect_handler_EAT_GOLD(melee_effect_handler_context_t *contex
         (randint0(100) < (adj_dex_safe[current_player->state.stat_ind[STAT_DEX]]
 						  + current_player->lev))) {
         /* Saving throw message */
-        msg("You quickly protect your money pouch!");
+        msg("%s", angdroid_game_ui_text("You quickly protect your money pouch!",
+			angdroid_zh_tw_enabled()));
 
         /* Occasional blink anyway */
         if (randint0(3)) context->blinked = true;
@@ -800,16 +908,20 @@ static void melee_effect_handler_EAT_GOLD(melee_effect_handler_context_t *contex
         if (gold > current_player->au) gold = current_player->au;
         current_player->au -= gold;
         if (gold <= 0) {
-            msg("Nothing was stolen.");
+            msg("%s", angdroid_game_ui_text("Nothing was stolen.",
+			angdroid_zh_tw_enabled()));
             return;
         }
 
         /* Let the player know they were robbed */
-        msg("Your purse feels lighter.");
+        msg("%s", angdroid_game_ui_text("Your purse feels lighter.",
+			angdroid_zh_tw_enabled()));
         if (current_player->au)
-            msg("%d coins were stolen!", gold);
+            msg(angdroid_zh_tw_enabled() ? "%d 枚錢幣被偷走了！" :
+				"%d coins were stolen!", gold);
         else
-            msg("All of your coins were stolen!");
+            msg("%s", angdroid_game_ui_text("All of your coins were stolen!",
+			angdroid_zh_tw_enabled()));
 
         /* While we have gold, put it in objects */
         while (gold > 0) {
@@ -858,7 +970,8 @@ static void melee_effect_handler_EAT_ITEM(melee_effect_handler_context_t *contex
 		/* Saving throw (unless paralyzed) based on dex and level */
 		if (!context->p->timed[TMD_PARALYZED] && (randint0(100) < chance)) {
 			/* Saving throw message */
-			msg("You grab hold of your backpack!");
+			msg("%s", angdroid_game_ui_text("You grab hold of your backpack!",
+			angdroid_zh_tw_enabled()));
 
 			/* Occasional "blink" anyway */
 			context->blinked = true;
@@ -909,12 +1022,14 @@ static void melee_effect_handler_EAT_FOOD(melee_effect_handler_context_t *contex
 		if (obj->number == 1) {
 			object_desc(o_name, sizeof(o_name), obj, ODESC_BASE,
 				context->p);
-			msg("Your %s (%c) was eaten!", o_name,
+			msg(angdroid_zh_tw_enabled() ? "你的%s（%c）被吃掉了！" :
+				"Your %s (%c) was eaten!", o_name,
 				gear_to_label(context->p, obj));
 		} else {
 			object_desc(o_name, sizeof(o_name), obj,
 				ODESC_PREFIX | ODESC_BASE, context->p);
-			msg("One of your %s (%c) was eaten!", o_name,
+			msg(angdroid_zh_tw_enabled() ? "你的一件%s（%c）被吃掉了！" :
+				"One of your %s (%c) was eaten!", o_name,
 				gear_to_label(context->p, obj));
 		}
 

@@ -103,6 +103,13 @@ static inline const char *angdroid_timed_message(const char *english, int zh_tw)
         { "You feel resistant to confusion!", "你獲得了混亂抗性！" },
         { "You are no longer resistant to confusion.", "你的混亂抗性消失了。" },
         { "You feel more resistant to confusion!", "你的混亂抗性增強了！" },
+        /* FAangband-only on-increase resistance notifications. */
+        { "Your resistance to acid feels renewed!", "你的酸液抗性效果已延長！" },
+        { "Your resistance to electricity feels renewed!", "你的閃電抗性效果已延長！" },
+        { "Your resistance to fire feels renewed!", "你的火焰抗性效果已延長！" },
+        { "Your resistance to cold feels renewed!", "你的寒冷抗性效果已延長！" },
+        { "Your resistance to poison feels renewed!", "你的毒素抗性效果已延長！" },
+        { "Your resistance to confusion feels renewed!", "你的混亂抗性效果已延長！" },
         { "You feel your memories fade.", "你感覺記憶正在逐漸消退。" },
         { "Your memories come flooding back.", "你的記憶再次湧現。" },
         { "Your mind expands.", "你的心靈感知擴展了。" },

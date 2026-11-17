@@ -44,6 +44,22 @@
 #include "ui-player.h"
 
 #include "droid.h"
+#include "../angband/zh-tw-ui.h"
+#include "../angband/zh-tw-class-titles.h"
+#include "../angband/zh-tw-character-sheet.h"
+#include "../angband/menu-text-fit.h"
+#include "ui-player-presentation.h"
+#include "../curses/unicode_display.h"
+
+/* Character dumps take the English screen layout as their baseline.
+ * Do not allow the additional onscreen stat headers or unit glyphs below
+ * to alter the preexisting character dump output. */
+static bool fa_player_dump_english = false;
+
+static bool fa_player_display_zh_tw(void)
+{
+	return angdroid_zh_tw_enabled() && !fa_player_dump_english;
+}
 
 /**
  * ------------------------------------------------------------------------
@@ -56,7 +72,7 @@
 struct panel_line {
 	uint8_t attr;
 	const char *label;
-	char value[20];
+	char value[96];
 };
 
 /**
@@ -106,7 +122,9 @@ static void panel_line(struct panel *p, uint8_t attr, const char *label,
 
 	/* Set the basics */
 	pl->attr = attr;
-	pl->label = label;
+	pl->label = angdroid_character_sheet_text(
+        angdroid_game_ui_text(label, angdroid_zh_tw_enabled()),
+        angdroid_zh_tw_enabled());
 
 	/* Set the value */
 	va_start(vp, fmt);
@@ -274,7 +292,7 @@ static const char *likert(int x, int y, uint8_t *attr)
 	/* Negative value */
 	if (x < 0) {
 		*attr = COLOUR_RED;
-		return ("Very Bad");
+		return angdroid_character_sheet_text("Very Bad", angdroid_zh_tw_enabled());
 	}
 
 	/* Analyze the value */
@@ -284,34 +302,34 @@ static const char *likert(int x, int y, uint8_t *attr)
 		case 1:
 		{
 			*attr = COLOUR_RED;
-			return ("Bad");
+			return angdroid_character_sheet_text("Bad", angdroid_zh_tw_enabled());
 		}
 		case 2:
 		{
 			*attr = COLOUR_RED;
-			return ("Poor");
+			return angdroid_character_sheet_text("Poor", angdroid_zh_tw_enabled());
 		}
 		case 3:
 		case 4:
 		{
 			*attr = COLOUR_YELLOW;
-			return ("Fair");
+			return angdroid_character_sheet_text("Fair", angdroid_zh_tw_enabled());
 		}
 		case 5:
 		{
 			*attr = COLOUR_YELLOW;
-			return ("Good");
+			return angdroid_character_sheet_text("Good", angdroid_zh_tw_enabled());
 		}
 		case 6:
 		{
 			*attr = COLOUR_YELLOW;
-			return ("Very Good");
+			return angdroid_character_sheet_text("Very Good", angdroid_zh_tw_enabled());
 		}
 		case 7:
 		case 8:
 		{
 			*attr = COLOUR_L_GREEN;
-			return ("Excellent");
+			return angdroid_character_sheet_text("Excellent", angdroid_zh_tw_enabled());
 		}
 		case 9:
 		case 10:
@@ -320,7 +338,7 @@ static const char *likert(int x, int y, uint8_t *attr)
 		case 13:
 		{
 			*attr = COLOUR_L_GREEN;
-			return ("Superb");
+			return angdroid_character_sheet_text("Superb", angdroid_zh_tw_enabled());
 		}
 		case 14:
 		case 15:
@@ -328,12 +346,12 @@ static const char *likert(int x, int y, uint8_t *attr)
 		case 17:
 		{
 			*attr = COLOUR_L_GREEN;
-			return ("Heroic");
+			return angdroid_character_sheet_text("Heroic", angdroid_zh_tw_enabled());
 		}
 		default:
 		{
 			*attr = COLOUR_L_GREEN;
-			return ("Legendary");
+			return angdroid_character_sheet_text("Legendary", angdroid_zh_tw_enabled());
 		}
 	}
 }
@@ -520,6 +538,19 @@ static void display_player_flag_info(void)
 }
 
 
+/* Keep translated captions within the original fixed-width stat
+ * columns and the active terminal, especially on smaller Android screens. */
+static void fa_player_stat_heading(int id, int row, int col, int columns)
+{
+	char visible[32];
+	if (!Term || row < 0 || row >= Term->hgt ||
+		col < 0 || col >= Term->wid || columns <= 0) return;
+	angdroid_menu_copy_columns(visible, sizeof(visible),
+		angdroid_fa_stat_heading(id, fa_player_display_zh_tw()),
+		(size_t)MIN(columns, Term->wid - col));
+	if (visible[0]) c_put_str(COLOUR_WHITE, visible, row, col);
+}
+
 /**
  * Special display, part 2b
  */
@@ -537,11 +568,11 @@ void display_player_stat_info(void)
 	col = 42;
 
 	/* Print out the labels for the columns */
-	c_put_str(COLOUR_WHITE, "  Self", row-1, col+5);
-	c_put_str(COLOUR_WHITE, " RB", row-1, col+12);
-	c_put_str(COLOUR_WHITE, " CB", row-1, col+16);
-	c_put_str(COLOUR_WHITE, " EB", row-1, col+20);
-	c_put_str(COLOUR_WHITE, "  Best", row-1, col+24);
+	fa_player_stat_heading(0, row-1, col+5, 7);
+	fa_player_stat_heading(1, row-1, col+12, 4);
+	fa_player_stat_heading(2, row-1, col+16, 4);
+	fa_player_stat_heading(3, row-1, col+20, 4);
+	fa_player_stat_heading(4, row-1, col+24, 7);
 
 	/* Display the stats */
 	for (i = 0; i < STAT_MAX; i++) {
@@ -661,43 +692,62 @@ static void display_player_sust_info(struct char_sheet_config *config)
 
 
 static void display_panel(const struct panel *p, bool left_adj,
-		const region *bounds)
+        const region *bounds)
 {
-	size_t i;
-	int col = bounds->col;
-	int row = bounds->row;
-	int w = bounds->width;
-	int offset = 0;
+    size_t i;
+    int col = bounds->col;
+    int row = bounds->row;
+    int w = bounds->width;
+    int offset = 0;
 
-	region_erase(bounds);
+    region_erase(bounds);
 
-	if (left_adj) {
-		for (i = 0; i < p->len; i++) {
-			struct panel_line *pl = &p->lines[i];
+    if (left_adj) {
+        for (i = 0; i < p->len; i++) {
+            const struct panel_line *pl = &p->lines[i];
+            int columns = pl->label ?
+                (int)angdroid_utf8_display_columns(pl->label) : 0;
+            if (offset < columns) offset = columns;
+        }
+        offset += 2;
+    }
 
-			int len = pl->label ? strlen(pl->label) : 0;
-			if (offset < len) offset = len;
-		}
-		offset += 2;
-	}
+    for (i = 0; i < p->len; ++i, ++row) {
+        const struct panel_line *pl = &p->lines[i];
+        int available, label_available, columns, value_x;
+        char label[256], value[sizeof(pl->value)];
 
-	for (i = 0; i < p->len; i++, row++) {
-		int len;
-		struct panel_line *pl = &p->lines[i];
+        if (!pl->label || !Term || row < 0 || row >= Term->hgt ||
+            col < 0 || col >= Term->wid) continue;
+        available = MIN(w, Term->wid - col);
+        if (available <= 0) continue;
 
-		if (!pl->label)
-			continue;
+        /* Labels and values occupy screen columns, not UTF-8 bytes.
+         * This also keeps the fixed FA character regions on small phones
+         * from writing into the next panel. */
+        label_available = left_adj ? MIN(offset - 1, available) : available;
+        angdroid_utf8_copy_complete(label, sizeof(label), pl->label);
+        angdroid_utf8_clip_columns(label, (size_t)MAX(0,label_available));
+        if (label[0])
+            Term_putstr(col, row, -1, COLOUR_WHITE, label);
 
-		Term_putstr(col, row, strlen(pl->label), COLOUR_WHITE, pl->label);
+        if (left_adj) {
+            value_x = col + offset;
+        } else {
+            value_x = col;
+        }
+        available = MIN(w - (left_adj ? offset : 0),
+            Term->wid - value_x);
+        if (available <= 0) continue;
 
-		len = strlen(pl->value);
-		len = len < w - offset ? len : w - offset - 1;
-
-		if (left_adj)
-			Term_putstr(col+offset, row, len, pl->attr, pl->value);
-		else
-			Term_putstr(col+w-len, row, len, pl->attr, pl->value);
-	}
+        angdroid_utf8_copy_complete(value, sizeof(value), pl->value);
+        angdroid_utf8_clip_columns(value, (size_t)available);
+        columns = (int)angdroid_utf8_display_columns(value);
+        if (!left_adj)
+            value_x = col + w - columns;
+        if (value_x >= col && value_x < Term->wid && value[0])
+            Term_putstr(value_x, row, -1, pl->attr, value);
+    }
 }
 
 static const char *show_title(void)
@@ -727,7 +777,7 @@ static const char *show_depth(void)
 {
 	static char buffer[13];
 
-	if (player->max_depth == 0) return "Town";
+	if (player->max_depth == 0) return angdroid_character_sheet_text("Town", fa_player_display_zh_tw());
 
 	strnfmt(buffer, sizeof(buffer), "%d' (L%d)",
 	        player->max_depth * 50, player->max_depth);
@@ -741,7 +791,7 @@ static const char *show_speed(void)
 	if (player->timed[TMD_FAST])
 		tmp -= (player_has(player, PF_ENHANCE_MAGIC)) ? 13 : 10;
 	if (player->timed[TMD_SLOW]) tmp += 10;
-	if (tmp == 110) return "Normal";
+	if (tmp == 110) return angdroid_character_sheet_text("Normal", fa_player_display_zh_tw());
 	int multiplier = 10 * extract_energy[tmp] / extract_energy[110];
 	int int_mul = multiplier / 10;
 	int dec_mul = multiplier % 10;
@@ -771,13 +821,26 @@ static const uint8_t colour_table[] =
 static struct panel *get_panel_topleft(void) {
 	struct panel *p = panel_allocate(7);
 
-	panel_line(p, COLOUR_L_BLUE, "Name", "%s", player->full_name);
-	panel_line(p, COLOUR_L_BLUE, "Race",	"%s", player->race->name);
-	panel_line(p, COLOUR_L_BLUE, "Class", "%s", player->class->name);
-	panel_line(p, COLOUR_L_BLUE, "Title", "%s", show_title());
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Name",
+		fa_player_display_zh_tw()), "%s", player->full_name);
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Race",
+		fa_player_display_zh_tw()), "%s",
+		angdroid_game_ui_text(player->race->name,
+			fa_player_display_zh_tw()));
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Class",
+		fa_player_display_zh_tw()), "%s",
+		angdroid_game_ui_text(player->class->name,
+			fa_player_display_zh_tw()));
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Title",
+		fa_player_display_zh_tw()), "%s",
+        angdroid_fa_sheet_status_title(
+            angdroid_zh_tw_class_title(show_title(),
+                fa_player_display_zh_tw()),
+            fa_player_display_zh_tw()));
 	panel_line(p, COLOUR_L_BLUE, "HP", "%d/%d", player->chp, player->mhp);
 	panel_line(p, COLOUR_L_BLUE, "SP", "%d/%d", player->csp, player->msp);
-	panel_line(p, COLOUR_L_BLUE, "Gold", "%d", player->au);
+	panel_line(p, COLOUR_L_BLUE, angdroid_game_ui_text("Gold",
+		fa_player_display_zh_tw()), "%d", player->au);
 
 	return p;
 }
@@ -788,15 +851,26 @@ static struct panel *get_panel_midleft(void) {
 	uint8_t attr = diff < 0 ? COLOUR_L_RED : COLOUR_L_GREEN;
 
 	panel_line(p, max_color(player->lev, player->max_lev),
-			"Level", "%d", player->lev);
+			angdroid_game_ui_text("Level", fa_player_display_zh_tw()),
+			"%d", player->lev);
 	panel_line(p, max_color(player->exp, player->max_exp),
-			"Cur Exp", "%d", player->exp);
-	panel_line(p, COLOUR_L_GREEN, "Max Exp", "%d", player->max_exp);
-	panel_line(p, COLOUR_L_GREEN, "Adv Exp", "%s", show_adv_exp());
-	panel_line(p, attr, "Burden", "%.1f lb",
+			angdroid_game_ui_text("Cur Exp", fa_player_display_zh_tw()),
+			"%d", player->exp);
+	panel_line(p, COLOUR_L_GREEN, angdroid_game_ui_text("Max Exp",
+		fa_player_display_zh_tw()), "%d", player->max_exp);
+	panel_line(p, COLOUR_L_GREEN, angdroid_game_ui_text("Adv Exp",
+		fa_player_display_zh_tw()), "%s", show_adv_exp());
+	panel_line(p, attr, angdroid_game_ui_text("Burden",
+		fa_player_display_zh_tw()),
+			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_BURDEN,
+				fa_player_display_zh_tw()),
 			   player->upkeep->total_weight / 10.0F);
-	panel_line(p, attr, "Overweight", "%d.%d lb", -diff / 10, abs(diff) % 10);
-	panel_line(p, COLOUR_L_GREEN, "Max Depth", "%s", show_depth());
+	panel_line(p, attr, angdroid_game_ui_text("Overweight",
+		fa_player_display_zh_tw()),
+			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_OVERWEIGHT,
+				fa_player_display_zh_tw()), -diff / 10, abs(diff) % 10);
+	panel_line(p, COLOUR_L_GREEN, angdroid_game_ui_text("Max Depth",
+		fa_player_display_zh_tw()), "%s", show_depth());
 
 	return p;
 }
@@ -830,7 +904,9 @@ static struct panel *get_panel_combat(void) {
 				   melee_sides, deadliness_conversion[dam]);
 	}
 	panel_line(p, COLOUR_L_BLUE, "To-hit", "%d,%+d", bth / 10, hit);
-	panel_line(p, COLOUR_L_BLUE, "Blows", "%d.%d/turn",
+	panel_line(p, COLOUR_L_BLUE, "Blows",
+			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_BLOWS,
+				fa_player_display_zh_tw()),
 			player->state.num_blows / 100, (player->state.num_blows / 10 % 10));
 
 	/* Ranged */
@@ -842,7 +918,9 @@ static struct panel *get_panel_combat(void) {
 	panel_line(p, COLOUR_L_BLUE, "Shoot to-dam", "%+d%%",
 			   deadliness_conversion[dam]);
 	panel_line(p, COLOUR_L_BLUE, "To-hit", "%d,%+d", bth / 10, hit);
-	panel_line(p, COLOUR_L_BLUE, "Shots", "%d.%d/turn",
+	panel_line(p, COLOUR_L_BLUE, "Shots",
+			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_SHOTS,
+				fa_player_display_zh_tw()),
 			   player->state.num_shots / 10, player->state.num_shots % 10);
 
 	return p;
@@ -883,7 +961,9 @@ static struct panel *get_panel_skills(void) {
 	panel_line(p, colour_table[skill / 10], "Searching", "%d%%", skill);
 
 	/* Infravision */
-	panel_line(p, COLOUR_L_GREEN, "Infravision", "%d ft",
+	panel_line(p, COLOUR_L_GREEN, "Infravision",
+			angdroid_fa_sheet_unit_format(ANGDROID_FA_SHEET_INFRA,
+				fa_player_display_zh_tw()),
 			player->state.see_infra * 10);
 
 	/* Speed */
@@ -961,10 +1041,10 @@ void display_player_xtra_info(int mode)
 			}
 		}
 	} else {
-		my_strcpy(points, "None", sizeof(points));
+		my_strcpy(points, angdroid_zh_tw_enabled() ? "無" : "None", sizeof(points));
 	}
 	Term_gotoxy(text_out_indent, free_space ? 18 : 17);
-	text_out_to_screen(COLOUR_WHITE, "Recall pts: ");
+	text_out_to_screen(COLOUR_WHITE, angdroid_zh_tw_enabled() ? "召回點：" : "Recall pts: ");
 	text_out_indent = 13;
 	text_out_to_screen(COLOUR_L_BLUE, points);
 	text_out_indent = 1;
@@ -1052,6 +1132,8 @@ void write_character_dump(ang_file *fff)
 	/* Begin dump */
 	file_putf(fff, "  [%s Character Dump]\n\n", buildid);
 
+	/* These screens are captured verbatim by the dump writer. */
+	fa_player_dump_english = true;
 	/* Display player basics */
 	display_player(2);
 
@@ -1091,6 +1173,7 @@ void write_character_dump(ang_file *fff)
 	file_putf(fff, "\n");
 
 	display_player(1);
+	fa_player_dump_english = false;
 
 	/* Print a header */
 	file_putf(fff, "%-25s%s\n", "Resistances", "Abilities");
@@ -1303,7 +1386,7 @@ void write_character_dump(ang_file *fff)
 bool dump_save(const char *path)
 {
 	if (text_lines_to_file(path, write_character_dump)) {
-		msg("Failed to create file %s.new", path);
+		msg(angdroid_zh_tw_enabled() ? "無法建立檔案 %s.new" : "Failed to create file %s.new", path);
 		return false;
 	}
 
@@ -1322,13 +1405,16 @@ void do_cmd_change_name(void)
 {
 	ui_event ke;
 	int mode = 0;
-	int prompt_line = 23 + MIN(Term->hgt - 24, 2);
+	int prompt_line = MAX(0, MIN(Term->hgt - 1,
+        23 + MIN(Term->hgt - 24, 2)));
 	const char *p;
 
 	bool more = true;
 
 	/* Prompt */
-	p = "['c' to change name, 'f' to file, 'h' to change mode, or ESC]";
+	p = angdroid_character_sheet_text(
+        "['c' to change name, 'f' to file, 'h' to change mode, or ESC]",
+        angdroid_zh_tw_enabled());
 
 	/* Save screen */
 	screen_save();
@@ -1338,8 +1424,16 @@ void do_cmd_change_name(void)
 		/* Display the player */
 		display_player(mode);
 
-		/* Prompt */
-		Term_putstr(2, prompt_line, -1, COLOUR_WHITE, p);
+        /* The bilingual instruction is never allowed to paint outside the
+         * terminal. Keep command keys c/f/h and the screen navigation. */
+        if (Term && Term->wid > 2) {
+            char visible[192];
+            angdroid_utf8_copy_complete(visible, sizeof(visible), p);
+            angdroid_utf8_clip_columns(visible,
+                (size_t)(Term->wid - 2));
+            if (visible[0])
+                Term_putstr(2, prompt_line, -1, COLOUR_WHITE, visible);
+        }
 
 		soft_kbd_flash("cfh");
 
@@ -1351,7 +1445,7 @@ void do_cmd_change_name(void)
 				case ESCAPE: more = false; break;
 				case 'c': {
 					if(arg_force_name)
-						msg("You are not allowed to change your name!");
+						msg("%s", angdroid_character_sheet_text("You are not allowed to change your name!", angdroid_zh_tw_enabled()));
 					else {
 					char namebuf[32] = "";
 
@@ -1374,9 +1468,9 @@ void do_cmd_change_name(void)
 
 					if (get_file(fname, buf, sizeof buf)) {
 						if (dump_save(buf))
-							msg("Character dump successful.");
+							msg("%s", angdroid_character_sheet_text("Character dump successful.", angdroid_zh_tw_enabled()));
 						else
-							msg("Character dump failed!");
+							msg("%s", angdroid_character_sheet_text("Character dump failed!", angdroid_zh_tw_enabled()));
 					}
 					break;
 				}

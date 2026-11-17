@@ -75,8 +75,10 @@
 #include "zh-tw-symbol-query.h"
 #include "zh-tw-shape-lore.h"
 #include "zh-tw-spell-names.h"
+#include "zh-tw-class-book-names.h"
 #include "knowledge-monster-label.h"
 #include "knowledge-column-text.h"
+#include "knowledge-note-prefill.h"
 #include "menu-text-fit.h"
 #include "../curses/unicode_display.h"
 
@@ -1580,11 +1582,18 @@ static void get_artifact_display_name(char *o_name, size_t namelen, int a_idx)
 static void display_artifact(int col, int row, bool cursor, int oid)
 {
 	uint8_t attr = curs_attrs[CURS_KNOWN][(int)cursor];
-	char o_name[80];
+	char o_name[512];
+	char clipped[256];
 
+	/* The complete artifact description is generated in a roomy display
+	 * buffer, then clipped at a whole glyph and the visible list edge.
+	 * The underlying artifact and its identification state are untouched. */
 	get_artifact_display_name(o_name, sizeof o_name, oid);
-
-	c_prt(attr, o_name, row, col);
+	if (Term && col >= 0 && col < Term->wid) {
+		angdroid_knowledge_clip_label(clipped, sizeof clipped,
+			o_name, col, Term->wid, Term->wid);
+		if (clipped[0]) c_prt(attr, clipped, row, col);
+	}
 }
 
 /**
@@ -1669,7 +1678,7 @@ static void desc_art_fake(int a_idx)
 	struct object object_body = OBJECT_NULL, known_object_body = OBJECT_NULL;
 	bool fake = false;
 
-	char header[120];
+	char header[512];
 
 	textblock *tb;
 	region area = { 0, 0, 0, 0 };
@@ -2162,6 +2171,15 @@ static const char *o_xtra_prompt(int oid)
 	return sel;
 }
 
+/* The edit widget has an 80-byte input buffer. Refuse a prefill if
+ * acceptance could silently lose a saved inscription's suffix or bytes. */
+static void knowledge_note_edit_unavailable(void)
+{
+	msg("%s", angdroid_zh_tw_enabled()
+		? "現有刻字過長或包含無效的 UTF-8，無法安全編輯。"
+		: "Existing inscription is too long or contains invalid UTF-8.");
+}
+
 /**
  * Special key actions for object inscription.
  */
@@ -2201,9 +2219,16 @@ static void o_xtra_act(struct keypress ch, int oid)
 		prt(angdroid_game_ui_text("Inscribe with: ",
 			angdroid_zh_tw_enabled()), 0, 0);
 
-		/* Default note */
-		if (k->note_aware || k->note_unaware)
-			strnfmt(text, sizeof(text), "%s", get_autoinscription(k, k->aware));
+		/* Do not overwrite a clipped original note upon confirmation. */
+		if (k->note_aware || k->note_unaware) {
+			const char *saved = get_autoinscription(k, k->aware);
+			if (!angdroid_knowledge_note_prefill(
+					text, sizeof(text), saved)) {
+				screen_load();
+				knowledge_note_edit_unavailable();
+				return;
+			}
+		}
 
 		/* Get an inscription */
 		if (askfor_aux(text, sizeof(text), NULL)) {
@@ -2379,10 +2404,15 @@ static void rune_xtra_act(struct keypress ch, int oid)
 		prt(angdroid_game_ui_text("Inscribe with: ",
 			angdroid_zh_tw_enabled()), 0, 0);
 
-		/* Default note */
-		if (rune_note(oid))
-			strnfmt(note_text, sizeof(note_text), "%s",
-					quark_str(rune_note(oid)));
+		/* Existing rune notes are user content: reject a lossy prefill. */
+		if (rune_note(oid) &&
+				!angdroid_knowledge_note_prefill(
+					note_text, sizeof(note_text),
+					quark_str(rune_note(oid)))) {
+			screen_load();
+			knowledge_note_edit_unavailable();
+			return;
+		}
 
 		/* Get an inscription */
 		if (askfor_aux(note_text, sizeof(note_text), NULL)) {
@@ -3279,13 +3309,18 @@ static void shape_lore_append_triggering_spells(textblock *tb,
 						if (n == 0) {
 							textblock_append(tb, "\n");
 						}
-						if (angdroid_zh_tw_enabled())
+						if (angdroid_zh_tw_enabled()) {
+							/* Show the actual class book in Chinese; an unknown
+							 * title remains English without changing the source key. */
+							const char *book_title =
+								angdroid_zh_tw_class_book_name(
+									kind->name, tval_find_name(kind->tval));
 							textblock_append(tb,
 								"%s的法術「%s」（出自 %s）會觸發變身。",
 								angdroid_shape_class(c->name, true),
 								angdroid_zh_tw_spell_name(spell->name, true),
-								kind->name);
-						else
+								book_title ? book_title : kind->name);
+						} else
 							textblock_append(tb,
 								"The %s spell, %s, from %s triggers the shapechange.",
 								c->name, spell->name, kind->name);
@@ -3821,12 +3856,13 @@ static void reset_main_knowledge_menu(void)
 		const char *name = f_info[stores[j].feat].name;
 		const char *shortcut = (j < 9) ? shortcuts[j] : "";
 		char localized[256];
-		const char *label = angdroid_knowledge_store_label(localized,
+		const char *label = angdroid_knowledge_store_label_for_menu(localized,
 			sizeof(localized), name, j + 1, shortcut,
 			angdroid_zh_tw_enabled());
 
-		/* Preserve the original format if an unusual custom store name
-		 * does not fit in the bounded translation buffer. */
+		/* A long translated custom name now falls back to its Chinese
+		 * numbered label; only the original English mode uses this
+		 * canonical English full-name fallback. */
 		if (!label) {
 			label = name ? format("Display %s'%s contents%s",
 				name, suffix(name, "s") ? "" : "s", shortcut) :
