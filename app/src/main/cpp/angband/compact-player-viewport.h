@@ -25,6 +25,7 @@ static inline int angdroid_compact_player_visible_rows(
  * change.  Multiple flags may share a terminal, so only use incremental
  * character redraws when this is its sole active widget. */
 struct angdroid_compact_player_redraw_state {
+    const void *terminal;
     int width;
     int height;
     int ready;
@@ -32,9 +33,10 @@ struct angdroid_compact_player_redraw_state {
 
 static inline int angdroid_compact_player_can_redraw_one(
     const struct angdroid_compact_player_redraw_state *state,
-    int term_width, int term_height, int sole_compact_flag)
+    const void *terminal, int term_width, int term_height, int sole_compact_flag)
 {
     return state && state->ready && sole_compact_flag &&
+        terminal && state->terminal == terminal &&
         term_width > 0 && term_height > 0 &&
         state->width == term_width && state->height == term_height;
 }
