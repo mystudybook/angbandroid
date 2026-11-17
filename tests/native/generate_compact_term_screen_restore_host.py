@@ -264,11 +264,20 @@ static void resize_nested_snapshot(term *t) {
             CHECK(Term->mem->next->a[y][x] == (inside ? 1 : 0));
         }
     }
+    /* Push an additional snapshot at the larger size, then shrink all
+     * frames back to the original size before restoring either layer. */
+    set_screen(L'丁', 4);
+    CHECK(Term_save() == 0);
+    CHECK(Term->saved == 3);
+    set_screen(L'戊', 5);
     CHECK(Term_resize(old_w, old_h) == 0);
     CHECK(Term->content_generation == before + 2);
     CHECK(resize_events == events + 2);
+    CHECK(Term->saved == 3);
+    expect_screen(L'戊', 5);
+    CHECK(Term_load() == 0);
     CHECK(Term->saved == 2);
-    expect_screen(L'丙', 3);
+    expect_screen(L'丁', 4);
     CHECK(Term_load_all() == 0);
     CHECK(Term->saved == 1);
     expect_screen(L'乙', 2);
