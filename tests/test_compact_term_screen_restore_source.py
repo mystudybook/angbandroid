@@ -82,6 +82,10 @@ for engine in ("angband", "faangband"):
     assert "CHECK(t.scr->tc[0][1] == L'樹' && t.scr->ta[0][1] == 4);" in generated
     assert "CHECK(Term_erase(2, 1, INT_MAX) == 0);" in generated
     assert "CHECK(Term_load_all() == 0);" in generated
+    assert "trace_screen_replay = true;" in generated
+    assert "CHECK(replay_terrain[0] == L'樹');" in generated
+    assert "CHECK(replay_terrain[1] == 0);" in generated
+    assert "CHECK(replay_fg_edge[1] == L'?' && replay_bg_edge[1] == L'?');" in generated
     assert "expect_clipped_edge(t.mem->next, 3, t.hgt);" in generated
     assert "CHECK(t->scr->cu && t->scr->cx == w - 1 && t->scr->cy == h - 1);" in generated
     assert "CHECK(t->tmp->cu && t->tmp->cx == 0 && t->tmp->cy == 0);" in generated
