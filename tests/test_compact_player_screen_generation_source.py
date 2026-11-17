@@ -55,9 +55,19 @@ for engine in ("angband", "faangband"):
     load = function(term_source, "errr Term_load(void)")
     assert load.index("++Term->content_generation;") < load.index(
         "term_win_copy(Term->scr, tmp, w, h);"), engine
+    assert "if (!Term->mem) return (-1);" in load, engine
+    assert load.index("if (!Term->mem) return (-1);") < (
+        load.index("++Term->content_generation;")), engine
+    assert load.index("if (!Term->mem) return (-1);") < (
+        load.index("Term->saved--;")), engine
     restore = function(term_source, "errr Term_load_all(void)")
     assert restore.index("++Term->content_generation;") < restore.index(
         "term_win_copy(Term->scr, tgt->saved_mem, w, h);"), engine
+    assert "if (!Term->mem) return (-1);" in restore, engine
+    assert restore.index("if (!Term->mem) return (-1);") < (
+        restore.index("++Term->content_generation;")), engine
+    assert restore.index("if (!Term->mem) return (-1);") < (
+        restore.index("Term->saved--;")), engine
     resize = function(term_source, "errr Term_resize(int w, int h)")
     assert resize.index("if ((Term->wid == w) && (Term->hgt == h)) return (1);") < (
         resize.index("++Term->content_generation;"))
