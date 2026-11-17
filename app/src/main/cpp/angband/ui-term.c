@@ -22,6 +22,7 @@
 #include "z-util.h"
 #include "z-virt.h"
 #include "../curses/unicode_layout.h"
+#include "../curses/term-soft-cursor-bounds.h"
 
 /* This counter survives term_nuke()/term_init() for a reused term address.
  * The Android native terminals are initialized on the game thread. */
@@ -1850,38 +1851,35 @@ errr Term_fresh(void)
 
 	/* Cursor update -- Erase old Cursor */
 	if (Term->soft_cursor) {
-		/* Cursor was visible */
-		if (!old->cu && old->cv) {
-		        /*
-		         * Fake a change at the old cursor position so that
-		         * position will be redrawn along with any other
-			 * changes.
-			 */
-			int mty = MAX(old->cy,
-				MIN(old->cy + old->cny - 1, h - 1));
-			int mtx = MAX(old->cx,
-				MIN(old->cx + old->cnx - 1, w - 1));
+		/* Only visit cells within the current terminal. In particular, a
+		 * large cursor's saved span must not overflow signed coordinates. */
+		int last_y = angdroid_term_cursor_last_cell(old->cy, old->cny, h);
+		int last_x = angdroid_term_cursor_last_cell(old->cx, old->cnx, w);
+
+		if (!old->cu && old->cv && last_x >= 0 && last_y >= 0) {
 			int ty;
-
-			for (ty = old->cy; ty <= mty; ++ty) {
+			for (ty = old->cy; ty <= last_y; ++ty) {
 				int tx;
+				int left = old->cx;
+				int right = last_x;
 
-				for (tx = old->cx; tx <= mtx; ++tx) {
+				/* The Android terminal stores a two-column CJK glyph as a
+				 * lead cell plus a private continuation. Repaint both cells
+				 * when a soft cursor covered either half of that glyph. */
+				for (tx = old->cx; tx <= last_x; ++tx) {
+					int partner = angdroid_wide_partner_column(w, tx,
+						scr->c[ty], scr->a[ty]);
+					if (partner >= 0 && partner < left) left = partner;
+					if (partner > right) right = partner;
+				}
+				for (tx = left; tx <= right; ++tx) {
 					old->c[ty][tx] = ~scr->c[ty][tx];
 				}
-				if (Term->x1[ty] > old->cx) {
-					Term->x1[ty] = old->cx;
-				}
-				if (Term->x2[ty] < mtx) {
-					Term->x2[ty] = mtx;
-				}
+				if (Term->x1[ty] > left) Term->x1[ty] = left;
+				if (Term->x2[ty] < right) Term->x2[ty] = right;
 			}
-			if (y1 > old->cy) {
-			    y1 = old->cy;
-			}
-			if (y2 < mty) {
-			    y2 = mty;
-			}
+			if (y1 > old->cy) y1 = old->cy;
+			if (y2 < last_y) y2 = last_y;
 		}
 	} else {
 		/* Cursor will be invisible */
@@ -1990,9 +1988,11 @@ errr Term_fresh(void)
 	if (Term->soft_cursor) {
 		/* Draw the (large or small) cursor */
 		if (!scr->cu && scr->cv) {
-			if ((((tile_width > 1)||(tile_height > 1)) &&
-			     (!smlcurs) && (Term->saved == 0) && (scr->cy > 0))
-			    || bigcurs) {
+			if (((((tile_width > 1)||(tile_height > 1)) &&
+			      (!smlcurs) && (Term->saved == 0) && (scr->cy > 0))
+			    || bigcurs) &&
+			    angdroid_term_big_cursor_fits(scr->cx, scr->cy, w, h,
+			        tile_width, tile_height)) {
 				(void)((*Term->bigcurs_hook)(scr->cx, scr->cy));
 				scr->cnx = tile_width;
 				scr->cny = tile_height;
