@@ -15,6 +15,7 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 assert "generate_compact_term_screen_restore_host.py" in script
+assert "test_term_soft_cursor_bounds.c" in script
 assert 'for engine in angband faangband; do' in script
 assert "test_compact_term_screen_restore_source.py" in verify
 
@@ -25,6 +26,15 @@ for engine in ("angband", "faangband"):
         body = module.lifecycle.extract_function(native, signature)
         assert body in generated, (engine, signature)
 
+    fresh = module.lifecycle.extract_function(native, "errr Term_fresh(void)")
+    assert '#include "../curses/term-soft-cursor-bounds.h"' in native
+    assert fresh.count("angdroid_term_cursor_last_cell(") == 2
+    assert fresh.count("angdroid_wide_partner_column(") == 1
+    assert "if (Term->x1[ty] > left) Term->x1[ty] = left;" in fresh
+    assert "if (Term->x2[ty] < right) Term->x2[ty] = right;" in fresh
+    assert "angdroid_term_big_cursor_fits(scr->cx, scr->cy, w, h," in fresh
+    assert "old->cy + old->cny - 1" not in fresh
+    assert "old->cx + old->cnx - 1" not in fresh
     save = module.lifecycle.extract_function(native, "errr Term_save(void)")
     nuke = module.lifecycle.extract_function(native, "errr term_nuke(term *t)")
     resize = module.lifecycle.extract_function(native, "errr Term_resize(int w, int h)")
@@ -68,4 +78,4 @@ for engine in ("angband", "faangband"):
     assert "L'丙'" in generated
     assert "CHECK(allocations - prev_alloc == releases - prev_release);" in generated
 
-print("PASS: native resize cursor bounds, snapshots and terminal reuse contracts")
+print("PASS: native cursor redraw, CJK pair, resize, snapshot and reuse contracts")
