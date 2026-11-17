@@ -2391,6 +2391,16 @@ static void update_topbar_subwindow(game_event_type type,
 static struct angdroid_compact_player_redraw_state
     compact_player_redraw_state[ANGBAND_TERM_MAX];
 
+/* EVENT_ENTER_WORLD and EVENT_LEAVE_WORLD can happen without a window
+ * flag or terminal-size change.  A new character must always get an
+ * initial full redraw rather than inheriting another character's rows. */
+static void angdroid_compact_player_invalidate_all(void)
+{
+	int i;
+	for (i = 0; i < ANGBAND_TERM_MAX; ++i)
+		angdroid_compact_player_invalidate(&compact_player_redraw_state[i]);
+}
+
 static void update_player_compact_subwindow(game_event_type type,
 										game_event_data *data, void *user)
 {
@@ -2768,8 +2778,8 @@ static void subwindow_set_flags(int win_idx, uint32_t new_flags)
 	term *old = Term;
 	int i;
 
-	/* Any change of window mode invalidates prior partial redraws. */
-	compact_player_redraw_state[win_idx].ready = 0;
+	/* A flag change invalidates all cached geometry and readiness. */
+	angdroid_compact_player_invalidate(&compact_player_redraw_state[win_idx]);
 
 	/* Deal with the changed flags by seeing what's changed */
 	for (i = 0; i < 32; i++)
@@ -3174,6 +3184,8 @@ static void ui_leave_init(game_event_type type, game_event_data *data,
 static void ui_enter_world(game_event_type type, game_event_data *data,
 						  void *user)
 {
+	/* Invalidate compact player rows on world/game lifetime changes. */
+	angdroid_compact_player_invalidate_all();
 	/* Allow big cursor */
 	smlcurs = false;
 
@@ -3246,6 +3258,8 @@ static void ui_enter_world(game_event_type type, game_event_data *data,
 static void ui_leave_world(game_event_type type, game_event_data *data,
 						  void *user)
 {
+	/* Invalidate compact player rows on world/game lifetime changes. */
+	angdroid_compact_player_invalidate_all();
 	/* Disallow big cursor */
 	smlcurs = true;
 
@@ -3333,6 +3347,8 @@ static void ui_enter_game(game_event_type type, game_event_data *data,
 static void ui_leave_game(game_event_type type, game_event_data *data,
 						  void *user)
 {
+	/* Invalidate compact player rows on world/game lifetime changes. */
+	angdroid_compact_player_invalidate_all();
 	/* Display a message to the player */
 	event_remove_handler(EVENT_MESSAGE, display_message, NULL);
 
