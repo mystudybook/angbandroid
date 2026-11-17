@@ -2385,6 +2385,9 @@ errr Term_clear(void)
 	int w = Term->wid;
 	int h = Term->hgt;
 
+	/* Invalidate compact-panel caches after a logical screen reset. */
+	++Term->content_generation;
+
 	/* Cursor usable */
 	Term->scr->cu = 0;
 
@@ -2831,6 +2834,8 @@ errr Term_load(void)
 		/* Forget it */
 		Term->mem = Term->mem->next;
 
+		/* Restoring saved cells replaces the current logical screen. */
+		++Term->content_generation;
 		/* Load */
 		term_win_copy(Term->scr, tmp, w, h);
 
@@ -2891,6 +2896,7 @@ errr Term_load_all(void)
 		int y;
 
 		reversed_list = reversed_list->next;
+		++Term->content_generation;
 		term_win_copy(Term->scr, tgt->saved_mem, w, h);
 		mem_free(tgt);
 
@@ -3068,6 +3074,9 @@ errr Term_resize(int w, int h)
 		if (Term->tmp->cy >= h) Term->tmp->cu = 1;
 	}
 
+	/* Resizing replaces the screen buffers, even if a later resize
+	 * returns to a previously cached width and height. */
+	++Term->content_generation;
 	/* Save new size */
 	Term->wid = w;
 	Term->hgt = h;
