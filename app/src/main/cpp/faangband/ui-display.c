@@ -65,6 +65,7 @@
 #include "../angband/zh-tw-timed-status.h"
 #include "../angband/zh-tw-terrain-trap.h"
 #include "../angband/statusline-bounds.h"
+#include "../angband/compact-player-viewport.h"
 #include "../angband/zh-tw-class-titles.h"
 #include "../angband/zh-tw-shape-display.h"
 #include "../angband/zh-tw-faangband-localities.h"
@@ -2390,19 +2391,30 @@ static void update_player_compact_subwindow(game_event_type type,
 	int row = 0;
 	int col = 0;
 	int i;
+	int visible_rows;
 	term *old = Term;
 	term *inv_term = user;
 
-	/* This subwindow redraws every field, not just the event's field.
-	 * Clear once so a shortened title, removed spellpoints or changed
-	 * equipment row never leaves stale content from the prior state. */
+	/* Redraw every owned field to remove old titles / no-longer-available
+	 * spellpoints. Flag changes already call Term_clear() on the whole
+	 * subwindow; normal player events should not clear unrelated rows. */
 	if (!inv_term || !player || !player->race || !player->class) return;
 	Term_activate(inv_term);
 	if (!Term || Term->hgt <= 0 || Term->wid <= 0) {
 		Term_activate(old);
 		return;
 	}
-	Term_clear();
+	visible_rows = angdroid_compact_player_visible_rows(
+		STAT_MAX, Term->hgt);
+	if (visible_rows == Term->hgt) {
+		/* Whole compact panel fits or the terminal is shorter than it. */
+		Term_clear();
+	} else {
+		/* For taller windows, erase only the rows actually owned by the
+		 * compact character panel, leaving other rows untouched. */
+		for (i = 0; i < visible_rows; ++i)
+			Term_erase(0, i, Term->wid);
+	}
 
 	/* Keep all row positions stable, even when the subwindow is shorter
 	 * than the complete compact player display. */
