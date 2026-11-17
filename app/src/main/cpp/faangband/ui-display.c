@@ -682,8 +682,8 @@ static void prt_class(int row, int col) {
  * terminal ends in the middle of that field. */
 static bool prt_short_field_fits(int row, int col, size_t columns)
 {
-	return Term && row >= 0 && row < Term->hgt && col >= 0 &&
-		col < Term->wid && columns <= (size_t)(Term->wid - col);
+	return Term && row >= 0 && row < Term->hgt &&
+		angdroid_statusline_fits_field(col, columns, Term->wid);
 }
 
 static int prt_level_short(int row, int col)
