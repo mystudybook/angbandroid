@@ -61,6 +61,7 @@
 
 #include "droid.h"
 #include "menu-text-fit.h"
+#include "zh-tw-timed-status.h"
 
 /**
  * There are a few functions installed to be triggered by several 
@@ -1322,15 +1323,20 @@ static size_t prt_tmd(int row, int col)
 			while (player->timed[i] > grade->max) {
 				grade = grade->next;
 			}
+			const char *label;
 			if (!grade->name) continue;
-			c_put_str(grade->color, grade->name, row, col + len);
-			len += strlen(grade->name) + 1;
+			/* Translate only the visible grade, not its parser data or
+			 * thresholds. The clipper returns terminal cells, not bytes. */
+			label = angdroid_timed_status_name(grade->name,
+				angdroid_zh_tw_enabled());
+			len += ang_status_put(grade->color, label, row,
+				col + (int)len);
 
 			/* Food meter */
 			if (i == TMD_FOOD) {
 				char *meter = format("%d %%", player->timed[i] / 100);
-				c_put_str(grade->color, meter, row, col + len);
-				len += strlen(meter) + 1;
+				len += ang_status_put(grade->color, meter, row,
+					col + (int)len);
 			}
 		}
 	}
