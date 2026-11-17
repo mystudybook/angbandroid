@@ -25,6 +25,7 @@ SIGNATURES = (
     "static void term_win_clamp_cursor(term_win *win, int w, int h)",
     "errr Term_resize(int w, int h)",
     "errr Term_clear(void)",
+    "errr Term_erase(int x, int y, int n)",
     "errr Term_save(void)",
     "errr Term_load(void)",
     "errr Term_load_all(void)",
@@ -130,6 +131,48 @@ static errr Term_event_push(const ui_event *event) {
 static void on_nuke(term *t) {
     assert(t->instance_id == 0);
 }
+
+/* Minimal cursor and pair-aware writer mocks for the genuine Term_erase()
+ * body. The foreground and terrain grid is real; only dirty row hardware
+ * and unrelated terminal output hooks are replaced in the host. */
+static errr Term_gotoxy(int x, int y) {
+    if (x < 0 || x >= Term->wid || y < 0 || y >= Term->hgt) return -1;
+    Term->scr->cx = x;
+    Term->scr->cy = y;
+    Term->scr->cu = false;
+    return 0;
+}
+static void erase_wide_partner(term *t, int x, int y) {
+    int partner = angdroid_wide_partner_column(t->wid, x,
+            t->scr->c[y], t->scr->a[y]);
+    if (partner >= 0) {
+        t->scr->c[y][partner] = L' ';
+        t->scr->a[y][partner] = COLOUR_WHITE;
+        if (partner < t->x1[y]) t->x1[y] = partner;
+        if (partner > t->x2[y]) t->x2[y] = partner;
+        if (y < t->y1) t->y1 = y;
+        if (y > t->y2) t->y2 = y;
+    }
+}
+#ifdef MOCK_FA_ERASE
+static void Term_clear_wide_neighbor(term *t, int x, int y,
+        wchar_t incoming, int attr) {
+    (void)incoming; (void)attr;
+    erase_wide_partner(t, x, y);
+}
+#else
+static void Term_queue_char(term *t, int x, int y, int a, wchar_t c,
+        int ta, wchar_t tc) {
+    (void)ta; (void)tc;
+    erase_wide_partner(t, x, y);
+    t->scr->a[y][x] = a;
+    t->scr->c[y][x] = c;
+    if (x < t->x1[y]) t->x1[y] = x;
+    if (x > t->x2[y]) t->x2[y] = x;
+    if (y < t->y1) t->y1 = y;
+    if (y > t->y2) t->y2 = y;
+}
+#endif
 '''
 
 TESTS = r'''
@@ -412,6 +455,100 @@ static void resized_cjk_snapshot_edges(void) {
     CHECK(allocations - before_alloc == releases - before_free);
 }
 
+
+static void erase_and_scroll_overlay_replay(void) {
+    term t;
+    unsigned long fresh_before = fresh_count;
+    size_t before_alloc = allocations, before_free = releases;
+    int x, y;
+    Term = &t;
+    CHECK(term_init(&t, 6, 3, 8) == 0);
+    Term = &t;
+    for (y = 0; y < t.hgt; ++y) {
+        for (x = 0; x < t.wid; ++x) {
+            t.scr->c[y][x] = L' ';
+            t.scr->a[y][x] = COLOUR_WHITE;
+            t.scr->tc[y][x] = 0;
+            t.scr->ta[y][x] = 0;
+        }
+        t.scr->c[y][3] = L'漢';
+        t.scr->c[y][4] = ANGDROID_TEXT_CONTINUATION;
+        t.scr->a[y][3] = t.scr->a[y][4] = 2;
+        t.scr->tc[y][3] = L'風';
+        t.scr->tc[y][4] = ANGDROID_TEXT_CONTINUATION;
+        t.scr->ta[y][3] = t.scr->ta[y][4] = 2;
+    }
+    /* A visually blank foreground can still have saved map terrain. */
+    t.scr->tc[0][1] = L'樹';
+    t.scr->ta[0][1] = 4;
+    CHECK(Term_save() == 0); /* Underlying screen */
+    CHECK(Term_erase(1, 0, 1) == 0);
+    CHECK(t.scr->c[0][1] == L' ');
+    CHECK(t.scr->tc[0][1] == 0 && t.scr->ta[0][1] == 0);
+    CHECK(Term_save() == 0); /* Newer overlay */
+    /* Copy complete rows, like a scrolled text view. This row movement is
+     * a test scenario, not a claim that the game calls a Term_scroll API. */
+    for (y = 0; y < t.hgt - 1; ++y) {
+        memcpy(t.scr->c[y], t.scr->c[y + 1], (size_t)t.wid * sizeof(wchar_t));
+        memcpy(t.scr->a[y], t.scr->a[y + 1], (size_t)t.wid * sizeof(int));
+        memcpy(t.scr->tc[y], t.scr->tc[y + 1], (size_t)t.wid * sizeof(wchar_t));
+        memcpy(t.scr->ta[y], t.scr->ta[y + 1], (size_t)t.wid * sizeof(int));
+    }
+    for (x = 0; x < t.wid; ++x) {
+        t.scr->c[2][x] = L'.';
+        t.scr->a[2][x] = 1;
+        t.scr->tc[2][x] = 0;
+        t.scr->ta[2][x] = 0;
+    }
+    CHECK(Term_resize(4, 3) == 0);
+    CHECK(t.saved == 2 && t.mem && t.mem->next);
+    for (y = 0; y < 2; ++y) {
+        CHECK(t.scr->c[y][3] == L'?');
+        CHECK(t.scr->tc[y][3] == L'?');
+    }
+    CHECK(t.scr->c[2][3] == L'.');
+    CHECK(t.scr->tc[2][3] == 0);
+    for (y = 0; y < t.hgt; ++y) {
+        CHECK(t.mem->c[y][3] == L'?');
+        CHECK(t.mem->tc[y][3] == L'?');
+        CHECK(t.mem->next->c[y][3] == L'?');
+        CHECK(t.mem->next->tc[y][3] == L'?');
+    }
+    CHECK(Term_load_all() == 0);
+    CHECK(fresh_count == fresh_before + 2);
+    CHECK(t.saved == 1 && t.mem && !t.mem->next);
+    for (y = 0; y < t.hgt; ++y) {
+        CHECK(t.scr->c[y][3] == L'?');
+        CHECK(t.scr->tc[y][3] == L'?');
+    }
+    CHECK(t.scr->tc[0][1] == 0 && t.scr->ta[0][1] == 0);
+    CHECK(Term_load() == 0); /* Older screen still has the map terrain. */
+    CHECK(t.saved == 0 && t.mem == NULL);
+    CHECK(t.scr->tc[0][1] == L'樹' && t.scr->ta[0][1] == 4);
+    for (y = 0; y < t.hgt; ++y) {
+        CHECK(t.scr->c[y][3] == L'?');
+        CHECK(t.scr->tc[y][3] == L'?');
+    }
+    /* Erasing the continuation must clear the original leading cell. */
+    CHECK(Term_resize(6, 3) == 0);
+    t.scr->c[1][1] = L'甲'; t.scr->a[1][1] = 2;
+    t.scr->c[1][2] = ANGDROID_TEXT_CONTINUATION; t.scr->a[1][2] = 2;
+    CHECK(Term_erase(2, 1, INT_MAX) == 0);
+    CHECK(t.scr->c[1][1] == L' ' && t.scr->c[1][2] == L' ');
+    CHECK(t.scr->a[1][1] == COLOUR_WHITE);
+    CHECK(Term_erase(-1, 0, INT_MAX) == -1);
+    CHECK(Term_erase(t.wid, 0, INT_MAX) == -1);
+    /* The saturated count never touches columns before the start. */
+    t.scr->c[0][0] = L'Z';
+    t.scr->a[0][0] = 7;
+    CHECK(Term_erase(1, 0, INT_MAX) == 0);
+    CHECK(t.scr->c[0][0] == L'Z' && t.scr->a[0][0] == 7);
+    CHECK(Term_erase(1, 0, INT_MIN) == 0);
+    CHECK(t.scr->c[0][0] == L'Z');
+    CHECK(term_nuke(&t) == 0);
+    CHECK(allocations - before_alloc == releases - before_free);
+}
+
 static void snapshot_depth_limit(void) {
     term t;
     unsigned i;
@@ -477,6 +614,7 @@ int main(void) {
     run_screen(80, 24);
     snapshot_depth_limit();
     resized_cjk_snapshot_edges();
+    erase_and_scroll_overlay_replay();
     cursor_bounds_matrix();
     printf("PASS: real %s Term_clear/save/load/load_all (%lu assertions)\n",
            ENGINE_NAME, checks);
@@ -490,6 +628,11 @@ def generate(engine: str) -> str:
         encoding="utf-8")
     extracts = [lifecycle.extract_function(src, signature) for signature in SIGNATURES]
     for sig, body in zip(SIGNATURES, extracts):
+        if sig == "errr Term_erase(int x, int y, int n)":
+            if "if (n > w - x) n = w - x;" not in body:
+                raise ValueError("Term_erase must clip without adding signed x+n")
+            if "scr_taa[x] == 0 && scr_tcc[x] == 0" not in body:
+                raise ValueError("Term_erase must clear stale background terrain")
         if sig == "errr Term_resize(int w, int h)" and body.count("term_win_copy_resized(") != 4:
             raise ValueError("All four resized window categories must repair clipped CJK pairs")
         if sig.startswith("static void term_win_copy_resized(") and body.count(
@@ -508,7 +651,8 @@ def generate(engine: str) -> str:
                     "Term->saved--;"):
                 raise ValueError(f"{sig} changes saved counter before checking")
     return (
-        PRELUDE + "\nstatic uint64_t angdroid_term_instance_sequence;\n\n"
+        ("#define MOCK_FA_ERASE 1\n" if engine == "faangband" else "")
+        + PRELUDE + "\nstatic uint64_t angdroid_term_instance_sequence;\n\n"
         + "\n\n".join(extracts) + "\n#define ENGINE_NAME \"" + engine + "\"\n"
         + TESTS
     )
