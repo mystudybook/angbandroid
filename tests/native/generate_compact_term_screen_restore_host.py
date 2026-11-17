@@ -23,6 +23,7 @@ SIGNATURES = (
     "errr term_init(term *t, int w, int h, int k)",
     "errr term_nuke(term *t)",
     "static void term_win_clamp_cursor(term_win *win, int w, int h)",
+    "errr Term_discard_saved_screens(term *t)",
     "errr Term_resize(int w, int h)",
     "errr Term_clear(void)",
     "errr Term_erase(int x, int y, int n)",
@@ -568,6 +569,40 @@ static void erase_and_scroll_overlay_replay(void) {
     CHECK(allocations - before_alloc == releases - before_free);
 }
 
+
+static void abandoned_session_snapshot_reset(void) {
+    term t;
+    uint32_t old_generation;
+    unsigned long alloc_start = allocations, free_start = releases;
+    unsigned n;
+    Term = &t;
+    CHECK(term_init(&t, 8, 3, 8) == 0);
+    Term = &t;
+    CHECK(Term_discard_saved_screens(NULL) == -1);
+    CHECK(Term_discard_saved_screens(&t) == 1);
+    set_screen(L'舊', 3);
+    for (n = 0; n < UINT8_MAX; ++n) CHECK(Term_save() == 0);
+    CHECK(t.mem && t.saved == UINT8_MAX);
+    set_screen(L'新', 4); /* The requested screen must remain intact. */
+    old_generation = t.content_generation;
+    CHECK(Term_discard_saved_screens(&t) == 0);
+    CHECK(t.mem == NULL && t.saved == 0);
+    CHECK(t.content_generation == old_generation + 1);
+    CHECK(t.total_erase);
+    expect_screen(L'新', 4);
+    CHECK(Term_load() == -1);
+    CHECK(Term_load_all() == -1);
+    CHECK(Term_discard_saved_screens(&t) == 1);
+    CHECK(t.content_generation == old_generation + 1);
+    CHECK(Term_save() == 0); /* New character gets a fresh screen frame. */
+    set_screen(L'乙', 5);
+    CHECK(Term_load() == 0);
+    expect_screen(L'新', 4);
+    CHECK(term_nuke(&t) == 0);
+    CHECK(Term_discard_saved_screens(&t) == -1);
+    CHECK(allocations - alloc_start == releases - free_start);
+}
+
 static void snapshot_depth_limit(void) {
     term t;
     unsigned i;
@@ -632,6 +667,7 @@ int main(void) {
     run_screen(12, 2);
     run_screen(80, 24);
     snapshot_depth_limit();
+    abandoned_session_snapshot_reset();
     resized_cjk_snapshot_edges();
     erase_and_scroll_overlay_replay();
     cursor_bounds_matrix();
@@ -659,6 +695,11 @@ def generate(engine: str) -> str:
             raise ValueError("Both foreground and terrain CJK layers must be repaired")
         if sig == "errr Term_resize(int w, int h)" and body.count("term_win_clamp_cursor(") != 5:
             raise ValueError("Resize must clamp old, scr, all saves and temporary cursor copies")
+        if sig == "errr Term_discard_saved_screens(term *t)":
+            for required in ("while (t->mem)", "t->saved = 0;",
+                             "++t->content_generation;", "t->total_erase = true;"):
+                if required not in body:
+                    raise ValueError("Discard must free all old snapshots and repaint")
         if sig == "errr Term_save(void)" and "if (Term->saved == UINT8_MAX) return (-1);" not in body:
             raise ValueError("Snapshot stack must enforce its uint8_t depth limit")
         if sig == "errr term_nuke(term *t)" and "while (t->mem)" not in body:
