@@ -75,6 +75,9 @@ struct term {
 };
 static term *Term;
 static unsigned long checks, allocations, releases, fresh_count, resize_events;
+static bool trace_screen_replay;
+static unsigned replay_frame_count;
+static wchar_t replay_terrain[2], replay_fg_edge[2], replay_bg_edge[2];
 #define CHECK(x) do { assert(x); ++checks; } while (0)
 static void *mem_alloc(size_t n) {
     void *p = malloc(n ? n : 1);
@@ -121,6 +124,14 @@ static void term_win_nuke(term_win *win) {
 }
 static errr Term_fresh(void) {
     ++fresh_count;
+    if (trace_screen_replay) {
+        assert(Term && replay_frame_count < 2);
+        assert(Term->wid >= 4 && Term->hgt >= 1);
+        replay_terrain[replay_frame_count] = Term->scr->tc[0][1];
+        replay_fg_edge[replay_frame_count] = Term->scr->c[0][3];
+        replay_bg_edge[replay_frame_count] = Term->scr->tc[0][3];
+        ++replay_frame_count;
+    }
     return 0;
 }
 static errr Term_event_push(const ui_event *event) {
@@ -514,8 +525,16 @@ static void erase_and_scroll_overlay_replay(void) {
         CHECK(t.mem->next->c[y][3] == L'?');
         CHECK(t.mem->next->tc[y][3] == L'?');
     }
+    replay_frame_count = 0;
+    trace_screen_replay = true;
     CHECK(Term_load_all() == 0);
+    trace_screen_replay = false;
     CHECK(fresh_count == fresh_before + 2);
+    CHECK(replay_frame_count == 2);
+    CHECK(replay_terrain[0] == L'樹'); /* Oldest saved screen replayed first */
+    CHECK(replay_terrain[1] == 0);     /* Newer overlay erased the terrain */
+    CHECK(replay_fg_edge[0] == L'?' && replay_bg_edge[0] == L'?');
+    CHECK(replay_fg_edge[1] == L'?' && replay_bg_edge[1] == L'?');
     CHECK(t.saved == 1 && t.mem && !t.mem->next);
     for (y = 0; y < t.hgt; ++y) {
         CHECK(t.scr->c[y][3] == L'?');
