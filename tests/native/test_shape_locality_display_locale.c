@@ -88,6 +88,35 @@ int main(void)
         CHECK(strcmp(short_name, "剛多林 城鎮") == 0);
         CHECK(angdroid_utf8_display_columns(short_name) == 11);
     }
+    /* Exercise every official locality through the exact display label
+     * formatter. In a 160-byte compact buffer, the level number must
+     * never disappear behind a multi-byte Chinese place name. */
+    {
+        static const char *const original_places[] = {
+#define LOC(id, name) name,
+#include "../../app/src/main/cpp/faangband/list-localities.h"
+#undef LOC
+        };
+        size_t count = sizeof(original_places) / sizeof(original_places[0]);
+        CHECK(count == 38); /* The final MAX sentinel is not a locality. */
+        for (i = 0; i + 1 < count; ++i) {
+            char full[160], copied[160], clipped[160];
+            const char *place = angdroid_faangband_locality_text(
+                original_places[i], 1);
+            size_t columns;
+            int length;
+            CHECK(place != original_places[i]);
+            length = snprintf(full, sizeof(full), "%s %d", place, 999);
+            CHECK(length > 0 && (size_t)length < sizeof(full));
+            angdroid_utf8_copy_complete(copied, sizeof(copied), full);
+            CHECK(strcmp(copied, full) == 0);
+            CHECK(strcmp(copied + strlen(copied) - 4, " 999") == 0);
+            columns = angdroid_menu_copy_columns(
+                clipped, sizeof(clipped), full, 13);
+            CHECK(columns <= 13);
+            CHECK(angdroid_utf8_display_columns(clipped) == columns);
+        }
+    }
     printf("PASS: 23 shape translations and locality display fallbacks (%u checks)\n",
            tests);
     return 0;
