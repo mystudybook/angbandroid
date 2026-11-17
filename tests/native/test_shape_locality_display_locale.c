@@ -6,6 +6,7 @@
 #include <string.h>
 #include "../../app/src/main/cpp/angband/zh-tw-shape-display.h"
 #include "../../app/src/main/cpp/angband/zh-tw-faangband-localities.h"
+#include "../../app/src/main/cpp/angband/menu-text-fit.h"
 
 static unsigned tests;
 #define CHECK(x) do { assert(x); ++tests; } while (0)
@@ -67,6 +68,26 @@ int main(void)
     CHECK(angdroid_faangband_locality_text(unknown_location, 1) ==
           unknown_location);
     CHECK(angdroid_shape_display_name("Bear", 1)[0] == 'B');
+
+    /* Mirror display-only locality + depth formatting at UTF-8 byte limits. */
+    {
+        char full[160], short_name[32], tiny[10];
+        const char *place = angdroid_faangband_locality_text(
+            "East Beleriand", 1);
+        snprintf(full, sizeof(full), "%s %d", place, 42);
+        angdroid_utf8_copy_complete(short_name, sizeof(short_name), full);
+        CHECK(strcmp(short_name, "東貝烈瑞安德 42") == 0);
+        CHECK(angdroid_utf8_display_columns(short_name) == 15);
+        angdroid_utf8_copy_complete(tiny, sizeof(tiny), full);
+        CHECK(strcmp(tiny, "東貝烈") == 0);
+        CHECK(angdroid_utf8_display_columns(tiny) == 6);
+
+        place = angdroid_faangband_locality_text("Gondolin", 1);
+        snprintf(full, sizeof(full), "%s 城鎮", place);
+        angdroid_utf8_copy_complete(short_name, sizeof(short_name), full);
+        CHECK(strcmp(short_name, "剛多林 城鎮") == 0);
+        CHECK(angdroid_utf8_display_columns(short_name) == 11);
+    }
     printf("PASS: 23 shape translations and locality display fallbacks (%u checks)\n",
            tests);
     return 0;
