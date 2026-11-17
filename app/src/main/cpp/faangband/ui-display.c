@@ -63,6 +63,7 @@
 #include "../angband/zh-tw-ui.h"
 #include "../angband/menu-text-fit.h"
 #include "../angband/zh-tw-timed-status.h"
+#include "../angband/zh-tw-terrain-trap.h"
 
 /**
  * There are a few functions installed to be triggered by several 
@@ -1260,6 +1261,9 @@ static size_t prt_terrain(int row, int col)
 {
 	struct feature *feat = square_feat(cave, player->grid);
 	struct trap *trap = square_trap(cave, player->grid);
+	const char *english_name;
+	const char *visible_name;
+	bool detected_trap = trap && !square_isinvis(cave, player->grid);
 	char buf[30];
 	uint8_t attr;
 
@@ -1271,13 +1275,25 @@ static size_t prt_terrain(int row, int col)
 		soft_kbd_flash("<");
 	}
 
-	if (trap && !square_isinvis(cave, player->grid)) {
-		my_strcpy(buf, trap->kind->name, sizeof(buf));
+	if (detected_trap) {
+		english_name = trap->kind->name;
 		attr = trap->kind->d_attr;
 	} else {
-		my_strcpy(buf, feat->name, sizeof(buf));
+		english_name = feat->name;
 		attr = feat->d_attr;
 	}
+
+	/* Use the existing exact-name knowledge translations for visible
+	 * terrain/traps. Unknown names use their unchanged English path. */
+	if (angdroid_zh_tw_enabled()) {
+		visible_name = detected_trap ?
+			angdroid_trap_name(english_name, true) :
+			angdroid_terrain_name(english_name, true);
+		if (visible_name != english_name)
+			return fa_status_put(attr, visible_name, row, col);
+	}
+
+	my_strcpy(buf, english_name, sizeof(buf));
 	my_strcap(buf);
 	c_put_str(attr, format("%s ", buf), row, col);
 
