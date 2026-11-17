@@ -30,9 +30,18 @@ for engine, include, status_put in (
     src = (CPP / engine / "ui-display.c").read_text(encoding="utf-8")
     assert include in src, engine
     dispatcher = source_function(src, "static void update_statusline_aux(")
-    assert "if (!Term || row < 0 || row >= Term->hgt ||" in dispatcher, engine
+    assert "if (!Term || row < 0 || row >= Term->hgt) return;" in dispatcher, engine
     assert "angdroid_statusline_has_room(col, 0, Term->wid)" in dispatcher
     assert "prt(\"\", row, col);" in dispatcher
+    assert dispatcher.count("statusline_flash_hidden_stairs();") == 2, engine
+    assert "if (i < N_ELEMENTS(status_handlers)) statusline_flash_hidden_stairs();" in dispatcher
+    hidden = source_function(src, "static void statusline_flash_hidden_stairs(")
+    terrain = source_function(src, "static size_t prt_terrain(")
+    for indicator, marker in ((">", "square_isdownstairs"),
+                               ("<", "square_isupstairs")):
+        assert marker in hidden and marker in terrain, engine
+        assert 'soft_kbd_flash("'+indicator+'")' in hidden, engine
+        assert 'soft_kbd_flash("'+indicator+'")' in terrain, engine
     assert dispatcher.count("angdroid_statusline_has_room(") == 2, engine
     assert "if (!angdroid_statusline_has_room(col, 0, Term->wid)) break;" in dispatcher
     assert "col = angdroid_statusline_next_col(col," in dispatcher
