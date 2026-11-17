@@ -777,6 +777,13 @@ done
     -o "$BUILD_DIR/test_term_soft_cursor_bounds"
 "$BUILD_DIR/test_term_soft_cursor_bounds"
 
+# CJK pairs clipped by a native resize must not leak orphan markers,
+# including the independent terrain layer and FAangband one-cell map glyphs.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$ROOT/tests/native/test_term_resize_cjk.c" \
+    -o "$BUILD_DIR/test_term_resize_cjk"
+"$BUILD_DIR/test_term_resize_cjk"
+
 # FAangband-specific on-increase messages for temporary resistances.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_timed_renewals.c" \
