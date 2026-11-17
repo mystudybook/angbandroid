@@ -57,7 +57,9 @@ for engine in ("angband", "faangband"):
     assert "cache->height = Term->hgt;" in redraw
     assert "cache->content_generation = Term->content_generation;" in redraw
     assert "cache->locale_zh_tw = angdroid_zh_tw_enabled();" in redraw
-    assert "Term->content_generation, angdroid_zh_tw_enabled()))" in redraw
+    assert "cache->instance_id = Term->instance_id;" in redraw
+    assert "Term->instance_id))" in redraw
+    assert "Term->content_generation, angdroid_zh_tw_enabled()," in redraw
     assert "cache->ready = (window_flag[win_idx] == PW_PLAYER_2);" in redraw
     assert redraw.index("if (win_idx >= 0 &&") < redraw.index(
         "visible_rows = angdroid_compact_player_visible_rows(")
