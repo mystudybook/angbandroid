@@ -68,9 +68,11 @@ for engine in ("angband", "faangband"):
 
     compact = function(src, "static void update_player_compact_subwindow(")
     assert "if (angband_term[i] == inv_term)" in compact
-    assert "angdroid_compact_player_can_redraw_one(" in compact
+    assert "angdroid_compact_player_cache_matches(" in compact
     assert "window_flag[win_idx] == PW_PLAYER_2" in compact
     assert "cache->ready = (window_flag[win_idx] == PW_PLAYER_2);" in compact
+    assert "cache->content_generation = Term->content_generation;" in compact
+    assert "cache->locale_zh_tw = angdroid_zh_tw_enabled();" in compact
     assert compact.index("cache->ready = ") > compact.index(
         "COMPACT_PLAYER_ROW(prt_field(")
 
