@@ -2433,10 +2433,11 @@ static void update_player_compact_subwindow(game_event_type type,
 		}
 	}
 	if (win_idx >= 0 &&
-		angdroid_compact_player_can_redraw_one(
+		angdroid_compact_player_cache_matches(
 			&compact_player_redraw_state[win_idx], inv_term,
 			Term->wid, Term->hgt,
-			window_flag[win_idx] == PW_PLAYER_2)) {
+			window_flag[win_idx] == PW_PLAYER_2,
+			Term->content_generation, angdroid_zh_tw_enabled())) {
 		int partial_row = -1;
 		switch (type) {
 		case EVENT_PLAYERTITLE:
@@ -2552,6 +2553,8 @@ static void update_player_compact_subwindow(game_event_type type,
 		cache->terminal = inv_term;
 		cache->width = Term->wid;
 		cache->height = Term->hgt;
+		cache->content_generation = Term->content_generation;
+		cache->locale_zh_tw = angdroid_zh_tw_enabled();
 		cache->ready = (window_flag[win_idx] == PW_PLAYER_2);
 	}
 	Term_fresh();
