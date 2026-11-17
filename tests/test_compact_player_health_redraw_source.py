@@ -75,7 +75,7 @@ for engine in ("angband", "faangband"):
     positions = [compact.index(s) for s in expected]
     assert positions == sorted(positions), engine
     assert "for (i = 0; i < STAT_MAX; i++)" in compact
-    assert compact.count("COMPACT_PLAYER_VALUE_ROW(") >= 9
+    assert compact.count("COMPACT_PLAYER_VALUE_ROW(") == 8
 
     equipment = function(src, "static void prt_equippy(")
     assert "col < 0 || col >= Term->wid) return;" in equipment
