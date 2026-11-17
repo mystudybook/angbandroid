@@ -74,6 +74,7 @@ run_check "FAangband color/keymap/pref confirmations zh-TW" python3 "$ROOT/tests
 run_check "FAangband effect selection menu zh-TW and UTF-8 widths" python3 "$ROOT/tests/test_faangband_effect_menu_locale_source.py"
 run_check "FAangband pref diagnostics and world map labels zh-TW" python3 "$ROOT/tests/test_faangband_pref_map_locale_source.py"
 run_check "FAangband statusline indicators and init wait zh-TW" python3 "$ROOT/tests/test_faangband_statusline_locale_source.py"
+run_check "Angband and FAangband speed/rest/repeat status and command prompt zh-TW" python3 "$ROOT/tests/test_speed_rest_repeat_locale_source.py"
 run_check "FAangband floor-item observations and display zh-TW" python3 "$ROOT/tests/test_faangband_floor_messages_locale_source.py"
 run_check "FAangband recall and player history screen-only zh-TW" python3 "$ROOT/tests/test_faangband_recall_history_locale_source.py"
 run_check "FAangband recall layout and cancel safety C99" sh "$ROOT/scripts/test-fa-recall-viewport.sh"
