@@ -41,6 +41,7 @@ for engine in ("angband", "faangband"):
         "t->instance_id = angdroid_term_instance_sequence;")
     nuke = function(term, "errr term_nuke(term *t)")
     assert "t->instance_id = 0;" in nuke
+    assert nuke.index("t->instance_id = 0;") < nuke.index("if (t->active_flag)")
     assert nuke.index("t->instance_id = 0;") < nuke.index("return (0);")
 
     panel = function(ui, "static void update_player_compact_subwindow(")
