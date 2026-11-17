@@ -360,6 +360,14 @@ static void run_screen(int width, int height) {
         previous_id = t.instance_id;
         Term = &t;
         CHECK(t.content_generation == 0);
+        /* A fresh term at the same address cannot inherit an old cursor,
+         * temporary frame, saved depth, or prior rendered screen cells. */
+        CHECK(t.saved == 0 && t.mem == NULL && t.tmp == NULL);
+        CHECK(!t.scr->cu && !t.scr->cv);
+        CHECK(t.scr->cx == 0 && t.scr->cy == 0);
+        CHECK(t.old->cx == 0 && t.old->cy == 0);
+        CHECK(t.scr->c[0][0] == 0 && t.old->c[0][0] == 0);
+        CHECK(t.scr->a[0][0] == 0 && t.old->a[0][0] == 0);
         verify_no_saved_load(&t);
         single_snapshot(&t);
         nested_snapshot(&t);
