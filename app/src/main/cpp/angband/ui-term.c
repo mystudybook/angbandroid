@@ -3186,6 +3186,9 @@ errr Term_activate(term *t)
  */
 errr term_nuke(term *t)
 {
+	/* Invalidate the instance before any hook can trigger a redraw. */
+	t->instance_id = 0;
+
 	/* Hack -- Call the special "nuke" hook */
 	if (t->active_flag) {
 		/* Call the "nuke" hook */
@@ -3235,9 +3238,6 @@ errr term_nuke(term *t)
 
 	/* Free the input queue */
 	mem_free(t->key_queue);
-
-	/* A destroyed terminal must never satisfy a previous UI cache. */
-	t->instance_id = 0;
 
 	/* Success */
 	return (0);
