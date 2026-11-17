@@ -24,6 +24,26 @@ for engine in ("angband", "faangband"):
         body = generator.module.extract_function(original, signature)
         assert body in generated, (engine, signature)
 
+    reset = generator.module.extract_function(original,
+        "void screen_reset_overlay_state(void)")
+    ui_init = (ROOT / "app/src/main/cpp" / engine / "ui-init.c").read_text(
+        encoding="utf-8")
+    output_h = (ROOT / "app/src/main/cpp" / engine / "ui-output.h").read_text(
+        encoding="utf-8")
+    term_h = (ROOT / "app/src/main/cpp" / engine / "ui-term.h").read_text(
+        encoding="utf-8")
+    assert "screen_save_depth = 1;" in reset
+    assert "screen_save_unbacked_depth = 0;" in reset
+    assert "screen_save_excess_depth = 0;" in reset
+    assert "void screen_reset_overlay_state(void);" in output_h
+    assert "extern errr Term_discard_saved_screens(term *t);" in term_h
+    init_entry = ui_init.index("void textui_init(void)")
+    discard = ui_init.index("Term_discard_saved_screens(term_screen)", init_entry)
+    reset_call = ui_init.index("screen_reset_overlay_state();", discard)
+    pref = ui_init.index('process_pref_file("pref.prf"', init_entry)
+    play_again = ui_init.index("if (!play_again)", init_entry)
+    assert init_entry < discard < reset_call < pref < play_again
+    assert "screen_save_depth++;" not in ui_init
     save = generator.module.extract_function(original, "void screen_save(void)")
     load = generator.module.extract_function(original, "void screen_load(void)")
     load_all = generator.module.extract_function(original,
@@ -49,12 +69,14 @@ for engine in ("angband", "faangband"):
     for name in (
         "test_empty_pops", "test_nested_and_replay", "test_native_capacity",
         "test_failed_native_save", "test_failed_native_restore",
-        "test_public_depth_saturation",
+        "test_public_depth_saturation", "test_new_character_session",
     ):
         assert "static void " + name + "(void)" in generated, (engine, name)
     assert "CHECK(screen_save_depth == INT16_MAX);" in generated
     assert "CHECK(screen_save_excess_depth == 5);" in generated
     assert "CHECK(screen_save_unbacked_depth == 7);" in generated
     assert 'CHECK(replayed == before + 3);' in generated
+    assert "CHECK(screen_save_depth == 1);" in generated
+    assert "CHECK(screen_save_excess_depth == 0 && screen_save_unbacked_depth == 0);" in generated
 
-print("PASS: Angband/FA screen save/load depth and real C99 extraction contracts")
+print("PASS: Angband/FA screen depths and new-game reset lifecycle contracts")
