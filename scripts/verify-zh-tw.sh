@@ -76,6 +76,7 @@ run_check "FAangband pref diagnostics and world map labels zh-TW" python3 "$ROOT
 run_check "FAangband statusline indicators and init wait zh-TW" python3 "$ROOT/tests/test_faangband_statusline_locale_source.py"
 run_check "Angband and FAangband speed/rest/repeat status and command prompt zh-TW" python3 "$ROOT/tests/test_speed_rest_repeat_locale_source.py"
 run_check "Angband feeling/light/moves/detection/ignore status zh-TW" python3 "$ROOT/tests/test_angband_remaining_statusline_locale_source.py"
+run_check "Angband/FA timed grade and visible terrain/trap status exact locale" python3 "$ROOT/tests/test_timed_terrain_status_source.py"
 run_check "FAangband floor-item observations and display zh-TW" python3 "$ROOT/tests/test_faangband_floor_messages_locale_source.py"
 run_check "FAangband recall and player history screen-only zh-TW" python3 "$ROOT/tests/test_faangband_recall_history_locale_source.py"
 run_check "FAangband recall layout and cancel safety C99" sh "$ROOT/scripts/test-fa-recall-viewport.sh"
