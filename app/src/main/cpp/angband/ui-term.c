@@ -2341,8 +2341,9 @@ errr Term_erase(int x, int y, int n)
 	/* Place cursor */
 	if (Term_gotoxy(x, y)) return (-1);
 
-	/* Force legal size */
-	if (x + n > w) n = w - x;
+	/* Term_gotoxy() already checked x. Subtract first so an untrusted
+	 * large erase count cannot overflow the signed x + n expression. */
+	if (n > w - x) n = w - x;
 
 	/* Fast access */
 	scr_aa = Term->scr->a[y];
