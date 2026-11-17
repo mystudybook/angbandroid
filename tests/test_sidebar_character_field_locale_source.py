@@ -18,9 +18,11 @@ def body(src: str, signature: str) -> str:
 
 for engine, includes in (
     ("angband", ('#include "zh-tw-ui.h"',
-                 '#include "zh-tw-class-titles.h"')),
+                 '#include "zh-tw-class-titles.h"',
+                 '#include "zh-tw-character-sheet.h"')),
     ("faangband", ('#include "../angband/zh-tw-ui.h"',
-                   '#include "../angband/zh-tw-class-titles.h"')),
+                   '#include "../angband/zh-tw-class-titles.h"',
+                   '#include "../angband/zh-tw-character-sheet.h"')),
 ):
     src = (CPP / engine / "ui-display.c").read_text(encoding="utf-8")
     for inc in includes:
@@ -59,6 +61,9 @@ for engine, includes in (
     assert "angdroid_zh_tw_class_title(" in combined
     assert "prt_compact_zh_caption(buf, COLOUR_L_GREEN, row, col)" in combined
     assert "return strlen(buf)+1;" in combined  # English fallback
+
+    depth = body(src, "static int prt_depth_short(")
+    assert "angdroid_character_sheet_text(buf, true)" in depth, engine
 
     for fn in ("prt_speed_short", "prt_depth_short", "prt_title_short"):
         compact_caller = body(src, "static int " + fn + "(")
