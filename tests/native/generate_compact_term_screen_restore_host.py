@@ -229,6 +229,79 @@ static void nested_snapshot(term *t) {
     verify_no_saved_load(t);
 }
 
+
+static void resize_nested_snapshot(term *t) {
+    int x, y, old_w = t->wid, old_h = t->hgt;
+    uint32_t before = Term->content_generation;
+    unsigned long events = resize_events;
+    Term = t;
+    set_screen(L'甲', 1);
+    CHECK(Term_save() == 0);
+    set_screen(L'乙', 2);
+    CHECK(Term_save() == 0);
+    set_screen(L'丙', 3);
+    CHECK(Term->saved == 2);
+    CHECK(Term_resize(old_w, old_h) == 1);
+    CHECK(Term_resize(0, old_h) == -1);
+    t->fixed_shape = true;
+    CHECK(Term_resize(old_w + 2, old_h + 1) == -1);
+    t->fixed_shape = false;
+    CHECK(Term->content_generation == before);
+    CHECK(resize_events == events);
+    CHECK(Term_resize(old_w + 2, old_h + 1) == 0);
+    CHECK(Term->content_generation == before + 1);
+    CHECK(resize_events == events + 1);
+    CHECK(Term->saved == 2);
+    CHECK(Term->mem && Term->mem->next && !Term->mem->next->next);
+    for (y = 0; y < Term->hgt; ++y) {
+        for (x = 0; x < Term->wid; ++x) {
+            bool inside = x < old_w && y < old_h;
+            CHECK(Term->scr->c[y][x] == (inside ? L'丙' : 0));
+            CHECK(Term->mem->c[y][x] == (inside ? L'乙' : 0));
+            CHECK(Term->mem->next->c[y][x] == (inside ? L'甲' : 0));
+            CHECK(Term->scr->a[y][x] == (inside ? 3 : 0));
+            CHECK(Term->mem->a[y][x] == (inside ? 2 : 0));
+            CHECK(Term->mem->next->a[y][x] == (inside ? 1 : 0));
+        }
+    }
+    CHECK(Term_resize(old_w, old_h) == 0);
+    CHECK(Term->content_generation == before + 2);
+    CHECK(resize_events == events + 2);
+    CHECK(Term->saved == 2);
+    expect_screen(L'丙', 3);
+    CHECK(Term_load_all() == 0);
+    CHECK(Term->saved == 1);
+    expect_screen(L'乙', 2);
+    CHECK(Term_load() == 0);
+    CHECK(Term->saved == 0 && Term->mem == NULL);
+    expect_screen(L'甲', 1);
+    verify_no_saved_load(t);
+}
+
+static void snapshot_depth_limit(void) {
+    term t;
+    unsigned i;
+    term_win *top;
+    size_t allocated = allocations, freed = releases;
+    Term = &t;
+    CHECK(term_init(&t, 2, 1, 8) == 0);
+    for (i = 0; i < UINT8_MAX; ++i) {
+        CHECK(Term_save() == 0);
+        CHECK(Term->saved == i + 1);
+    }
+    top = Term->mem;
+    CHECK(Term_save() == -1);
+    CHECK(Term->saved == UINT8_MAX && Term->mem == top);
+    CHECK(Term_resize(3, 2) == 0);
+    CHECK(Term->saved == UINT8_MAX);
+    CHECK(Term_load() == 0);
+    CHECK(Term->saved == UINT8_MAX - 1 && Term->mem != NULL);
+    /* Destructor must free all remaining saved frames. */
+    CHECK(term_nuke(&t) == 0);
+    CHECK(t.saved == 0 && t.mem == NULL);
+    CHECK(allocations - allocated == releases - freed);
+}
+
 static void run_screen(int width, int height) {
     term t;
     size_t prev_alloc = allocations, prev_release = releases;
@@ -245,6 +318,7 @@ static void run_screen(int width, int height) {
         verify_no_saved_load(&t);
         single_snapshot(&t);
         nested_snapshot(&t);
+        resize_nested_snapshot(&t);
         t.nuke_hook = on_nuke;
         t.active_flag = true;
         CHECK(term_nuke(&t) == 0);
@@ -258,6 +332,7 @@ int main(void) {
     run_screen(5, 3);
     run_screen(12, 2);
     run_screen(80, 24);
+    snapshot_depth_limit();
     printf("PASS: real %s Term_clear/save/load/load_all (%lu assertions)\n",
            ENGINE_NAME, checks);
     return 0;
