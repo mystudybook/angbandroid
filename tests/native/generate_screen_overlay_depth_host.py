@@ -13,6 +13,7 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 SIGNATURES = (
+    "void screen_reset_overlay_state(void)",
     "static bool screen_load_is_unbacked(void)",
     "void screen_save(void)",
     "void screen_load(void)",
@@ -171,6 +172,55 @@ static void test_public_depth_saturation(void) {
     for (i = 0; i < UINT8_MAX; ++i) screen_load();
     fresh();
 }
+
+static void test_new_character_session(void) {
+    unsigned i;
+    unsigned before_restore = loads_called;
+    fresh();
+
+    /* Reproduce a stranded native stack and rejected overlays from the
+     * previous character. textui_init() discards the physical saves first. */
+    for (i = 0; i < UINT8_MAX + 5u; ++i) screen_save();
+    CHECK(physical_depth == UINT8_MAX);
+    CHECK(screen_save_unbacked_depth == 5);
+    CHECK(screen_save_depth == UINT8_MAX + 5);
+
+    physical_depth = 0; /* Term_discard_saved_screens(term_screen) */
+    screen_reset_overlay_state();
+    CHECK(physical_depth == 0);
+    CHECK(screen_save_depth == 1); /* Intentional startup icky depth */
+    CHECK(screen_save_unbacked_depth == 0);
+    CHECK(screen_save_excess_depth == 0);
+    CHECK(!textui_map_is_visible());
+
+    screen_save(); /* New game's splash screen */
+    CHECK(screen_save_depth == 2 && physical_depth == 1);
+    screen_load();
+    CHECK(physical_depth == 0 && screen_save_depth == 1);
+    CHECK(loads_called == before_restore + 1);
+    --screen_save_depth; /* ui_enter_world() opens the map */
+    fresh();
+
+    /* The previous character may also leave depth near INT16_MAX. */
+    screen_save_depth = INT16_MAX;
+    screen_save_excess_depth = 11;
+    screen_save_unbacked_depth = 600;
+    physical_depth = 0; /* Discard old native snapshots on replay */
+    screen_reset_overlay_state();
+    CHECK(screen_save_depth == 1);
+    CHECK(screen_save_excess_depth == 0 && screen_save_unbacked_depth == 0);
+    --screen_save_depth; /* Only initial icky-depth decrement */
+    fresh();
+
+    /* Repeated restart at the same terminal address is idempotent. */
+    screen_reset_overlay_state();
+    CHECK(screen_save_depth == 1);
+    screen_reset_overlay_state();
+    CHECK(screen_save_depth == 1);
+    --screen_save_depth;
+    fresh();
+}
+
 int main(void) {
     test_empty_pops();
     test_nested_and_replay();
@@ -178,6 +228,7 @@ int main(void) {
     test_failed_native_save();
     test_failed_native_restore();
     test_public_depth_saturation();
+    test_new_character_session();
     printf("PASS: %s real ui-output save/load wrappers (%lu checks)\n",
            ENGINE_NAME, checks);
     return 0;
