@@ -2862,25 +2862,21 @@ errr Term_load(void)
 
 	term_win *tmp;
 
+	/* No saved screen: do not decrement the unsigned save depth or mark
+	 * unchanged rows dirty. The caller can handle this as a failed load. */
+	if (!Term->mem) return (-1);
+
 	/* Pop off window from the list */
-	if (Term->mem) {
-		/* Save pointer to old mem */
-		tmp = Term->mem;
+	tmp = Term->mem;
+	Term->mem = tmp->next;
 
-		/* Forget it */
-		Term->mem = Term->mem->next;
+	/* Restoring saved cells replaces the current logical screen. */
+	++Term->content_generation;
+	term_win_copy(Term->scr, tmp, w, h);
 
-		/* Restoring saved cells replaces the current logical screen. */
-		++Term->content_generation;
-		/* Load */
-		term_win_copy(Term->scr, tmp, w, h);
-
-		/* Free the old window */
-		(void)term_win_nuke(tmp);
-
-		/* Kill it */
-		mem_free(tmp);
-	}
+	/* Free the saved window */
+	(void)term_win_nuke(tmp);
+	mem_free(tmp);
 
 	/* Assume change */
 	for (y = 0; y < h; y++) {
@@ -2918,6 +2914,10 @@ errr Term_load_all(void)
 		term_win *saved_mem; struct reversed_save *next;
 	} *reversed_list = NULL;
 	struct term_win *cursor;
+
+	/* No snapshot to replay: saved is an unsigned byte and must never
+	 * wrap from zero to 255, nor should a no-op damage the current screen. */
+	if (!Term->mem) return (-1);
 
 	for (cursor = Term->mem; cursor; cursor = cursor->next) {
 		struct reversed_save *new_head = mem_alloc(sizeof(*new_head));
