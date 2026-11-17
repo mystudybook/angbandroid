@@ -2818,9 +2818,14 @@ void subwindows_set_flags(uint32_t *new_flags, size_t n_subwindows)
 {
 	size_t j;
 
-	for (j = 0; j < n_subwindows; j++) {
-		/* Dead window */
-		if (!angband_term[j]) continue;
+	if (!new_flags) return;
+	for (j = 0; j < n_subwindows && j < ANGBAND_TERM_MAX; j++) {
+		/* A detached term must not retain a partial redraw cache, even
+		 * if the next attached term happens to reuse its old address. */
+		if (!angband_term[j]) {
+			angdroid_compact_player_invalidate(&compact_player_redraw_state[j]);
+			continue;
+		}
 
 		/* Ignore non-changes */
 		if (window_flag[j] != new_flags[j])
