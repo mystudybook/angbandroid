@@ -2972,6 +2972,31 @@ errr Term_load_all(void)
 /**
  * React to a new physical window size.
  */
+/**
+ * Drop any outstanding saved overlays when starting a new game session.
+ * Do not restore their contents: an abandoned frame from a prior character
+ * must never become the new character's display. Leave the active screen
+ * and cursor intact, but force a physical repaint after discarding saves.
+ */
+errr Term_discard_saved_screens(term *t)
+{
+	term_win *saved;
+
+	if (!t || !t->instance_id) return (-1);
+	if (!t->mem && !t->saved) return (1);
+
+	while (t->mem) {
+		saved = t->mem;
+		t->mem = saved->next;
+		term_win_nuke(saved);
+		mem_free(saved);
+	}
+	t->saved = 0;
+	++t->content_generation;
+	t->total_erase = true;
+	return (0);
+}
+
 /* A resize may leave a saved cursor outside the smaller terminal.
  * Mark it unusable AND move its coordinates into the new grid, since the
  * hardware cursor path still passes cy to curs_hook() when cu is true. */
