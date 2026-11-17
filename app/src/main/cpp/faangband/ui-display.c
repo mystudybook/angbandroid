@@ -66,6 +66,7 @@
 #include "../angband/zh-tw-terrain-trap.h"
 #include "../angband/statusline-bounds.h"
 #include "../angband/zh-tw-class-titles.h"
+#include "../angband/zh-tw-character-sheet.h"
 
 /**
  * There are a few functions installed to be triggered by several 
@@ -804,7 +805,8 @@ static int prt_depth_short(int row, int col)
 	int len = fmt_depth(buf, sizeof(buf));
 	if (angdroid_zh_tw_enabled())
 		return prt_compact_zh_caption(
-			angdroid_game_ui_text(buf, true), COLOUR_WHITE, row, col);
+			angdroid_character_sheet_text(buf, true),
+			COLOUR_WHITE, row, col);
 	put_str(buf, row, col);
 	return len+1;
 }
