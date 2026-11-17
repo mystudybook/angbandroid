@@ -31,6 +31,19 @@ struct angdroid_compact_player_redraw_state {
     int ready;
 };
 
+/* Clear both readiness and terminal identity when leaving a world,
+ * reloading a character or switching window flags.  A reused terminal
+ * pointer with the same dimensions must not inherit an older character. */
+static inline void angdroid_compact_player_invalidate(
+    struct angdroid_compact_player_redraw_state *state)
+{
+    if (!state) return;
+    state->terminal = NULL;
+    state->width = 0;
+    state->height = 0;
+    state->ready = 0;
+}
+
 static inline int angdroid_compact_player_can_redraw_one(
     const struct angdroid_compact_player_redraw_state *state,
     const void *terminal, int term_width, int term_height, int sole_compact_flag)
