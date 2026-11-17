@@ -493,6 +493,17 @@ int16_t screen_save_depth;
 static uint64_t screen_save_unbacked_depth;
 static uint64_t screen_save_excess_depth;
 
+/* Reinitialize the UI-only depth when switching characters or rebuilding
+ * the game display. The extra initial icky level is intentional: it is
+ * paired with the direct decrement in ui_enter_world(), not a Term_save().
+ * Saved native frames are discarded separately at the textui_init() entry. */
+void screen_reset_overlay_state(void)
+{
+	screen_save_depth = 1;
+	screen_save_unbacked_depth = 0;
+	screen_save_excess_depth = 0;
+}
+
 /* Finish one logical pop without touching the native save stack if its
  * matching push did not create a snapshot. */
 static bool screen_load_is_unbacked(void)
