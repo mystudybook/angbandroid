@@ -70,7 +70,8 @@ assert '"深入" : "Descent"' in fn("prt_descent")
 assert '"學習 (%d)" : "Study (%d)"' in fn("prt_study")
 assert "prt_level_feeling, prt_light, prt_moves, prt_unignore" in SRC
 assert "prt_descent, prt_state, prt_study, prt_tmd, prt_dtrap, prt_terrain" in SRC
-assert "col += status_handlers[i](row, col);" in SRC
+assert "col = angdroid_statusline_next_col(col," in SRC
+assert "status_handlers[i](row, col), Term->wid);" in SRC
 assert "test_angband_remaining_statusline_locale_source.py" in RUN
 
 print("PASS: Angband feeling/light/moves/dtrap/unignore UI translation contracts")
