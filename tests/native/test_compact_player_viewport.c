@@ -81,6 +81,34 @@ int main(void)
         CHECK(!angdroid_compact_player_can_redraw_one(
             &state, &screen_a, 80, 25, 1));
     }
+    /* Returning to the same terminal at the same dimensions must not
+     * carry a previous character's ready state into the next world. */
+    {
+        int screen;
+        struct angdroid_compact_player_redraw_state state = {
+            &screen, 80, 25, 1
+        };
+        CHECK(angdroid_compact_player_can_redraw_one(
+            &state, &screen, 80, 25, 1));
+        angdroid_compact_player_invalidate(&state);
+        CHECK(state.terminal == NULL);
+        CHECK(state.width == 0);
+        CHECK(state.height == 0);
+        CHECK(state.ready == 0);
+        CHECK(!angdroid_compact_player_can_redraw_one(
+            &state, &screen, 80, 25, 1));
+        /* It is safe to invalidate twice or without a state. */
+        angdroid_compact_player_invalidate(&state);
+        angdroid_compact_player_invalidate(NULL);
+        CHECK(state.ready == 0);
+        /* A full redraw may then seed the newly loaded world. */
+        state.terminal = &screen;
+        state.width = 80;
+        state.height = 25;
+        state.ready = 1;
+        CHECK(angdroid_compact_player_can_redraw_one(
+            &state, &screen, 80, 25, 1));
+    }
     CHECK(ANGDROID_COMPACT_ROW_TITLE == 2);
     CHECK(ANGDROID_COMPACT_ROW_EXP == 4);
     CHECK(ANGDROID_COMPACT_ROW_GOLD == 5);
