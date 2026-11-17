@@ -742,6 +742,12 @@ python3 "$ROOT/tests/native/generate_textblock_ui_host.py" \
     -o "$BUILD_DIR/test_shape_locality_display_locale"
 "$BUILD_DIR/test_shape_locality_display_locale"
 
+# Compact character panel owned rows on short and tall viewports.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic \
+    "$ROOT/tests/native/test_compact_player_viewport.c" \
+    -o "$BUILD_DIR/test_compact_player_viewport"
+"$BUILD_DIR/test_compact_player_viewport"
+
 # FAangband-specific on-increase messages for temporary resistances.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_timed_renewals.c" \
