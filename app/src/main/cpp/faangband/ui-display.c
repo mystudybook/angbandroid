@@ -2652,7 +2652,7 @@ static void see_floor_items(game_event_type type, game_event_data *data,
 	if (floor_num == 1) {
 		/* Get the object */
 		struct object *obj = floor_list[0];
-		char o_name[80];
+		char o_name[160];
 
 		if (!can_pickup)
 			p = "have no room for";
@@ -2662,15 +2662,29 @@ static void see_floor_items(game_event_type type, game_event_data *data,
 		/* Describe the object.  Less detail if blind. */
 		if (blind) {
 			object_desc(o_name, sizeof(o_name), obj,
-				ODESC_PREFIX | ODESC_BASE, player);
+				ODESC_PREFIX | ODESC_BASE |
+					(angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0),
+				player);
 		} else {
 			object_desc(o_name, sizeof(o_name), obj,
-				ODESC_PREFIX | ODESC_FULL, player);
+				ODESC_PREFIX | ODESC_FULL |
+					(angdroid_zh_tw_enabled() ? ODESC_ZH_TW : 0),
+				player);
 		}
 
-		/* Message */
+		/* Translate the player's observation, not the original
+		 * carry/capacity/visibility rules or the item identity. */
 		event_signal(EVENT_MESSAGE_FLUSH);
-		msg("You %s %s.", p, o_name);
+		if (angdroid_zh_tw_enabled()) {
+			if (!can_pickup)
+				msg("你沒有空間攜帶%s。", o_name);
+			else if (blind)
+				msg("你摸到%s。", o_name);
+			else
+				msg("你看到%s。", o_name);
+		} else {
+			msg("You %s %s.", p, o_name);
+		}
 	} else {
 		ui_event e;
 
@@ -2682,7 +2696,13 @@ static void see_floor_items(game_event_type type, game_event_data *data,
 		/* Display objects on the floor */
 		screen_save();
 		show_floor(floor_list, floor_num, OLIST_WEIGHT, NULL);
-		prt(format("You %s: ", p), 0, 0);
+		if (angdroid_zh_tw_enabled()) {
+			prt(!can_pickup ? "你沒有空間攜帶下列物品：" :
+				blind ? "你感覺地上有下列物品：" :
+				"你看到下列物品：", 0, 0);
+		} else {
+			prt(format("You %s: ", p), 0, 0);
+		}
 
 		/* Wait for it.  Use key as next command. */
 		e = inkey_ex();
