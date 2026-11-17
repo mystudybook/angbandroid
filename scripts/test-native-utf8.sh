@@ -771,6 +771,12 @@ for engine in angband faangband; do
     "$BUILD_DIR/test_${engine}_screen_restore"
 done
 
+# Soft cursor redraw: extreme spans, large tiles and the second CJK cell.
+"$CC" -std=c99 -Wall -Wextra -Werror -pedantic -I "$ROOT" \
+    "$ROOT/tests/native/test_term_soft_cursor_bounds.c" \
+    -o "$BUILD_DIR/test_term_soft_cursor_bounds"
+"$BUILD_DIR/test_term_soft_cursor_bounds"
+
 # FAangband-specific on-increase messages for temporary resistances.
 "$CC" -std=c99 -Wall -Wextra -Werror -pedantic -Wformat -Werror=format-security \
     "$ROOT/tests/native/test_faangband_timed_renewals.c" \
