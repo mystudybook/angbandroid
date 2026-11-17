@@ -2826,6 +2826,10 @@ errr Term_save(void)
 
 	term_win *mem;
 
+	/* saved is a uint8_t: refuse a new frame before it could wrap to zero.
+	 * Leave the existing snapshot chain and requested screen untouched. */
+	if (Term->saved == UINT8_MAX) return (-1);
+
 	/* Allocate window */
 	mem = mem_zalloc(sizeof(term_win));
 
@@ -3214,14 +3218,15 @@ errr term_nuke(term *t)
 	/* Kill "requested" */
 	mem_free(t->scr);
 
-	/* If needed */
-	if (t->mem) {
-		/* Nuke "memorized" */
-		term_win_nuke(t->mem);
-
-		/* Kill "memorized" */
-		mem_free(t->mem);
+	/* Every Term_save() allocates one linked snapshot.  Discard the
+	 * entire stack when a terminal is destroyed, not only its top frame. */
+	while (t->mem) {
+		term_win *saved = t->mem;
+		t->mem = saved->next;
+		term_win_nuke(saved);
+		mem_free(saved);
 	}
+	t->saved = 0;
 
 	/* If needed */
 	if (t->tmp) {
