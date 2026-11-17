@@ -1829,7 +1829,8 @@ ui_event textui_get_command(int *count)
 
 					int c = textui_get_count();
 
-					if (c == -1 || !get_com_ex("Command: ", &ke))
+					if (c == -1 || !get_com_ex(angdroid_game_ui_text("Command: ",
+						angdroid_zh_tw_enabled()), &ke))
 						continue;
 					else
 						*count = c;
@@ -1838,14 +1839,16 @@ ui_event textui_get_command(int *count)
 
 				case '\\': {
 					/* Allow keymaps to be bypassed */
-					(void)get_com_ex("Command: ", &ke);
+					(void)get_com_ex(angdroid_game_ui_text("Command: ",
+						angdroid_zh_tw_enabled()), &ke);
 					keymap_ok = false;
 					break;
 				}
 
 				case '^': {
 					/* Allow "control chars" to be entered */
-					if (!get_com_ex("Control: ", &ke)
+					if (!get_com_ex(angdroid_game_ui_text("Control: ",
+						angdroid_zh_tw_enabled()), &ke)
 							|| ke.type != EVT_KBRD) {
 						continue;
 					}
