@@ -67,6 +67,7 @@
 #include "../angband/statusline-bounds.h"
 #include "../angband/zh-tw-class-titles.h"
 #include "../angband/zh-tw-shape-display.h"
+#include "../angband/zh-tw-faangband-localities.h"
 #include "../angband/zh-tw-character-sheet.h"
 
 /**
@@ -559,9 +560,29 @@ static void prt_speed(int row, int col)
 	}
 }
 
+/* Forward declaration: statusline renderer is defined below the sidebar. */
+static size_t fa_status_put(uint8_t attr, const char *message,
+	int row, int col);
+
 static int fmt_depth(char buf[], int max)
 {
 	struct level *lev = &world->levels[player->place];
+
+	if (angdroid_zh_tw_enabled()) {
+		const char *locality = angdroid_faangband_locality_text(
+			locality_name(lev->locality), true);
+		char display[160];
+
+		/* Format only in the display layer.  The actual level_name()
+		 * remains canonical English for lookups, maps and savefiles. */
+		if (lev->depth)
+			strnfmt(display, sizeof(display), "%s %d", locality,
+				lev->depth);
+		else
+			strnfmt(display, sizeof(display), "%s 城鎮", locality);
+		angdroid_utf8_copy_complete(buf, (size_t)max, display);
+		return (int)angdroid_utf8_display_columns(buf);
+	}
 	my_strcpy(buf, level_name(lev), max);
 	return strlen(buf);
 }
@@ -575,9 +596,12 @@ static size_t prt_depth(int row, int col)
 
 	fmt_depth(depths, sizeof(depths));
 
-	/* Right-Adjust the "depth", and clear old values */
-	put_str(depths, row, col);
+	/* Translated locality labels may be wider in cells than English.
+	 * Clip them to the remaining row, returning terminal-cell advances. */
+	if (angdroid_zh_tw_enabled())
+		return fa_status_put(COLOUR_WHITE, depths, row, col);
 
+	put_str(depths, row, col);
 	return strlen(depths) + 1;
 }
 
