@@ -21,6 +21,7 @@ SIGNATURES = (
     "static errr term_win_copy(term_win *s, term_win *f, int w, int h)",
     "errr term_init(term *t, int w, int h, int k)",
     "errr term_nuke(term *t)",
+    "static void term_win_clamp_cursor(term_win *win, int w, int h)",
     "errr Term_resize(int w, int h)",
     "errr Term_clear(void)",
     "errr Term_save(void)",
@@ -287,6 +288,41 @@ static void resize_nested_snapshot(term *t) {
     verify_no_saved_load(t);
 }
 
+
+static void cursor_shrink_guard(term *t) {
+    int w = t->wid, h = t->hgt;
+    term_win *win;
+    Term = t;
+    CHECK(t->saved == 0 && t->mem == NULL && t->tmp == NULL);
+    set_screen(L'甲', 7);
+    CHECK(Term_save() == 0);
+    win = t->tmp = mem_zalloc(sizeof(*t->tmp));
+    term_win_init(win, w, h);
+    CHECK(Term_resize(w + 3, h + 4) == 0);
+    /* Simulate an active cursor, a displayed cursor, a saved cursor
+     * and a temporary cursor located outside the upcoming smaller grid. */
+    t->old->cx = w + 1; t->old->cy = h + 2;
+    t->old->cv = true; t->old->cu = false;
+    t->scr->cx = w + 2; t->scr->cy = h + 3;
+    t->scr->cv = true; t->scr->cu = false;
+    t->mem->cx = w; t->mem->cy = h;
+    t->mem->cv = true; t->mem->cu = false;
+    t->tmp->cx = -7; t->tmp->cy = -3;
+    t->tmp->cv = true; t->tmp->cu = false;
+    CHECK(Term_resize(w, h) == 0);
+    CHECK(t->old->cu && t->old->cx == w - 1 && t->old->cy == h - 1);
+    CHECK(t->scr->cu && t->scr->cx == w - 1 && t->scr->cy == h - 1);
+    CHECK(t->mem->cu && t->mem->cx == w - 1 && t->mem->cy == h - 1);
+    CHECK(t->tmp->cu && t->tmp->cx == 0 && t->tmp->cy == 0);
+    /* Restoration must not reintroduce an out-of-bounds cursor. */
+    CHECK(Term_load() == 0);
+    CHECK(t->saved == 0 && t->mem == NULL);
+    CHECK(t->scr->cu && t->scr->cx == w - 1 && t->scr->cy == h - 1);
+    CHECK(Term_resize(w + 1, h + 1) == 0);
+    CHECK(t->scr->cu && t->scr->cx == w - 1 && t->scr->cy == h - 1);
+    CHECK(Term_resize(w, h) == 0);
+}
+
 static void snapshot_depth_limit(void) {
     term t;
     unsigned i;
@@ -328,6 +364,7 @@ static void run_screen(int width, int height) {
         single_snapshot(&t);
         nested_snapshot(&t);
         resize_nested_snapshot(&t);
+        cursor_shrink_guard(&t);
         t.nuke_hook = on_nuke;
         t.active_flag = true;
         CHECK(term_nuke(&t) == 0);
@@ -354,6 +391,8 @@ def generate(engine: str) -> str:
         encoding="utf-8")
     extracts = [lifecycle.extract_function(src, signature) for signature in SIGNATURES]
     for sig, body in zip(SIGNATURES, extracts):
+        if sig == "errr Term_resize(int w, int h)" and body.count("term_win_clamp_cursor(") != 4:
+            raise ValueError("Resize must clamp old, scr, memorized and temporary cursors")
         if sig == "errr Term_save(void)" and "if (Term->saved == UINT8_MAX) return (-1);" not in body:
             raise ValueError("Snapshot stack must enforce its uint8_t depth limit")
         if sig == "errr term_nuke(term *t)" and "while (t->mem)" not in body:
