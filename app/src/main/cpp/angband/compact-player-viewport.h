@@ -33,6 +33,7 @@ struct angdroid_compact_player_redraw_state {
     int ready;
     uint32_t content_generation;
     int locale_zh_tw;
+    uint64_t instance_id;
 };
 
 /* Clear both readiness and terminal identity when leaving a world,
@@ -48,6 +49,7 @@ static inline void angdroid_compact_player_invalidate(
     state->ready = 0;
     state->content_generation = 0;
     state->locale_zh_tw = 0;
+    state->instance_id = 0;
 }
 
 static inline int angdroid_compact_player_can_redraw_one(
@@ -67,12 +69,15 @@ static inline int angdroid_compact_player_can_redraw_one(
 static inline int angdroid_compact_player_cache_matches(
     const struct angdroid_compact_player_redraw_state *state,
     const void *terminal, int width, int height, int sole_compact_flag,
-    uint32_t content_generation, int locale_zh_tw)
+    uint32_t content_generation, int locale_zh_tw,
+    uint64_t instance_id)
 {
-    return angdroid_compact_player_can_redraw_one(state, terminal,
+    return instance_id != 0 &&
+        angdroid_compact_player_can_redraw_one(state, terminal,
             width, height, sole_compact_flag) &&
         state->content_generation == content_generation &&
-        state->locale_zh_tw == locale_zh_tw;
+        state->locale_zh_tw == locale_zh_tw &&
+        state->instance_id == instance_id;
 }
 
 /* Zero-based rows owned by the compact character display. */
